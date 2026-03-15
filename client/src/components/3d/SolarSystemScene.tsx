@@ -5,6 +5,7 @@ import { OrbitControls, Stars, Preload } from '@react-three/drei'
 import { Suspense, useRef, useMemo, useState } from 'react'
 import * as THREE from 'three'
 import { sunData, planetsData, type PlanetData } from '@/lib/solarSystemData'
+import { getStaticAssetUrl } from '@/lib/apiConfig'
 
 const origin = new THREE.Vector3(0, 0, 0)
 
@@ -37,7 +38,7 @@ function OrbitPath({ distance, color }: { distance: number; color: string }) {
 /** Mặt Trời – tự quay quanh trục; click → chuyển tâm về Mặt Trời */
 function Sun({ onSelect }: { onSelect: () => void }) {
   const groupRef = useRef<THREE.Group>(null)
-  const texture = useLoader(THREE.TextureLoader, sunData.texture) as THREE.Texture
+  const texture = useLoader(THREE.TextureLoader, getStaticAssetUrl(sunData.texture)) as THREE.Texture
   useMemo(() => {
     texture.colorSpace = THREE.SRGBColorSpace
     texture.wrapS = texture.wrapT = THREE.RepeatWrapping
@@ -85,7 +86,7 @@ function Planet({
   const groupRef = useRef<THREE.Group>(null)
   const spinRef = useRef<THREE.Group>(null)
   const angleRef = useRef(Math.random() * Math.PI * 2)
-  const map = useLoader(THREE.TextureLoader, data.texture) as THREE.Texture
+  const map = useLoader(THREE.TextureLoader, getStaticAssetUrl(data.texture)) as THREE.Texture
   useMemo(() => {
     map.colorSpace = THREE.SRGBColorSpace
     map.wrapS = map.wrapT = THREE.ClampToEdgeWrapping
@@ -127,7 +128,7 @@ function Planet({
           <PlanetRing
             inner={data.ringInner! * data.radius}
             outer={data.ringOuter! * data.radius}
-            texturePath={data.ringTexture}
+            texturePath={getStaticAssetUrl(data.ringTexture)}
           />
         )}
       </group>

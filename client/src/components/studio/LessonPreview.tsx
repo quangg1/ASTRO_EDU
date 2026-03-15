@@ -2,6 +2,7 @@
 
 import dynamic from 'next/dynamic'
 import type { Lesson, LessonSection, QuizQuestion } from '@/lib/coursesApi'
+import { resolveMediaUrl } from '@/lib/apiConfig'
 import { getStageByTime } from '@/lib/earthHistoryData'
 
 const EarthScene = dynamic(() => import('@/components/3d/EarthScene'), { ssr: false, loading: () => <div className="h-full flex items-center justify-center text-gray-600 text-sm">Loading 3D scene...</div> })
@@ -110,7 +111,7 @@ function SectionPreview({ sec, index }: { sec: LessonSection; index: number }) {
           {sec.title && <h3 className="text-base font-semibold text-white">{sec.title}</h3>}
           {sec.modelUrl ? (
             <div className="h-[350px] rounded-xl border border-cyan-500/20 overflow-hidden bg-black/50">
-              <ModelViewer url={sec.modelUrl} />
+              <ModelViewer url={resolveMediaUrl(sec.modelUrl)} />
             </div>
           ) : (
             <div className="h-[200px] rounded-xl border border-dashed border-white/20 flex items-center justify-center text-gray-600 text-sm">No 3D model set</div>

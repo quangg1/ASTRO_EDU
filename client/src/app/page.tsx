@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { fetchCourses, type Course } from '@/lib/coursesApi'
+import { getStaticAssetUrl } from '@/lib/apiConfig'
 
 export default function HomePage() {
   const [courses, setCourses] = useState<Course[]>([])
@@ -30,7 +31,7 @@ export default function HomePage() {
       {/* Background */}
       <div className="fixed inset-0 z-0">
         <Image
-          src="/images/nebula-home.jpg"
+          src={getStaticAssetUrl('/images/nebula-home.jpg')}
           alt="Nebula and stars"
           fill
           className="object-cover"

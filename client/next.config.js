@@ -9,9 +9,13 @@ const nextConfig = {
     return [{ source: '/media/:path*', destination: `${mediaUrl}/:path*` }];
   },
   
-  // Allow images from external sources
+  // Allow images from localhost and from media CDN (S3 / CloudFront)
   images: {
-    domains: ['localhost'],
+    remotePatterns: [
+      { protocol: 'https', hostname: '**.amazonaws.com', pathname: '/**' },
+      { protocol: 'https', hostname: '**.cloudfront.net', pathname: '/**' },
+      { protocol: 'http', hostname: 'localhost', pathname: '/**' },
+    ],
   },
   
   // Transpile three.js packages

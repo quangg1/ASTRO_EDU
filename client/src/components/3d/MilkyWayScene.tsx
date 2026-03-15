@@ -4,6 +4,7 @@ import { Canvas, useFrame, useLoader } from '@react-three/fiber'
 import { OrbitControls, Preload } from '@react-three/drei'
 import { Suspense, useRef, useMemo } from 'react'
 import * as THREE from 'three'
+import { getStaticAssetUrl } from '@/lib/apiConfig'
 
 const MILKY_WAY_TEXTURE = '/textures/8k_stars_milky_way.jpg'
 const SKYBOX_RADIUS = 400
@@ -36,7 +37,7 @@ const MILKY_OFFSET_Y = 0.275
 /** Bầu trời Milky Way – texture phủ sphere, zoom vào dải Milky Way ở giữa ảnh */
 function MilkyWaySkybox() {
   const meshRef = useRef<THREE.Mesh>(null)
-  const texture = useLoader(THREE.TextureLoader, MILKY_WAY_TEXTURE) as THREE.Texture
+  const texture = useLoader(THREE.TextureLoader, getStaticAssetUrl(MILKY_WAY_TEXTURE)) as THREE.Texture
   useMemo(() => {
     texture.colorSpace = THREE.SRGBColorSpace
     texture.mapping = THREE.EquirectangularReflectionMapping

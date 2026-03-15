@@ -4,6 +4,7 @@ import { useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
 import type { LessonSection, SectionType } from '@/lib/coursesApi'
 import { uploadMedia } from '@/lib/coursesApi'
+import { resolveMediaUrl } from '@/lib/apiConfig'
 import MathBlock from './blocks/MathBlock'
 import ChartBlock from './blocks/ChartBlock'
 import SliderBlock from './blocks/SliderBlock'
@@ -329,7 +330,7 @@ export default function BlockEditor({ section, onChange }: Props) {
           </div>
           {section.modelUrl && (
             <div className="h-[280px] rounded-lg border border-cyan-500/20 overflow-hidden bg-black/40">
-              <ModelViewer url={section.modelUrl} />
+              <ModelViewer url={resolveMediaUrl(section.modelUrl)} />
             </div>
           )}
           <input value={section.caption ?? ''} onChange={(e) => update({ caption: e.target.value })} placeholder="Caption (optional)" className={inputCls} />

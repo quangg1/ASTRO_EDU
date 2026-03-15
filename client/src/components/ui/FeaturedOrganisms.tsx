@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useGLTF } from '@react-three/drei'
 import { getIconicOrganismsForStage, type IconicOrganism } from '@/lib/iconicOrganisms'
+import { getStaticAssetUrl } from '@/lib/apiConfig'
 import { Organism3DViewer } from './Organism3DViewer'
 
 interface FeaturedOrganismsProps {
@@ -104,7 +105,7 @@ export function FeaturedOrganisms({ stageId, variant = 'compact' }: FeaturedOrga
 
   useEffect(() => {
     allOrganisms.forEach((org) => {
-      if (org.modelUrl) useGLTF.preload(org.modelUrl)
+      if (org.modelUrl) useGLTF.preload(getStaticAssetUrl(org.modelUrl))
     })
   }, [stageId, allOrganisms])
 

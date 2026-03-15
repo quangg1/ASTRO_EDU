@@ -6,6 +6,7 @@ import dynamic from 'next/dynamic'
 import * as THREE from 'three'
 import { useGLTF, OrbitControls, Environment } from '@react-three/drei'
 import type { IconicOrganism } from '@/lib/iconicOrganisms'
+import { getStaticAssetUrl } from '@/lib/apiConfig'
 
 const Canvas = dynamic(() => import('@react-three/fiber').then((m) => m.Canvas), { ssr: false })
 
@@ -91,7 +92,7 @@ export function Organism3DViewer({ organism, onClose }: Organism3DViewerProps) {
                   </mesh>
                 }
               >
-                <SceneContent modelUrl={organism.modelUrl} />
+                <SceneContent modelUrl={getStaticAssetUrl(organism.modelUrl)} />
               </Suspense>
             </Canvas>
           )}

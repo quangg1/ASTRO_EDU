@@ -38,11 +38,13 @@ export function hasPaleoTexture(stageTime: number): boolean {
   return diff <= 30 // chỉ dùng nếu lệch tối đa 30 Ma
 }
 
+import { getStaticAssetUrl } from './apiConfig'
+
 /** Trả về path texture paleo CHỈ KHI file có trong web: /textures/paleo/paleo_XXX.jpg. Không trả về path cho thời kỳ chưa có file. */
 export function getPaleoTexturePath(stageTime: number): string | null {
   const age = getClosestPaleoAge(stageTime)
   if (age === undefined) return null
   const diff = Math.abs(stageTime - age)
   if (diff > 30) return null
-  return `/textures/paleo/paleo_${String(age).padStart(3, '0')}.jpg`
+  return getStaticAssetUrl(`/textures/paleo/paleo_${String(age).padStart(3, '0')}.jpg`)
 }

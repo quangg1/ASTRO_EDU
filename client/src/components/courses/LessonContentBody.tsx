@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import dynamic from 'next/dynamic'
 import type { Lesson, LessonSection, ResourceLink } from '@/lib/coursesApi'
+import { resolveMediaUrl } from '@/lib/apiConfig'
 import { getStageByTime } from '@/lib/earthHistoryData'
 import { FeaturedOrganisms } from '@/components/ui/FeaturedOrganisms'
 import { Loading } from '@/components/ui/Loading'
@@ -99,13 +100,13 @@ export function LessonContentBody({ lesson }: { lesson: Lesson }) {
                 {lesson.videoUrl.includes('youtube.com') || lesson.videoUrl.includes('youtu.be') ? (
                   <iframe
                     className="w-full h-full"
-                    src={lesson.videoUrl}
+                    src={resolveMediaUrl(lesson.videoUrl)}
                     title={lesson.title}
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                     allowFullScreen
                   />
                 ) : (
-                  <video className="w-full h-full" controls src={lesson.videoUrl}>
+                  <video className="w-full h-full" controls src={resolveMediaUrl(lesson.videoUrl)}>
                     Video not supported.
                   </video>
                 )}
@@ -119,9 +120,9 @@ export function LessonContentBody({ lesson }: { lesson: Lesson }) {
               {sec.content && <p className="text-sm text-gray-400">{sec.content}</p>}
               <div className="w-full aspect-video rounded-xl overflow-hidden bg-black/60 border border-white/10">
                 {sec.videoUrl && (sec.videoUrl.includes('youtube.com') || sec.videoUrl.includes('youtu.be')) ? (
-                  <iframe className="w-full h-full" src={sec.videoUrl} title={sec.title || 'Video'} allowFullScreen />
+                  <iframe className="w-full h-full" src={resolveMediaUrl(sec.videoUrl)} title={sec.title || 'Video'} allowFullScreen />
                 ) : (
-                  <video className="w-full h-full" controls src={sec.videoUrl}>Video not supported.</video>
+                  <video className="w-full h-full" controls src={resolveMediaUrl(sec.videoUrl)}>Video not supported.</video>
                 )}
               </div>
             </section>
@@ -216,7 +217,7 @@ export function LessonContentBody({ lesson }: { lesson: Lesson }) {
                   {sec.type === 'image' && sec.imageUrl && (
                     <figure className="my-3">
                       <img
-                        src={sec.imageUrl}
+                        src={resolveMediaUrl(sec.imageUrl)}
                         alt={sec.title || 'Hình minh họa'}
                         className="rounded-xl w-full max-h-[460px] object-cover border border-white/10"
                       />
@@ -225,7 +226,7 @@ export function LessonContentBody({ lesson }: { lesson: Lesson }) {
                   )}
                   {sec.type === '3d' && sec.modelUrl && (
                     <div className="my-3 h-[400px] rounded-xl border border-cyan-500/20 overflow-hidden bg-black/50">
-                      <ModelViewer url={sec.modelUrl} />
+                      <ModelViewer url={resolveMediaUrl(sec.modelUrl)} />
                     </div>
                   )}
                   {sec.type === 'richtext' && (sec.html || sec.content) && (
