@@ -39,3 +39,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Large media – lưu trên cloud, không commit (xem docs/MEDIA_CLOUD.md)
+/public/course-media/
+/public/models/
+/public/textures/
+/public/images/
