@@ -1,0 +1,362 @@
+// === Dán vào PHYLUM_INFO trong client/src/lib/fossilPhyla.ts (điền nameVi, description) ===
+
+  'Haptophyta': {
+    nameVi: 'TODO: dịch tên Việt',
+    description: 'TODO: mô tả ngắn.',
+    color: '#ff9ff3',
+  },
+  'Unknown': {
+    nameVi: 'TODO: dịch tên Việt',
+    description: 'TODO: mô tả ngắn.',
+    color: '#e17055',
+  },
+  'Ochrophyta': {
+    nameVi: 'TODO: dịch tên Việt',
+    description: 'TODO: mô tả ngắn.',
+    color: '#55efc4',
+  },
+  'Pinophyta': {
+    nameVi: 'TODO: dịch tên Việt',
+    description: 'TODO: mô tả ngắn.',
+    color: '#5c6bc0',
+  },
+  'Rhodophyta': {
+    nameVi: 'TODO: dịch tên Việt',
+    description: 'TODO: mô tả ngắn.',
+    color: '#4dd0e1',
+  },
+  'Dinozoa': {
+    nameVi: 'TODO: dịch tên Việt',
+    description: 'TODO: mô tả ngắn.',
+    color: '#ffcc80',
+  },
+  'Ginkgophyta': {
+    nameVi: 'TODO: dịch tên Việt',
+    description: 'TODO: mô tả ngắn.',
+    color: '#e57373',
+  },
+  'Equisetophyta': {
+    nameVi: 'TODO: dịch tên Việt',
+    description: 'TODO: mô tả ngắn.',
+    color: '#81c784',
+  },
+  'Chlorophyta': {
+    nameVi: 'TODO: dịch tên Việt',
+    description: 'TODO: mô tả ngắn.',
+    color: '#ba68c8',
+  },
+  'Peltaspermophyta': {
+    nameVi: 'TODO: dịch tên Việt',
+    description: 'TODO: mô tả ngắn.',
+    color: '#ff8a65',
+  },
+  'Annelida': {
+    nameVi: 'TODO: dịch tên Việt',
+    description: 'TODO: mô tả ngắn.',
+    color: '#4fc3f7',
+  },
+  'Cycadophyta': {
+    nameVi: 'TODO: dịch tên Việt',
+    description: 'TODO: mô tả ngắn.',
+    color: '#ff6b6b',
+  },
+  'Spermatophyta': {
+    nameVi: 'TODO: dịch tên Việt',
+    description: 'TODO: mô tả ngắn.',
+    color: '#4ecdc4',
+  },
+  'Tracheophyta': {
+    nameVi: 'TODO: dịch tên Việt',
+    description: 'TODO: mô tả ngắn.',
+    color: '#45b7d1',
+  },
+  'Magnoliophyta': {
+    nameVi: 'TODO: dịch tên Việt',
+    description: 'TODO: mô tả ngắn.',
+    color: '#f9ca24',
+  },
+  'Lophotrochozoa': {
+    nameVi: 'TODO: dịch tên Việt',
+    description: 'TODO: mô tả ngắn.',
+    color: '#a55eea',
+  },
+  'Hyolitha': {
+    nameVi: 'TODO: dịch tên Việt',
+    description: 'TODO: mô tả ngắn.',
+    color: '#ff9ff3',
+  },
+  'Lycopodiophyta': {
+    nameVi: 'TODO: dịch tên Việt',
+    description: 'TODO: mô tả ngắn.',
+    color: '#26de81',
+  },
+  'Problematica': {
+    nameVi: 'TODO: dịch tên Việt',
+    description: 'TODO: mô tả ngắn.',
+    color: '#00b894',
+  },
+  'Cyanobacteria': {
+    nameVi: 'TODO: dịch tên Việt',
+    description: 'TODO: mô tả ngắn.',
+    color: '#fd79a8',
+  },
+  'Bryophyta': {
+    nameVi: 'TODO: dịch tên Việt',
+    description: 'TODO: mô tả ngắn.',
+    color: '#e17055',
+  },
+  'Lycophyta': {
+    nameVi: 'TODO: dịch tên Việt',
+    description: 'TODO: mô tả ngắn.',
+    color: '#55efc4',
+  },
+  'Gnetophyta': {
+    nameVi: 'TODO: dịch tên Việt',
+    description: 'TODO: mô tả ngắn.',
+    color: '#00cec9',
+  },
+  'Gymnospermophyta': {
+    nameVi: 'TODO: dịch tên Việt',
+    description: 'TODO: mô tả ngắn.',
+    color: '#fab1a0',
+  },
+  'Sphenophyta': {
+    nameVi: 'TODO: dịch tên Việt',
+    description: 'TODO: mô tả ngắn.',
+    color: '#dfe6e9',
+  },
+  'Coniferophyta': {
+    nameVi: 'TODO: dịch tên Việt',
+    description: 'TODO: mô tả ngắn.',
+    color: '#e8a030',
+  },
+  'Gymnosperm': {
+    nameVi: 'TODO: dịch tên Việt',
+    description: 'TODO: mô tả ngắn.',
+    color: '#5c6bc0',
+  },
+  'Psilophytophyta': {
+    nameVi: 'TODO: dịch tên Việt',
+    description: 'TODO: mô tả ngắn.',
+    color: '#4dd0e1',
+  },
+  'Ciliophora': {
+    nameVi: 'TODO: dịch tên Việt',
+    description: 'TODO: mô tả ngắn.',
+    color: '#9e9e9e',
+  },
+  'Pteridospermophyta': {
+    nameVi: 'TODO: dịch tên Việt',
+    description: 'TODO: mô tả ngắn.',
+    color: '#ffcc80',
+  },
+  'Charophyta': {
+    nameVi: 'TODO: dịch tên Việt',
+    description: 'TODO: mô tả ngắn.',
+    color: '#e57373',
+  },
+  'Priapulida': {
+    nameVi: 'TODO: dịch tên Việt',
+    description: 'TODO: mô tả ngắn.',
+    color: '#81c784',
+  },
+  'Chaetognatha': {
+    nameVi: 'TODO: dịch tên Việt',
+    description: 'TODO: mô tả ngắn.',
+    color: '#ba68c8',
+  },
+  'Lycopodophyta': {
+    nameVi: 'TODO: dịch tên Việt',
+    description: 'TODO: mô tả ngắn.',
+    color: '#ff8a65',
+  },
+  'Filicophyta': {
+    nameVi: 'TODO: dịch tên Việt',
+    description: 'TODO: mô tả ngắn.',
+    color: '#4fc3f7',
+  },
+  'Sarcomastigophora': {
+    nameVi: 'TODO: dịch tên Việt',
+    description: 'TODO: mô tả ngắn.',
+    color: '#ff6b6b',
+  },
+  'Aneurophytophyta': {
+    nameVi: 'TODO: dịch tên Việt',
+    description: 'TODO: mô tả ngắn.',
+    color: '#4ecdc4',
+  },
+  'Onychophora': {
+    nameVi: 'TODO: dịch tên Việt',
+    description: 'TODO: mô tả ngắn.',
+    color: '#45b7d1',
+  },
+  'Cercozoa': {
+    nameVi: 'TODO: dịch tên Việt',
+    description: 'TODO: mô tả ngắn.',
+    color: '#f9ca24',
+  },
+  'Cycadeoideophyta': {
+    nameVi: 'TODO: dịch tên Việt',
+    description: 'TODO: mô tả ngắn.',
+    color: '#ff9ff3',
+  },
+  'Rhizopodea': {
+    nameVi: 'TODO: dịch tên Việt',
+    description: 'TODO: mô tả ngắn.',
+    color: '#26de81',
+  },
+  'Ascomycota': {
+    nameVi: 'TODO: dịch tên Việt',
+    description: 'TODO: mô tả ngắn.',
+    color: '#00b894',
+  },
+  'Vetulicolia': {
+    nameVi: 'TODO: dịch tên Việt',
+    description: 'TODO: mô tả ngắn.',
+    color: '#fd79a8',
+  },
+  'Zosterophyllophyta': {
+    nameVi: 'TODO: dịch tên Việt',
+    description: 'TODO: mô tả ngắn.',
+    color: '#e17055',
+  },
+  'Ctenophora': {
+    nameVi: 'TODO: dịch tên Việt',
+    description: 'TODO: mô tả ngắn.',
+    color: '#55efc4',
+  },
+  'Progymnospermophyta': {
+    nameVi: 'TODO: dịch tên Việt',
+    description: 'TODO: mô tả ngắn.',
+    color: '#00cec9',
+  },
+  'Anthocerophyta': {
+    nameVi: 'TODO: dịch tên Việt',
+    description: 'TODO: mô tả ngắn.',
+    color: '#fab1a0',
+  },
+  'Basidiomycota': {
+    nameVi: 'TODO: dịch tên Việt',
+    description: 'TODO: mô tả ngắn.',
+    color: '#dfe6e9',
+  },
+  'Thallophyta': {
+    nameVi: 'TODO: dịch tên Việt',
+    description: 'TODO: mô tả ngắn.',
+    color: '#e8a030',
+  },
+  'Phaeophyta': {
+    nameVi: 'TODO: dịch tên Việt',
+    description: 'TODO: mô tả ngắn.',
+    color: '#5c6bc0',
+  },
+  'Sipuncula': {
+    nameVi: 'TODO: dịch tên Việt',
+    description: 'TODO: mô tả ngắn.',
+    color: '#4dd0e1',
+  },
+  'Isoetophyta': {
+    nameVi: 'TODO: dịch tên Việt',
+    description: 'TODO: mô tả ngắn.',
+    color: '#9e9e9e',
+  },
+  'Entoprocta': {
+    nameVi: 'TODO: dịch tên Việt',
+    description: 'TODO: mô tả ngắn.',
+    color: '#ffcc80',
+  },
+  'Platyhelminthes': {
+    nameVi: 'TODO: dịch tên Việt',
+    description: 'TODO: mô tả ngắn.',
+    color: '#e57373',
+  },
+  'Nemertea': {
+    nameVi: 'TODO: dịch tên Việt',
+    description: 'TODO: mô tả ngắn.',
+    color: '#81c784',
+  },
+  'Tardigrada': {
+    nameVi: 'TODO: dịch tên Việt',
+    description: 'TODO: mô tả ngắn.',
+    color: '#ba68c8',
+  },
+  'Scalidophora': {
+    nameVi: 'TODO: dịch tên Việt',
+    description: 'TODO: mô tả ngắn.',
+    color: '#ff8a65',
+  },
+  'Prymnesiophyta': {
+    nameVi: 'TODO: dịch tên Việt',
+    description: 'TODO: mô tả ngắn.',
+    color: '#4fc3f7',
+  },
+  'Rotifera': {
+    nameVi: 'TODO: dịch tên Việt',
+    description: 'TODO: mô tả ngắn.',
+    color: '#ff6b6b',
+  },
+  'Acanthocephala': {
+    nameVi: 'TODO: dịch tên Việt',
+    description: 'TODO: mô tả ngắn.',
+    color: '#4ecdc4',
+  },
+  'Lobosa': {
+    nameVi: 'TODO: dịch tên Việt',
+    description: 'TODO: mô tả ngắn.',
+    color: '#45b7d1',
+  },
+  'Choanozoa': {
+    nameVi: 'TODO: dịch tên Việt',
+    description: 'TODO: mô tả ngắn.',
+    color: '#f9ca24',
+  },
+  'Pogonophora': {
+    nameVi: 'TODO: dịch tên Việt',
+    description: 'TODO: mô tả ngắn.',
+    color: '#a55eea',
+  },
+  'Uncertain': {
+    nameVi: 'TODO: dịch tên Việt',
+    description: 'TODO: mô tả ngắn.',
+    color: '#ff9ff3',
+  },
+  'Petalonamae': {
+    nameVi: 'TODO: dịch tên Việt',
+    description: 'TODO: mô tả ngắn.',
+    color: '#26de81',
+  },
+  'Nematomorpha': {
+    nameVi: 'TODO: dịch tên Việt',
+    description: 'TODO: mô tả ngắn.',
+    color: '#00b894',
+  },
+  'Acoela': {
+    nameVi: 'TODO: dịch tên Việt',
+    description: 'TODO: mô tả ngắn.',
+    color: '#fd79a8',
+  },
+  'Granuloreticulosa': {
+    nameVi: 'TODO: dịch tên Việt',
+    description: 'TODO: mô tả ngắn.',
+    color: '#e17055',
+  },
+  'Dinomastigota': {
+    nameVi: 'TODO: dịch tên Việt',
+    description: 'TODO: mô tả ngắn.',
+    color: '#55efc4',
+  },
+  'Placozoa': {
+    nameVi: 'TODO: dịch tên Việt',
+    description: 'TODO: mô tả ngắn.',
+    color: '#00cec9',
+  },
+  'Cladoxylophyta': {
+    nameVi: 'TODO: dịch tên Việt',
+    description: 'TODO: mô tả ngắn.',
+    color: '#fab1a0',
+  },
+  'Oomycota': {
+    nameVi: 'TODO: dịch tên Việt',
+    description: 'TODO: mô tả ngắn.',
+    color: '#dfe6e9',
+  },

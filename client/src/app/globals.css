@@ -1,0 +1,119 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #000000;
+  --foreground: #ffffff;
+}
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(74, 144, 217, 0.5);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(74, 144, 217, 0.8);
+}
+
+/* Canvas styles (below AppHeader ~ 3.5rem) */
+.canvas-container {
+  position: fixed;
+  top: 3.5rem;
+  left: 0;
+  width: 100vw;
+  height: calc(100vh - 3.5rem);
+  z-index: 1;
+}
+
+/* UI overlay */
+.ui-overlay {
+  position: fixed;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.ui-overlay > * {
+  pointer-events: auto;
+}
+
+/* Glass effect */
+.glass {
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(74, 144, 217, 0.3);
+}
+
+/* Animation classes */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideInLeft {
+  from { transform: translateX(-100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes slideInRight {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
+
+.animate-slide-left {
+  animation: slideInLeft 0.3s ease-out;
+}
+
+.animate-slide-right {
+  animation: slideInRight 0.3s ease-out;
+}
+
+@keyframes slideUpFade {
+  from { transform: translateY(12px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.animate-slide-up-fade {
+  animation: slideUpFade 0.25s ease-out;
+}
+
+/* TipTap rich text editor */
+.tiptap .ProseMirror {
+  min-height: 120px;
+}
+.tiptap .ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: rgba(255, 255, 255, 0.2);
+  pointer-events: none;
+  height: 0;
+}
+.tiptap .ProseMirror h1 { font-size: 1.5em; font-weight: 700; margin: 0.5em 0 0.25em; }
+.tiptap .ProseMirror h2 { font-size: 1.25em; font-weight: 600; margin: 0.5em 0 0.25em; }
+.tiptap .ProseMirror h3 { font-size: 1.1em; font-weight: 600; margin: 0.4em 0 0.2em; }
+.tiptap .ProseMirror ul { list-style: disc; padding-left: 1.5em; }
+.tiptap .ProseMirror ol { list-style: decimal; padding-left: 1.5em; }
+.tiptap .ProseMirror blockquote { border-left: 3px solid rgba(34, 211, 238, 0.4); padding-left: 1em; margin: 0.5em 0; color: rgba(255,255,255,0.7); }
+.tiptap .ProseMirror code { background: rgba(255,255,255,0.1); padding: 0.1em 0.3em; border-radius: 4px; font-size: 0.9em; }
+.tiptap .ProseMirror a { color: #22d3ee; text-decoration: underline; }
+.tiptap .ProseMirror img { max-width: 100%; border-radius: 8px; margin: 0.5em 0; }

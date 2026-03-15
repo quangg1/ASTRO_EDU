@@ -1,0 +1,604 @@
+[
+  {
+    "phylum": "Mollusca",
+    "count": 499564,
+    "color": "#ff6b6b",
+    "nameVi": "(đã có)",
+    "description": "(đã có)"
+  },
+  {
+    "phylum": "Chordata",
+    "count": 307588,
+    "color": "#4ecdc4",
+    "nameVi": "(đã có)",
+    "description": "(đã có)"
+  },
+  {
+    "phylum": "Foraminifera",
+    "count": 195958,
+    "color": "#45b7d1",
+    "nameVi": "(đã có)",
+    "description": "(đã có)"
+  },
+  {
+    "phylum": "Brachiopoda",
+    "count": 186979,
+    "color": "#f9ca24",
+    "nameVi": "(đã có)",
+    "description": "(đã có)"
+  },
+  {
+    "phylum": "Arthropoda",
+    "count": 164672,
+    "color": "#a55eea",
+    "nameVi": "(đã có)",
+    "description": "(đã có)"
+  },
+  {
+    "phylum": "Haptophyta",
+    "count": 103165,
+    "color": "#ff9ff3",
+    "nameVi": "TODO: dịch tên Việt cho \"Haptophyta\"",
+    "description": "TODO: mô tả ngắn cho nhóm này."
+  },
+  {
+    "phylum": "Radiolaria",
+    "count": 75045,
+    "color": "#26de81",
+    "nameVi": "(đã có)",
+    "description": "(đã có)"
+  },
+  {
+    "phylum": "Cnidaria",
+    "count": 70359,
+    "color": "#00b894",
+    "nameVi": "(đã có)",
+    "description": "(đã có)"
+  },
+  {
+    "phylum": "Angiospermae",
+    "count": 44000,
+    "color": "#fd79a8",
+    "nameVi": "(đã có)",
+    "description": "(đã có)"
+  },
+  {
+    "phylum": "Unknown",
+    "count": 35234,
+    "color": "#e17055",
+    "nameVi": "TODO: dịch tên Việt cho \"Unknown\"",
+    "description": "TODO: mô tả ngắn cho nhóm này."
+  },
+  {
+    "phylum": "Ochrophyta",
+    "count": 34466,
+    "color": "#55efc4",
+    "nameVi": "TODO: dịch tên Việt cho \"Ochrophyta\"",
+    "description": "TODO: mô tả ngắn cho nhóm này."
+  },
+  {
+    "phylum": "Echinodermata",
+    "count": 34257,
+    "color": "#00cec9",
+    "nameVi": "(đã có)",
+    "description": "(đã có)"
+  },
+  {
+    "phylum": "Bryozoa",
+    "count": 30819,
+    "color": "#fab1a0",
+    "nameVi": "(đã có)",
+    "description": "(đã có)"
+  },
+  {
+    "phylum": "Pteridophyta",
+    "count": 27517,
+    "color": "#dfe6e9",
+    "nameVi": "(đã có)",
+    "description": "(đã có)"
+  },
+  {
+    "phylum": "Porifera",
+    "count": 24047,
+    "color": "#e8a030",
+    "nameVi": "(đã có)",
+    "description": "(đã có)"
+  },
+  {
+    "phylum": "Pinophyta",
+    "count": 15124,
+    "color": "#5c6bc0",
+    "nameVi": "TODO: dịch tên Việt cho \"Pinophyta\"",
+    "description": "TODO: mô tả ngắn cho nhóm này."
+  },
+  {
+    "phylum": "Rhodophyta",
+    "count": 8108,
+    "color": "#4dd0e1",
+    "nameVi": "TODO: dịch tên Việt cho \"Rhodophyta\"",
+    "description": "TODO: mô tả ngắn cho nhóm này."
+  },
+  {
+    "phylum": "Hemichordata",
+    "count": 8007,
+    "color": "#9e9e9e",
+    "nameVi": "(đã có)",
+    "description": "(đã có)"
+  },
+  {
+    "phylum": "Dinozoa",
+    "count": 6711,
+    "color": "#ffcc80",
+    "nameVi": "TODO: dịch tên Việt cho \"Dinozoa\"",
+    "description": "TODO: mô tả ngắn cho nhóm này."
+  },
+  {
+    "phylum": "Ginkgophyta",
+    "count": 5568,
+    "color": "#e57373",
+    "nameVi": "TODO: dịch tên Việt cho \"Ginkgophyta\"",
+    "description": "TODO: mô tả ngắn cho nhóm này."
+  },
+  {
+    "phylum": "Equisetophyta",
+    "count": 4774,
+    "color": "#81c784",
+    "nameVi": "TODO: dịch tên Việt cho \"Equisetophyta\"",
+    "description": "TODO: mô tả ngắn cho nhóm này."
+  },
+  {
+    "phylum": "Chlorophyta",
+    "count": 4476,
+    "color": "#ba68c8",
+    "nameVi": "TODO: dịch tên Việt cho \"Chlorophyta\"",
+    "description": "TODO: mô tả ngắn cho nhóm này."
+  },
+  {
+    "phylum": "Peltaspermophyta",
+    "count": 4063,
+    "color": "#ff8a65",
+    "nameVi": "TODO: dịch tên Việt cho \"Peltaspermophyta\"",
+    "description": "TODO: mô tả ngắn cho nhóm này."
+  },
+  {
+    "phylum": "Annelida",
+    "count": 3970,
+    "color": "#4fc3f7",
+    "nameVi": "TODO: dịch tên Việt cho \"Annelida\"",
+    "description": "TODO: mô tả ngắn cho nhóm này."
+  },
+  {
+    "phylum": "Cycadophyta",
+    "count": 3786,
+    "color": "#ff6b6b",
+    "nameVi": "TODO: dịch tên Việt cho \"Cycadophyta\"",
+    "description": "TODO: mô tả ngắn cho nhóm này."
+  },
+  {
+    "phylum": "Spermatophyta",
+    "count": 2979,
+    "color": "#4ecdc4",
+    "nameVi": "TODO: dịch tên Việt cho \"Spermatophyta\"",
+    "description": "TODO: mô tả ngắn cho nhóm này."
+  },
+  {
+    "phylum": "Tracheophyta",
+    "count": 2575,
+    "color": "#45b7d1",
+    "nameVi": "TODO: dịch tên Việt cho \"Tracheophyta\"",
+    "description": "TODO: mô tả ngắn cho nhóm này."
+  },
+  {
+    "phylum": "Magnoliophyta",
+    "count": 2503,
+    "color": "#f9ca24",
+    "nameVi": "TODO: dịch tên Việt cho \"Magnoliophyta\"",
+    "description": "TODO: mô tả ngắn cho nhóm này."
+  },
+  {
+    "phylum": "Lophotrochozoa",
+    "count": 2389,
+    "color": "#a55eea",
+    "nameVi": "TODO: dịch tên Việt cho \"Lophotrochozoa\"",
+    "description": "TODO: mô tả ngắn cho nhóm này."
+  },
+  {
+    "phylum": "Hyolitha",
+    "count": 2377,
+    "color": "#ff9ff3",
+    "nameVi": "TODO: dịch tên Việt cho \"Hyolitha\"",
+    "description": "TODO: mô tả ngắn cho nhóm này."
+  },
+  {
+    "phylum": "Lycopodiophyta",
+    "count": 2243,
+    "color": "#26de81",
+    "nameVi": "TODO: dịch tên Việt cho \"Lycopodiophyta\"",
+    "description": "TODO: mô tả ngắn cho nhóm này."
+  },
+  {
+    "phylum": "Problematica",
+    "count": 1919,
+    "color": "#00b894",
+    "nameVi": "TODO: dịch tên Việt cho \"Problematica\"",
+    "description": "TODO: mô tả ngắn cho nhóm này."
+  },
+  {
+    "phylum": "Cyanobacteria",
+    "count": 1860,
+    "color": "#fd79a8",
+    "nameVi": "TODO: dịch tên Việt cho \"Cyanobacteria\"",
+    "description": "TODO: mô tả ngắn cho nhóm này."
+  },
+  {
+    "phylum": "Bryophyta",
+    "count": 1595,
+    "color": "#e17055",
+    "nameVi": "TODO: dịch tên Việt cho \"Bryophyta\"",
+    "description": "TODO: mô tả ngắn cho nhóm này."
+  },
+  {
+    "phylum": "Lycophyta",
+    "count": 1062,
+    "color": "#55efc4",
+    "nameVi": "TODO: dịch tên Việt cho \"Lycophyta\"",
+    "description": "TODO: mô tả ngắn cho nhóm này."
+  },
+  {
+    "phylum": "Gnetophyta",
+    "count": 1034,
+    "color": "#00cec9",
+    "nameVi": "TODO: dịch tên Việt cho \"Gnetophyta\"",
+    "description": "TODO: mô tả ngắn cho nhóm này."
+  },
+  {
+    "phylum": "Gymnospermophyta",
+    "count": 1010,
+    "color": "#fab1a0",
+    "nameVi": "TODO: dịch tên Việt cho \"Gymnospermophyta\"",
+    "description": "TODO: mô tả ngắn cho nhóm này."
+  },
+  {
+    "phylum": "Sphenophyta",
+    "count": 991,
+    "color": "#dfe6e9",
+    "nameVi": "TODO: dịch tên Việt cho \"Sphenophyta\"",
+    "description": "TODO: mô tả ngắn cho nhóm này."
+  },
+  {
+    "phylum": "Coniferophyta",
+    "count": 963,
+    "color": "#e8a030",
+    "nameVi": "TODO: dịch tên Việt cho \"Coniferophyta\"",
+    "description": "TODO: mô tả ngắn cho nhóm này."
+  },
+  {
+    "phylum": "Gymnosperm",
+    "count": 917,
+    "color": "#5c6bc0",
+    "nameVi": "TODO: dịch tên Việt cho \"Gymnosperm\"",
+    "description": "TODO: mô tả ngắn cho nhóm này."
+  },
+  {
+    "phylum": "Psilophytophyta",
+    "count": 577,
+    "color": "#4dd0e1",
+    "nameVi": "TODO: dịch tên Việt cho \"Psilophytophyta\"",
+    "description": "TODO: mô tả ngắn cho nhóm này."
+  },
+  {
+    "phylum": "Ciliophora",
+    "count": 564,
+    "color": "#9e9e9e",
+    "nameVi": "TODO: dịch tên Việt cho \"Ciliophora\"",
+    "description": "TODO: mô tả ngắn cho nhóm này."
+  },
+  {
+    "phylum": "Pteridospermophyta",
+    "count": 486,
+    "color": "#ffcc80",
+    "nameVi": "TODO: dịch tên Việt cho \"Pteridospermophyta\"",
+    "description": "TODO: mô tả ngắn cho nhóm này."
+  },
+  {
+    "phylum": "Charophyta",
+    "count": 387,
+    "color": "#e57373",
+    "nameVi": "TODO: dịch tên Việt cho \"Charophyta\"",
+    "description": "TODO: mô tả ngắn cho nhóm này."
+  },
+  {
+    "phylum": "Priapulida",
+    "count": 372,
+    "color": "#81c784",
+    "nameVi": "TODO: dịch tên Việt cho \"Priapulida\"",
+    "description": "TODO: mô tả ngắn cho nhóm này."
+  },
+  {
+    "phylum": "Chaetognatha",
+    "count": 295,
+    "color": "#ba68c8",
+    "nameVi": "TODO: dịch tên Việt cho \"Chaetognatha\"",
+    "description": "TODO: mô tả ngắn cho nhóm này."
+  },
+  {
+    "phylum": "Lycopodophyta",
+    "count": 285,
+    "color": "#ff8a65",
+    "nameVi": "TODO: dịch tên Việt cho \"Lycopodophyta\"",
+    "description": "TODO: mô tả ngắn cho nhóm này."
+  },
+  {
+    "phylum": "Filicophyta",
+    "count": 221,
+    "color": "#4fc3f7",
+    "nameVi": "TODO: dịch tên Việt cho \"Filicophyta\"",
+    "description": "TODO: mô tả ngắn cho nhóm này."
+  },
+  {
+    "phylum": "Sarcomastigophora",
+    "count": 212,
+    "color": "#ff6b6b",
+    "nameVi": "TODO: dịch tên Việt cho \"Sarcomastigophora\"",
+    "description": "TODO: mô tả ngắn cho nhóm này."
+  },
+  {
+    "phylum": "Aneurophytophyta",
+    "count": 176,
+    "color": "#4ecdc4",
+    "nameVi": "TODO: dịch tên Việt cho \"Aneurophytophyta\"",
+    "description": "TODO: mô tả ngắn cho nhóm này."
+  },
+  {
+    "phylum": "Onychophora",
+    "count": 135,
+    "color": "#45b7d1",
+    "nameVi": "TODO: dịch tên Việt cho \"Onychophora\"",
+    "description": "TODO: mô tả ngắn cho nhóm này."
+  },
+  {
+    "phylum": "Cercozoa",
+    "count": 123,
+    "color": "#f9ca24",
+    "nameVi": "TODO: dịch tên Việt cho \"Cercozoa\"",
+    "description": "TODO: mô tả ngắn cho nhóm này."
+  },
+  {
+    "phylum": "Nematoda",
+    "count": 123,
+    "color": "#a55eea",
+    "nameVi": "(đã có)",
+    "description": "(đã có)"
+  },
+  {
+    "phylum": "Cycadeoideophyta",
+    "count": 98,
+    "color": "#ff9ff3",
+    "nameVi": "TODO: dịch tên Việt cho \"Cycadeoideophyta\"",
+    "description": "TODO: mô tả ngắn cho nhóm này."
+  },
+  {
+    "phylum": "Rhizopodea",
+    "count": 81,
+    "color": "#26de81",
+    "nameVi": "TODO: dịch tên Việt cho \"Rhizopodea\"",
+    "description": "TODO: mô tả ngắn cho nhóm này."
+  },
+  {
+    "phylum": "Ascomycota",
+    "count": 70,
+    "color": "#00b894",
+    "nameVi": "TODO: dịch tên Việt cho \"Ascomycota\"",
+    "description": "TODO: mô tả ngắn cho nhóm này."
+  },
+  {
+    "phylum": "Vetulicolia",
+    "count": 47,
+    "color": "#fd79a8",
+    "nameVi": "TODO: dịch tên Việt cho \"Vetulicolia\"",
+    "description": "TODO: mô tả ngắn cho nhóm này."
+  },
+  {
+    "phylum": "Zosterophyllophyta",
+    "count": 45,
+    "color": "#e17055",
+    "nameVi": "TODO: dịch tên Việt cho \"Zosterophyllophyta\"",
+    "description": "TODO: mô tả ngắn cho nhóm này."
+  },
+  {
+    "phylum": "Ctenophora",
+    "count": 39,
+    "color": "#55efc4",
+    "nameVi": "TODO: dịch tên Việt cho \"Ctenophora\"",
+    "description": "TODO: mô tả ngắn cho nhóm này."
+  },
+  {
+    "phylum": "Progymnospermophyta",
+    "count": 34,
+    "color": "#00cec9",
+    "nameVi": "TODO: dịch tên Việt cho \"Progymnospermophyta\"",
+    "description": "TODO: mô tả ngắn cho nhóm này."
+  },
+  {
+    "phylum": "Anthocerophyta",
+    "count": 32,
+    "color": "#fab1a0",
+    "nameVi": "TODO: dịch tên Việt cho \"Anthocerophyta\"",
+    "description": "TODO: mô tả ngắn cho nhóm này."
+  },
+  {
+    "phylum": "Basidiomycota",
+    "count": 26,
+    "color": "#dfe6e9",
+    "nameVi": "TODO: dịch tên Việt cho \"Basidiomycota\"",
+    "description": "TODO: mô tả ngắn cho nhóm này."
+  },
+  {
+    "phylum": "Thallophyta",
+    "count": 21,
+    "color": "#e8a030",
+    "nameVi": "TODO: dịch tên Việt cho \"Thallophyta\"",
+    "description": "TODO: mô tả ngắn cho nhóm này."
+  },
+  {
+    "phylum": "Phaeophyta",
+    "count": 16,
+    "color": "#5c6bc0",
+    "nameVi": "TODO: dịch tên Việt cho \"Phaeophyta\"",
+    "description": "TODO: mô tả ngắn cho nhóm này."
+  },
+  {
+    "phylum": "Sipuncula",
+    "count": 8,
+    "color": "#4dd0e1",
+    "nameVi": "TODO: dịch tên Việt cho \"Sipuncula\"",
+    "description": "TODO: mô tả ngắn cho nhóm này."
+  },
+  {
+    "phylum": "Isoetophyta",
+    "count": 8,
+    "color": "#9e9e9e",
+    "nameVi": "TODO: dịch tên Việt cho \"Isoetophyta\"",
+    "description": "TODO: mô tả ngắn cho nhóm này."
+  },
+  {
+    "phylum": "Entoprocta",
+    "count": 7,
+    "color": "#ffcc80",
+    "nameVi": "TODO: dịch tên Việt cho \"Entoprocta\"",
+    "description": "TODO: mô tả ngắn cho nhóm này."
+  },
+  {
+    "phylum": "Platyhelminthes",
+    "count": 6,
+    "color": "#e57373",
+    "nameVi": "TODO: dịch tên Việt cho \"Platyhelminthes\"",
+    "description": "TODO: mô tả ngắn cho nhóm này."
+  },
+  {
+    "phylum": "Nemertea",
+    "count": 6,
+    "color": "#81c784",
+    "nameVi": "TODO: dịch tên Việt cho \"Nemertea\"",
+    "description": "TODO: mô tả ngắn cho nhóm này."
+  },
+  {
+    "phylum": "Tardigrada",
+    "count": 6,
+    "color": "#ba68c8",
+    "nameVi": "TODO: dịch tên Việt cho \"Tardigrada\"",
+    "description": "TODO: mô tả ngắn cho nhóm này."
+  },
+  {
+    "phylum": "Scalidophora",
+    "count": 5,
+    "color": "#ff8a65",
+    "nameVi": "TODO: dịch tên Việt cho \"Scalidophora\"",
+    "description": "TODO: mô tả ngắn cho nhóm này."
+  },
+  {
+    "phylum": "Prymnesiophyta",
+    "count": 4,
+    "color": "#4fc3f7",
+    "nameVi": "TODO: dịch tên Việt cho \"Prymnesiophyta\"",
+    "description": "TODO: mô tả ngắn cho nhóm này."
+  },
+  {
+    "phylum": "Rotifera",
+    "count": 3,
+    "color": "#ff6b6b",
+    "nameVi": "TODO: dịch tên Việt cho \"Rotifera\"",
+    "description": "TODO: mô tả ngắn cho nhóm này."
+  },
+  {
+    "phylum": "Acanthocephala",
+    "count": 3,
+    "color": "#4ecdc4",
+    "nameVi": "TODO: dịch tên Việt cho \"Acanthocephala\"",
+    "description": "TODO: mô tả ngắn cho nhóm này."
+  },
+  {
+    "phylum": "Lobosa",
+    "count": 3,
+    "color": "#45b7d1",
+    "nameVi": "TODO: dịch tên Việt cho \"Lobosa\"",
+    "description": "TODO: mô tả ngắn cho nhóm này."
+  },
+  {
+    "phylum": "Choanozoa",
+    "count": 3,
+    "color": "#f9ca24",
+    "nameVi": "TODO: dịch tên Việt cho \"Choanozoa\"",
+    "description": "TODO: mô tả ngắn cho nhóm này."
+  },
+  {
+    "phylum": "Pogonophora",
+    "count": 3,
+    "color": "#a55eea",
+    "nameVi": "TODO: dịch tên Việt cho \"Pogonophora\"",
+    "description": "TODO: mô tả ngắn cho nhóm này."
+  },
+  {
+    "phylum": "Uncertain",
+    "count": 2,
+    "color": "#ff9ff3",
+    "nameVi": "TODO: dịch tên Việt cho \"Uncertain\"",
+    "description": "TODO: mô tả ngắn cho nhóm này."
+  },
+  {
+    "phylum": "Petalonamae",
+    "count": 2,
+    "color": "#26de81",
+    "nameVi": "TODO: dịch tên Việt cho \"Petalonamae\"",
+    "description": "TODO: mô tả ngắn cho nhóm này."
+  },
+  {
+    "phylum": "Nematomorpha",
+    "count": 2,
+    "color": "#00b894",
+    "nameVi": "TODO: dịch tên Việt cho \"Nematomorpha\"",
+    "description": "TODO: mô tả ngắn cho nhóm này."
+  },
+  {
+    "phylum": "Acoela",
+    "count": 2,
+    "color": "#fd79a8",
+    "nameVi": "TODO: dịch tên Việt cho \"Acoela\"",
+    "description": "TODO: mô tả ngắn cho nhóm này."
+  },
+  {
+    "phylum": "Granuloreticulosa",
+    "count": 2,
+    "color": "#e17055",
+    "nameVi": "TODO: dịch tên Việt cho \"Granuloreticulosa\"",
+    "description": "TODO: mô tả ngắn cho nhóm này."
+  },
+  {
+    "phylum": "Dinomastigota",
+    "count": 1,
+    "color": "#55efc4",
+    "nameVi": "TODO: dịch tên Việt cho \"Dinomastigota\"",
+    "description": "TODO: mô tả ngắn cho nhóm này."
+  },
+  {
+    "phylum": "Placozoa",
+    "count": 1,
+    "color": "#00cec9",
+    "nameVi": "TODO: dịch tên Việt cho \"Placozoa\"",
+    "description": "TODO: mô tả ngắn cho nhóm này."
+  },
+  {
+    "phylum": "Cladoxylophyta",
+    "count": 1,
+    "color": "#fab1a0",
+    "nameVi": "TODO: dịch tên Việt cho \"Cladoxylophyta\"",
+    "description": "TODO: mô tả ngắn cho nhóm này."
+  },
+  {
+    "phylum": "Oomycota",
+    "count": 1,
+    "color": "#dfe6e9",
+    "nameVi": "TODO: dịch tên Việt cho \"Oomycota\"",
+    "description": "TODO: mô tả ngắn cho nhóm này."
+  }
+]

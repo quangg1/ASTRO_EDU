@@ -1,0 +1,89 @@
+# Dán vào fossilPhyla.ts hoặc điền nameVi, description rồi dùng script sinh lại.
+# Cột: phylum | count | nameVi (TODO) | description (TODO)
+
+Mollusca	499564	(đã có)	(đã có)
+Chordata	307588	(đã có)	(đã có)
+Foraminifera	195958	(đã có)	(đã có)
+Brachiopoda	186979	(đã có)	(đã có)
+Arthropoda	164672	(đã có)	(đã có)
+Haptophyta	103165	TODO: dịch tên Việt cho "Haptophyta"	TODO: mô tả ngắn cho nhóm này.
+Radiolaria	75045	(đã có)	(đã có)
+Cnidaria	70359	(đã có)	(đã có)
+Angiospermae	44000	(đã có)	(đã có)
+Unknown	35234	TODO: dịch tên Việt cho "Unknown"	TODO: mô tả ngắn cho nhóm này.
+Ochrophyta	34466	TODO: dịch tên Việt cho "Ochrophyta"	TODO: mô tả ngắn cho nhóm này.
+Echinodermata	34257	(đã có)	(đã có)
+Bryozoa	30819	(đã có)	(đã có)
+Pteridophyta	27517	(đã có)	(đã có)
+Porifera	24047	(đã có)	(đã có)
+Pinophyta	15124	TODO: dịch tên Việt cho "Pinophyta"	TODO: mô tả ngắn cho nhóm này.
+Rhodophyta	8108	TODO: dịch tên Việt cho "Rhodophyta"	TODO: mô tả ngắn cho nhóm này.
+Hemichordata	8007	(đã có)	(đã có)
+Dinozoa	6711	TODO: dịch tên Việt cho "Dinozoa"	TODO: mô tả ngắn cho nhóm này.
+Ginkgophyta	5568	TODO: dịch tên Việt cho "Ginkgophyta"	TODO: mô tả ngắn cho nhóm này.
+Equisetophyta	4774	TODO: dịch tên Việt cho "Equisetophyta"	TODO: mô tả ngắn cho nhóm này.
+Chlorophyta	4476	TODO: dịch tên Việt cho "Chlorophyta"	TODO: mô tả ngắn cho nhóm này.
+Peltaspermophyta	4063	TODO: dịch tên Việt cho "Peltaspermophyta"	TODO: mô tả ngắn cho nhóm này.
+Annelida	3970	TODO: dịch tên Việt cho "Annelida"	TODO: mô tả ngắn cho nhóm này.
+Cycadophyta	3786	TODO: dịch tên Việt cho "Cycadophyta"	TODO: mô tả ngắn cho nhóm này.
+Spermatophyta	2979	TODO: dịch tên Việt cho "Spermatophyta"	TODO: mô tả ngắn cho nhóm này.
+Tracheophyta	2575	TODO: dịch tên Việt cho "Tracheophyta"	TODO: mô tả ngắn cho nhóm này.
+Magnoliophyta	2503	TODO: dịch tên Việt cho "Magnoliophyta"	TODO: mô tả ngắn cho nhóm này.
+Lophotrochozoa	2389	TODO: dịch tên Việt cho "Lophotrochozoa"	TODO: mô tả ngắn cho nhóm này.
+Hyolitha	2377	TODO: dịch tên Việt cho "Hyolitha"	TODO: mô tả ngắn cho nhóm này.
+Lycopodiophyta	2243	TODO: dịch tên Việt cho "Lycopodiophyta"	TODO: mô tả ngắn cho nhóm này.
+Problematica	1919	TODO: dịch tên Việt cho "Problematica"	TODO: mô tả ngắn cho nhóm này.
+Cyanobacteria	1860	TODO: dịch tên Việt cho "Cyanobacteria"	TODO: mô tả ngắn cho nhóm này.
+Bryophyta	1595	TODO: dịch tên Việt cho "Bryophyta"	TODO: mô tả ngắn cho nhóm này.
+Lycophyta	1062	TODO: dịch tên Việt cho "Lycophyta"	TODO: mô tả ngắn cho nhóm này.
+Gnetophyta	1034	TODO: dịch tên Việt cho "Gnetophyta"	TODO: mô tả ngắn cho nhóm này.
+Gymnospermophyta	1010	TODO: dịch tên Việt cho "Gymnospermophyta"	TODO: mô tả ngắn cho nhóm này.
+Sphenophyta	991	TODO: dịch tên Việt cho "Sphenophyta"	TODO: mô tả ngắn cho nhóm này.
+Coniferophyta	963	TODO: dịch tên Việt cho "Coniferophyta"	TODO: mô tả ngắn cho nhóm này.
+Gymnosperm	917	TODO: dịch tên Việt cho "Gymnosperm"	TODO: mô tả ngắn cho nhóm này.
+Psilophytophyta	577	TODO: dịch tên Việt cho "Psilophytophyta"	TODO: mô tả ngắn cho nhóm này.
+Ciliophora	564	TODO: dịch tên Việt cho "Ciliophora"	TODO: mô tả ngắn cho nhóm này.
+Pteridospermophyta	486	TODO: dịch tên Việt cho "Pteridospermophyta"	TODO: mô tả ngắn cho nhóm này.
+Charophyta	387	TODO: dịch tên Việt cho "Charophyta"	TODO: mô tả ngắn cho nhóm này.
+Priapulida	372	TODO: dịch tên Việt cho "Priapulida"	TODO: mô tả ngắn cho nhóm này.
+Chaetognatha	295	TODO: dịch tên Việt cho "Chaetognatha"	TODO: mô tả ngắn cho nhóm này.
+Lycopodophyta	285	TODO: dịch tên Việt cho "Lycopodophyta"	TODO: mô tả ngắn cho nhóm này.
+Filicophyta	221	TODO: dịch tên Việt cho "Filicophyta"	TODO: mô tả ngắn cho nhóm này.
+Sarcomastigophora	212	TODO: dịch tên Việt cho "Sarcomastigophora"	TODO: mô tả ngắn cho nhóm này.
+Aneurophytophyta	176	TODO: dịch tên Việt cho "Aneurophytophyta"	TODO: mô tả ngắn cho nhóm này.
+Onychophora	135	TODO: dịch tên Việt cho "Onychophora"	TODO: mô tả ngắn cho nhóm này.
+Cercozoa	123	TODO: dịch tên Việt cho "Cercozoa"	TODO: mô tả ngắn cho nhóm này.
+Nematoda	123	(đã có)	(đã có)
+Cycadeoideophyta	98	TODO: dịch tên Việt cho "Cycadeoideophyta"	TODO: mô tả ngắn cho nhóm này.
+Rhizopodea	81	TODO: dịch tên Việt cho "Rhizopodea"	TODO: mô tả ngắn cho nhóm này.
+Ascomycota	70	TODO: dịch tên Việt cho "Ascomycota"	TODO: mô tả ngắn cho nhóm này.
+Vetulicolia	47	TODO: dịch tên Việt cho "Vetulicolia"	TODO: mô tả ngắn cho nhóm này.
+Zosterophyllophyta	45	TODO: dịch tên Việt cho "Zosterophyllophyta"	TODO: mô tả ngắn cho nhóm này.
+Ctenophora	39	TODO: dịch tên Việt cho "Ctenophora"	TODO: mô tả ngắn cho nhóm này.
+Progymnospermophyta	34	TODO: dịch tên Việt cho "Progymnospermophyta"	TODO: mô tả ngắn cho nhóm này.
+Anthocerophyta	32	TODO: dịch tên Việt cho "Anthocerophyta"	TODO: mô tả ngắn cho nhóm này.
+Basidiomycota	26	TODO: dịch tên Việt cho "Basidiomycota"	TODO: mô tả ngắn cho nhóm này.
+Thallophyta	21	TODO: dịch tên Việt cho "Thallophyta"	TODO: mô tả ngắn cho nhóm này.
+Phaeophyta	16	TODO: dịch tên Việt cho "Phaeophyta"	TODO: mô tả ngắn cho nhóm này.
+Sipuncula	8	TODO: dịch tên Việt cho "Sipuncula"	TODO: mô tả ngắn cho nhóm này.
+Isoetophyta	8	TODO: dịch tên Việt cho "Isoetophyta"	TODO: mô tả ngắn cho nhóm này.
+Entoprocta	7	TODO: dịch tên Việt cho "Entoprocta"	TODO: mô tả ngắn cho nhóm này.
+Platyhelminthes	6	TODO: dịch tên Việt cho "Platyhelminthes"	TODO: mô tả ngắn cho nhóm này.
+Nemertea	6	TODO: dịch tên Việt cho "Nemertea"	TODO: mô tả ngắn cho nhóm này.
+Tardigrada	6	TODO: dịch tên Việt cho "Tardigrada"	TODO: mô tả ngắn cho nhóm này.
+Scalidophora	5	TODO: dịch tên Việt cho "Scalidophora"	TODO: mô tả ngắn cho nhóm này.
+Prymnesiophyta	4	TODO: dịch tên Việt cho "Prymnesiophyta"	TODO: mô tả ngắn cho nhóm này.
+Rotifera	3	TODO: dịch tên Việt cho "Rotifera"	TODO: mô tả ngắn cho nhóm này.
+Acanthocephala	3	TODO: dịch tên Việt cho "Acanthocephala"	TODO: mô tả ngắn cho nhóm này.
+Lobosa	3	TODO: dịch tên Việt cho "Lobosa"	TODO: mô tả ngắn cho nhóm này.
+Choanozoa	3	TODO: dịch tên Việt cho "Choanozoa"	TODO: mô tả ngắn cho nhóm này.
+Pogonophora	3	TODO: dịch tên Việt cho "Pogonophora"	TODO: mô tả ngắn cho nhóm này.
+Uncertain	2	TODO: dịch tên Việt cho "Uncertain"	TODO: mô tả ngắn cho nhóm này.
+Petalonamae	2	TODO: dịch tên Việt cho "Petalonamae"	TODO: mô tả ngắn cho nhóm này.
+Nematomorpha	2	TODO: dịch tên Việt cho "Nematomorpha"	TODO: mô tả ngắn cho nhóm này.
+Acoela	2	TODO: dịch tên Việt cho "Acoela"	TODO: mô tả ngắn cho nhóm này.
+Granuloreticulosa	2	TODO: dịch tên Việt cho "Granuloreticulosa"	TODO: mô tả ngắn cho nhóm này.
+Dinomastigota	1	TODO: dịch tên Việt cho "Dinomastigota"	TODO: mô tả ngắn cho nhóm này.
+Placozoa	1	TODO: dịch tên Việt cho "Placozoa"	TODO: mô tả ngắn cho nhóm này.
+Cladoxylophyta	1	TODO: dịch tên Việt cho "Cladoxylophyta"	TODO: mô tả ngắn cho nhóm này.
+Oomycota	1	TODO: dịch tên Việt cho "Oomycota"	TODO: mô tả ngắn cho nhóm này.

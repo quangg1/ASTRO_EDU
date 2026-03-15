@@ -1,0 +1,5 @@
+# Flag Embedding – BGE-M3 (multilingual, hỗ trợ tiếng Việt)
+FlagEmbedding>=1.2.0
+# Server
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0

@@ -1,0 +1,17 @@
+{
+  "name": "galaxies",
+  "private": true,
+  "scripts": {
+    "dev:server": "cd services/earth-history && npm run dev",
+    "dev:api": "cd services/api && npm run dev",
+    "dev:client": "cd client && npm run dev",
+    "dev:auth": "cd services/auth && npm run dev",
+    "dev:courses": "cd services/courses && npm run dev",
+    "dev:media": "cd services/media && npm run dev",
+    "dev:community": "cd services/community && npm run dev",
+    "dev:payment": "cd services/payment && npm run dev",
+    "build": "cd client && npm run build",
+    "start": "cd client && npm run start",
+    "install:all": "npm install && cd packages/auth-shared && npm install && cd ../../services/api && npm install && cd ../earth-history && npm install && cd ../client && npm install && cd ../services/auth && npm install && cd ../services/courses && npm install && cd ../media && npm install && cd ../community && npm install && cd ../payment && npm install"
+  }
+}
