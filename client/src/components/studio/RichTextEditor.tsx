@@ -60,7 +60,7 @@ export default function RichTextEditor({ value, onChange, placeholder }: Props) 
 
   useEffect(() => {
     if (editor && value !== editor.getHTML()) {
-      editor.commands.setContent(value || '', false)
+      editor.commands.setContent(value || '', { emitUpdate: false })
     }
   }, [value]) // eslint-disable-line react-hooks/exhaustive-deps
 

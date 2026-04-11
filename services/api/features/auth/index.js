@@ -1,10 +1,12 @@
 const express = require('express');
-const passport = require('passport');
 const crypto = require('crypto');
 const User = require('./models/User');
 const { issueToken, verifyToken } = require('./lib/jwt');
-const { redirectWithToken } = require('./lib/passport');
-const { authMiddleware } = require('../../shared/jwtAuth');
+const { findOrLinkFirebaseUser } = require('./lib/oauthUser');
+const { getFirebaseAdmin } = require('./lib/firebaseAdmin');
+const { authMiddleware, requireRole } = require('../../shared/jwtAuth');
+
+const ROLES = ['student', 'teacher', 'moderator', 'admin'];
 
 const router = express.Router();
 
@@ -20,7 +22,13 @@ router.post('/register', async (req, res) => {
     }
     const existing = await User.findOne({ email: email.trim().toLowerCase() });
     if (existing) {
-      return res.status(409).json({ success: false, error: 'Email đã được sử dụng' });
+      const socialOnly = !existing.password;
+      return res.status(409).json({
+        success: false,
+        error: socialOnly
+          ? 'Email đã được dùng với Google/Facebook/Firebase. Đăng nhập bằng tài khoản đó — không đăng ký mật khẩu riêng cho email này.'
+          : 'Email đã được sử dụng',
+      });
     }
     const user = await User.create({
       email: email.trim().toLowerCase(),
@@ -56,6 +64,13 @@ router.post('/login', async (req, res) => {
     }
     const user = await User.findOne({ email: email.trim().toLowerCase() }).select('+password');
     if (!user || !user.password) {
+      if (user && !user.password) {
+        return res.status(401).json({
+          success: false,
+          error:
+            'Tài khoản này đăng nhập bằng Google/Facebook (hoặc Firebase). Dùng nút đăng nhập tương ứng.',
+        });
+      }
       return res.status(401).json({ success: false, error: 'Email hoặc mật khẩu không đúng' });
     }
     const ok = await user.comparePassword(password);
@@ -82,24 +97,53 @@ router.post('/login', async (req, res) => {
   }
 });
 
-// --- OAuth ---
-router.get('/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
-router.get(
-  '/google/callback',
-  passport.authenticate('google', { session: false, failureRedirect: '/auth/failure' }),
-  (req, res) => { redirectWithToken(res, req.user); }
-);
-
-router.get('/facebook', passport.authenticate('facebook', { scope: ['email', 'public_profile'] }));
-router.get(
-  '/facebook/callback',
-  passport.authenticate('facebook', { session: false, failureRedirect: '/auth/failure' }),
-  (req, res) => { redirectWithToken(res, req.user); }
-);
-
-router.get('/failure', (req, res) => {
-  const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
-  res.redirect(`${clientUrl}/login?error=oauth_failed`);
+/**
+ * Đăng nhập bằng Firebase ID token (Google / Facebook bật trong Firebase Console).
+ * Client: signInWithPopup → getIdToken() → POST body { idToken }.
+ */
+router.post('/firebase', async (req, res) => {
+  try {
+    const admin = getFirebaseAdmin();
+    if (!admin) {
+      return res.status(503).json({
+        success: false,
+        error: 'Server chưa cấu hình FIREBASE_SERVICE_ACCOUNT_JSON',
+      });
+    }
+    const idToken = req.body?.idToken;
+    if (!idToken || typeof idToken !== 'string') {
+      return res.status(400).json({ success: false, error: 'Thiếu idToken' });
+    }
+    const decoded = await admin.auth().verifyIdToken(idToken);
+    const identities = decoded.firebase?.identities || {};
+    const user = await findOrLinkFirebaseUser({
+      firebaseUid: decoded.uid,
+      email: decoded.email,
+      identities,
+      displayName: decoded.name || decoded.email?.split('@')[0] || 'User',
+      avatar: decoded.picture || null,
+      signInProvider: decoded.firebase?.sign_in_provider || '',
+    });
+    const token = issueToken(user);
+    res.json({
+      success: true,
+      token,
+      user: {
+        id: user._id,
+        email: user.email,
+        displayName: user.displayName,
+        avatar: user.avatar,
+        provider: user.provider,
+        role: user.role || 'student',
+      },
+    });
+  } catch (err) {
+    console.error('Firebase auth:', err);
+    res.status(401).json({
+      success: false,
+      error: 'Token Firebase không hợp lệ hoặc đã hết hạn',
+    });
+  }
 });
 
 // --- Me ---
@@ -244,12 +288,8 @@ router.post('/reset-password', async (req, res) => {
   }
 });
 
-router.get('/admin/users', authMiddleware, async (req, res) => {
+router.get('/admin/users', authMiddleware, requireRole('admin'), async (req, res) => {
   try {
-    const admin = await User.findById(req.userId).select('role');
-    if (!admin || admin.role !== 'admin') {
-      return res.status(403).json({ success: false, error: 'Không có quyền admin' });
-    }
     const users = await User.find().select('email displayName avatar provider role createdAt').sort({ createdAt: -1 }).limit(500).lean();
     const list = users.map((u) => ({
       id: u._id,
@@ -264,6 +304,42 @@ router.get('/admin/users', authMiddleware, async (req, res) => {
   } catch (err) {
     console.error('Admin users error:', err);
     res.status(500).json({ success: false, error: 'Lỗi server' });
+  }
+});
+
+router.patch('/admin/users/:id', authMiddleware, requireRole('admin'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { role } = req.body || {};
+    if (!ROLES.includes(role)) {
+      return res.status(400).json({ success: false, error: 'Role không hợp lệ. Chọn: student, teacher, moderator, admin' });
+    }
+    if (id === req.userId && role !== 'admin') {
+      return res.status(400).json({ success: false, error: 'Admin không được tự hạ quyền của chính mình' });
+    }
+    const user = await User.findByIdAndUpdate(
+      id,
+      { $set: { role } },
+      { new: true, runValidators: true }
+    ).select('email displayName avatar provider role createdAt');
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'Không tìm thấy user' });
+    }
+    res.json({
+      success: true,
+      user: {
+        id: user._id,
+        email: user.email,
+        displayName: user.displayName,
+        avatar: user.avatar,
+        provider: user.provider,
+        role: user.role || 'student',
+        createdAt: user.createdAt,
+      },
+    });
+  } catch (err) {
+    console.error('Admin update user role error:', err);
+    res.status(500).json({ success: false, error: 'Lỗi cập nhật role' });
   }
 });
 

@@ -1,0 +1,888 @@
+'use client'
+
+import { useEffect, useMemo, useState, type Dispatch, type SetStateAction } from 'react'
+import dynamic from 'next/dynamic'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import {
+  DEPTH_ORDER,
+  DEPTH_META,
+  type DepthLevel,
+  type LearningConcept,
+  type LearningModule,
+  type LearningNode,
+  type LessonConceptAnchor,
+  type LessonItem,
+  type TopicWeight,
+} from '@/data/learningPathCurriculum'
+import { fetchEditorLearningPath, saveEditorLearningPath } from '@/lib/learningPathApi'
+import { fetchEditorConcepts } from '@/lib/conceptsApi'
+import type { Lesson } from '@/lib/coursesApi'
+import { useAuthStore } from '@/store/useAuthStore'
+import { BookOpen, ChevronRight, Layers, ListTree, Save, Sparkles } from 'lucide-react'
+import { NodeTopicWeightsEditor } from '@/components/studio/NodeTopicWeightsEditor'
+
+const BlockEditor = dynamic(() => import('@/components/studio/BlockEditor'), { ssr: false })
+const BlockPalette = dynamic(() => import('@/components/studio/BlockPalette'), { ssr: false })
+const LessonPreview = dynamic(() => import('@/components/studio/LessonPreview'), { ssr: false })
+
+function cloneJson<T>(obj: T): T {
+  return JSON.parse(JSON.stringify(obj))
+}
+
+type ConceptUsageItem = {
+  conceptId: string
+  moduleId: string
+  moduleTitle: string
+  nodeId: string
+  nodeTitle: string
+  depth: DepthLevel
+  lessonId: string
+  lessonTitle: string
+}
+
+function buildConceptUsage(modules: LearningModule[]): ConceptUsageItem[] {
+  const out: ConceptUsageItem[] = []
+  for (const m of modules) {
+    for (const n of m.nodes) {
+      for (const d of DEPTH_ORDER) {
+        for (const lesson of n.depths[d] ?? []) {
+          const seen = new Set<string>()
+          for (const conceptId of lesson.conceptIds ?? []) {
+            const key = `${lesson.id}:${conceptId}`
+            if (seen.has(key)) continue
+            seen.add(key)
+            out.push({
+              conceptId,
+              moduleId: m.id,
+              moduleTitle: m.titleVi || m.title || m.id,
+              nodeId: n.id,
+              nodeTitle: n.titleVi || n.title || n.id,
+              depth: d,
+              lessonId: lesson.id,
+              lessonTitle: lesson.titleVi || lesson.title || lesson.id,
+            })
+          }
+          for (const a of lesson.conceptAnchors ?? []) {
+            const conceptId = String(a.conceptId || '').trim()
+            if (!conceptId) continue
+            const key = `${lesson.id}:${conceptId}`
+            if (seen.has(key)) continue
+            seen.add(key)
+            out.push({
+              conceptId,
+              moduleId: m.id,
+              moduleTitle: m.titleVi || m.title || m.id,
+              nodeId: n.id,
+              nodeTitle: n.titleVi || n.title || n.id,
+              depth: d,
+              lessonId: lesson.id,
+              lessonTitle: lesson.titleVi || lesson.title || lesson.id,
+            })
+          }
+        }
+      }
+    }
+  }
+  return out
+}
+
+const inputCls =
+  'w-full rounded-lg bg-black/50 border border-white/15 px-3 py-2 text-white text-sm focus:border-cyan-500/50 focus:outline-none transition-colors'
+
+function updateLesson(
+  modules: LearningModule[],
+  moduleId: string,
+  nodeId: string,
+  depth: DepthLevel,
+  lessonId: string,
+  patch: Partial<LessonItem>,
+): LearningModule[] {
+  return modules.map((m) => {
+    if (m.id !== moduleId) return m
+    return {
+      ...m,
+      nodes: m.nodes.map((n) => {
+        if (n.id !== nodeId) return n
+        const depths = { ...n.depths } as Record<DepthLevel, LessonItem[]>
+        const list = [...(depths[depth] ?? [])]
+        const idx = list.findIndex((l) => l.id === lessonId)
+        if (idx >= 0) list[idx] = { ...list[idx], ...patch }
+        depths[depth] = list
+        return { ...n, depths }
+      }),
+    }
+  })
+}
+
+function updateNodeFields(
+  modules: LearningModule[],
+  moduleId: string,
+  nodeId: string,
+  patch: Partial<LearningNode>,
+): LearningModule[] {
+  return modules.map((m) => {
+    if (m.id !== moduleId) return m
+    return {
+      ...m,
+      nodes: m.nodes.map((n) => (n.id === nodeId ? { ...n, ...patch } : n)),
+    }
+  })
+}
+
+function LearningPathLessonEditor({
+  activeLesson,
+  concepts,
+  moduleId,
+  nodeId,
+  depth,
+  editorTab,
+  setEditorTab,
+  updateLesson: applyPatch,
+  setModules,
+  inputCls,
+}: {
+  activeLesson: LessonItem
+  concepts: LearningConcept[]
+  moduleId: string
+  nodeId: string
+  depth: DepthLevel
+  editorTab: 'blocks' | 'preview'
+  setEditorTab: (t: 'blocks' | 'preview') => void
+  updateLesson: typeof updateLesson
+  setModules: Dispatch<SetStateAction<LearningModule[]>>
+  inputCls: string
+}) {
+  const sections = activeLesson.sections ?? []
+  const selectedConceptIds = activeLesson.conceptIds ?? []
+
+  const patchLesson = (patch: Partial<LessonItem>) => {
+    setModules((prev) => applyPatch(prev, moduleId, nodeId, depth, activeLesson.id, patch))
+  }
+
+  const previewLesson: Lesson = useMemo(
+    () => ({
+      title: activeLesson.titleVi,
+      slug: activeLesson.id,
+      description: '',
+      type: 'text',
+      visualizationId: null,
+      stageTime: null,
+      videoUrl: null,
+      coverImage: null,
+      galleryImages: [],
+      week: null,
+      moduleId: null,
+      content: '',
+      learningGoals: [],
+      sections: activeLesson.sections ?? [],
+      quizQuestions: [],
+      resourceLinks: [],
+      sourcePdf: null,
+      sourcePageCount: null,
+      order: 0,
+    }),
+    [activeLesson],
+  )
+
+  return (
+    <div className="max-w-4xl space-y-4">
+      <div>
+        <p className="text-[10px] text-slate-600 font-mono break-all mb-2">{activeLesson.id}</p>
+        <h2 className="text-lg font-semibold text-white">Soạn bài học</h2>
+        <p className="text-xs text-slate-500 mt-1">
+          Cùng block kit với Course Studio — &quot;Lưu toàn bộ&quot; sau khi sửa xong (có thể nhiều bài).
+        </p>
+      </div>
+
+      <label className="block text-xs text-slate-400">
+        Tiêu đề (VI)
+        <input
+          value={activeLesson.titleVi}
+          onChange={(e) => patchLesson({ titleVi: e.target.value })}
+          className={`mt-1 ${inputCls}`}
+        />
+      </label>
+      <label className="block text-xs text-slate-400">
+        Title (EN)
+        <input
+          value={activeLesson.title}
+          onChange={(e) => patchLesson({ title: e.target.value })}
+          className={`mt-1 ${inputCls}`}
+        />
+      </label>
+
+      <div className="rounded-xl border border-cyan-500/25 bg-cyan-500/5 p-3">
+        <p className="text-xs font-medium text-cyan-200 mb-2">Concept mapping</p>
+        {concepts.length === 0 ? (
+          <p className="text-xs text-slate-500">
+            Chưa có concept. Tạo concept ở panel bên trái rồi quay lại map cho bài này.
+          </p>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1">
+            {concepts.map((c) => {
+              const checked = selectedConceptIds.includes(c.id)
+              return (
+                <label
+                  key={c.id}
+                  className="flex items-start gap-2 rounded-lg border border-white/10 bg-black/30 px-2.5 py-2 text-xs cursor-pointer"
+                  title={c.short_description || c.explanation}
+                >
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={(e) => {
+                      const next = e.target.checked
+                        ? [...selectedConceptIds, c.id]
+                        : selectedConceptIds.filter((id) => id !== c.id)
+                      patchLesson({ conceptIds: [...new Set(next)] })
+                    }}
+                    className="mt-0.5"
+                  />
+                  <span className="min-w-0">
+                    <span className="text-cyan-200 block">#{c.id}</span>
+                    <span className="text-slate-200 block">{c.title || c.id}</span>
+                  </span>
+                </label>
+              )
+            })}
+          </div>
+        )}
+      </div>
+
+      <div className="rounded-xl border border-violet-500/25 bg-violet-500/5 p-3">
+        <p className="text-xs font-medium text-violet-200 mb-1">Highlight trong nội dung (cụm văn bản → concept)</p>
+        <p className="text-[11px] text-slate-500 mb-3">
+          Gõ đúng cụm xuất hiện trong nội dung bài (khớp ngữ nghĩa do bạn chọn, không auto theo title concept). Cụm dài được ưu tiên nếu trùng phần.
+        </p>
+        {concepts.length === 0 ? (
+          <p className="text-xs text-slate-500">Cần có concept trong thư viện.</p>
+        ) : (
+          <div className="space-y-2">
+            {(activeLesson.conceptAnchors ?? []).map((row, idx) => (
+              <div key={idx} className="flex flex-wrap gap-2 items-end">
+                <label className="flex-1 min-w-[140px] text-[10px] text-slate-400">
+                  Cụm trong bài
+                  <input
+                    value={row.phrase}
+                    onChange={(e) => {
+                      const next = [...(activeLesson.conceptAnchors ?? [])] as LessonConceptAnchor[]
+                      next[idx] = { ...next[idx], phrase: e.target.value }
+                      patchLesson({ conceptAnchors: next })
+                    }}
+                    className={`mt-1 ${inputCls}`}
+                    placeholder="Đúng đoạn văn cần gắn (vd: quỹ đạo elip)"
+                  />
+                </label>
+                <label className="flex-1 min-w-[120px] text-[10px] text-slate-400">
+                  Concept
+                  <select
+                    value={row.conceptId}
+                    onChange={(e) => {
+                      const next = [...(activeLesson.conceptAnchors ?? [])] as LessonConceptAnchor[]
+                      next[idx] = { ...next[idx], conceptId: e.target.value }
+                      patchLesson({ conceptAnchors: next })
+                    }}
+                    className={`mt-1 ${inputCls}`}
+                  >
+                    <option value="">— Chọn —</option>
+                    {concepts.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.id} — {c.title || c.id}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const next = (activeLesson.conceptAnchors ?? []).filter((_, i) => i !== idx)
+                    patchLesson({ conceptAnchors: next })
+                  }}
+                  className="rounded-lg border border-red-500/30 px-2 py-1.5 text-[10px] text-red-300 hover:bg-red-500/10"
+                >
+                  Xóa
+                </button>
+              </div>
+            ))}
+            <button
+              type="button"
+              onClick={() => {
+                const first = concepts[0]?.id ?? ''
+                patchLesson({
+                  conceptAnchors: [
+                    ...(activeLesson.conceptAnchors ?? []),
+                    { conceptId: first, phrase: '' },
+                  ],
+                })
+              }}
+              className="text-xs text-violet-300 hover:text-violet-100 border border-violet-500/30 rounded-lg px-3 py-1.5"
+            >
+              + Thêm cụm gắn concept
+            </button>
+          </div>
+        )}
+      </div>
+
+      <div className="rounded-xl border border-white/10 bg-black/20 overflow-hidden">
+        <div className="flex gap-0.5 px-3 py-2 border-b border-white/10">
+          <button
+            type="button"
+            onClick={() => setEditorTab('blocks')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+              editorTab === 'blocks'
+                ? 'bg-cyan-600/90 text-white'
+                : 'text-slate-500 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            Blocks ({sections.length})
+          </button>
+          <button
+            type="button"
+            onClick={() => setEditorTab('preview')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+              editorTab === 'preview'
+                ? 'bg-emerald-600/90 text-white'
+                : 'text-slate-500 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            Preview
+          </button>
+        </div>
+
+        {editorTab === 'blocks' && (
+          <div className="p-4 space-y-3">
+            {sections.map((sec, bi) => (
+              <div
+                key={bi}
+                className="rounded-2xl border border-white/10 bg-[#0a0f17]/80 p-4 space-y-3 group/block relative"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-mono text-slate-600 w-5 text-right">{bi + 1}</span>
+                    <div className="h-3 w-px bg-white/10" />
+                  </div>
+                  <div className="flex items-center gap-1 opacity-0 group-hover/block:opacity-100 transition-opacity">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const s = [...sections]
+                        if (bi > 0) {
+                          ;[s[bi - 1], s[bi]] = [s[bi], s[bi - 1]]
+                          patchLesson({ sections: s })
+                        }
+                      }}
+                      disabled={bi === 0}
+                      className="text-[10px] text-slate-600 hover:text-white disabled:opacity-20 px-1"
+                    >
+                      ↑
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const s = [...sections]
+                        if (bi < s.length - 1) {
+                          ;[s[bi], s[bi + 1]] = [s[bi + 1], s[bi]]
+                          patchLesson({ sections: s })
+                        }
+                      }}
+                      disabled={bi === sections.length - 1}
+                      className="text-[10px] text-slate-600 hover:text-white disabled:opacity-20 px-1"
+                    >
+                      ↓
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const s = [...sections]
+                        s.splice(bi + 1, 0, cloneJson(s[bi]))
+                        patchLesson({ sections: s })
+                      }}
+                      className="text-[10px] text-slate-600 hover:text-cyan-300 px-1"
+                      title="Nhân đôi block"
+                    >
+                      ⧉
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const s = [...sections]
+                        s.splice(bi, 1)
+                        patchLesson({ sections: s })
+                      }}
+                      className="text-[10px] text-red-500/50 hover:text-red-400 px-1"
+                    >
+                      ×
+                    </button>
+                  </div>
+                </div>
+                <BlockEditor
+                  section={sec}
+                  onChange={(updated) => {
+                    const s = [...sections]
+                    s[bi] = updated
+                    patchLesson({ sections: s })
+                  }}
+                />
+              </div>
+            ))}
+            <BlockPalette onAdd={(sec) => patchLesson({ sections: [...sections, sec] })} />
+          </div>
+        )}
+
+        {editorTab === 'preview' && (
+          <div className="border-t border-emerald-500/10 bg-[#060b14]">
+            <div className="px-4 py-2 border-b border-emerald-500/10 bg-emerald-500/5 flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="text-[11px] font-medium text-emerald-300">Preview (như học viên thấy)</span>
+            </div>
+            <div className="p-5 max-w-4xl mx-auto">
+              <LessonPreview
+                lesson={previewLesson}
+                conceptAnchors={activeLesson.conceptAnchors}
+                concepts={concepts}
+              />
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+export default function StudioLearningPathPage() {
+  const router = useRouter()
+  const { user, checked } = useAuthStore()
+  const [modules, setModules] = useState<LearningModule[]>([])
+  const [concepts, setConcepts] = useState<LearningConcept[]>([])
+  const [published, setPublished] = useState(true)
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [message, setMessage] = useState('')
+  const [editorTab, setEditorTab] = useState<'blocks' | 'preview'>('blocks')
+
+  /** Điều hướng phân cấp */
+  const [moduleId, setModuleId] = useState<string | null>(null)
+  const [nodeId, setNodeId] = useState<string | null>(null)
+  const [depth, setDepth] = useState<DepthLevel | null>(null)
+  /** Chỉ một bài được mở form chi tiết */
+  const [activeLessonId, setActiveLessonId] = useState<string | null>(null)
+  const [invalidConceptIds, setInvalidConceptIds] = useState<string[]>([])
+
+  useEffect(() => {
+    if (checked && !user) router.replace('/login?redirect=/studio/learning-path')
+    if (checked && user && user.role !== 'teacher' && user.role !== 'admin') router.replace('/')
+  }, [checked, user, router])
+
+  useEffect(() => {
+    if (!user) return
+    const token = typeof window !== 'undefined' ? localStorage.getItem('galaxies_token') : null
+    if (!token) {
+      setLoading(false)
+      return
+    }
+    Promise.all([fetchEditorLearningPath(token), fetchEditorConcepts(token)])
+      .then(([d, cs]) => {
+        if (!d) return
+        setModules(d.modules || [])
+        setConcepts(cs || [])
+        setPublished(d.published)
+        if (!d.modules?.length) return
+        const sorted = [...d.modules].sort((a, b) => a.order - b.order)
+        const first = sorted[0]
+        const firstNode = first?.nodes[0]
+        setModuleId(first?.id ?? null)
+        setNodeId(firstNode?.id ?? null)
+        const firstDepth =
+          DEPTH_ORDER.find((dep) => (firstNode?.depths[dep]?.length ?? 0) > 0) ?? 'beginner'
+        setDepth(firstDepth)
+        setActiveLessonId(firstNode?.depths[firstDepth]?.[0]?.id ?? null)
+      })
+      .finally(() => setLoading(false))
+  }, [user])
+
+  const sortedModules = useMemo(
+    () => [...modules].sort((a, b) => a.order - b.order),
+    [modules],
+  )
+
+  const currentModule = useMemo(
+    () => sortedModules.find((m) => m.id === moduleId) ?? null,
+    [sortedModules, moduleId],
+  )
+
+  const currentNode = useMemo(
+    () => currentModule?.nodes.find((n) => n.id === nodeId) ?? null,
+    [currentModule, nodeId],
+  )
+
+  const conceptUsage = useMemo(() => buildConceptUsage(modules), [modules])
+  const conceptUsageById = useMemo(() => {
+    const map = new Map<string, ConceptUsageItem[]>()
+    for (const row of conceptUsage) {
+      if (!map.has(row.conceptId)) map.set(row.conceptId, [])
+      map.get(row.conceptId)?.push(row)
+    }
+    return map
+  }, [conceptUsage])
+
+  const lessonsAtDepth = useMemo(() => {
+    if (!currentNode || !depth) return []
+    return currentNode.depths[depth] ?? []
+  }, [currentNode, depth])
+
+  const activeLesson = useMemo(
+    () => lessonsAtDepth.find((l) => l.id === activeLessonId) ?? null,
+    [lessonsAtDepth, activeLessonId],
+  )
+
+  /** Giữ bài đang chọn khớp danh sách khi đổi tầng/node */
+  useEffect(() => {
+    if (lessonsAtDepth.length === 0) {
+      setActiveLessonId(null)
+      return
+    }
+    setActiveLessonId((prev) =>
+      prev && lessonsAtDepth.some((l) => l.id === prev) ? prev : lessonsAtDepth[0].id,
+    )
+  }, [lessonsAtDepth])
+
+  /** Khi đổi module: chọn node & depth hợp lệ đầu tiên */
+  const onSelectModule = (id: string) => {
+    setModuleId(id)
+    const mod = sortedModules.find((m) => m.id === id)
+    const n = mod?.nodes[0]
+    setNodeId(n?.id ?? null)
+    if (!n) {
+      setDepth(null)
+      setActiveLessonId(null)
+      return
+    }
+    const dep = DEPTH_ORDER.find((d) => (n.depths[d]?.length ?? 0) > 0) ?? 'beginner'
+    setDepth(dep)
+    setActiveLessonId(n.depths[dep]?.[0]?.id ?? null)
+  }
+
+  const onSelectNode = (nid: string) => {
+    setNodeId(nid)
+    const n = currentModule?.nodes.find((x) => x.id === nid)
+    if (!n) {
+      setActiveLessonId(null)
+      return
+    }
+    const dep = DEPTH_ORDER.find((d) => (n.depths[d]?.length ?? 0) > 0) ?? depth ?? 'beginner'
+    setDepth(dep)
+    setActiveLessonId(n.depths[dep]?.[0]?.id ?? null)
+  }
+
+  const onSelectDepth = (d: DepthLevel) => {
+    setDepth(d)
+    const n = currentNode
+    setActiveLessonId(n?.depths[d]?.[0]?.id ?? null)
+  }
+
+  const save = async () => {
+    const token = localStorage.getItem('galaxies_token')
+    if (!token) return
+    setSaving(true)
+    setMessage('')
+    const rPath = await saveEditorLearningPath(token, modules, published)
+    setSaving(false)
+    if (rPath.ok && rPath.modules) {
+      setModules(rPath.modules)
+      if (typeof rPath.published === 'boolean') setPublished(rPath.published)
+      setInvalidConceptIds(rPath.invalidConceptIds || [])
+    }
+    setMessage(rPath.ok ? 'Đã lưu Learning Path.' : rPath.error || 'Lỗi lưu')
+  }
+
+  if (!checked || !user) {
+    return <div className="min-h-screen bg-black pt-20 px-4 text-gray-400">Đang kiểm tra đăng nhập...</div>
+  }
+
+  return (
+    <div className="min-h-screen bg-[#050508] pt-14 pb-10 px-3 md:px-6">
+      <div className="max-w-7xl mx-auto flex flex-col gap-4">
+        <nav className="text-sm shrink-0">
+          <Link href="/studio" className="text-cyan-400 hover:text-cyan-300">
+            ← Studio
+          </Link>
+        </nav>
+
+        {/* Thanh công cụ cố định */}
+        <header className="rounded-2xl border border-white/10 bg-gradient-to-r from-violet-950/50 to-cyan-950/30 px-4 py-4 md:px-6 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div>
+            <h1 className="text-xl md:text-2xl font-bold text-white flex items-center gap-2">
+              <ListTree className="w-6 h-6 text-violet-400" />
+              Learning Path Studio
+            </h1>
+            <p className="text-xs text-slate-400 mt-1 max-w-xl">
+              Chọn <strong className="text-slate-300">Module → Chủ đề → Tầng → Bài</strong>. Nội dung bài dùng{' '}
+              <strong className="text-cyan-200/90">cùng block kit với khóa học</strong> — không nhập HTML một ô.
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <label className="flex items-center gap-2 text-xs text-slate-300 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={published}
+                onChange={(e) => setPublished(e.target.checked)}
+                className="rounded border-white/20"
+              />
+              Published
+            </label>
+            <button
+              type="button"
+              onClick={save}
+              disabled={saving || loading}
+              className="inline-flex items-center gap-2 min-h-10 px-4 rounded-xl bg-cyan-600 text-white text-sm font-medium hover:bg-cyan-500 disabled:opacity-50"
+            >
+              <Save className="w-4 h-4" />
+              {saving ? 'Đang lưu...' : 'Lưu toàn bộ'}
+            </button>
+            <Link
+              href="/tutorial"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-cyan-300 hover:underline"
+            >
+              Xem học viên →
+            </Link>
+          </div>
+        </header>
+        {message ? <p className="text-sm text-emerald-400/90 px-1">{message}</p> : null}
+        {invalidConceptIds.length > 0 ? (
+          <p className="text-sm text-amber-300/90 px-1">
+            Đã loại bỏ concept không tồn tại khỏi lesson:{' '}
+            <span className="font-mono">{invalidConceptIds.join(', ')}</span>
+          </p>
+        ) : null}
+
+        {loading ? (
+          <p className="text-slate-500 py-12 text-center">Đang tải...</p>
+        ) : modules.length === 0 ? (
+          <p className="text-slate-500 py-12 text-center">Chưa có dữ liệu. Khởi động API và GET /api/learning-path để seed.</p>
+        ) : (
+          <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 lg:items-stretch min-h-[calc(100vh-12rem)]">
+            {/* Cột trái: 3 bước điều hướng */}
+            <aside className="w-full lg:w-[300px] shrink-0 flex flex-col gap-4">
+              <section className="rounded-2xl border border-white/10 bg-[#0c1018] p-4">
+                <p className="text-[10px] uppercase tracking-wider text-slate-500 font-semibold mb-2 flex items-center gap-1">
+                  <Layers className="w-3.5 h-3.5" /> 1. Module
+                </p>
+                <div className="space-y-1 max-h-[220px] overflow-y-auto pr-1">
+                  {sortedModules.map((m) => (
+                    <button
+                      key={m.id}
+                      type="button"
+                      onClick={() => onSelectModule(m.id)}
+                      className={`w-full text-left rounded-xl px-3 py-2.5 text-sm transition-colors ${
+                        moduleId === m.id
+                          ? 'bg-cyan-500/20 border border-cyan-500/40 text-white'
+                          : 'border border-transparent text-slate-400 hover:bg-white/5 hover:text-slate-200'
+                      }`}
+                    >
+                      <span className="mr-2">{m.emoji}</span>
+                      <span className="font-medium">{m.titleVi}</span>
+                      <span className="block text-[10px] text-slate-500 mt-0.5">#{m.order} · {m.id}</span>
+                    </button>
+                  ))}
+                </div>
+              </section>
+
+              <section className="rounded-2xl border border-white/10 bg-[#0c1018] p-4">
+                <p className="text-[10px] uppercase tracking-wider text-slate-500 font-semibold mb-2 flex items-center gap-1">
+                  <BookOpen className="w-3.5 h-3.5" /> 2. Chủ đề (node)
+                </p>
+                {!currentModule ? (
+                  <p className="text-xs text-slate-600">Chọn module trước.</p>
+                ) : (
+                  <div className="space-y-1 max-h-[240px] overflow-y-auto pr-1">
+                    {currentModule.nodes.map((n, i) => (
+                      <button
+                        key={n.id}
+                        type="button"
+                        onClick={() => onSelectNode(n.id)}
+                        className={`w-full text-left rounded-xl px-3 py-2 text-sm transition-colors ${
+                          nodeId === n.id
+                            ? 'bg-violet-500/20 border border-violet-500/40 text-white'
+                            : 'border border-transparent text-slate-400 hover:bg-white/5'
+                        }`}
+                      >
+                        <span className="text-slate-500 text-xs mr-1">{i + 1}.</span>
+                        {n.titleVi}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </section>
+
+              {currentModule && currentNode && (
+                <NodeTopicWeightsEditor
+                  topicWeights={currentNode.topicWeights}
+                  onChange={(topicWeights: TopicWeight[]) =>
+                    setModules((prev) =>
+                      updateNodeFields(prev, currentModule.id, currentNode.id, { topicWeights }),
+                    )
+                  }
+                />
+              )}
+
+              <section className="rounded-2xl border border-white/10 bg-[#0c1018] p-4">
+                <p className="text-[10px] uppercase tracking-wider text-slate-500 font-semibold mb-2">
+                  Concept Library
+                </p>
+                <p className="text-xs text-slate-400 mb-3">
+                  Concept được quản lý ở Studio riêng. Ở đây chỉ dùng để map vào lesson.
+                </p>
+                <Link
+                  href="/studio/concepts"
+                  className="inline-flex items-center rounded-lg bg-cyan-600/80 hover:bg-cyan-500 text-white text-xs font-medium px-3 py-2"
+                >
+                  Mở Concept Studio
+                </Link>
+              </section>
+
+              <section className="rounded-2xl border border-white/10 bg-[#0c1018] p-4">
+                <p className="text-[10px] uppercase tracking-wider text-slate-500 font-semibold mb-2">
+                  Concept Usage Report
+                </p>
+                {concepts.length === 0 ? (
+                  <p className="text-xs text-slate-600">Chưa có concept để thống kê.</p>
+                ) : (
+                  <div className="space-y-2 max-h-[280px] overflow-y-auto pr-1">
+                    {concepts.map((c) => {
+                      const rows = conceptUsageById.get(c.id) || []
+                      return (
+                        <details
+                          key={`usage-${c.id}`}
+                          className="rounded-lg border border-white/10 bg-black/30 px-2.5 py-2"
+                        >
+                          <summary className="cursor-pointer text-xs text-cyan-200">
+                            #{c.id} · {c.title || c.id} ({rows.length})
+                          </summary>
+                          <div className="mt-2 space-y-1">
+                            {rows.length === 0 ? (
+                              <p className="text-[11px] text-slate-500">Chưa được gắn vào lesson nào.</p>
+                            ) : (
+                              rows.map((r) => (
+                                <p key={`${r.lessonId}-${r.depth}`} className="text-[11px] text-slate-300 leading-snug">
+                                  <span className="text-slate-500">{r.moduleTitle}</span> → {r.nodeTitle} →{' '}
+                                  <span className="text-cyan-300">{DEPTH_META[r.depth].labelVi}</span> → {r.lessonTitle}
+                                </p>
+                              ))
+                            )}
+                          </div>
+                        </details>
+                      )
+                    })}
+                  </div>
+                )}
+              </section>
+
+              <section className="rounded-2xl border border-white/10 bg-[#0c1018] p-4">
+                <p className="text-[10px] uppercase tracking-wider text-slate-500 font-semibold mb-2 flex items-center gap-1">
+                  <Sparkles className="w-3.5 h-3.5" /> 3. Tầng độ sâu
+                </p>
+                {!currentNode ? (
+                  <p className="text-xs text-slate-600">Chọn chủ đề trước.</p>
+                ) : (
+                  <div className="flex flex-col gap-2">
+                    {DEPTH_ORDER.map((d) => {
+                      const count = currentNode.depths[d]?.length ?? 0
+                      const meta = DEPTH_META[d]
+                      const disabled = count === 0
+                      return (
+                        <button
+                          key={d}
+                          type="button"
+                          disabled={disabled}
+                          onClick={() => onSelectDepth(d)}
+                          className={`rounded-xl px-3 py-2.5 text-left text-sm border transition-all ${
+                            disabled
+                              ? 'opacity-40 cursor-not-allowed border-white/5 text-slate-600'
+                              : depth === d
+                                ? `bg-gradient-to-r ${meta.gradient} border-white/20 text-white shadow-lg`
+                                : 'border-white/10 text-slate-400 hover:border-white/20 hover:bg-white/5'
+                          }`}
+                        >
+                          <span className="mr-1">{meta.short}</span>
+                          {meta.labelVi}
+                          <span className="float-right text-[10px] opacity-80">{count} bài</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
+              </section>
+            </aside>
+
+            {/* Cột phải: danh sách bài trong tầng + form một bài */}
+            <div className="flex-1 min-w-0 flex flex-col rounded-2xl border border-white/10 bg-[#0a0f17] overflow-hidden">
+              {/* Breadcrumb */}
+              <div className="px-4 py-3 border-b border-white/10 bg-black/20 flex flex-wrap items-center gap-2 text-xs text-slate-400">
+                <span>Đang sửa:</span>
+                <span className="text-cyan-300/90">{currentModule?.titleVi ?? '—'}</span>
+                <ChevronRight className="w-3 h-3 opacity-50" />
+                <span className="text-violet-300/90">{currentNode?.titleVi ?? '—'}</span>
+                <ChevronRight className="w-3 h-3 opacity-50" />
+                <span className="text-slate-200">
+                  {depth ? `${DEPTH_META[depth].short} ${DEPTH_META[depth].labelVi}` : '—'}
+                </span>
+              </div>
+
+              <div className="flex flex-col xl:flex-row flex-1 min-h-0">
+                {/* Danh sách bài (chỉ tiêu đề) */}
+                <div className="w-full xl:w-[240px] shrink-0 border-b xl:border-b-0 xl:border-r border-white/10 p-3 max-h-[40vh] xl:max-h-none overflow-y-auto">
+                  <p className="text-[10px] uppercase text-slate-500 font-semibold mb-2 px-1">4. Chọn bài</p>
+                  {lessonsAtDepth.length === 0 ? (
+                    <p className="text-xs text-slate-600 px-2">Không có bài ở tầng này.</p>
+                  ) : (
+                    <ul className="space-y-1">
+                      {lessonsAtDepth.map((le, idx) => (
+                        <li key={le.id}>
+                          <button
+                            type="button"
+                            onClick={() => setActiveLessonId(le.id)}
+                            className={`w-full text-left rounded-lg px-3 py-2 text-sm transition-colors ${
+                              activeLessonId === le.id
+                                ? 'bg-white/10 text-white border border-cyan-500/30'
+                                : 'text-slate-400 hover:bg-white/5 border border-transparent'
+                            }`}
+                          >
+                            <span className="text-slate-600 text-xs mr-1">{idx + 1}.</span>
+                            <span className="line-clamp-2">{le.titleVi}</span>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+
+                {/* Form chi tiết — một bài (block kit như Course) */}
+                <div className="flex-1 p-4 md:p-6 overflow-y-auto min-h-[320px]">
+                  {!currentModule || !currentNode || !depth || !activeLesson ? (
+                    <p className="text-slate-500 text-sm">Chọn đủ Module → Chủ đề → Tầng → Bài để soạn nội dung.</p>
+                  ) : (
+                    <LearningPathLessonEditor
+                      activeLesson={activeLesson}
+                      concepts={concepts}
+                      moduleId={currentModule.id}
+                      nodeId={currentNode.id}
+                      depth={depth}
+                      editorTab={editorTab}
+                      setEditorTab={setEditorTab}
+                      updateLesson={updateLesson}
+                      setModules={setModules}
+                      inputCls={inputCls}
+                    />
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}

@@ -1,0 +1,111 @@
+import { getApiPathBase } from './apiConfig'
+import type { LearningConcept, LearningModule } from '@/data/learningPathCurriculum'
+
+const API = `${getApiPathBase()}/learning-path`
+
+/** Đảm bảo mỗi node có topicWeights[] (API/Mongo đôi khi không trả field) */
+function normalizeEditorModules(modules: LearningModule[]): LearningModule[] {
+  return modules.map((m) => ({
+    ...m,
+    nodes: (m.nodes || []).map((n) => ({
+      ...n,
+      topicWeights: Array.isArray(n.topicWeights)
+        ? n.topicWeights.map((tw) => ({
+            topicId: String((tw as { topicId?: string }).topicId || ''),
+            weight: Math.max(0, Math.min(1, Number((tw as { weight?: number }).weight) || 0)),
+          }))
+        : [],
+    })),
+  }))
+}
+
+export async function fetchPublicLearningPath(): Promise<LearningModule[] | null> {
+  try {
+    const res = await fetch(API, { cache: 'no-store' })
+    const data = await res.json()
+    if (data.success && Array.isArray(data.data?.modules)) return data.data.modules as LearningModule[]
+    return null
+  } catch {
+    return null
+  }
+}
+
+export async function fetchPublicLearningPathData(): Promise<{
+  modules: LearningModule[]
+  concepts: LearningConcept[]
+} | null> {
+  try {
+    const res = await fetch(API, { cache: 'no-store' })
+    const data = await res.json()
+    if (data.success && Array.isArray(data.data?.modules)) {
+      return {
+        modules: data.data.modules as LearningModule[],
+        concepts: Array.isArray(data.data?.concepts) ? (data.data.concepts as LearningConcept[]) : [],
+      }
+    }
+    return null
+  } catch {
+    return null
+  }
+}
+
+export async function fetchEditorLearningPath(token: string): Promise<{
+  modules: LearningModule[]
+  concepts: LearningConcept[]
+  published: boolean
+} | null> {
+  try {
+    const res = await fetch(`${API}/editor`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    const data = await res.json()
+    if (data.success && Array.isArray(data.data?.modules)) {
+      return {
+        modules: normalizeEditorModules(data.data.modules as LearningModule[]),
+        concepts: Array.isArray(data.data?.concepts) ? (data.data.concepts as LearningConcept[]) : [],
+        published: !!data.data.published,
+      }
+    }
+    return null
+  } catch {
+    return null
+  }
+}
+
+export async function saveEditorLearningPath(
+  token: string,
+  modules: LearningModule[],
+  published?: boolean,
+): Promise<{
+  ok: boolean
+  modules?: LearningModule[]
+  concepts?: LearningConcept[]
+  published?: boolean
+  invalidConceptIds?: string[]
+  error?: string
+}> {
+  try {
+    const res = await fetch(`${API}/editor`, {
+      method: 'PUT',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ modules, published }),
+    })
+    const data = await res.json()
+    if (data.success && Array.isArray(data.data?.modules)) {
+      return {
+        ok: true,
+        modules: normalizeEditorModules(data.data.modules as LearningModule[]),
+        concepts: Array.isArray(data.data?.concepts) ? (data.data.concepts as LearningConcept[]) : [],
+        published: !!data.data?.published,
+        invalidConceptIds: Array.isArray(data.data?.invalidConceptIds) ? data.data.invalidConceptIds : [],
+      }
+    }
+    if (data.success) return { ok: true }
+    return { ok: false, error: data.error || 'Save failed' }
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : 'Network error' }
+  }
+}

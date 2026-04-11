@@ -77,6 +77,112 @@ router.post('/internal/confirm-enroll', (req, res, next) => {
   }
 });
 
+router.get('/editor/list', authMiddleware, requireRole('teacher', 'admin'), async (req, res) => {
+  try {
+    const query = {};
+    if (req.userRole === 'teacher') {
+      // Teacher chỉ thấy khóa học của mình; khóa cũ chưa gán teacherId vẫn ẩn
+      query.teacherId = req.userId;
+    }
+    const courses = await Course.find(query)
+      .select('title slug description thumbnail level lessons published')
+      .sort({ updatedAt: -1 })
+      .lean();
+    const list = courses.map((c) => ({
+      id: c._id,
+      title: c.title,
+      slug: c.slug,
+      description: c.description,
+      thumbnail: c.thumbnail,
+      level: c.level,
+      lessonCount: (c.lessons || []).length,
+      price: c.price ?? 0,
+      currency: c.currency ?? 'VND',
+      isPaid: c.isPaid ?? false,
+      published: c.published ?? false,
+    }));
+    res.json({ success: true, data: list });
+  } catch (err) {
+    console.error('Editor list courses error:', err);
+    res.status(500).json({ success: false, error: 'Lỗi server' });
+  }
+});
+
+router.get('/my', authMiddleware, async (req, res) => {
+  try {
+    const enrollments = await Enrollment.find({ userId: req.userId })
+      .sort({ enrolledAt: -1 })
+      .lean();
+    const courseIds = [...new Set(enrollments.map((e) => e.courseId))];
+    const courses = await Course.find({ _id: { $in: courseIds } })
+      .select('title slug description thumbnail level lessons')
+      .lean();
+    const courseMap = Object.fromEntries(courses.map((c) => [c._id.toString(), c]));
+    const list = enrollments.map((e) => {
+      const course = courseMap[e.courseId.toString()];
+      const lessons = course?.lessons || [];
+      const progress = e.progress || [];
+      const completed = progress.filter((p) => p.completed).length;
+      const total = lessons.length;
+      const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
+      return {
+        id: e._id,
+        courseId: e.courseId,
+        title: course?.title || 'Khóa học',
+        slug: course?.slug || '',
+        description: course?.description || '',
+        thumbnail: course?.thumbnail,
+        level: course?.level || 'beginner',
+        lessonCount: total,
+        enrolledAt: e.enrolledAt,
+        progress: e.progress || [],
+        completedCount: completed,
+        totalLessons: total,
+        percentComplete: percent,
+      };
+    });
+    res.json({ success: true, data: list });
+  } catch (err) {
+    console.error('My courses error:', err);
+    res.status(500).json({ success: false, error: 'Lỗi server' });
+  }
+});
+
+router.post('/', authMiddleware, requireRole('teacher', 'admin'), async (req, res) => {
+  try {
+    const { title, slug } = req.body || {};
+    if (!title || !title.trim()) {
+      return res.status(400).json({ success: false, error: 'Tiêu đề khóa học là bắt buộc' });
+    }
+    const rawSlug = (slug || title).toString().trim().toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '').slice(0, 80) || 'course-' + Date.now();
+    const existing = await Course.findOne({ slug: rawSlug });
+    if (existing) {
+      return res.status(409).json({ success: false, error: 'Slug đã tồn tại. Thử tiêu đề hoặc slug khác.', slug: rawSlug });
+    }
+    const course = await Course.create({
+      title: title.trim(),
+      slug: rawSlug,
+      description: '',
+      level: 'beginner',
+      published: false,
+      modules: [],
+      lessons: [],
+      teacherId: req.userRole === 'teacher' ? req.userId : null,
+    });
+    res.status(201).json({
+      success: true,
+      data: {
+        id: course._id,
+        title: course.title,
+        slug: course.slug,
+      },
+    });
+  } catch (err) {
+    console.error('Create course error:', err);
+    res.status(500).json({ success: false, error: 'Lỗi tạo khóa học' });
+  }
+});
+
 router.get('/:slug', optionalAuth, async (req, res) => {
   try {
     const course = await Course.findOne({ slug: req.params.slug, published: true }).lean();
@@ -206,26 +312,36 @@ router.patch('/:slug/progress', authMiddleware, async (req, res) => {
 
 router.get('/:slug/editor', authMiddleware, requireRole('teacher', 'admin'), async (req, res) => {
   try {
-    const course = await Course.findOne({ slug: req.params.slug }).lean();
+    const course = await Course.findOne({ slug: req.params.slug });
     if (!course) {
       return res.status(404).json({ success: false, error: 'Không tìm thấy khóa học' });
     }
+    // Phân quyền: teacher chỉ sửa course của mình. Khóa cũ chưa gán teacherId sẽ tự gán về teacher đầu tiên mở.
+    if (req.userRole === 'teacher') {
+      if (!course.teacherId) {
+        course.teacherId = req.userId;
+        await course.save();
+      } else if (course.teacherId !== req.userId) {
+        return res.status(403).json({ success: false, error: 'Không có quyền sửa khóa học này' });
+      }
+    }
+    const data = course.toObject();
     res.json({
       success: true,
       data: {
-        id: course._id,
-        title: course.title,
-        slug: course.slug,
-        description: course.description,
-        thumbnail: course.thumbnail,
-        level: course.level,
-        durationWeeks: course.durationWeeks,
-        published: course.published,
-        price: course.price ?? 0,
-        currency: course.currency ?? 'VND',
-        isPaid: course.isPaid ?? false,
-        modules: (course.modules || []).sort((a, b) => a.order - b.order),
-        lessons: (course.lessons || []).sort((a, b) => a.order - b.order),
+        id: data._id,
+        title: data.title,
+        slug: data.slug,
+        description: data.description,
+        thumbnail: data.thumbnail,
+        level: data.level,
+        durationWeeks: data.durationWeeks,
+        published: data.published,
+        price: data.price ?? 0,
+        currency: data.currency ?? 'VND',
+        isPaid: data.isPaid ?? false,
+        modules: (data.modules || []).sort((a, b) => a.order - b.order),
+        lessons: (data.lessons || []).sort((a, b) => a.order - b.order),
       },
     });
   } catch (err) {
@@ -240,6 +356,15 @@ router.put('/:slug/editor', authMiddleware, requireRole('teacher', 'admin'), asy
     const course = await Course.findOne({ slug: req.params.slug });
     if (!course) {
       return res.status(404).json({ success: false, error: 'Không tìm thấy khóa học' });
+    }
+
+    // Phân quyền: teacher chỉ lưu course của mình
+    if (req.userRole === 'teacher') {
+      if (!course.teacherId) {
+        course.teacherId = req.userId;
+      } else if (course.teacherId !== req.userId) {
+        return res.status(403).json({ success: false, error: 'Không có quyền sửa khóa học này' });
+      }
     }
 
     if (typeof title === 'string' && title.trim()) course.title = title.trim();

@@ -25,34 +25,34 @@ export default function CommunityPage() {
     <div className="min-h-screen bg-gradient-to-b from-[#05070c] via-black to-[#04090f]">
       <div className="pt-20 px-4 pb-12 max-w-6xl mx-auto">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-white">Cộng đồng Galaxies</h1>
+          <h1 className="text-3xl font-bold text-white">Cosmo Learn Community</h1>
           <p className="mt-2 text-gray-400">
-            Chia sẻ kinh nghiệm, hỏi đáp, và cập nhật tin thiên văn mới nhất
+            Share knowledge, ask questions, and stay up to date with the latest astronomy news.
           </p>
         </div>
 
         {loading ? (
-          <div className="py-16 text-center text-gray-500">Đang tải...</div>
+          <div className="py-16 text-center text-gray-500">Loading...</div>
         ) : (
           <div className="space-y-10">
-            {/* Tin thiên văn - News section */}
+            {/* Astronomy news */}
             <section className="rounded-2xl border border-cyan-500/20 bg-[#08111f]/80 overflow-hidden">
               <div className="px-5 py-4 border-b border-white/10 flex items-center justify-between">
                 <h2 className="text-lg font-semibold text-cyan-300 flex items-center gap-2">
-                  🌌 Tin thiên văn
+                  🌌 Astronomy news
                 </h2>
                 <Link
                   href="/community/tin-thien-van"
                   className="text-sm text-cyan-400 hover:text-cyan-300"
                 >
-                  Xem tất cả
+                  View all
                 </Link>
               </div>
               <div className="p-4">
                 {news.length === 0 ? (
                   <p className="text-gray-500 text-sm py-4">
-                    Chưa có tin. Chạy <code className="bg-white/10 px-1 rounded">npm run crawl-news</code> trong
-                    services/community để cập nhật.
+                    No news yet. Run <code className="bg-white/10 px-1 rounded">npm run crawl-news</code> in
+                    services/community to update.
                   </p>
                 ) : (
                   <div className="grid gap-3 md:grid-cols-2">
@@ -73,7 +73,7 @@ export default function CommunityPage() {
                           <div className="min-w-0 flex-1">
                             <h3 className="font-medium text-white line-clamp-2">{p.title}</h3>
                             <p className="text-xs text-gray-500 mt-1">
-                              {p.sourceName} · {p.publishedAt ? new Date(p.publishedAt).toLocaleDateString('vi-VN') : ''}
+                              {p.sourceName} · {p.publishedAt ? new Date(p.publishedAt).toLocaleDateString('en-US') : ''}
                             </p>
                           </div>
                         </div>
@@ -84,10 +84,10 @@ export default function CommunityPage() {
               </div>
             </section>
 
-            {/* Diễn đàn */}
+            {/* Forums */}
             <section className="rounded-2xl border border-white/10 bg-[#08111f]/50 overflow-hidden">
               <h2 className="px-5 py-4 border-b border-white/10 text-lg font-semibold text-white">
-                Diễn đàn
+                Forums
               </h2>
               <div className="p-4 grid gap-3 md:grid-cols-2">
                 {newsForum && (
@@ -99,7 +99,7 @@ export default function CommunityPage() {
                     <div>
                       <h3 className="font-medium text-white">{newsForum.title}</h3>
                       <p className="text-sm text-gray-400 line-clamp-1">{newsForum.description}</p>
-                      <p className="text-xs text-cyan-400 mt-1">{newsForum.postCount} bài viết</p>
+                      <p className="text-xs text-cyan-400 mt-1">{newsForum.postCount} posts</p>
                     </div>
                   </Link>
                 )}
@@ -113,7 +113,7 @@ export default function CommunityPage() {
                     <div>
                       <h3 className="font-medium text-white">{f.title}</h3>
                       <p className="text-sm text-gray-400 line-clamp-1">{f.description}</p>
-                      <p className="text-xs text-gray-500 mt-1">{f.postCount} bài viết</p>
+                      <p className="text-xs text-gray-500 mt-1">{f.postCount} posts</p>
                     </div>
                   </Link>
                 ))}

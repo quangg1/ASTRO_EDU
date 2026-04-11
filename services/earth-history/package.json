@@ -9,6 +9,9 @@
     "seed": "node seeds/seedData.js",
     "import-pbdb": "node seeds/importPBDB.js",
     "list-phyla": "node scripts/listPhyla.js",
+    "prune-fossils": "node scripts/pruneFossilsByPeriod.js",
+    "analyze-fossil-stages": "node scripts/analyzeFossilEarthStages.js",
+    "delete-fossils-outside-stages": "node scripts/deleteFossilsOutsideEarthStages.js",
     "seed-phylum-metadata": "node seeds/seedPhylumMetadata.js"
   },
   "dependencies": {

@@ -39,6 +39,53 @@ export interface Tutorial {
   relatedSlugs: string[]
   published: boolean
   order: number
+  difficulty?: 'beginner' | 'intermediate' | 'advanced'
+  prerequisites?: string[]
+  learningObjectives?: string[]
+}
+
+export interface TutorialTrackItem {
+  title: string
+  tutorialSlug: string
+  description?: string
+  order: number
+}
+
+export interface TutorialTrackItem {
+  title: string
+  tutorialSlug: string
+  description?: string
+  order: number
+}
+
+export interface TutorialTrackSubtopic {
+  title: string
+  description?: string
+  order: number
+  items: TutorialTrackItem[]
+}
+
+export interface TutorialTrackTopic {
+  title: string
+  description?: string
+  order: number
+  subtopics: TutorialTrackSubtopic[]
+}
+
+export interface TutorialTrack {
+  _id: string
+  title: string
+  slug: string
+  description?: string
+  icon?: string
+  level: number
+  order: number
+  topics: TutorialTrackTopic[]
+}
+
+// legacy names kept for backwards compatibility in components
+export interface TutorialTrackSection extends TutorialTrackTopic {
+  items: TutorialTrackItem[]
 }
 
 export async function fetchTutorialCategories(): Promise<TutorialCategory[]> {
@@ -59,11 +106,45 @@ export async function fetchTutorials(categoryId?: string, search?: string): Prom
   return []
 }
 
+export async function fetchTutorialTracks(): Promise<TutorialTrack[]> {
+  const res = await fetch(`${API}/tracks`)
+  const data = await res.json()
+  if (data.success && Array.isArray(data.data)) return data.data
+  return []
+}
+
+export async function fetchTrackProgress(
+  trackSlug: string,
+): Promise<{ items: string[]; progress: Record<string, { status: string }> } | null> {
+  const token = typeof window !== 'undefined' ? localStorage.getItem('galaxies_token') : null
+  if (!token) return null
+  const res = await fetch(`${API}/tracks/${encodeURIComponent(trackSlug)}/progress`, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  const data = await res.json()
+  if (data.success && data.data) return data.data
+  return null
+}
+
 export async function fetchTutorial(slug: string): Promise<Tutorial | null> {
   const res = await fetch(`${API}/${encodeURIComponent(slug)}`)
   const data = await res.json()
   if (data.success && data.data) return data.data
   return null
+}
+
+export async function completeTutorial(slug: string): Promise<{ success: boolean }> {
+  const res = await fetch(`${API}/${encodeURIComponent(slug)}/progress/complete`, {
+    method: 'POST',
+    headers: (() => {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('galaxies_token') : null
+      const h: HeadersInit = { 'Content-Type': 'application/json' }
+      if (token) (h as Record<string, string>)['Authorization'] = `Bearer ${token}`
+      return h
+    })(),
+  })
+  const data = await res.json()
+  return { success: !!data.success }
 }
 
 /** Editor API – cần auth (teacher/admin) */

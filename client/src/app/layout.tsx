@@ -1,25 +1,46 @@
 import type { Metadata, Viewport } from 'next'
 import './globals.css'
+import { getStaticAssetUrl } from '@/lib/apiConfig'
 import { AuthProvider } from '@/components/auth/AuthProvider'
 import { AppHeader } from '@/components/ui/AppHeader'
+import { AppShell } from '@/components/ui/AppShell'
 import { AITutor } from '@/components/ai-tutor/AITutor'
 import { ErrorBoundaryWrap } from '@/components/ui/ErrorBoundaryWrap'
 import { Analytics } from '@/components/ui/Analytics'
+import { PwaRegister } from '@/components/ui/PwaRegister'
+import { PwaInstallPrompt } from '@/components/ui/PwaInstallPrompt'
+import { PwaStatusBadge } from '@/components/ui/PwaStatusBadge'
+import { HybridBootstrap } from '@/components/ui/HybridBootstrap'
+import { ChunkLoadRecovery } from '@/components/ui/ChunkLoadRecovery'
 
 export const metadata: Metadata = {
-  title: { default: 'Galaxies Edu – Thiên văn học | Earth History | Hệ Mặt Trời', template: '%s | Galaxies Edu' },
-  description: 'Học thiên văn qua khóa học và mô phỏng 3D: Lịch sử Trái Đất, Hệ Mặt Trời, Milky Way. Tutorial, khóa học chuyên sâu, cộng đồng.',
-  keywords: ['astronomy', 'earth history', 'solar system', 'milky way', 'courses', 'education', '3D', 'thiên văn học'],
+  title: { default: 'Cosmo Learn – Astronomy | Earth History | Solar System', template: '%s | Cosmo Learn' },
+  applicationName: 'Cosmo Learn',
+  description: 'Learn astronomy through courses and 3D simulations: Earth History, the Solar System, and the Milky Way. Tutorials, in-depth courses, and community.',
+  keywords: ['astronomy', 'earth history', 'solar system', 'milky way', 'courses', 'education', '3D'],
   openGraph: {
-    title: 'Galaxies Edu – Học thiên văn qua mô phỏng 3D',
-    description: 'Khóa học, tutorial và mô phỏng 3D: Lịch sử Trái Đất, Hệ Mặt Trời, Milky Way.',
+    title: 'Cosmo Learn – Learn astronomy with 3D simulations',
+    description: 'Courses, tutorials, and 3D simulations: Earth History, the Solar System, and the Milky Way.',
     type: 'website',
   },
   robots: { index: true, follow: true },
+  icons: {
+    icon: getStaticAssetUrl('/images/web_icon.png'),
+    shortcut: getStaticAssetUrl('/images/web_icon.png'),
+    apple: getStaticAssetUrl('/images/web_icon.png'),
+  },
+  appleWebApp: {
+    capable: true,
+    title: 'Cosmo Learn',
+    statusBarStyle: 'black-translucent',
+  },
 }
 
 export const viewport: Viewport = {
   themeColor: '#0a0f17',
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
 }
 
 export default function RootLayout({
@@ -28,13 +49,18 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="vi">
+    <html lang="en">
       <body className="antialiased">
         <Analytics />
+        <ChunkLoadRecovery />
+        <PwaRegister />
+        <HybridBootstrap />
         <AuthProvider>
           <ErrorBoundaryWrap>
             <AppHeader />
-            {children}
+            <PwaInstallPrompt />
+            <PwaStatusBadge />
+            <AppShell>{children}</AppShell>
             <AITutor />
           </ErrorBoundaryWrap>
         </AuthProvider>

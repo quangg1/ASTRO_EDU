@@ -3,9 +3,9 @@ import { NextRequest, NextResponse } from 'next/server'
 const EMBEDDING_URL = process.env.EMBEDDING_URL || 'http://localhost:5004'
 
 /**
- * Proxy tới Embedding service (Flag Embedding BGE-M3).
- * POST body: { texts: string[] } hoặc { text: string }
- * Trả về: { embeddings: number[][] } hoặc { embedding: number[] }
+ * Proxy to embedding service (Flag Embedding BGE-M3).
+ * POST body: { texts: string[] } or { text: string }
+ * Returns: { embeddings: number[][] } or { embedding: number[] }
  */
 export async function POST(req: NextRequest) {
   try {

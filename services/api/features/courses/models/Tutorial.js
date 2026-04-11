@@ -31,15 +31,21 @@ const tutorialSchema = new mongoose.Schema({
   categoryId: { type: mongoose.Schema.Types.ObjectId, ref: 'TutorialCategory', default: null },
   readTime: { type: Number, default: 5 },
   tags: [{ type: String }],
+  difficulty: { type: String, enum: ['beginner', 'intermediate', 'advanced'], default: 'beginner' },
+  prerequisites: [{ type: String }], // danh sách tutorialSlug cần học trước
+  learningObjectives: [{ type: String }],
   sections: [tutorialSectionSchema],
   relatedSlugs: [{ type: String }],
   published: { type: Boolean, default: false },
   order: { type: Number, default: 0 },
+  /** Giáo viên tạo tutorial */
+  authorId: { type: String, default: null },
 }, { timestamps: true });
 
 tutorialSchema.index({ slug: 1 }, { unique: true });
 tutorialSchema.index({ categoryId: 1 });
 tutorialSchema.index({ published: 1 });
+tutorialSchema.index({ authorId: 1 });
 
 const TutorialCategory = mongoose.model('TutorialCategory', tutorialCategorySchema);
 const Tutorial = mongoose.model('Tutorial', tutorialSchema);

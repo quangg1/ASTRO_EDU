@@ -1,4 +1,5 @@
 import { getAuthBase } from './apiConfig'
+import { setSecureToken, clearSecureToken } from './hybrid/mobileNative'
 const AUTH_BASE = getAuthBase()
 
 export interface AuthUser {
@@ -7,7 +8,7 @@ export interface AuthUser {
   displayName: string
   avatar: string | null
   provider: string
-  role?: 'student' | 'teacher' | 'admin'
+  role?: 'student' | 'teacher' | 'moderator' | 'admin'
 }
 
 export interface AuthResponse {
@@ -19,23 +20,47 @@ export interface AuthResponse {
 
 const TOKEN_KEY = 'galaxies_token'
 
+function isTokenFormatValid(token: string): boolean {
+  return token.split('.').length === 3 && token.length > 20
+}
+
+async function authFetch(url: string, init?: RequestInit): Promise<Response> {
+  return fetch(url, {
+    cache: 'no-store',
+    credentials: 'omit',
+    ...init,
+    headers: {
+      ...(init?.headers || {}),
+    },
+  })
+}
+
 export function getToken(): string | null {
   if (typeof window === 'undefined') return null
-  return localStorage.getItem(TOKEN_KEY)
+  const token = localStorage.getItem(TOKEN_KEY)
+  if (!token) return null
+  if (!isTokenFormatValid(token)) {
+    localStorage.removeItem(TOKEN_KEY)
+    return null
+  }
+  return token
 }
 
 export function setToken(token: string): void {
   if (typeof window === 'undefined') return
+  if (!isTokenFormatValid(token)) return
   localStorage.setItem(TOKEN_KEY, token)
+  setSecureToken(token).catch(() => {})
 }
 
 export function clearToken(): void {
   if (typeof window === 'undefined') return
   localStorage.removeItem(TOKEN_KEY)
+  clearSecureToken().catch(() => {})
 }
 
 export async function login(email: string, password: string): Promise<AuthResponse> {
-  const res = await fetch(`${AUTH_BASE}/auth/login`, {
+  const res = await authFetch(`${AUTH_BASE}/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password }),
@@ -53,7 +78,7 @@ export async function register(
   password: string,
   displayName?: string
 ): Promise<AuthResponse> {
-  const res = await fetch(`${AUTH_BASE}/auth/register`, {
+  const res = await authFetch(`${AUTH_BASE}/auth/register`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password, displayName }),
@@ -68,8 +93,8 @@ export async function register(
 
 export async function fetchMe(): Promise<AuthResponse> {
   const token = getToken()
-  if (!token) return { success: false, error: 'Chưa đăng nhập' }
-  const res = await fetch(`${AUTH_BASE}/auth/me`, {
+  if (!token) return { success: false, error: 'Not signed in' }
+  const res = await authFetch(`${AUTH_BASE}/auth/me`, {
     headers: { Authorization: `Bearer ${token}` },
   })
   const data = await res.json()
@@ -77,21 +102,28 @@ export async function fetchMe(): Promise<AuthResponse> {
     return { success: true, user: data.user }
   }
   clearToken()
-  return { success: false, error: data.error || 'Phiên đăng nhập hết hạn' }
+  return { success: false, error: data.error || 'Session expired' }
 }
 
-export function getGoogleAuthUrl(): string {
-  return `${AUTH_BASE}/auth/google`
-}
-
-export function getFacebookAuthUrl(): string {
-  return `${AUTH_BASE}/auth/facebook`
+/** Đăng nhập sau khi Firebase `signInWithPopup` — server verify ID token và gộp user theo email. */
+export async function loginWithFirebaseIdToken(idToken: string): Promise<AuthResponse> {
+  const res = await authFetch(`${AUTH_BASE}/auth/firebase`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ idToken }),
+  })
+  const data = await res.json()
+  if (data.success && data.token) {
+    setToken(data.token)
+    return { success: true, token: data.token, user: data.user }
+  }
+  return { success: false, error: data.error || 'Đăng nhập Firebase thất bại' }
 }
 
 export async function updateProfile(data: { displayName?: string; avatar?: string }): Promise<AuthResponse> {
   const token = getToken()
-  if (!token) return { success: false, error: 'Chưa đăng nhập' }
-  const res = await fetch(`${AUTH_BASE}/auth/me`, {
+  if (!token) return { success: false, error: 'Not signed in' }
+  const res = await authFetch(`${AUTH_BASE}/auth/me`, {
     method: 'PATCH',
     headers: {
       'Content-Type': 'application/json',
@@ -106,8 +138,8 @@ export async function updateProfile(data: { displayName?: string; avatar?: strin
 
 export async function changePassword(currentPassword: string, newPassword: string): Promise<AuthResponse> {
   const token = getToken()
-  if (!token) return { success: false, error: 'Chưa đăng nhập' }
-  const res = await fetch(`${AUTH_BASE}/auth/change-password`, {
+  if (!token) return { success: false, error: 'Not signed in' }
+  const res = await authFetch(`${AUTH_BASE}/auth/change-password`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -121,7 +153,7 @@ export async function changePassword(currentPassword: string, newPassword: strin
 }
 
 export async function forgotPassword(email: string): Promise<{ success: boolean; error?: string; resetLink?: string }> {
-  const res = await fetch(`${AUTH_BASE}/auth/forgot-password`, {
+  const res = await authFetch(`${AUTH_BASE}/auth/forgot-password`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email }),
@@ -132,7 +164,7 @@ export async function forgotPassword(email: string): Promise<{ success: boolean;
 }
 
 export async function resetPassword(token: string, newPassword: string): Promise<AuthResponse> {
-  const res = await fetch(`${AUTH_BASE}/auth/reset-password`, {
+  const res = await authFetch(`${AUTH_BASE}/auth/reset-password`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ token, newPassword }),
@@ -154,11 +186,29 @@ export interface AdminUser {
 
 export async function fetchAdminUsers(): Promise<{ success: boolean; data?: AdminUser[]; error?: string }> {
   const token = getToken()
-  if (!token) return { success: false, error: 'Chưa đăng nhập' }
-  const res = await fetch(`${AUTH_BASE}/auth/admin/users`, {
+  if (!token) return { success: false, error: 'Not signed in' }
+  const res = await authFetch(`${AUTH_BASE}/auth/admin/users`, {
     headers: { Authorization: `Bearer ${token}` },
   })
   const data = await res.json()
   if (data.success && Array.isArray(data.data)) return { success: true, data: data.data }
   return { success: false, error: data.error || 'Lỗi tải danh sách' }
+}
+
+export type UserRole = 'student' | 'teacher' | 'moderator' | 'admin'
+
+export async function updateUserRole(
+  userId: string,
+  role: UserRole
+): Promise<{ success: boolean; user?: AdminUser; error?: string }> {
+  const token = getToken()
+  if (!token) return { success: false, error: 'Not signed in' }
+  const res = await authFetch(`${AUTH_BASE}/auth/admin/users/${encodeURIComponent(userId)}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ role }),
+  })
+  const data = await res.json()
+  if (data.success && data.user) return { success: true, user: data.user }
+  return { success: false, error: data.error || 'Cập nhật role thất bại' }
 }

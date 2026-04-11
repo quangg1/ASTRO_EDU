@@ -6,6 +6,8 @@
 export interface PlanetData {
   name: string
   nameVi: string
+  /** Short English blurb for astronaut / pilot HUD */
+  explorerBlurb: string
   texture: string
   radius: number      // bán kính hiển thị (đơn vị 3D)
   distance: number   // khoảng cách từ Mặt Trời (đơn vị 3D)
@@ -35,6 +37,7 @@ export const planetsData: PlanetData[] = [
   {
     name: 'Mercury',
     nameVi: 'Sao Thủy',
+    explorerBlurb: 'Sun-blasted, cratered world — the smallest planet and a stark first stop.',
     texture: `${T}/8k_mercury.jpg`,
     radius: 0.22 * PLANET_SIZE_SCALE,
     distance: 8,
@@ -45,6 +48,7 @@ export const planetsData: PlanetData[] = [
   {
     name: 'Venus',
     nameVi: 'Sao Kim',
+    explorerBlurb: 'Thick clouds, crushing pressure, and furnace-like heat — Earth’s “evil twin”.',
     texture: `${T}/8k_venus_surface.jpg`,
     radius: 0.32 * PLANET_SIZE_SCALE,
     distance: 12,
@@ -55,6 +59,7 @@ export const planetsData: PlanetData[] = [
   {
     name: 'Earth',
     nameVi: 'Trái Đất',
+    explorerBlurb: 'Our blue world — oceans, atmosphere, and the only known life in the solar system.',
     texture: `${T}/8k_earth_daymap.jpg`,
     radius: 0.34 * PLANET_SIZE_SCALE,
     distance: 16,
@@ -65,6 +70,7 @@ export const planetsData: PlanetData[] = [
   {
     name: 'Mars',
     nameVi: 'Sao Hỏa',
+    explorerBlurb: 'Rusty deserts, giant volcanoes, and polar ice — humanity’s next frontier.',
     texture: `${T}/8k_mars.jpg`,
     radius: 0.18 * PLANET_SIZE_SCALE,
     distance: 20,
@@ -75,6 +81,7 @@ export const planetsData: PlanetData[] = [
   {
     name: 'Jupiter',
     nameVi: 'Sao Mộc',
+    explorerBlurb: 'The largest planet — a stormy gas giant with the Great Red Spot.',
     texture: `${T}/8k_jupiter.jpg`,
     radius: 1.0 * PLANET_SIZE_SCALE,
     distance: 28,
@@ -85,6 +92,7 @@ export const planetsData: PlanetData[] = [
   {
     name: 'Saturn',
     nameVi: 'Sao Thổ',
+    explorerBlurb: 'Iconic rings of ice and rock orbiting a pale gas giant.',
     texture: `${T}/8k_saturn.jpg`,
     radius: 0.85 * PLANET_SIZE_SCALE,
     distance: 36,
@@ -98,6 +106,7 @@ export const planetsData: PlanetData[] = [
   {
     name: 'Uranus',
     nameVi: 'Sao Thiên Vương',
+    explorerBlurb: 'An ice giant tilted on its side, with a smooth blue-green haze.',
     texture: `${T}/2k_uranus.jpg`,
     radius: 0.5 * PLANET_SIZE_SCALE,
     distance: 44,
@@ -108,6 +117,7 @@ export const planetsData: PlanetData[] = [
   {
     name: 'Neptune',
     nameVi: 'Sao Hải Vương',
+    explorerBlurb: 'Deep blue, wind-whipped ice giant — the farthest major planet from the Sun.',
     texture: `${T}/2k_neptune.jpg`,
     radius: 0.48 * PLANET_SIZE_SCALE,
     distance: 52,

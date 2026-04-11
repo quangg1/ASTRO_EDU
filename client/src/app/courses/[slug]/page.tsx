@@ -156,6 +156,18 @@ export default function CourseSlugPage() {
   const [loading, setLoading] = useState(true)
   const [enrolling, setEnrolling] = useState(false)
   const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null)
+  const [showMobileLessons, setShowMobileLessons] = useState(false)
+  const [reducedMode, setReducedMode] = useState(false)
+  const [enableMobile3D, setEnableMobile3D] = useState(false)
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const mediaQuery = window.matchMedia('(max-width: 768px), (prefers-reduced-motion: reduce)')
+    const apply = () => setReducedMode(mediaQuery.matches)
+    apply()
+    mediaQuery.addEventListener('change', apply)
+    return () => mediaQuery.removeEventListener('change', apply)
+  }, [])
 
   useEffect(() => {
     if (!slug) return
@@ -194,6 +206,10 @@ export default function CourseSlugPage() {
     const lesson = course.lessons.find((l) => l.slug === lessonSlugFromUrl)
     if (lesson) setSelectedLesson(lesson)
   }, [course?.lessons, lessonSlugFromUrl])
+
+  useEffect(() => {
+    setEnableMobile3D(false)
+  }, [selectedLesson?.slug])
 
   // Removed auto-popup: chat only opens when user clicks the button
 
@@ -278,7 +294,7 @@ export default function CourseSlugPage() {
     return (
       <div className="min-h-screen bg-black">
         <main className="pt-16 flex items-center justify-center min-h-[50vh]">
-          <p className="text-gray-500">Đang tải khóa học...</p>
+          <p className="text-gray-500">Loading course...</p>
         </main>
       </div>
     )
@@ -291,14 +307,14 @@ export default function CourseSlugPage() {
         <aside className="w-full md:w-80 shrink-0 border-b md:border-b-0 md:border-r border-white/10 bg-[#070c14]">
           <div className="p-4 border-b border-white/10">
             <Link href="/courses" className="text-sm text-cyan-400 hover:text-cyan-300 mb-4 inline-block">
-              ← Khóa học
+              ← Courses
             </Link>
             <h1 className="font-bold text-white text-lg mb-2">{course.title}</h1>
             <p className="text-sm text-gray-400 mb-4 line-clamp-3">{course.description}</p>
             <div className="mb-4 rounded-xl border border-white/10 bg-white/5 p-3">
               <div className="flex items-center justify-between text-xs text-gray-400 mb-2">
-                <span>Tiến độ học</span>
-                <span>{completedCount}/{lessons.length} bài</span>
+                <span>Progress</span>
+                <span>{completedCount}/{lessons.length} lessons</span>
               </div>
               <div className="h-2 bg-white/10 rounded-full overflow-hidden">
                 <div className="h-full bg-cyan-500" style={{ width: `${progressPercent}%` }} />
@@ -312,26 +328,36 @@ export default function CourseSlugPage() {
                 className="w-full py-2 rounded-xl bg-cyan-600 text-white text-sm font-medium hover:bg-cyan-500 disabled:opacity-50"
               >
                 {enrolling
-                  ? 'Đang đăng ký...'
+                  ? 'Enrolling...'
                   : course.isPaid && (course.price ?? 0) > 0
-                    ? `Mua khóa học ${course.currency === 'USD' ? `$${course.price}` : `${(course.price ?? 0).toLocaleString('vi-VN')} ₫`}`
-                    : 'Tham gia khóa học'}
+                    ? `Buy course ${course.currency === 'USD' ? `$${course.price}` : `${(course.price ?? 0).toLocaleString('en-US')} ₫`}`
+                    : 'Enroll'}
               </button>
             )}
             {!user && (
-              <p className="text-sm text-gray-500">Đăng nhập để tham gia khóa học.</p>
+              <p className="text-sm text-gray-500">Log in to enroll in this course.</p>
             )}
+            <button
+              type="button"
+              onClick={() => setShowMobileLessons((v) => !v)}
+              className="md:hidden mt-3 w-full min-h-11 rounded-xl border border-white/10 bg-white/5 text-sm text-gray-200"
+            >
+              {showMobileLessons ? 'Hide lessons' : 'Show lessons'}
+            </button>
           </div>
-          <ModuleSidebar
-            courseModules={courseModules}
-            lessonsByModule={lessonsByModule}
-            progressBySlug={progressBySlug}
-            selectedLesson={selectedLesson}
-            onSelectLesson={(lesson) => {
-              setSelectedLesson(lesson)
-              router.replace(`/courses/${slug}?lesson=${encodeURIComponent(lesson.slug)}`, { scroll: false })
-            }}
-          />
+          <div className={showMobileLessons ? 'block md:block' : 'hidden md:block'}>
+            <ModuleSidebar
+              courseModules={courseModules}
+              lessonsByModule={lessonsByModule}
+              progressBySlug={progressBySlug}
+              selectedLesson={selectedLesson}
+              onSelectLesson={(lesson) => {
+                setSelectedLesson(lesson)
+                setShowMobileLessons(false)
+                router.replace(`/courses/${slug}?lesson=${encodeURIComponent(lesson.slug)}`, { scroll: false })
+              }}
+            />
+          </div>
         </aside>
 
         {/* Content: lesson or placeholder */}
@@ -340,7 +366,7 @@ export default function CourseSlugPage() {
             <>
               {/* Breadcrumb */}
               <div className="px-5 py-3 border-b border-white/10 flex items-center gap-2 text-sm text-gray-400 bg-[#0a1220]">
-                <Link href="/courses" className="hover:text-cyan-400">Khóa học</Link>
+                <Link href="/courses" className="hover:text-cyan-400">Courses</Link>
                 <span>/</span>
                 <span className="text-white">{course.title}</span>
                 <span>/</span>
@@ -354,7 +380,7 @@ export default function CourseSlugPage() {
                     onClick={() => markComplete(selectedLesson.slug, !progressBySlug.get(selectedLesson.slug))}
                     className="text-sm px-3 py-1.5 rounded-xl bg-white/10 text-gray-300 hover:bg-cyan-600/30 hover:text-cyan-300"
                   >
-                    {progressBySlug.get(selectedLesson.slug) ? 'Đánh dấu chưa hoàn thành' : 'Đánh dấu hoàn thành'}
+                    {progressBySlug.get(selectedLesson.slug) ? 'Mark as incomplete' : 'Mark as completed'}
                   </button>
                 )}
               </div>
@@ -362,15 +388,15 @@ export default function CourseSlugPage() {
                 {!isEnrolled && course.isPaid && (course.price ?? 0) > 0 ? (
                   <div className="flex flex-col items-center justify-center min-h-[320px] p-8 text-center">
                     <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-8 max-w-md">
-                      <p className="text-amber-200 font-medium mb-2">Nội dung khóa học trả phí</p>
-                      <p className="text-sm text-gray-400 mb-6">Mua khóa học để mở khóa toàn bộ bài học và theo dõi tiến độ.</p>
+                      <p className="text-amber-200 font-medium mb-2">Paid course content</p>
+                      <p className="text-sm text-gray-400 mb-6">Buy the course to unlock all lessons and track your progress.</p>
                       <button
                         type="button"
                         onClick={handleEnroll}
                         disabled={enrolling}
                         className="px-6 py-3 rounded-xl bg-cyan-600 text-white font-medium hover:bg-cyan-500 disabled:opacity-50"
                       >
-                        {enrolling ? 'Đang xử lý...' : `Mua ngay ${course.currency === 'USD' ? `$${course.price}` : `${(course.price ?? 0).toLocaleString('vi-VN')} ₫`}`}
+                        {enrolling ? 'Processing...' : `Buy now ${course.currency === 'USD' ? `$${course.price}` : `${(course.price ?? 0).toLocaleString('en-US')} ₫`}`}
                       </button>
                     </div>
                   </div>
@@ -387,13 +413,29 @@ export default function CourseSlugPage() {
                           }}
                             className="px-4 py-2 rounded-xl bg-cyan-600 text-white text-sm font-medium hover:bg-cyan-500"
                         >
-                          Bài tiếp: {nextLesson.title} →
+                          Next lesson: {nextLesson.title} →
                         </button>
                       </div>
                     )}
                   </>
                 ) : selectedLesson.type === 'visualization' ? (
                   <div className="w-full h-full min-h-[400px] relative flex flex-col">
+                    {reducedMode && !enableMobile3D && (
+                      <div className="px-6 py-8 border-b border-white/10 bg-[#0a111f]">
+                        <p className="text-sm text-gray-300 mb-3">
+                          3D visualizations can be heavy on mobile devices.
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => setEnableMobile3D(true)}
+                          className="min-h-11 px-4 py-2 rounded-xl bg-cyan-600 text-white text-sm font-medium hover:bg-cyan-500"
+                        >
+                          Load 3D visualization
+                        </button>
+                      </div>
+                    )}
+                    {(!reducedMode || enableMobile3D) && (
+                      <>
                     {selectedLesson.visualizationId === 'earth-history' && (() => {
                       const stageTime = selectedLesson.stageTime
                       const stage = stageTime != null ? getStageByTime(stageTime) : undefined
@@ -427,8 +469,10 @@ export default function CourseSlugPage() {
                       selectedLesson.visualizationId || ''
                     ) && (
                       <div className="absolute inset-0 flex items-center justify-center text-gray-500">
-                        Mô phỏng: {selectedLesson.visualizationId || 'Chưa cấu hình'}
+                        Simulation: {selectedLesson.visualizationId || 'Not configured'}
                       </div>
+                    )}
+                      </>
                     )}
                     {nextLesson && (
                       <div className="p-4 border-t border-white/10 shrink-0">
@@ -440,7 +484,7 @@ export default function CourseSlugPage() {
                           }}
                           className="px-4 py-2 rounded-lg bg-cyan-600 text-white text-sm font-medium hover:bg-cyan-500"
                         >
-                          Bài tiếp: {nextLesson.title} →
+                          Next lesson: {nextLesson.title} →
                         </button>
                       </div>
                     )}
@@ -466,13 +510,13 @@ export default function CourseSlugPage() {
                               }}
                               className="px-4 py-2 rounded-xl bg-cyan-600 text-white text-sm font-medium hover:bg-cyan-500"
                             >
-                              Bài tiếp: {nextLesson.title} →
+                              Next lesson: {nextLesson.title} →
                             </button>
                           </div>
                         )}
                       </>
                     ) : (
-                      <div className="p-6 text-gray-400">Bài quiz (chưa có câu hỏi).</div>
+                      <div className="p-6 text-gray-400">Quiz lesson (no questions yet).</div>
                     )}
                   </>
                 ) : null}
@@ -484,8 +528,8 @@ export default function CourseSlugPage() {
                 <h2 className="text-2xl font-bold text-white">{course.title}</h2>
                 <p className="text-gray-300 text-sm leading-relaxed">{course.description}</p>
                 <p className="text-gray-500 text-xs">
-                  {course.durationWeeks != null && `${course.durationWeeks} tuần · `}
-                  {lessons.length} bài học
+                  {course.durationWeeks != null && `${course.durationWeeks} weeks · `}
+                  {lessons.length} lessons
                 </p>
                 <button
                   type="button"
@@ -498,7 +542,7 @@ export default function CourseSlugPage() {
                   }}
                   className="mt-4 px-6 py-3 rounded-xl bg-cyan-600 text-white font-medium hover:bg-cyan-500"
                 >
-                  Bắt đầu học
+                  Start learning
                 </button>
               </div>
             </div>

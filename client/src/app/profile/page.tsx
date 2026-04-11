@@ -44,7 +44,7 @@ export default function ProfilePage() {
       setProfileMessage('success')
     } else {
       setProfileMessage('error')
-      setProfileError(res.error || 'Cập nhật thất bại')
+      setProfileError(res.error || 'Update failed')
     }
   }
 
@@ -53,12 +53,12 @@ export default function ProfilePage() {
     setPasswordMessage(null)
     setPasswordError('')
     if (newPassword !== confirmPassword) {
-      setPasswordError('Mật khẩu mới và xác nhận không khớp')
+      setPasswordError('New password and confirmation do not match')
       setPasswordMessage('error')
       return
     }
     if (newPassword.length < 6) {
-      setPasswordError('Mật khẩu mới tối thiểu 6 ký tự')
+      setPasswordError('New password must be at least 6 characters')
       setPasswordMessage('error')
       return
     }
@@ -72,14 +72,14 @@ export default function ProfilePage() {
       setConfirmPassword('')
     } else {
       setPasswordMessage('error')
-      setPasswordError(res.error || 'Đổi mật khẩu thất bại')
+      setPasswordError(res.error || 'Password change failed')
     }
   }
 
   if (!checked || !user) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
-        <p className="text-gray-500">Đang tải...</p>
+        <p className="text-gray-500">Loading...</p>
       </div>
     )
   }
@@ -88,22 +88,41 @@ export default function ProfilePage() {
     <div className="min-h-screen bg-black">
       <main className="pt-20 px-4 pb-12 max-w-lg mx-auto">
         <Link href="/" className="text-sm text-cyan-400 hover:text-cyan-300 mb-6 inline-block">
-          ← Về trang chủ
+          ← Back to home
         </Link>
-        <h1 className="text-2xl font-bold text-white mb-8">Hồ sơ cá nhân</h1>
+        <h1 className="text-2xl font-bold text-white mb-6">Profile</h1>
 
-        {/* Thông tin cơ bản */}
+        <div className="flex flex-wrap gap-3 mb-8">
+          <Link
+            href="/my-courses"
+            className="px-4 py-2 rounded-lg bg-cyan-600/20 border border-cyan-500/30 text-cyan-300 text-sm hover:bg-cyan-600/30"
+          >
+            My Learning
+          </Link>
+          {(user.role === 'teacher' || user.role === 'admin') && (
+            <Link href="/studio" className="px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-gray-300 text-sm hover:bg-white/15">
+              Studio
+            </Link>
+          )}
+          {user.role === 'admin' && (
+            <Link href="/admin" className="px-4 py-2 rounded-lg bg-amber-500/20 border border-amber-500/30 text-amber-300 text-sm hover:bg-amber-500/30">
+              Admin
+            </Link>
+          )}
+        </div>
+
+        {/* Basic info */}
         <section className="glass rounded-2xl p-6 mb-8">
-          <h2 className="text-lg font-semibold text-cyan-300 mb-4">Thông tin</h2>
+          <h2 className="text-lg font-semibold text-cyan-300 mb-4">Details</h2>
           <form onSubmit={handleSaveProfile} className="space-y-4">
             <div>
-              <label className="block text-sm text-gray-400 mb-1">Tên hiển thị</label>
+              <label className="block text-sm text-gray-400 mb-1">Display name</label>
               <input
                 type="text"
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
                 className="w-full px-4 py-2.5 rounded-lg bg-white/10 border border-white/20 text-white placeholder-gray-500 focus:border-cyan-500 focus:outline-none"
-                placeholder="Tên của bạn"
+                placeholder="Your name"
               />
             </div>
             <div>
@@ -116,9 +135,9 @@ export default function ProfilePage() {
                 placeholder="https://..."
               />
             </div>
-            <p className="text-xs text-gray-500">Email: {user.email || '—'} (đăng nhập bằng {user.provider})</p>
+            <p className="text-xs text-gray-500">Email: {user.email || '—'} (signed in with {user.provider})</p>
             {profileMessage === 'success' && (
-              <p className="text-sm text-green-400">Đã cập nhật thông tin.</p>
+              <p className="text-sm text-green-400">Profile updated.</p>
             )}
             {profileMessage === 'error' && (
               <p className="text-sm text-red-400">{profileError}</p>
@@ -128,18 +147,18 @@ export default function ProfilePage() {
               disabled={loadingProfile}
               className="w-full py-2.5 rounded-lg bg-cyan-600 text-white font-medium hover:bg-cyan-500 disabled:opacity-50"
             >
-              {loadingProfile ? 'Đang lưu...' : 'Lưu thay đổi'}
+              {loadingProfile ? 'Saving...' : 'Save changes'}
             </button>
           </form>
         </section>
 
-        {/* Đổi mật khẩu (chỉ tài khoản local) */}
+        {/* Change password (local accounts only) */}
         {user.provider === 'local' && (
           <section className="glass rounded-2xl p-6">
-            <h2 className="text-lg font-semibold text-cyan-300 mb-4">Đổi mật khẩu</h2>
+            <h2 className="text-lg font-semibold text-cyan-300 mb-4">Change password</h2>
             <form onSubmit={handleChangePassword} className="space-y-4">
               <div>
-                <label className="block text-sm text-gray-400 mb-1">Mật khẩu hiện tại</label>
+                <label className="block text-sm text-gray-400 mb-1">Current password</label>
                 <input
                   type="password"
                   value={currentPassword}
@@ -149,7 +168,7 @@ export default function ProfilePage() {
                 />
               </div>
               <div>
-                <label className="block text-sm text-gray-400 mb-1">Mật khẩu mới</label>
+                <label className="block text-sm text-gray-400 mb-1">New password</label>
                 <input
                   type="password"
                   value={newPassword}
@@ -160,7 +179,7 @@ export default function ProfilePage() {
                 />
               </div>
               <div>
-                <label className="block text-sm text-gray-400 mb-1">Xác nhận mật khẩu mới</label>
+                <label className="block text-sm text-gray-400 mb-1">Confirm new password</label>
                 <input
                   type="password"
                   value={confirmPassword}
@@ -170,7 +189,7 @@ export default function ProfilePage() {
                 />
               </div>
               {passwordMessage === 'success' && (
-                <p className="text-sm text-green-400">Đã đổi mật khẩu.</p>
+                <p className="text-sm text-green-400">Password changed.</p>
               )}
               {passwordMessage === 'error' && (
                 <p className="text-sm text-red-400">{passwordError}</p>
@@ -180,7 +199,7 @@ export default function ProfilePage() {
                 disabled={loadingPassword}
                 className="w-full py-2.5 rounded-lg bg-white/15 border border-white/20 text-white font-medium hover:bg-white/25 disabled:opacity-50"
               >
-                {loadingPassword ? 'Đang xử lý...' : 'Đổi mật khẩu'}
+                {loadingPassword ? 'Processing...' : 'Change password'}
               </button>
             </form>
           </section>
@@ -188,7 +207,7 @@ export default function ProfilePage() {
 
         <p className="mt-6 text-center">
           <Link href="/forgot-password" className="text-sm text-cyan-400 hover:text-cyan-300">
-            Quên mật khẩu?
+            Forgot password?
           </Link>
         </p>
       </main>

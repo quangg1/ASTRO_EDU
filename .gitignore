@@ -1,8 +1,43 @@
 node_modules
 .env
-.env.local
+.env.*
+!.env.example
 *.pyc
 __pycache__/
+aws_credentials.txt
+*.credentials
+*.key
+*.p12
+
+# Secrets & cloud keys (không đẩy lên GitHub)
+*firebase-adminsdk*.json
+*-firebase-adminsdk-*.json
+google-services.json
+GoogleService-Info.plist
+
+# OS & editor
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+*.suo
+*.user
+
+# Logs & local tooling
+*.log
+npm-debug.log*
+.yarn-error.log*
+
+# Android / Capacitor (nếu build local)
+**/android/.gradle/
+**/android/**/build/
+**/android/**/local.properties
+**/android/captures/
+
+# File cài đặt / tài liệu cá nhân thả nhầm vào repo
+*.exe
+*.dmg
+*.msi
 
 # Large assets – lưu trên cloud (xem docs/MEDIA_CLOUD.md)
 PALEOMAP PaleoAtlas Rasters v3/

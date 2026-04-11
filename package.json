@@ -5,6 +5,7 @@
     "dev:server": "cd services/earth-history && npm run dev",
     "dev:api": "cd services/api && npm run dev",
     "dev:client": "cd client && npm run dev",
+    "dev:client:poll": "cd client && npm run dev:poll",
     "dev:auth": "cd services/auth && npm run dev",
     "dev:courses": "cd services/courses && npm run dev",
     "dev:media": "cd services/media && npm run dev",

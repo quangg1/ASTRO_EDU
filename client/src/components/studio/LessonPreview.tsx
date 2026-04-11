@@ -1,7 +1,10 @@
 'use client'
 
 import dynamic from 'next/dynamic'
+import { useMemo } from 'react'
 import type { Lesson, LessonSection, QuizQuestion } from '@/lib/coursesApi'
+import type { LearningConcept, LessonConceptAnchor } from '@/data/learningPathCurriculum'
+import { applyConceptAnchorsToHtml } from '@/lib/conceptAnchorsHtml'
 import { resolveMediaUrl } from '@/lib/apiConfig'
 import { getStageByTime } from '@/lib/earthHistoryData'
 
@@ -18,18 +21,38 @@ const CALLOUT_STYLES: Record<string, { border: string; bg: string; icon: string 
   danger: { border: 'border-red-500/40', bg: 'bg-red-500/10', icon: '\u274C' },
 }
 
-function SectionPreview({ sec, index }: { sec: LessonSection; index: number }) {
+type SectionPreviewProps = {
+  sec: LessonSection
+  index: number
+  /** Learning Path: highlight cụm → concept (giống trang học bài) */
+  conceptAnchors?: LessonConceptAnchor[]
+  concepts?: LearningConcept[]
+}
+
+/** Dùng chung Course + Learning Path — render một block */
+export function SectionPreview({ sec, index, conceptAnchors, concepts }: SectionPreviewProps) {
+  const conceptMap = useMemo(() => {
+    if (!concepts?.length) return null
+    return new Map(concepts.map((c) => [c.id, c] as const))
+  }, [concepts])
+
   switch (sec.type) {
-    case 'richtext':
+    case 'richtext': {
+      const raw = sec.html || sec.content || ''
+      const html =
+        conceptAnchors?.length && conceptMap
+          ? applyConceptAnchorsToHtml(raw, conceptAnchors, conceptMap)
+          : raw
       return (
         <div className="space-y-2">
           {sec.title && <h3 className="text-base font-semibold text-white">{index + 1}. {sec.title}</h3>}
           <div
             className="prose prose-invert prose-sm max-w-none text-gray-200 leading-relaxed [&_h1]:text-xl [&_h1]:font-bold [&_h2]:text-lg [&_h2]:font-semibold [&_h3]:text-base [&_h3]:font-semibold [&_a]:text-cyan-400 [&_blockquote]:border-l-cyan-500/40 [&_blockquote]:text-gray-400 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_code]:bg-white/10 [&_code]:px-1 [&_code]:rounded [&_img]:rounded-xl [&_img]:max-h-80"
-            dangerouslySetInnerHTML={{ __html: sec.html || sec.content || '' }}
+            dangerouslySetInnerHTML={{ __html: html }}
           />
         </div>
       )
+    }
 
     case 'text':
       return (
@@ -220,10 +243,17 @@ function QuizPreview({ questions }: { questions: QuizQuestion[] }) {
   )
 }
 
-export default function LessonPreview({ lesson }: { lesson: Lesson }) {
+type LessonPreviewProps = {
+  lesson: Lesson
+  conceptAnchors?: LessonConceptAnchor[]
+  concepts?: LearningConcept[]
+}
+
+export default function LessonPreview({ lesson, conceptAnchors, concepts }: LessonPreviewProps) {
   const sections = lesson.sections ?? []
   const quizQuestions = lesson.quizQuestions ?? []
   const goals = lesson.learningGoals ?? []
+  const showConceptStyles = !!(conceptAnchors?.length && concepts?.length)
 
   return (
     <div className="space-y-5">
@@ -291,7 +321,12 @@ export default function LessonPreview({ lesson }: { lesson: Lesson }) {
         <div className="space-y-4">
           {sections.map((sec, i) => (
             <div key={i} className="rounded-xl border border-white/10 bg-[#0a0f17] p-5">
-              <SectionPreview sec={sec} index={i} />
+              <SectionPreview
+                sec={sec}
+                index={i}
+                conceptAnchors={conceptAnchors}
+                concepts={concepts}
+              />
             </div>
           ))}
         </div>
@@ -306,6 +341,20 @@ export default function LessonPreview({ lesson }: { lesson: Lesson }) {
           <QuizPreview questions={quizQuestions} />
         </div>
       )}
+
+      {showConceptStyles ? (
+        <style jsx global>{`
+          .lp-concept-inline {
+            background: rgba(34, 211, 238, 0.14);
+            border: 1px solid rgba(34, 211, 238, 0.35);
+            color: #a5f3fc;
+            border-radius: 6px;
+            padding: 0 4px;
+            cursor: default;
+            pointer-events: none;
+          }
+        `}</style>
+      ) : null}
     </div>
   )
 }

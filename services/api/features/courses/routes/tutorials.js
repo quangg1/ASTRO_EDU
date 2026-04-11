@@ -1,5 +1,7 @@
 const express = require('express');
 const { Tutorial, TutorialCategory } = require('../models/Tutorial');
+const TutorialTrack = require('../models/TutorialTrack');
+const TutorialProgress = require('../models/TutorialProgress');
 const { authMiddleware, requireRole } = require('../../../shared/jwtAuth');
 
 const router = express.Router();
@@ -38,9 +40,27 @@ router.get('/', async (req, res) => {
   }
 });
 
+// Tree-style track giống GeeksforGeeks: Python Tutorial -> Basics -> list bài
+router.get('/tracks', async (req, res) => {
+  try {
+    const tracks = await TutorialTrack.find()
+      .sort({ level: 1, order: 1 })
+      .lean();
+    res.json({ success: true, data: tracks });
+  } catch (err) {
+    console.error('List tutorial tracks error:', err);
+    res.status(500).json({ success: false, error: 'Lỗi server' });
+  }
+});
+
 router.get('/editor/all', authMiddleware, requireRole('teacher', 'admin'), async (req, res) => {
   try {
-    const list = await Tutorial.find().sort({ order: 1, createdAt: -1 }).lean();
+    const query = {};
+    if (req.userRole === 'teacher') {
+      // Teacher chỉ thấy tutorial của mình; bài cũ chưa gán authorId sẽ ẩn
+      query.authorId = req.userId;
+    }
+    const list = await Tutorial.find(query).sort({ order: 1, createdAt: -1 }).lean();
     const categories = await TutorialCategory.find().sort({ order: 1 }).lean();
     res.json({ success: true, data: { tutorials: list, categories } });
   } catch (err) {
@@ -51,10 +71,19 @@ router.get('/editor/all', authMiddleware, requireRole('teacher', 'admin'), async
 
 router.get('/editor/:slug', authMiddleware, requireRole('teacher', 'admin'), async (req, res) => {
   try {
-    const t = await Tutorial.findOne({ slug: req.params.slug }).lean();
+    const t = await Tutorial.findOne({ slug: req.params.slug });
     if (!t) return res.status(404).json({ success: false, error: 'Không tìm thấy' });
+    if (req.userRole === 'teacher') {
+      if (!t.authorId) {
+        t.authorId = req.userId;
+        await t.save();
+      } else if (t.authorId !== req.userId) {
+        return res.status(403).json({ success: false, error: 'Không có quyền sửa tutorial này' });
+      }
+    }
+    const data = t.toObject();
     const categories = await TutorialCategory.find().sort({ order: 1 }).lean();
-    res.json({ success: true, data: { tutorial: t, categories } });
+    res.json({ success: true, data: { tutorial: data, categories } });
   } catch (err) {
     console.error('Editor get tutorial error:', err);
     res.status(500).json({ success: false, error: 'Lỗi server' });
@@ -79,6 +108,7 @@ router.post('/editor', authMiddleware, requireRole('teacher', 'admin'), async (r
       sections: Array.isArray(sections) ? sections : [],
       relatedSlugs: Array.isArray(relatedSlugs) ? relatedSlugs : [],
       published: !!published,
+      authorId: req.userRole === 'teacher' ? req.userId : null,
     });
     res.status(201).json({ success: true, data: t });
   } catch (err) {
@@ -110,10 +140,70 @@ router.get('/:slug', async (req, res) => {
   }
 });
 
+// Get progress for current user on a track
+router.get('/tracks/:slug/progress', authMiddleware, async (req, res) => {
+  try {
+    const track = await TutorialTrack.findOne({ slug: req.params.slug }).lean();
+    if (!track) {
+      return res.status(404).json({ success: false, error: 'Không tìm thấy track' });
+    }
+    const allItems = [];
+    (track.topics || []).forEach((t) => {
+      (t.subtopics || []).forEach((s) => {
+        (s.items || []).forEach((it) => {
+          allItems.push(it.tutorialSlug);
+        });
+      });
+    });
+    const progresses = await TutorialProgress.find({
+      userId: req.userId,
+      tutorialSlug: { $in: allItems },
+    }).lean();
+    const bySlug = {};
+    progresses.forEach((p) => {
+      bySlug[p.tutorialSlug] = p;
+    });
+    res.json({
+      success: true,
+      data: {
+        items: allItems,
+        progress: bySlug,
+      },
+    });
+  } catch (err) {
+    console.error('Track progress error:', err);
+    res.status(500).json({ success: false, error: 'Lỗi server' });
+  }
+});
+
+// Mark a tutorial as completed for current user
+router.post('/:slug/progress/complete', authMiddleware, async (req, res) => {
+  try {
+    const slug = req.params.slug;
+    const now = new Date();
+    const doc = await TutorialProgress.findOneAndUpdate(
+      { userId: req.userId, tutorialSlug: slug },
+      { $set: { status: 'completed', completedAt: now } },
+      { upsert: true, new: true },
+    ).lean();
+    res.json({ success: true, data: doc });
+  } catch (err) {
+    console.error('Complete tutorial error:', err);
+    res.status(500).json({ success: false, error: 'Lỗi server' });
+  }
+});
+
 router.put('/editor/:slug', authMiddleware, requireRole('teacher', 'admin'), async (req, res) => {
   try {
     const t = await Tutorial.findOne({ slug: req.params.slug });
     if (!t) return res.status(404).json({ success: false, error: 'Không tìm thấy' });
+    if (req.userRole === 'teacher') {
+      if (!t.authorId) {
+        t.authorId = req.userId;
+      } else if (t.authorId !== req.userId) {
+        return res.status(403).json({ success: false, error: 'Không có quyền sửa tutorial này' });
+      }
+    }
     const { title, summary, categoryId, readTime, tags, sections, relatedSlugs, published } = req.body || {};
     if (typeof title === 'string' && title.trim()) t.title = title.trim();
     if (typeof summary === 'string') t.summary = summary;

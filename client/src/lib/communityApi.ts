@@ -136,3 +136,23 @@ export async function votePost(postId: string, value: 1 | -1): Promise<{ success
   if (json.success) return { success: true, voteCount: json.voteCount, myVote: json.myVote }
   return { success: false, error: json.error || 'Lỗi vote' }
 }
+
+/** Admin: ghim / bỏ ghim bài viết */
+export async function pinPost(postId: string, isPinned: boolean): Promise<{ success: boolean; data?: Post; error?: string }> {
+  const res = await fetch(`${COMMUNITY_BASE}/posts/${postId}`, {
+    method: 'PATCH',
+    headers: authHeaders(),
+    body: JSON.stringify({ isPinned }),
+  })
+  const json = await res.json()
+  if (json.success) return { success: true, data: json.data }
+  return { success: false, error: json.error || 'Lỗi cập nhật' }
+}
+
+/** Admin: xóa bài viết */
+export async function deletePost(postId: string): Promise<{ success: boolean; error?: string }> {
+  const res = await fetch(`${COMMUNITY_BASE}/posts/${postId}`, { method: 'DELETE', headers: authHeaders() })
+  const json = await res.json()
+  if (json.success) return { success: true }
+  return { success: false, error: json.error || 'Lỗi xóa' }
+}

@@ -19,15 +19,15 @@ function ResetPasswordForm() {
     e.preventDefault()
     setError('')
     if (newPassword !== confirmPassword) {
-      setError('Mật khẩu và xác nhận không khớp')
+      setError('Password and confirmation do not match')
       return
     }
     if (newPassword.length < 6) {
-      setError('Mật khẩu tối thiểu 6 ký tự')
+      setError('Password must be at least 6 characters')
       return
     }
     if (!token) {
-      setError('Thiếu link đặt lại. Vui lòng dùng link trong email.')
+      setError('Missing reset token. Please use the link from your email.')
       return
     }
     setLoading(true)
@@ -37,17 +37,17 @@ function ResetPasswordForm() {
       setSuccess(true)
       setTimeout(() => router.push('/login'), 2000)
     } else {
-      setError(res.error || 'Đặt lại mật khẩu thất bại')
+      setError(res.error || 'Password reset failed')
     }
   }
 
   if (!token) {
     return (
       <div className="w-full max-w-sm glass rounded-2xl p-6 shadow-xl">
-        <h1 className="text-xl font-bold text-cyan-400 mb-2">Đặt lại mật khẩu</h1>
-        <p className="text-sm text-red-300 mb-4">Link không hợp lệ. Vui lòng yêu cầu link mới từ trang Quên mật khẩu.</p>
+        <h1 className="text-xl font-bold text-cyan-400 mb-2">Reset password</h1>
+        <p className="text-sm text-red-300 mb-4">Invalid link. Please request a new one from the Forgot password page.</p>
         <Link href="/forgot-password" className="text-cyan-400 hover:underline">
-          Quên mật khẩu
+          Forgot password
         </Link>
       </div>
     )
@@ -56,16 +56,16 @@ function ResetPasswordForm() {
   if (success) {
     return (
       <div className="w-full max-w-sm glass rounded-2xl p-6 shadow-xl">
-        <h1 className="text-xl font-bold text-cyan-400 mb-2">Đặt lại mật khẩu</h1>
-        <p className="text-green-400">Đã đặt lại mật khẩu. Đang chuyển tới trang đăng nhập...</p>
+        <h1 className="text-xl font-bold text-cyan-400 mb-2">Reset password</h1>
+        <p className="text-green-400">Password updated. Redirecting to sign in...</p>
       </div>
     )
   }
 
   return (
     <div className="w-full max-w-sm glass rounded-2xl p-6 shadow-xl">
-      <h1 className="text-xl font-bold text-cyan-400 mb-2">Đặt lại mật khẩu</h1>
-      <p className="text-sm text-gray-400 mb-6">Nhập mật khẩu mới cho tài khoản của bạn.</p>
+      <h1 className="text-xl font-bold text-cyan-400 mb-2">Reset password</h1>
+      <p className="text-sm text-gray-400 mb-6">Enter a new password for your account.</p>
       <form onSubmit={handleSubmit} className="space-y-4">
         {error && (
           <div className="p-3 rounded-lg bg-red-500/20 text-red-300 text-sm">
@@ -73,7 +73,7 @@ function ResetPasswordForm() {
           </div>
         )}
         <div>
-          <label className="block text-sm text-gray-400 mb-1">Mật khẩu mới (tối thiểu 6 ký tự)</label>
+          <label className="block text-sm text-gray-400 mb-1">New password (min. 6 characters)</label>
           <input
             type="password"
             value={newPassword}
@@ -85,7 +85,7 @@ function ResetPasswordForm() {
           />
         </div>
         <div>
-          <label className="block text-sm text-gray-400 mb-1">Xác nhận mật khẩu mới</label>
+          <label className="block text-sm text-gray-400 mb-1">Confirm new password</label>
           <input
             type="password"
             value={confirmPassword}
@@ -100,12 +100,12 @@ function ResetPasswordForm() {
           disabled={loading}
           className="w-full py-2.5 rounded-lg bg-cyan-600 text-white font-medium hover:bg-cyan-500 disabled:opacity-50"
         >
-          {loading ? 'Đang xử lý...' : 'Đặt lại mật khẩu'}
+          {loading ? 'Working...' : 'Reset password'}
         </button>
       </form>
       <p className="mt-6 text-center text-sm text-gray-400">
         <Link href="/login" className="text-cyan-400 hover:text-cyan-300">
-          ← Quay lại đăng nhập
+          ← Back to sign in
         </Link>
       </p>
     </div>
@@ -115,7 +115,7 @@ function ResetPasswordForm() {
 export default function ResetPasswordPage() {
   return (
     <div className="min-h-screen bg-black flex flex-col items-center justify-center p-4">
-      <Suspense fallback={<p className="text-gray-500">Đang tải...</p>}>
+      <Suspense fallback={<p className="text-gray-500">Loading...</p>}>
         <ResetPasswordForm />
       </Suspense>
     </div>

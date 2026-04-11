@@ -23,16 +23,16 @@ export default function ForgotPasswordPage() {
       setSent(true)
       if (res.resetLink) setResetLink(res.resetLink)
     } else {
-      setError(res.error || 'Gửi yêu cầu thất bại')
+      setError(res.error || 'Request failed')
     }
   }
 
   return (
     <div className="min-h-screen bg-black flex flex-col items-center justify-center p-4">
       <div className="w-full max-w-sm glass rounded-2xl p-6 shadow-xl">
-        <h1 className="text-xl font-bold text-cyan-400 mb-2">Quên mật khẩu</h1>
+        <h1 className="text-xl font-bold text-cyan-400 mb-2">Forgot password</h1>
         <p className="text-sm text-gray-400 mb-6">
-          Nhập email đăng ký. Chúng tôi sẽ gửi link đặt lại mật khẩu (trong môi trường dev link hiển thị bên dưới).
+          Enter your account email. We’ll send a password reset link (in dev, the link will be shown below).
         </p>
 
         {!sent ? (
@@ -58,17 +58,15 @@ export default function ForgotPasswordPage() {
               disabled={loading}
               className="w-full py-2.5 rounded-lg bg-cyan-600 text-white font-medium hover:bg-cyan-500 disabled:opacity-50"
             >
-              {loading ? 'Đang gửi...' : 'Gửi link đặt lại mật khẩu'}
+              {loading ? 'Sending...' : 'Send reset link'}
             </button>
           </form>
         ) : (
           <div className="space-y-4">
-            <p className="text-sm text-green-400">
-              Nếu email tồn tại, bạn sẽ nhận được hướng dẫn đặt lại mật khẩu.
-            </p>
+            <p className="text-sm text-green-400">If the email exists, you’ll receive reset instructions.</p>
             {resetLink && (
               <div className="p-3 rounded-lg bg-white/10 text-sm break-all">
-                <p className="text-gray-400 mb-1">Link đặt lại (dev):</p>
+                <p className="text-gray-400 mb-1">Reset link (dev):</p>
                 <a href={resetLink} className="text-cyan-400 hover:underline">
                   {resetLink}
                 </a>
@@ -79,7 +77,7 @@ export default function ForgotPasswordPage() {
 
         <p className="mt-6 text-center text-sm text-gray-400">
           <Link href="/login" className="text-cyan-400 hover:text-cyan-300">
-            ← Quay lại đăng nhập
+            ← Back to sign in
           </Link>
         </p>
       </div>

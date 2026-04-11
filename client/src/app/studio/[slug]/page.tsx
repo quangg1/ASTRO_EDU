@@ -290,12 +290,12 @@ export default function StudioEditorPage() {
               <label className="text-xs text-gray-400">Weeks<input type="number" value={course.durationWeeks ?? ''} onChange={(e) => uc((p) => ({ ...p, durationWeeks: e.target.value ? Number(e.target.value) : null }))} className={`mt-1 ${inputCls}`} /></label>
               <label className="text-xs text-gray-400 flex items-center gap-2">
                 <input type="checkbox" checked={!!course.isPaid} onChange={(e) => uc((p) => ({ ...p, isPaid: e.target.checked }))} />
-                Khóa trả phí
+                Paid course
               </label>
               {course.isPaid && (
                 <>
-                  <label className="text-xs text-gray-400">Giá (VNĐ / USD)<input type="number" min={0} value={course.price ?? 0} onChange={(e) => uc((p) => ({ ...p, price: Math.max(0, Number(e.target.value) || 0) }))} className={`mt-1 ${inputCls}`} /></label>
-                  <label className="text-xs text-gray-400">Đơn vị
+                  <label className="text-xs text-gray-400">Price (VND / USD)<input type="number" min={0} value={course.price ?? 0} onChange={(e) => uc((p) => ({ ...p, price: Math.max(0, Number(e.target.value) || 0) }))} className={`mt-1 ${inputCls}`} /></label>
+                  <label className="text-xs text-gray-400">Currency
                     <select value={course.currency ?? 'VND'} onChange={(e) => uc((p) => ({ ...p, currency: e.target.value }))} className={`mt-1 ${inputCls}`}>
                       <option value="VND">VND</option><option value="USD">USD</option>
                     </select>

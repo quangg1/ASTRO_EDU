@@ -1,0 +1,1380 @@
+{
+  "modules": [
+    {
+      "id": "intro-scale",
+      "order": 1,
+      "title": "Introduction & Scale",
+      "titleVi": "Giới thiệu & Quy mô",
+      "emoji": "🌌",
+      "goal": "Understand what the universe is and how vast it is.",
+      "goalVi": "Hiểu “vũ trụ là gì và lớn đến đâu”.",
+      "connections": [
+        "→ Module 6 (Cosmology)"
+      ],
+      "nodes": [
+        {
+          "id": "astronomy-what-is",
+          "title": "What is Astronomy?",
+          "titleVi": "Astronomy là gì",
+          "depths": {
+            "beginner": [
+              {
+                "id": "intro-scale__astronomy-what-is__beginner__0",
+                "titleVi": "Thiên văn học vs chiêm tinh",
+                "title": "",
+                "sections": [],
+                "body": ""
+              },
+              {
+                "id": "intro-scale__astronomy-what-is__beginner__1",
+                "titleVi": "Các nhánh cơ bản của thiên văn học",
+                "title": "",
+                "sections": [],
+                "body": ""
+              }
+            ],
+            "explorer": [
+              {
+                "id": "intro-scale__astronomy-what-is__explorer__0",
+                "titleVi": "Observation vs Theory",
+                "title": "",
+                "sections": [],
+                "body": ""
+              },
+              {
+                "id": "intro-scale__astronomy-what-is__explorer__1",
+                "titleVi": "Data-driven science",
+                "title": "",
+                "sections": [],
+                "body": ""
+              }
+            ],
+            "researcher": [
+              {
+                "id": "intro-scale__astronomy-what-is__researcher__0",
+                "titleVi": "Model uncertainty",
+                "title": "",
+                "sections": [],
+                "body": ""
+              },
+              {
+                "id": "intro-scale__astronomy-what-is__researcher__1",
+                "titleVi": "Bias trong quan sát",
+                "title": "",
+                "sections": [],
+                "body": ""
+              }
+            ]
+          },
+          "topicWeights": [
+            {
+              "topicId": "astrophysics",
+              "weight": 0.55
+            },
+            {
+              "topicId": "stargazing",
+              "weight": 0.25
+            }
+          ]
+        },
+        {
+          "id": "universe-scale",
+          "title": "Scale of the universe",
+          "titleVi": "Quy mô vũ trụ",
+          "depths": {
+            "beginner": [
+              {
+                "id": "intro-scale__universe-scale__beginner__0",
+                "titleVi": "Earth → Sun → Galaxy — trực giác thứ bậc khoảng cách",
+                "title": "",
+                "sections": [],
+                "body": ""
+              }
+            ],
+            "explorer": [
+              {
+                "id": "intro-scale__universe-scale__explorer__0",
+                "titleVi": "AU, light-year, parsec — khi nào dùng đơn vị nào",
+                "title": "",
+                "sections": [],
+                "body": ""
+              }
+            ],
+            "researcher": [
+              {
+                "id": "intro-scale__universe-scale__researcher__0",
+                "titleVi": "Log scale",
+                "title": "",
+                "sections": [],
+                "body": ""
+              },
+              {
+                "id": "intro-scale__universe-scale__researcher__1",
+                "titleVi": "Fermi estimation — ước lượng đúng thứ tự độ lớn",
+                "title": "",
+                "sections": [],
+                "body": ""
+              }
+            ]
+          },
+          "topicWeights": [
+            {
+              "topicId": "astrophysics",
+              "weight": 0.65
+            },
+            {
+              "topicId": "solar-system",
+              "weight": 0.25
+            }
+          ]
+        },
+        {
+          "id": "hierarchical-structure",
+          "title": "Hierarchical structure",
+          "titleVi": "Cấu trúc phân cấp",
+          "depths": {
+            "beginner": [
+              {
+                "id": "intro-scale__hierarchical-structure__beginner__0",
+                "titleVi": "Hành tinh → sao → thiên hà",
+                "title": "",
+                "sections": [],
+                "body": ""
+              }
+            ],
+            "explorer": [
+              {
+                "id": "intro-scale__hierarchical-structure__explorer__0",
+                "titleVi": "Galaxy cluster — thiên hà không đứng một mình",
+                "title": "",
+                "sections": [],
+                "body": ""
+              }
+            ],
+            "researcher": [
+              {
+                "id": "intro-scale__hierarchical-structure__researcher__0",
+                "titleVi": "Cosmic web — cấu trúc xốp của vũ trụ quy mô lớn",
+                "title": "",
+                "sections": [],
+                "body": ""
+              }
+            ]
+          },
+          "topicWeights": [
+            {
+              "topicId": "galaxies-nebulae",
+              "weight": 0.55
+            },
+            {
+              "topicId": "astrophysics",
+              "weight": 0.45
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sky-motion",
+      "order": 2,
+      "title": "Sky & Motion",
+      "titleVi": "Bầu trời & Chuyển động",
+      "emoji": "🌍",
+      "goal": "Understand the sky from Earth’s perspective.",
+      "goalVi": "Hiểu bầu trời từ góc nhìn Trái Đất.",
+      "connections": [
+        "→ Module 4 (Solar System)",
+        "→ Module 3 (Observation)"
+      ],
+      "nodes": [
+        {
+          "id": "day-night",
+          "title": "Day & night",
+          "titleVi": "Ngày & đêm",
+          "depths": {
+            "beginner": [
+              {
+                "id": "sky-motion__day-night__beginner__0",
+                "titleVi": "Trái Đất quay → ngày và đêm",
+                "title": "",
+                "sections": [],
+                "body": ""
+              }
+            ],
+            "explorer": [
+              {
+                "id": "sky-motion__day-night__explorer__0",
+                "titleVi": "Trục nghiêng và mùa (liên hệ ngắn)",
+                "title": "",
+                "sections": [],
+                "body": ""
+              }
+            ],
+            "researcher": [
+              {
+                "id": "sky-motion__day-night__researcher__0",
+                "titleVi": "Reference frame — ITRS / GCRS, sidereal vs solar day",
+                "title": "",
+                "sections": [],
+                "body": ""
+              }
+            ]
+          },
+          "topicWeights": [
+            {
+              "topicId": "stargazing",
+              "weight": 0.95
+            },
+            {
+              "topicId": "solar-system",
+              "weight": 0.35
+            }
+          ]
+        },
+        {
+          "id": "moon-phases",
+          "title": "Moon phases",
+          "titleVi": "Pha Mặt Trăng",
+          "depths": {
+            "beginner": [
+              {
+                "id": "sky-motion__moon-phases__beginner__0",
+                "titleVi": "Trăng non / trăng tròn — nhận diện pha",
+                "title": "",
+                "sections": [],
+                "body": ""
+              }
+            ],
+            "explorer": [
+              {
+                "id": "sky-motion__moon-phases__explorer__0",
+                "titleVi": "Vị trí Sun–Earth–Moon quyết định pha",
+                "title": "",
+                "sections": [],
+                "body": ""
+              }
+            ],
+            "researcher": [
+              {
+                "id": "sky-motion__moon-phases__researcher__0",
+                "titleVi": "Mô hình hình học — góc pha và khoảng cách",
+                "title": "",
+                "sections": [],
+                "body": ""
+              }
+            ]
+          },
+          "topicWeights": [
+            {
+              "topicId": "solar-system",
+              "weight": 0.75
+            },
+            {
+              "topicId": "stargazing",
+              "weight": 0.5
+            }
+          ]
+        },
+        {
+          "id": "eclipses",
+          "title": "Solar & lunar eclipses",
+          "titleVi": "Nhật thực / Nguyệt thực",
+          "depths": {
+            "beginner": [
+              {
+                "id": "sky-motion__eclipses__beginner__0",
+                "titleVi": "Hiện tượng — khi nào thấy gì",
+                "title": "",
+                "sections": [],
+                "body": ""
+              }
+            ],
+            "explorer": [
+              {
+                "id": "sky-motion__eclipses__explorer__0",
+                "titleVi": "Điều kiện để xảy ra (đồng hàng, node)",
+                "title": "",
+                "sections": [],
+                "body": ""
+              }
+            ],
+            "researcher": [
+              {
+                "id": "sky-motion__eclipses__researcher__0",
+                "titleVi": "Shadow geometry — umbra, penumbra, saros (giới thiệu)",
+                "title": "",
+                "sections": [],
+                "body": ""
+              }
+            ]
+          },
+          "topicWeights": [
+            {
+              "topicId": "solar-system",
+              "weight": 0.7
+            },
+            {
+              "topicId": "stargazing",
+              "weight": 0.45
+            }
+          ]
+        },
+        {
+          "id": "coordinate-systems",
+          "title": "Astronomical coordinates",
+          "titleVi": "Hệ tọa độ thiên văn",
+          "depths": {
+            "beginner": [
+              {
+                "id": "sky-motion__coordinate-systems__beginner__0",
+                "titleVi": "Alt–az — độ cao & phương vị",
+                "title": "",
+                "sections": [],
+                "body": ""
+              }
+            ],
+            "explorer": [
+              {
+                "id": "sky-motion__coordinate-systems__explorer__0",
+                "titleVi": "RA–Dec — mặt trời xích đạo",
+                "title": "",
+                "sections": [],
+                "body": ""
+              }
+            ],
+            "researcher": [
+              {
+                "id": "sky-motion__coordinate-systems__researcher__0",
+                "titleVi": "Chuyển đổi giữa các hệ — ma trận rotation",
+                "title": "",
+                "sections": [],
+                "body": ""
+              }
+            ]
+          },
+          "topicWeights": [
+            {
+              "topicId": "stargazing",
+              "weight": 0.95
+            }
+          ]
+        },
+        {
+          "id": "astronomical-time",
+          "title": "Astronomical time",
+          "titleVi": "Thời gian thiên văn",
+          "depths": {
+            "beginner": [
+              {
+                "id": "sky-motion__astronomical-time__beginner__0",
+                "titleVi": "Ngày thường — Mặt Trời lên/xuống",
+                "title": "",
+                "sections": [],
+                "body": ""
+              }
+            ],
+            "explorer": [
+              {
+                "id": "sky-motion__astronomical-time__explorer__0",
+                "titleVi": "Ngày sao vs ngày Mặt Trời",
+                "title": "",
+                "sections": [],
+                "body": ""
+              }
+            ],
+            "researcher": [
+              {
+                "id": "sky-motion__astronomical-time__researcher__0",
+                "titleVi": "Time standard — UTC, leap second, equation of time (ý niệm)",
+                "title": "",
+                "sections": [],
+                "body": ""
+              }
+            ]
+          },
+          "topicWeights": [
+            {
+              "topicId": "stargazing",
+              "weight": 0.88
+            },
+            {
+              "topicId": "astrophysics",
+              "weight": 0.22
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "light-observation",
+      "order": 3,
+      "title": "Light & Observation",
+      "titleVi": "Ánh sáng & Quan sát",
+      "emoji": "🔭",
+      "goal": "How we “read” the universe.",
+      "goalVi": "Hiểu cách con người “đọc” vũ trụ.",
+      "connections": [
+        "→ Module 6 (Cosmology — redshift)",
+        "→ Module 5 (Stars)"
+      ],
+      "nodes": [
+        {
+          "id": "what-is-light",
+          "title": "What is light?",
+          "titleVi": "Ánh sáng là gì",
+          "depths": {
+            "beginner": [
+              {
+                "id": "light-observation__what-is-light__beginner__0",
+                "titleVi": "Sóng — bước sóng, màu",
+                "title": "",
+                "sections": [],
+                "body": ""
+              }
+            ],
+            "explorer": [
+              {
+                "id": "light-observation__what-is-light__explorer__0",
+                "titleVi": "Photon — năng lượng & momentum",
+                "title": "",
+                "sections": [],
+                "body": ""
+              }
+            ],
+            "researcher": [
+              {
+                "id": "light-observation__what-is-light__researcher__0",
+                "titleVi": "Dual nature — thí nghiệm gợi ý sóng–hạt",
+                "title": "",
+                "sections": [],
+                "body": ""
+              }
+            ]
+          },
+          "topicWeights": [
+            {
+              "topicId": "astrophysics",
+              "weight": 0.82
+            },
+            {
+              "topicId": "telescopes",
+              "weight": 0.32
+            }
+          ]
+        },
+        {
+          "id": "spectrum",
+          "title": "Spectrum",
+          "titleVi": "Quang phổ",
+          "depths": {
+            "beginner": [
+              {
+                "id": "light-observation__spectrum__beginner__0",
+                "titleVi": "Màu sắc — phổ liên tục",
+                "title": "",
+                "sections": [],
+                "body": ""
+              }
+            ],
+            "explorer": [
+              {
+                "id": "light-observation__spectrum__explorer__0",
+                "titleVi": "Phát xạ / hấp thụ — vạch phổ",
+                "title": "",
+                "sections": [],
+                "body": ""
+              }
+            ],
+            "researcher": [
+              {
+                "id": "light-observation__spectrum__researcher__0",
+                "titleVi": "Phân tích vạch phổ — nguyên tố, vận tốc",
+                "title": "",
+                "sections": [],
+                "body": ""
+              }
+            ]
+          },
+          "topicWeights": [
+            {
+              "topicId": "astrophysics",
+              "weight": 0.92
+            },
+            {
+              "topicId": "telescopes",
+              "weight": 0.35
+            }
+          ]
+        },
+        {
+          "id": "doppler",
+          "title": "Doppler effect",
+          "titleVi": "Hiệu ứng Doppler",
+          "depths": {
+            "beginner": [
+              {
+                "id": "light-observation__doppler__beginner__0",
+                "titleVi": "Ví dụ âm thanh — qua xe cứu thương",
+                "title": "",
+                "sections": [],
+                "body": ""
+              }
+            ],
+            "explorer": [
+              {
+                "id": "light-observation__doppler__explorer__0",
+                "titleVi": "Redshift / blueshift trong thiên văn",
+                "title": "",
+                "sections": [],
+                "body": ""
+              }
+            ],
+            "researcher": [
+              {
+                "id": "light-observation__doppler__researcher__0",
+                "titleVi": "Relativistic Doppler — khi v ~ c",
+                "title": "",
+                "sections": [],
+                "body": ""
+              }
+            ]
+          },
+          "topicWeights": [
+            {
+              "topicId": "astrophysics",
+              "weight": 0.55
+            },
+            {
+              "topicId": "exoplanets",
+              "weight": 0.45
+            }
+          ]
+        },
+        {
+          "id": "telescopes",
+          "title": "Telescopes",
+          "titleVi": "Kính thiên văn",
+          "depths": {
+            "beginner": [
+              {
+                "id": "light-observation__telescopes__beginner__0",
+                "titleVi": "Thu thập thêm ánh sáng — nhìn xa hơn",
+                "title": "",
+                "sections": [],
+                "body": ""
+              }
+            ],
+            "explorer": [
+              {
+                "id": "light-observation__telescopes__explorer__0",
+                "titleVi": "Độ phân giải — Rayleigh",
+                "title": "",
+                "sections": [],
+                "body": ""
+              }
+            ],
+            "researcher": [
+              {
+                "id": "light-observation__telescopes__researcher__0",
+                "titleVi": "Interferometry — ghép nhiều kính",
+                "title": "",
+                "sections": [],
+                "body": ""
+              }
+            ]
+          },
+          "topicWeights": [
+            {
+              "topicId": "telescopes",
+              "weight": 1
+            },
+            {
+              "topicId": "stargazing",
+              "weight": 0.38
+            }
+          ]
+        },
+        {
+          "id": "multi-wavelength",
+          "title": "Multi-wavelength observing",
+          "titleVi": "Quan sát đa bước sóng",
+          "depths": {
+            "beginner": [
+              {
+                "id": "light-observation__multi-wavelength__beginner__0",
+                "titleVi": "Radio / X-ray / quang — mỗi kênh một câu chuyện",
+                "title": "",
+                "sections": [],
+                "body": ""
+              }
+            ],
+            "explorer": [
+              {
+                "id": "light-observation__multi-wavelength__explorer__0",
+                "titleVi": "Tại sao cần nhiều loại — bụi, nhiệt độ",
+                "title": "",
+                "sections": [],
+                "body": ""
+              }
+            ],
+            "researcher": [
+              {
+                "id": "light-observation__multi-wavelength__researcher__0",
+                "titleVi": "Atmospheric window — chỗ nào quan sát được từ mặt đất",
+                "title": "",
+                "sections": [],
+                "body": ""
+              }
+            ]
+          },
+          "topicWeights": [
+            {
+              "topicId": "telescopes",
+              "weight": 0.9
+            },
+            {
+              "topicId": "galaxies-nebulae",
+              "weight": 0.48
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "solar-system",
+      "order": 4,
+      "title": "Solar System",
+      "titleVi": "Hệ Mặt Trời",
+      "emoji": "☀️",
+      "goal": "Our nearest cosmic neighbourhood.",
+      "goalVi": "Hiểu hệ gần nhất với chúng ta.",
+      "connections": [
+        "→ Module 5 (Stars)"
+      ],
+      "nodes": [
+        {
+          "id": "the-sun",
+          "title": "The Sun",
+          "titleVi": "Mặt Trời",
+          "depths": {
+            "beginner": [
+              {
+                "id": "solar-system__the-sun__beginner__0",
+                "titleVi": "Nguồn sáng & nhiệt cho Hệ Mặt Trời",
+                "title": "",
+                "sections": [],
+                "body": ""
+              }
+            ],
+            "explorer": [
+              {
+                "id": "solar-system__the-sun__explorer__0",
+                "titleVi": "Cấu trúc lớp — lõi, bức xạ, đối lưu",
+                "title": "",
+                "sections": [],
+                "body": ""
+              }
+            ],
+            "researcher": [
+              {
+                "id": "solar-system__the-sun__researcher__0",
+                "titleVi": "Fusion — proton–proton, cân bằng thủy tĩnh",
+                "title": "",
+                "sections": [],
+                "body": ""
+              }
+            ]
+          },
+          "topicWeights": [
+            {
+              "topicId": "solar-system",
+              "weight": 1
+            },
+            {
+              "topicId": "stars-constellations",
+              "weight": 0.28
+            }
+          ]
+        },
+        {
+          "id": "planets",
+          "title": "Planets",
+          "titleVi": "Hành tinh",
+          "depths": {
+            "beginner": [
+              {
+                "id": "solar-system__planets__beginner__0",
+                "titleVi": "8 hành tinh — thứ tự và nhóm",
+                "title": "",
+                "sections": [],
+                "body": ""
+              }
+            ],
+            "explorer": [
+              {
+                "id": "solar-system__planets__explorer__0",
+                "titleVi": "Rocky / gas giant / ice giant",
+                "title": "",
+                "sections": [],
+                "body": ""
+              }
+            ],
+            "researcher": [
+              {
+                "id": "solar-system__planets__researcher__0",
+                "titleVi": "Formation models — accretion, migration (ý niệm)",
+                "title": "",
+                "sections": [],
+                "body": ""
+              }
+            ]
+          },
+          "topicWeights": [
+            {
+              "topicId": "solar-system",
+              "weight": 1
+            }
+          ]
+        },
+        {
+          "id": "orbits",
+          "title": "Orbits",
+          "titleVi": "Quỹ đạo",
+          "depths": {
+            "beginner": [
+              {
+                "id": "solar-system__orbits__beginner__0",
+                "titleVi": "Chuyển động quanh Mặt Trời",
+                "title": "",
+                "sections": [],
+                "body": ""
+              }
+            ],
+            "explorer": [
+              {
+                "id": "solar-system__orbits__explorer__0",
+                "titleVi": "Ellipse — Kepler",
+                "title": "",
+                "sections": [],
+                "body": ""
+              }
+            ],
+            "researcher": [
+              {
+                "id": "solar-system__orbits__researcher__0",
+                "titleVi": "N-body problem — hỗn loạn nhẹ, resonance",
+                "title": "",
+                "sections": [],
+                "body": ""
+              }
+            ]
+          },
+          "topicWeights": [
+            {
+              "topicId": "solar-system",
+              "weight": 0.95
+            },
+            {
+              "topicId": "astrophysics",
+              "weight": 0.42
+            }
+          ]
+        },
+        {
+          "id": "small-bodies",
+          "title": "Small bodies",
+          "titleVi": "Vật thể nhỏ",
+          "depths": {
+            "beginner": [
+              {
+                "id": "solar-system__small-bodies__beginner__0",
+                "titleVi": "Sao chổi / tiểu hành tinh — khác nhau thế nào",
+                "title": "",
+                "sections": [],
+                "body": ""
+              }
+            ],
+            "explorer": [
+              {
+                "id": "solar-system__small-bodies__explorer__0",
+                "titleVi": "Vành đai Kuiper — Pluto & bạn",
+                "title": "",
+                "sections": [],
+                "body": ""
+              }
+            ],
+            "researcher": [
+              {
+                "id": "solar-system__small-bodies__researcher__0",
+                "titleVi": "Mô hình đám mây Oort — nguồn sao chổi dài chu kỳ",
+                "title": "",
+                "sections": [],
+                "body": ""
+              }
+            ]
+          },
+          "topicWeights": [
+            {
+              "topicId": "solar-system",
+              "weight": 0.55
+            },
+            {
+              "topicId": "space-exploration",
+              "weight": 0.72
+            }
+          ]
+        },
+        {
+          "id": "solar-system-formation",
+          "title": "Formation of the Solar System",
+          "titleVi": "Hình thành hệ Mặt Trời",
+          "depths": {
+            "beginner": [
+              {
+                "id": "solar-system__solar-system-formation__beginner__0",
+                "titleVi": "Từ đám mây khí — trực giác",
+                "title": "",
+                "sections": [],
+                "body": ""
+              }
+            ],
+            "explorer": [
+              {
+                "id": "solar-system__solar-system-formation__explorer__0",
+                "titleVi": "Accretion disk — gom khối lượng",
+                "title": "",
+                "sections": [],
+                "body": ""
+              }
+            ],
+            "researcher": [
+              {
+                "id": "solar-system__solar-system-formation__researcher__0",
+                "titleVi": "Angular momentum problem — hướng giải thích",
+                "title": "",
+                "sections": [],
+                "body": ""
+              }
+            ]
+          },
+          "topicWeights": [
+            {
+              "topicId": "solar-system",
+              "weight": 0.88
+            },
+            {
+              "topicId": "astrophysics",
+              "weight": 0.38
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "stars-evolution",
+      "order": 5,
+      "title": "Stars & Evolution",
+      "titleVi": "Sao & Tiến hóa",
+      "emoji": "⭐",
+      "goal": "The engines of the universe.",
+      "goalVi": "Hiểu “động cơ” của vũ trụ.",
+      "connections": [
+        "→ Module 6 (Galaxy & Universe)"
+      ],
+      "nodes": [
+        {
+          "id": "what-is-a-star",
+          "title": "What is a star?",
+          "titleVi": "Sao là gì",
+          "depths": {
+            "beginner": [
+              {
+                "id": "stars-evolution__what-is-a-star__beginner__0",
+                "titleVi": "Quả cầu khí nóng — phát sáng",
+                "title": "",
+                "sections": [],
+                "body": ""
+              }
+            ],
+            "explorer": [
+              {
+                "id": "stars-evolution__what-is-a-star__explorer__0",
+                "titleVi": "Khối lượng, nhiệt độ, độ sáng liên hệ",
+                "title": "",
+                "sections": [],
+                "body": ""
+              }
+            ],
+            "researcher": [
+              {
+                "id": "stars-evolution__what-is-a-star__researcher__0",
+                "titleVi": "Hydrostatic equilibrium — cân bằng áp suất vs hấp dẫn",
+                "title": "",
+                "sections": [],
+                "body": ""
+              }
+            ]
+          },
+          "topicWeights": [
+            {
+              "topicId": "stars-constellations",
+              "weight": 0.92
+            },
+            {
+              "topicId": "astrophysics",
+              "weight": 0.42
+            }
+          ]
+        },
+        {
+          "id": "stellar-energy",
+          "title": "Stellar energy",
+          "titleVi": "Năng lượng sao",
+          "depths": {
+            "beginner": [
+              {
+                "id": "stars-evolution__stellar-energy__beginner__0",
+                "titleVi": "Sao “cháy” bằng fusion — trực giác",
+                "title": "",
+                "sections": [],
+                "body": ""
+              }
+            ],
+            "explorer": [
+              {
+                "id": "stars-evolution__stellar-energy__explorer__0",
+                "titleVi": "Vai trò fusion — vùng lõi",
+                "title": "",
+                "sections": [],
+                "body": ""
+              }
+            ],
+            "researcher": [
+              {
+                "id": "stars-evolution__stellar-energy__researcher__0",
+                "titleVi": "Proton–proton chain / CNO — điều kiện nhiệt độ",
+                "title": "",
+                "sections": [],
+                "body": ""
+              }
+            ]
+          },
+          "topicWeights": [
+            {
+              "topicId": "stars-constellations",
+              "weight": 0.88
+            },
+            {
+              "topicId": "astrophysics",
+              "weight": 0.58
+            }
+          ]
+        },
+        {
+          "id": "hr-diagram",
+          "title": "H–R diagram",
+          "titleVi": "Biểu đồ H–R",
+          "depths": {
+            "beginner": [
+              {
+                "id": "stars-evolution__hr-diagram__beginner__0",
+                "titleVi": "Màu vs độ sáng — nhóm sao",
+                "title": "",
+                "sections": [],
+                "body": ""
+              }
+            ],
+            "explorer": [
+              {
+                "id": "stars-evolution__hr-diagram__explorer__0",
+                "titleVi": "Phân loại sao — dãy chính, khổng lồ",
+                "title": "",
+                "sections": [],
+                "body": ""
+              }
+            ],
+            "researcher": [
+              {
+                "id": "stars-evolution__hr-diagram__researcher__0",
+                "titleVi": "Stellar modeling — đường đẳng thế",
+                "title": "",
+                "sections": [],
+                "body": ""
+              }
+            ]
+          },
+          "topicWeights": [
+            {
+              "topicId": "stars-constellations",
+              "weight": 0.92
+            },
+            {
+              "topicId": "astrophysics",
+              "weight": 0.42
+            }
+          ]
+        },
+        {
+          "id": "stellar-lifecycle",
+          "title": "Stellar lifecycle",
+          "titleVi": "Vòng đời sao",
+          "depths": {
+            "beginner": [
+              {
+                "id": "stars-evolution__stellar-lifecycle__beginner__0",
+                "titleVi": "Sinh → già → chết — câu chuyện",
+                "title": "",
+                "sections": [],
+                "body": ""
+              }
+            ],
+            "explorer": [
+              {
+                "id": "stars-evolution__stellar-lifecycle__explorer__0",
+                "titleVi": "Red giant — lõi He, vỏ H",
+                "title": "",
+                "sections": [],
+                "body": ""
+              }
+            ],
+            "researcher": [
+              {
+                "id": "stars-evolution__stellar-lifecycle__researcher__0",
+                "titleVi": "Stellar evolution equations — ý niệm",
+                "title": "",
+                "sections": [],
+                "body": ""
+              }
+            ]
+          },
+          "topicWeights": [
+            {
+              "topicId": "stars-constellations",
+              "weight": 0.96
+            }
+          ]
+        },
+        {
+          "id": "stellar-remnants",
+          "title": "Stellar endpoints",
+          "titleVi": "Kết thúc sao",
+          "depths": {
+            "beginner": [
+              {
+                "id": "stars-evolution__stellar-remnants__beginner__0",
+                "titleVi": "Lùn trắng — lõi còn lại",
+                "title": "",
+                "sections": [],
+                "body": ""
+              }
+            ],
+            "explorer": [
+              {
+                "id": "stars-evolution__stellar-remnants__explorer__0",
+                "titleVi": "Sao neutron — vật chất siêu đặc",
+                "title": "",
+                "sections": [],
+                "body": ""
+              }
+            ],
+            "researcher": [
+              {
+                "id": "stars-evolution__stellar-remnants__researcher__0",
+                "titleVi": "Vật lý lỗ đen — horizon, singularity (giới thiệu)",
+                "title": "",
+                "sections": [],
+                "body": ""
+              }
+            ]
+          },
+          "topicWeights": [
+            {
+              "topicId": "stars-constellations",
+              "weight": 0.78
+            },
+            {
+              "topicId": "astrophysics",
+              "weight": 0.52
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "universe-cosmology",
+      "order": 6,
+      "title": "Universe & Cosmology",
+      "titleVi": "Vũ trụ & Vũ trụ học",
+      "emoji": "🌌",
+      "goal": "The universe at the largest scales.",
+      "goalVi": "Hiểu vũ trụ ở quy mô lớn nhất.",
+      "connections": [],
+      "nodes": [
+        {
+          "id": "galaxies",
+          "title": "Galaxies",
+          "titleVi": "Thiên hà",
+          "depths": {
+            "beginner": [
+              {
+                "id": "universe-cosmology__galaxies__beginner__0",
+                "titleVi": "Tập hợp sao + khí + bụi",
+                "title": "",
+                "sections": [],
+                "body": ""
+              }
+            ],
+            "explorer": [
+              {
+                "id": "universe-cosmology__galaxies__explorer__0",
+                "titleVi": "Xoắn ốc / elip — hình dạng",
+                "title": "",
+                "sections": [],
+                "body": ""
+              }
+            ],
+            "researcher": [
+              {
+                "id": "universe-cosmology__galaxies__researcher__0",
+                "titleVi": "Dark matter halo — quay mép sao",
+                "title": "",
+                "sections": [],
+                "body": ""
+              }
+            ]
+          },
+          "topicWeights": [
+            {
+              "topicId": "galaxies-nebulae",
+              "weight": 1
+            },
+            {
+              "topicId": "astrophysics",
+              "weight": 0.42
+            }
+          ]
+        },
+        {
+          "id": "big-bang",
+          "title": "Big Bang",
+          "titleVi": "Big Bang",
+          "depths": {
+            "beginner": [
+              {
+                "id": "universe-cosmology__big-bang__beginner__0",
+                "titleVi": "Vũ trụ bắt đầu từ trạng thái nóng, đặc",
+                "title": "",
+                "sections": [],
+                "body": ""
+              }
+            ],
+            "explorer": [
+              {
+                "id": "universe-cosmology__big-bang__explorer__0",
+                "titleVi": "Timeline — hạt nhân nguyên thủy, CMB (ý niệm)",
+                "title": "",
+                "sections": [],
+                "body": ""
+              }
+            ],
+            "researcher": [
+              {
+                "id": "universe-cosmology__big-bang__researcher__0",
+                "titleVi": "Inflation — giải quyết thống nhất/thẳng (ý niệm)",
+                "title": "",
+                "sections": [],
+                "body": ""
+              }
+            ]
+          },
+          "topicWeights": [
+            {
+              "topicId": "galaxies-nebulae",
+              "weight": 0.52
+            },
+            {
+              "topicId": "astrophysics",
+              "weight": 0.92
+            }
+          ]
+        },
+        {
+          "id": "expansion",
+          "title": "Expansion of the universe",
+          "titleVi": "Giãn nở vũ trụ",
+          "depths": {
+            "beginner": [
+              {
+                "id": "universe-cosmology__expansion__beginner__0",
+                "titleVi": "Vũ trụ “lớn dần” — khoảng cách tăng",
+                "title": "",
+                "sections": [],
+                "body": ""
+              }
+            ],
+            "explorer": [
+              {
+                "id": "universe-cosmology__expansion__explorer__0",
+                "titleVi": "Định luật Hubble — v ~ d",
+                "title": "",
+                "sections": [],
+                "body": ""
+              }
+            ],
+            "researcher": [
+              {
+                "id": "universe-cosmology__expansion__researcher__0",
+                "titleVi": "Metric expansion — FLRW (ý niệm)",
+                "title": "",
+                "sections": [],
+                "body": ""
+              }
+            ]
+          },
+          "topicWeights": [
+            {
+              "topicId": "galaxies-nebulae",
+              "weight": 0.48
+            },
+            {
+              "topicId": "astrophysics",
+              "weight": 0.88
+            }
+          ]
+        },
+        {
+          "id": "dark-matter",
+          "title": "Dark matter",
+          "titleVi": "Vật chất tối",
+          "depths": {
+            "beginner": [
+              {
+                "id": "universe-cosmology__dark-matter__beginner__0",
+                "titleVi": "Không phát sáng nhưng có hấp dẫn",
+                "title": "",
+                "sections": [],
+                "body": ""
+              }
+            ],
+            "explorer": [
+              {
+                "id": "universe-cosmology__dark-matter__explorer__0",
+                "titleVi": "Bằng chứng — quay thiên hà, thấu kính",
+                "title": "",
+                "sections": [],
+                "body": ""
+              }
+            ],
+            "researcher": [
+              {
+                "id": "universe-cosmology__dark-matter__researcher__0",
+                "titleVi": "Particle models — WIMP, axion (tổng quan)",
+                "title": "",
+                "sections": [],
+                "body": ""
+              }
+            ]
+          },
+          "topicWeights": [
+            {
+              "topicId": "astrophysics",
+              "weight": 0.92
+            },
+            {
+              "topicId": "galaxies-nebulae",
+              "weight": 0.52
+            }
+          ]
+        },
+        {
+          "id": "dark-energy",
+          "title": "Dark energy",
+          "titleVi": "Năng lượng tối",
+          "depths": {
+            "beginner": [
+              {
+                "id": "universe-cosmology__dark-energy__beginner__0",
+                "titleVi": "Làm vũ trụ giãn nhanh dần",
+                "title": "",
+                "sections": [],
+                "body": ""
+              }
+            ],
+            "explorer": [
+              {
+                "id": "universe-cosmology__dark-energy__explorer__0",
+                "titleVi": "Quan sát — supernovae Ia",
+                "title": "",
+                "sections": [],
+                "body": ""
+              }
+            ],
+            "researcher": [
+              {
+                "id": "universe-cosmology__dark-energy__researcher__0",
+                "titleVi": "Hằng số vũ trụ — ΛCDM",
+                "title": "",
+                "sections": [],
+                "body": ""
+              }
+            ]
+          },
+          "topicWeights": [
+            {
+              "topicId": "astrophysics",
+              "weight": 0.95
+            },
+            {
+              "topicId": "galaxies-nebulae",
+              "weight": 0.45
+            }
+          ]
+        },
+        {
+          "id": "fate-of-universe",
+          "title": "Fate of the universe",
+          "titleVi": "Số phận vũ trụ",
+          "depths": {
+            "beginner": [
+              {
+                "id": "universe-cosmology__fate-of-universe__beginner__0",
+                "titleVi": "Kết thúc — nhiệt độ, giãn nở",
+                "title": "",
+                "sections": [],
+                "body": ""
+              }
+            ],
+            "explorer": [
+              {
+                "id": "universe-cosmology__fate-of-universe__explorer__0",
+                "titleVi": "Kịch bản — Big Rip / Big Freeze (ý niệm)",
+                "title": "",
+                "sections": [],
+                "body": ""
+              }
+            ],
+            "researcher": [
+              {
+                "id": "universe-cosmology__fate-of-universe__researcher__0",
+                "titleVi": "Thermodynamics — entropy, heat death (ý niệm)",
+                "title": "",
+                "sections": [],
+                "body": ""
+              }
+            ]
+          },
+          "topicWeights": [
+            {
+              "topicId": "astrophysics",
+              "weight": 0.9
+            },
+            {
+              "topicId": "galaxies-nebulae",
+              "weight": 0.52
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

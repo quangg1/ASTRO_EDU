@@ -54,14 +54,14 @@ export default function ForumPage() {
       setPosts((p) => [res.data!, ...p])
       setTotal((t) => t + 1)
     } else {
-      alert(res.error || 'Lỗi')
+      alert(res.error || 'Error')
     }
   }
 
   if (!forum && !loading) {
     return (
       <div className="min-h-screen bg-black pt-20 flex items-center justify-center">
-        <p className="text-gray-500">Không tìm thấy diễn đàn</p>
+        <p className="text-gray-500">Forum not found</p>
       </div>
     )
   }
@@ -72,7 +72,7 @@ export default function ForumPage() {
     <div className="min-h-screen bg-gradient-to-b from-[#05070c] via-black to-[#04090f]">
       <div className="pt-20 px-4 pb-12 max-w-4xl mx-auto">
         <Link href="/community" className="text-sm text-cyan-400 hover:text-cyan-300 mb-4 inline-block">
-          ← Cộng đồng
+          ← Community
         </Link>
 
         {forum && (
@@ -84,7 +84,7 @@ export default function ForumPage() {
                   {forum.title}
                 </h1>
                 <p className="text-gray-400 mt-1">{forum.description}</p>
-                <p className="text-xs text-gray-500 mt-2">{total} bài viết</p>
+                <p className="text-xs text-gray-500 mt-2">{total} posts</p>
               </div>
               {!isNewsForum && user && (
                 <button
@@ -92,7 +92,7 @@ export default function ForumPage() {
                   onClick={() => setShowNewPost(!showNewPost)}
                   className="px-4 py-2 rounded-xl bg-cyan-600 text-white text-sm font-medium hover:bg-cyan-500"
                 >
-                  {showNewPost ? 'Hủy' : 'Đăng bài'}
+                  {showNewPost ? 'Cancel' : 'New post'}
                 </button>
               )}
             </div>
@@ -101,13 +101,13 @@ export default function ForumPage() {
               <div className="mb-6 rounded-xl border border-cyan-500/30 bg-black/40 p-5">
                 <input
                   type="text"
-                  placeholder="Tiêu đề"
+                  placeholder="Title"
                   value={newTitle}
                   onChange={(e) => setNewTitle(e.target.value)}
                   className="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-gray-500 mb-3"
                 />
                 <textarea
-                  placeholder="Nội dung (tùy chọn)"
+                  placeholder="Content (optional)"
                   value={newContent}
                   onChange={(e) => setNewContent(e.target.value)}
                   rows={4}
@@ -119,13 +119,13 @@ export default function ForumPage() {
                   disabled={submitting || !newTitle.trim()}
                   className="px-4 py-2 rounded-lg bg-cyan-600 text-white text-sm font-medium disabled:opacity-50"
                 >
-                  {submitting ? 'Đang đăng...' : 'Đăng'}
+                  {submitting ? 'Posting...' : 'Post'}
                 </button>
               </div>
             )}
 
             {loading ? (
-              <div className="py-12 text-center text-gray-500">Đang tải...</div>
+              <div className="py-12 text-center text-gray-500">Loading...</div>
             ) : (
               <div className="space-y-3">
                 {posts.map((p) => (
@@ -140,10 +140,10 @@ export default function ForumPage() {
                     )}
                     <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
                       <span>{p.authorName}</span>
-                      <span>{p.commentCount} bình luận</span>
+                      <span>{p.commentCount} comments</span>
                       <span>{p.voteCount} vote</span>
                       {p.sourceName && <span>{p.sourceName}</span>}
-                      <span>{new Date(p.createdAt).toLocaleDateString('vi-VN')}</span>
+                      <span>{new Date(p.createdAt).toLocaleDateString('en-US')}</span>
                     </div>
                   </Link>
                 ))}
@@ -158,7 +158,7 @@ export default function ForumPage() {
                   disabled={page <= 1}
                   className="px-4 py-2 rounded-lg bg-white/10 text-white disabled:opacity-50"
                 >
-                  Trước
+                  Previous
                 </button>
                 <button
                   type="button"
@@ -166,7 +166,7 @@ export default function ForumPage() {
                   disabled={page * 20 >= total}
                   className="px-4 py-2 rounded-lg bg-white/10 text-white disabled:opacity-50"
                 >
-                  Sau
+                  Next
                 </button>
               </div>
             )}

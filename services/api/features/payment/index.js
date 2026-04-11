@@ -1,7 +1,7 @@
 const express = require('express');
 const Order = require('./models/Order');
 const { buildPaymentUrl, verifyReturnUrl } = require('./lib/vnpay');
-const { authMiddleware } = require('../../shared/jwtAuth');
+const { authMiddleware, requireRole } = require('../../shared/jwtAuth');
 const fetch = require('node-fetch');
 
 const router = express.Router();
@@ -111,6 +111,32 @@ router.get('/orders', authMiddleware, async (req, res) => {
     res.json({ success: true, data: orders });
   } catch (err) {
     console.error('List orders error:', err);
+    res.status(500).json({ success: false, error: 'Lỗi server' });
+  }
+});
+
+// Admin: thống kê cơ bản + danh sách đơn gần đây
+router.get('/admin/overview', authMiddleware, requireRole('admin'), async (req, res) => {
+  try {
+    const totalOrders = await Order.countDocuments({});
+    const completedOrders = await Order.countDocuments({ status: 'completed' });
+    const failedOrders = await Order.countDocuments({ status: 'failed' });
+    const agg = await Order.aggregate([
+      { $match: { status: 'completed' } },
+      { $group: { _id: null, sum: { $sum: '$amount' } } },
+    ]);
+    const totalRevenue = agg.length > 0 ? agg[0].sum : 0;
+    const recentOrders = await Order.find({})
+      .sort({ createdAt: -1 })
+      .limit(50)
+      .lean();
+    res.json({
+      success: true,
+      stats: { totalOrders, completedOrders, failedOrders, totalRevenue },
+      orders: recentOrders,
+    });
+  } catch (err) {
+    console.error('Admin overview orders error:', err);
     res.status(500).json({ success: false, error: 'Lỗi server' });
   }
 });

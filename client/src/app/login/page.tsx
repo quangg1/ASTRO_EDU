@@ -1,22 +1,71 @@
 'use client'
 
-import { useState } from 'react'
+import { Suspense, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { login, getGoogleAuthUrl, getFacebookAuthUrl } from '@/lib/authApi'
+import { motion } from 'framer-motion'
+import { Eye, EyeOff, Sparkles } from 'lucide-react'
+import { login } from '@/lib/authApi'
+import { FirebaseAuthButtons } from '@/components/auth/FirebaseAuthButtons'
+import { getStaticAssetUrl } from '@/lib/apiConfig'
 import { useAuthStore } from '@/store/useAuthStore'
+import { SiteLogo } from '@/components/ui/SiteLogo'
+import { sr } from '@/lib/ssrStableRandom'
 
-export default function LoginPage() {
+function FloatingParticles() {
+  const particles = Array.from({ length: 30 }, (_, i) => ({
+    id: i,
+    x: sr(i * 7 + 1) * 100,
+    y: sr(i * 7 + 2) * 100,
+    size: sr(i * 7 + 3) * 3 + 1,
+    duration: sr(i * 7 + 4) * 20 + 10,
+    delay: sr(i * 7 + 5) * 5,
+    driftX: sr(i * 7 + 6) * 20 - 10,
+  }))
+
+  return (
+    <div className="absolute inset-0 overflow-hidden pointer-events-none">
+      {particles.map((p) => (
+        <motion.div
+          key={p.id}
+          className="absolute rounded-full bg-white/30"
+          style={{
+            left: `${p.x}%`,
+            top: `${p.y}%`,
+            width: p.size,
+            height: p.size,
+          }}
+          animate={{
+            y: [0, -30, 0],
+            x: [0, p.driftX, 0],
+            opacity: [0.2, 0.8, 0.2],
+          }}
+          transition={{
+            duration: p.duration,
+            repeat: Infinity,
+            delay: p.delay,
+            ease: 'easeInOut',
+          }}
+        />
+      ))}
+    </div>
+  )
+}
+
+function LoginPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const errorParam = searchParams.get('error')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [error, setError] = useState(errorParam === 'oauth_failed' ? 'Đăng nhập Google/Facebook thất bại.' : '')
+  const [showPassword, setShowPassword] = useState(false)
+  const [error, setError] = useState(
+    errorParam === 'oauth_failed' ? 'Đăng nhập Google/Facebook thất bại.' : ''
+  )
   const [loading, setLoading] = useState(false)
   const setUser = useAuthStore((s) => s.setUser)
 
-  const redirectTo = searchParams.get('redirect') || '/courses'
+  const redirectTo = searchParams.get('redirect') || '/dashboard'
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -29,83 +78,245 @@ export default function LoginPage() {
         router.push(redirectTo)
         return
       }
-      setError(res.error || 'Đăng nhập thất bại')
+      setError(res.error || 'Sign-in failed')
     } catch {
-      setError('Lỗi kết nối')
+      setError('Network error')
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div className="min-h-screen bg-black flex flex-col items-center justify-center p-4">
-      <div className="w-full max-w-sm glass rounded-2xl p-6 shadow-xl">
-        <h1 className="text-xl font-bold text-cyan-400 mb-2">Đăng nhập</h1>
-        <p className="text-sm text-gray-400 mb-6">Galaxies – Học thiên văn qua mô phỏng 3D</p>
-
-        {error && (
-          <div className="mb-4 p-3 rounded-lg bg-red-500/20 text-red-300 text-sm">
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm text-gray-400 mb-1">Email</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-2.5 rounded-lg bg-white/10 border border-white/20 text-white placeholder-gray-500 focus:border-cyan-500 focus:outline-none"
-              placeholder="you@example.com"
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-sm text-gray-400 mb-1">Mật khẩu</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-2.5 rounded-lg bg-white/10 border border-white/20 text-white placeholder-gray-500 focus:border-cyan-500 focus:outline-none"
-              placeholder="••••••••"
-              required
-            />
-          </div>
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-2.5 rounded-lg bg-cyan-600 text-white font-medium hover:bg-cyan-500 disabled:opacity-50 transition-colors"
+    <div className="relative min-h-screen flex">
+      {/* Left - Astronomy Image (desktop) */}
+      <motion.div
+        initial={{ opacity: 0, x: -50 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.8 }}
+        className="hidden lg:flex lg:w-1/2 relative overflow-hidden"
+      >
+        <div className="absolute inset-0">
+          <img
+            src={getStaticAssetUrl('/images/nebula-home.jpg')}
+            alt="Nebula"
+            className="w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-black/60" />
+        </div>
+        <FloatingParticles />
+        <div className="relative z-10 flex flex-col gap-6 p-16 justify-center">
+          <motion.div
+            initial={{ scale: 0, rotate: -180 }}
+            animate={{ scale: 1, rotate: 0 }}
+            transition={{ duration: 0.8, type: 'spring' }}
+            className="flex justify-start"
           >
-            {loading ? 'Đang đăng nhập...' : 'Đăng nhập'}
-          </button>
-        </form>
+            <SiteLogo className="text-2xl" />
+          </motion.div>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3, duration: 0.8 }}
+          >
+            <h1 className="font-[Poppins,sans-serif] font-semibold text-[56px] text-white leading-[64px] mb-4">
+              Explore the Universe
+            </h1>
+            <p className="font-[Poppins,sans-serif] text-[20px] text-white/90 max-w-[500px] leading-relaxed">
+              Cosmo Learn — learn astronomy through interactive 3D simulations. Join the community and start exploring stars, planets, and galaxies.
+            </p>
+          </motion.div>
+        </div>
+      </motion.div>
 
-        <div className="mt-6 pt-4 border-t border-white/10">
-          <p className="text-xs text-gray-500 text-center mb-3">Hoặc đăng nhập bằng</p>
-          <div className="flex gap-3">
-            <a
-              href={getGoogleAuthUrl()}
-              className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg bg-white/10 hover:bg-white/20 text-gray-300 text-sm transition-colors"
-            >
-              <span className="text-lg">G</span> Google
-            </a>
-            <a
-              href={getFacebookAuthUrl()}
-              className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg bg-white/10 hover:bg-white/20 text-gray-300 text-sm transition-colors"
-            >
-              <span className="text-lg">f</span> Facebook
-            </a>
-          </div>
+      {/* Right - Auth Form */}
+      <div className="w-full lg:w-1/2 relative overflow-y-auto">
+        <motion.div
+          className="absolute inset-0 bg-gradient-to-br from-slate-950 via-amber-950/50 to-slate-950"
+          animate={{
+            background: [
+              'linear-gradient(135deg, #0a0a0f 0%, #422006 48%, #0a0a0f 100%)',
+              'linear-gradient(135deg, #0a0a0f 0%, #3d2a0a 48%, #0a0a0f 100%)',
+              'linear-gradient(135deg, #0a0a0f 0%, #451a03 48%, #0a0a0f 100%)',
+              'linear-gradient(135deg, #0a0a0f 0%, #422006 48%, #0a0a0f 100%)',
+            ],
+          }}
+          transition={{ duration: 18, repeat: Infinity, ease: 'easeInOut' }}
+        />
+
+        {/* Animated stars */}
+        <div className="absolute inset-0 overflow-hidden">
+          {[...Array(40)].map((_, i) => (
+            <motion.div
+              key={i}
+              className="absolute rounded-full bg-white"
+              style={{
+                top: `${sr(i + 1000) * 100}%`,
+                left: `${sr(i + 2000) * 100}%`,
+                width: sr(i + 3000) * 3 + 1,
+                height: sr(i + 4000) * 3 + 1,
+              }}
+              animate={{
+                opacity: [0.1, 1, 0.1],
+                scale: [1, 1.5, 1],
+              }}
+              transition={{
+                duration: sr(i + 5000) * 3 + 2,
+                repeat: Infinity,
+                delay: sr(i + 6000) * 2,
+              }}
+            />
+          ))}
+          {[...Array(3)].map((_, i) => (
+            <motion.div
+              key={`shoot-${i}`}
+              className="absolute h-[2px] w-[100px] bg-gradient-to-r from-transparent via-white to-transparent"
+              style={{ top: `${sr(i + 7000) * 50}%`, left: '-100px' }}
+              animate={{ x: ['0vw', '120vw'], y: ['0vh', '40vh'] }}
+              transition={{
+                duration: 2,
+                repeat: Infinity,
+                delay: i * 7,
+                ease: 'easeIn',
+              }}
+            />
+          ))}
         </div>
 
-        <p className="mt-6 text-center text-sm text-gray-400">
-          Chưa có tài khoản?{' '}
-          <Link href="/register" className="text-cyan-400 hover:text-cyan-300">
-            Đăng ký
-          </Link>
-        </p>
+        <FloatingParticles />
+
+        {/* Top right - link to register */}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="hidden sm:block absolute top-6 sm:top-12 right-4 sm:right-12 z-20"
+        >
+          <p className="font-[Poppins,sans-serif] text-[16px] text-white/80">
+            New here?{' '}
+            <Link
+              href="/register"
+              className="inline-flex items-center gap-1 text-white font-medium underline hover:text-amber-300 transition-colors"
+            >
+              Sign up
+              <Sparkles className="size-4" />
+            </Link>
+          </p>
+        </motion.div>
+
+        {/* Mobile: show logo at top */}
+        <div className="lg:hidden absolute top-6 left-4 z-20">
+          <SiteLogo className="text-xl" />
+        </div>
+
+        {/* Form */}
+        <div className="relative z-10 flex items-center justify-center min-h-screen p-4 sm:p-8 lg:p-16">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.5 }}
+            className="w-full max-w-[568px] flex flex-col gap-8 sm:gap-12 pt-16 sm:pt-0"
+          >
+            <h2 className="font-[Poppins,sans-serif] font-medium text-[30px] sm:text-[40px] text-white">
+              Welcome back
+            </h2>
+
+            <div className="flex flex-col gap-4">
+              <FirebaseAuthButtons redirectTo={redirectTo} />
+            </div>
+
+            <div className="flex items-center gap-6">
+              <div className="flex-1 h-[2px] bg-gradient-to-r from-transparent via-white/20 to-white/20" />
+              <span className="font-medium text-[18px] text-white/60">OR</span>
+              <div className="flex-1 h-[2px] bg-gradient-to-l from-transparent via-white/20 to-white/20" />
+            </div>
+
+            <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+              {error && (
+                <div className="p-3 rounded-xl bg-red-500/20 text-red-300 text-sm border border-red-400/30">
+                  {error}
+                </div>
+              )}
+
+              <div className="flex flex-col gap-[4px] w-full">
+                <label className="font-[Poppins,sans-serif] text-white/80 text-[16px]">
+                  Email
+                </label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Enter your email"
+                  required
+                  className="h-[56px] w-full rounded-[12px] bg-white/10 backdrop-blur-md border border-white/20 px-4 text-white placeholder:text-white/40 focus:outline-none focus:border-amber-400/60 focus:bg-white/15 transition-all duration-300"
+                />
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center justify-between">
+                  <label className="font-[Poppins,sans-serif] text-white/80 text-[16px]">
+                    Password
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="flex items-center gap-2 text-white/60 hover:text-white/80 transition-colors text-[14px]"
+                  >
+                    {showPassword ? (
+                      <><EyeOff className="size-4" /> Hide</>
+                    ) : (
+                      <><Eye className="size-4" /> Show</>
+                    )}
+                  </button>
+                </div>
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter your password"
+                  required
+                  className="h-[56px] w-full rounded-[12px] bg-white/10 backdrop-blur-md border border-white/20 px-4 text-white placeholder:text-white/40 focus:outline-none focus:border-amber-400/60 focus:bg-white/15 transition-all duration-300"
+                />
+              </div>
+
+              <motion.button
+                type="submit"
+                disabled={loading}
+                whileHover={{ scale: loading ? 1 : 1.02, boxShadow: loading ? 'none' : '0 0 40px rgba(245, 166, 35, 0.45)' }}
+                whileTap={{ scale: loading ? 1 : 0.98 }}
+                className="h-[56px] sm:h-[64px] w-full rounded-[28px] sm:rounded-[32px] bg-gradient-to-r from-amber-500 via-orange-500 to-orange-600 hover:from-amber-400 hover:via-orange-400 hover:to-orange-500 text-white font-[Poppins,sans-serif] text-[18px] sm:text-[20px] font-medium transition-all duration-300 relative overflow-hidden group disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <motion.div
+                  className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0"
+                  animate={{ x: ['-100%', '100%'] }}
+                  transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}
+                />
+                <span className="relative z-10">
+                  {loading ? 'Signing in...' : 'Sign in'}
+                </span>
+              </motion.button>
+
+              <div className="lg:hidden text-center">
+                <p className="font-[Poppins,sans-serif] text-[16px] text-white/80">
+                  New here?{' '}
+                  <Link
+                    href="/register"
+                    className="text-white font-medium underline hover:text-amber-300"
+                  >
+                    Sign up
+                  </Link>
+                </p>
+              </div>
+            </form>
+          </motion.div>
+        </div>
       </div>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-black flex items-center justify-center"><p className="text-gray-500">Loading...</p></div>}>
+      <LoginPageContent />
+    </Suspense>
   )
 }

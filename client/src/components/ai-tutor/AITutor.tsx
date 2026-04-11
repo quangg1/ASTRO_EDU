@@ -243,8 +243,9 @@ export function AITutor() {
     <>
       <button
         type="button"
+        data-ai-tutor-fab
         onClick={() => setOpen((o) => !o)}
-        className={`fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full shadow-xl flex items-center justify-center transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:ring-offset-2 focus:ring-offset-black ${canUseAI ? 'hover:scale-110' : 'opacity-80 hover:opacity-100'}`}
+        className={`fixed bottom-[calc(5.25rem+env(safe-area-inset-bottom,0px))] right-6 z-50 w-14 h-14 rounded-full shadow-xl flex items-center justify-center transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2 focus:ring-offset-black ${canUseAI ? 'hover:scale-110' : 'opacity-80 hover:opacity-100'}`}
         style={{
           background: isAgent
             ? 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 50%, #6d28d9 100%)'
@@ -259,6 +260,7 @@ export function AITutor() {
 
       {open && (
         <div
+          data-ai-tutor-panel
           className="fixed z-50 w-[min(420px,calc(100vw-3rem))] h-[min(560px,calc(100vh-8rem))] flex flex-col rounded-2xl overflow-hidden animate-slide-up-fade"
           style={{
             bottom: `${96 - pos.y}px`,

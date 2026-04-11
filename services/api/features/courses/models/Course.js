@@ -81,6 +81,8 @@ const courseSchema = new mongoose.Schema({
   price: { type: Number, default: 0 },
   currency: { type: String, enum: ['VND', 'USD'], default: 'VND' },
   isPaid: { type: Boolean, default: false },
+  /** Giáo viên sở hữu khóa học (teacher); null = chưa gán (cũ) */
+  teacherId: { type: String, default: null, index: true },
   modules: [moduleSchema],
   lessons: [lessonSchema],
   published: { type: Boolean, default: false },

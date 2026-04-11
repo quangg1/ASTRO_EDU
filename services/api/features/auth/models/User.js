@@ -25,7 +25,7 @@ const userSchema = new mongoose.Schema(
     },
     provider: {
       type: String,
-      enum: ['local', 'google', 'facebook'],
+      enum: ['local', 'google', 'facebook', 'multi'],
       default: 'local',
     },
     role: {
@@ -33,10 +33,26 @@ const userSchema = new mongoose.Schema(
       enum: ['student', 'teacher', 'admin'],
       default: 'student',
     },
+    /** Legacy — ưu tiên dùng googleId / facebookId */
     providerId: {
       type: String,
       sparse: true,
       index: true,
+    },
+    /** Google OAuth subject (Passport hoặc Firebase identities) */
+    googleId: {
+      type: String,
+      sparse: true,
+    },
+    /** Facebook OAuth id */
+    facebookId: {
+      type: String,
+      sparse: true,
+    },
+    /** Firebase Auth uid — một user có thể đăng nhập GG/FB qua Firebase cùng email */
+    firebaseUid: {
+      type: String,
+      sparse: true,
     },
     resetToken: { type: String, select: false },
     resetTokenExpires: { type: Date, select: false },
@@ -44,9 +60,10 @@ const userSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// sparse: cho phép nhiều user local (providerId = null)
-userSchema.index({ provider: 1, providerId: 1 }, { unique: true, sparse: true });
 userSchema.index({ email: 1 }, { unique: true, sparse: true });
+userSchema.index({ googleId: 1 }, { unique: true, sparse: true });
+userSchema.index({ facebookId: 1 }, { unique: true, sparse: true });
+userSchema.index({ firebaseUid: 1 }, { unique: true, sparse: true });
 
 userSchema.pre('save', async function (next) {
   if (!this.isModified('password') || !this.password) return next();

@@ -110,9 +110,40 @@ export interface Course {
   published?: boolean
 }
 
+export interface MyCourse {
+  id: string
+  courseId: string
+  title: string
+  slug: string
+  description: string
+  thumbnail: string | null
+  level: string
+  lessonCount: number
+  enrolledAt: string
+  progress: { lessonSlug: string; completed: boolean; completedAt: string | null }[]
+  completedCount: number
+  totalLessons: number
+  percentComplete: number
+}
+
+export async function fetchMyCourses(): Promise<MyCourse[]> {
+  const res = await fetch(`${COURSES_BASE}/courses/my`, { headers: authHeaders() })
+  const data = await res.json()
+  if (data.success && Array.isArray(data.data)) return data.data
+  return []
+}
+
 export async function fetchCourses(search?: string): Promise<Course[]> {
   const url = search?.trim() ? `${COURSES_BASE}/courses?q=${encodeURIComponent(search.trim())}` : `${COURSES_BASE}/courses`
   const res = await fetch(url, { headers: authHeaders() })
+  const data = await res.json()
+  if (data.success && Array.isArray(data.data)) return data.data
+  return []
+}
+
+/** Danh sách khóa học cho Studio (teacher/admin), gồm cả chưa publish */
+export async function fetchCoursesForEditor(): Promise<Course[]> {
+  const res = await fetch(`${COURSES_BASE}/courses/editor/list`, { headers: authHeaders() })
   const data = await res.json()
   if (data.success && Array.isArray(data.data)) return data.data
   return []
@@ -201,4 +232,15 @@ export async function saveCourseFromEditor(
   const data = await res.json()
   if (data.success) return { success: true }
   return { success: false, error: data.error || 'Lưu khóa học thất bại' }
+}
+
+export async function createCourse(title: string, slug?: string): Promise<{ success: boolean; slug?: string; error?: string }> {
+  const res = await fetch(`${COURSES_BASE}/courses`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ title: title.trim(), slug: slug?.trim() || undefined }),
+  })
+  const data = await res.json()
+  if (data.success && data.data?.slug) return { success: true, slug: data.data.slug }
+  return { success: false, error: data.error || 'Tạo khóa học thất bại' }
 }

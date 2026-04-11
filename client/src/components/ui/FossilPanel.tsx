@@ -215,7 +215,7 @@ export function FossilPanel() {
 }
 
 interface FossilListModalProps {
-  fossils: typeof useSimulatorStore.prototype.fossils
+  fossils: Fossil[]
   phylumMetadata: Record<string, import('@/lib/api').PhylumInfoFromApi> | null
   /** Chỉ tìm trong kỷ này; nếu không truyền thì tìm toàn DB (legacy). */
   timeRange?: { maxMa: number; minMa: number }

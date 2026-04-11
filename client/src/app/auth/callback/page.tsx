@@ -12,7 +12,7 @@ function CallbackContent() {
 
   useEffect(() => {
     const token = searchParams.get('token')
-    const redirectTo = searchParams.get('redirect') || '/courses'
+    const redirectTo = searchParams.get('redirect') || '/dashboard'
     if (!token) {
       router.replace('/login?error=missing_token')
       return
@@ -34,7 +34,7 @@ function CallbackContent() {
 
   return (
     <div className="min-h-screen bg-black flex items-center justify-center">
-      <p className="text-cyan-400">Đang đăng nhập...</p>
+      <p className="text-cyan-400">Signing you in...</p>
     </div>
   )
 }
@@ -43,7 +43,7 @@ export default function AuthCallbackPage() {
   return (
     <Suspense fallback={
       <div className="min-h-screen bg-black flex items-center justify-center">
-        <p className="text-cyan-400">Đang tải...</p>
+        <p className="text-cyan-400">Loading...</p>
       </div>
     }>
       <CallbackContent />

@@ -9,6 +9,18 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        // Cosmic landing (use in landing page only)
+        background: 'hsl(var(--cosmic-background))',
+        foreground: 'hsl(var(--cosmic-foreground))',
+        card: 'hsl(var(--cosmic-card))',
+        primary: 'hsl(var(--cosmic-primary))',
+        'primary-foreground': 'hsl(var(--cosmic-primary-foreground))',
+        secondary: 'hsl(var(--cosmic-secondary))',
+        muted: 'hsl(var(--cosmic-muted))',
+        'muted-foreground': 'hsl(var(--cosmic-muted-foreground))',
+        border: 'hsl(var(--cosmic-border))',
+        accent: 'hsl(var(--cosmic-accent))',
+        destructive: 'hsl(var(--cosmic-destructive))',
         // Earth History theme colors
         'earth': {
           'hadean': '#8B4513',

@@ -1094,7 +1094,8 @@ const seedData = [
         name: 'Trái Đất hiện đại',
         nameEn: 'Modern Earth',
         icon: '🌍',
-        time: 0,
+        /** Cửa sổ Ma khớp Quaternary → hiện tại (tránh time=timeEnd=0 không overlap PBDB) */
+        time: 2.58,
         timeEnd: 0,
         timeDisplay: 'Hiện tại',
         timeDisplayEn: 'Present Day',

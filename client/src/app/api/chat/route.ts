@@ -3,15 +3,15 @@ import { NextRequest, NextResponse } from 'next/server'
 const AI_SERVICE_URL = process.env.AI_SERVICE_URL || ''
 
 /**
- * Proxy chat tới AI service (Python: RAG, security, multimodal).
- * Cần set AI_SERVICE_URL (vd. http://localhost:5005) và chạy services/ai.
+ * Proxy chat to AI service (Python: RAG, security, multimodal).
+ * Set AI_SERVICE_URL (e.g. http://localhost:5005) and run services/ai.
  */
 export async function POST(req: NextRequest) {
   if (!AI_SERVICE_URL) {
     return NextResponse.json(
       {
         error:
-          'Chưa cấu hình AI. Đặt AI_SERVICE_URL (vd. http://localhost:5005) và chạy service AI Python (services/ai).',
+          'AI is not configured. Set AI_SERVICE_URL (e.g. http://localhost:5005) and run the Python AI service (services/ai).',
       },
       { status: 503 }
     )
@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
 
     if (!res.ok) {
       return NextResponse.json(
-        { error: typeof data.detail === 'string' ? data.detail : 'AI service lỗi' },
+        { error: typeof data.detail === 'string' ? data.detail : 'AI service error' },
         { status: res.status >= 500 ? 502 : res.status }
       )
     }
@@ -63,13 +63,13 @@ export async function POST(req: NextRequest) {
   } catch (e) {
     const err = e instanceof Error ? e : new Error(String(e))
     if (err.name === 'AbortError') {
-      return NextResponse.json({ error: 'Yêu cầu quá thời gian chờ.' }, { status: 504 })
+      return NextResponse.json({ error: 'Request timed out.' }, { status: 504 })
     }
     console.error('Chat API error:', err)
     return NextResponse.json(
       {
         error:
-          'Không kết nối được AI service. Kiểm tra AI_SERVICE_URL và service Python (services/ai) đã chạy chưa.',
+          'Could not connect to the AI service. Check AI_SERVICE_URL and ensure the Python service (services/ai) is running.',
       },
       { status: 503 }
     )

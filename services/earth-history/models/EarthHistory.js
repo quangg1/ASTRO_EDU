@@ -166,8 +166,7 @@ const earthHistoryStageSchema = new mongoose.Schema({
     collection: 'earth_history_stages'
 });
 
-// Indexes
-earthHistoryStageSchema.index({ stageId: 1 });
+// Indexes (stageId đã có unique index — không khai báo thêm)
 earthHistoryStageSchema.index({ time: -1 });
 earthHistoryStageSchema.index({ eon: 1, era: 1, period: 1 });
 earthHistoryStageSchema.index({ order: 1 });
