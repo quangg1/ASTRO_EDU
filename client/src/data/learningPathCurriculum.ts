@@ -107,6 +107,181 @@ export function makeDepthLessons(
   }))
 }
 
+/** Slug an toàn cho id module/node (Studio tạo mới). */
+function slugPart(s: string): string {
+  return (
+    s
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, '-')
+      .replace(/[^a-z0-9-_]/g, '')
+      .slice(0, 36) || 'item'
+  )
+}
+
+/** Id module mới (duy nhất trong collection). */
+export function generateNewModuleId(titleHint?: string): string {
+  const base = slugPart(titleHint || 'module')
+  return `${base}-${Math.random().toString(36).slice(2, 9)}`
+}
+
+/** Id node mới, gắn prefix moduleId để tránh trùng giữa các module. */
+export function generateNewNodeId(moduleId: string, titleHint?: string): string {
+  const base = slugPart(titleHint || 'topic')
+  return `${moduleId}__${base}-${Math.random().toString(36).slice(2, 8)}`
+}
+
+/** Id bài học mới (hậu tố ngẫu nhiên — ổn định URL, không phụ thuộc chỉ số khi xóa giữa chừng). */
+export function newLessonId(moduleId: string, nodeId: string, depth: DepthLevel): string {
+  return `${moduleId}__${nodeId}__${depth}__${Math.random().toString(36).slice(2, 12)}`
+}
+
+export function createEmptyLessonItem(
+  moduleId: string,
+  nodeId: string,
+  depth: DepthLevel,
+  titleVi = 'Bài mới',
+): LessonItem {
+  return {
+    id: newLessonId(moduleId, nodeId, depth),
+    titleVi,
+    title: '',
+    conceptIds: [],
+    sections: [],
+    body: '',
+  }
+}
+
+export function createEmptyNode(moduleId: string, titleVi = 'Chủ đề mới'): LearningNode {
+  const id = generateNewNodeId(moduleId, titleVi)
+  return {
+    id,
+    title: '',
+    titleVi,
+    depths: { beginner: [], explorer: [], researcher: [] },
+    topicWeights: [],
+  }
+}
+
+/**
+ * Module trống cho Studio: 1 chủ đề + 1 bài Cơ bản để có thể soạn ngay.
+ * Có thể thêm node/bài khác sau.
+ */
+export function createEmptyModule(order: number): LearningModule {
+  const id = generateNewModuleId('module-moi')
+  const node = createEmptyNode(id, 'Chủ đề đầu tiên')
+  node.depths.beginner = [createEmptyLessonItem(id, node.id, 'beginner', 'Bài đầu tiên')]
+  return {
+    id,
+    order,
+    title: '',
+    titleVi: 'Module mới',
+    emoji: '📘',
+    goal: '',
+    goalVi: '',
+    nodes: [node],
+    connections: [],
+  }
+}
+
+/** Sau khi xóa module, gán lại order 1..n theo thứ tự hiện tại. */
+export function renumberModuleOrders(modules: LearningModule[]): LearningModule[] {
+  return [...modules].sort((a, b) => a.order - b.order).map((m, i) => ({ ...m, order: i + 1 }))
+}
+
+/**
+ * Bản sao module với id module / node / lesson mới (tránh trùng URL & DB).
+ * Giữ nội dung bài (sections, conceptIds, …).
+ */
+export function duplicateLearningModule(src: LearningModule): LearningModule {
+  const mid = generateNewModuleId(src.titleVi || 'module')
+  const nodes: LearningNode[] = (src.nodes || []).map((n) => {
+    const nid = generateNewNodeId(mid, n.titleVi || 'node')
+    const depths = {
+      beginner: [] as LessonItem[],
+      explorer: [] as LessonItem[],
+      researcher: [] as LessonItem[],
+    }
+    for (const d of DEPTH_ORDER) {
+      depths[d] = (n.depths[d] ?? []).map((lesson) => ({
+        ...lesson,
+        id: newLessonId(mid, nid, d),
+      }))
+    }
+    return {
+      ...n,
+      id: nid,
+      depths,
+    }
+  })
+  const titleSuffix = ' (bản sao)'
+  const titleVi = (src.titleVi || '').trim() ? `${src.titleVi}${titleSuffix}` : `Module mới${titleSuffix}`
+  return {
+    ...src,
+    id: mid,
+    titleVi,
+    title: src.title,
+    order: src.order,
+    nodes,
+    connections: Array.isArray(src.connections) ? [...src.connections] : [],
+  }
+}
+
+/** Đổi chỗ hai module theo chỉ số trong danh sách đã sort theo order. */
+export function reorderModuleOrderList(
+  modules: LearningModule[],
+  fromIndex: number,
+  toIndex: number,
+): LearningModule[] {
+  const sorted = [...modules].sort((a, b) => a.order - b.order)
+  if (fromIndex < 0 || fromIndex >= sorted.length || toIndex < 0 || toIndex >= sorted.length) {
+    return modules
+  }
+  if (fromIndex === toIndex) return modules
+  const next = [...sorted]
+  const [item] = next.splice(fromIndex, 1)
+  next.splice(toIndex, 0, item)
+  return renumberModuleOrders(next)
+}
+
+/** Di chuyển module một bước lên / xuống. */
+export function moveModuleStep(modules: LearningModule[], moduleId: string, dir: -1 | 1): LearningModule[] {
+  const sorted = [...modules].sort((a, b) => a.order - b.order)
+  const idx = sorted.findIndex((m) => m.id === moduleId)
+  if (idx < 0) return modules
+  const to = idx + dir
+  if (to < 0 || to >= sorted.length) return modules
+  return reorderModuleOrderList(modules, idx, to)
+}
+
+/** Kéo thả: đặt module draggedId vào vị trí của dropTargetId. */
+export function reorderModulesDragDrop(
+  modules: LearningModule[],
+  draggedId: string,
+  dropTargetId: string,
+): LearningModule[] {
+  if (draggedId === dropTargetId) return modules
+  const sorted = [...modules].sort((a, b) => a.order - b.order)
+  const fromIdx = sorted.findIndex((m) => m.id === draggedId)
+  const toIdx = sorted.findIndex((m) => m.id === dropTargetId)
+  if (fromIdx < 0 || toIdx < 0) return modules
+  return reorderModuleOrderList(modules, fromIdx, toIdx)
+}
+
+/** Chèn một module đã clone (duplicateLearningModule) ngay sau afterModuleId. */
+export function insertModuleCloneAfter(
+  modules: LearningModule[],
+  afterModuleId: string,
+  clone: LearningModule,
+): LearningModule[] {
+  const sorted = [...modules].sort((a, b) => a.order - b.order)
+  const idx = sorted.findIndex((m) => m.id === afterModuleId)
+  if (idx < 0) return modules
+  const next = [...sorted]
+  next.splice(idx + 1, 0, clone)
+  return renumberModuleOrders(next)
+}
+
 export const LEARNING_MODULES: LearningModule[] = [
   {
     id: 'intro-scale',

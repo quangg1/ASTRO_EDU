@@ -171,7 +171,9 @@ router.put('/editor', authMiddleware, requireRole('teacher', 'admin'), async (re
       return res.status(400).json({ success: false, error: 'modules phải là mảng' });
     }
     const normalized = normalizeModules(modules);
-    const normalizedConcepts = normalizeConcepts(concepts);
+    /** Chỉ ghi concepts nhúng trong document khi client gửi — tránh xóa sạch khi body thiếu concepts */
+    const normalizedConcepts =
+      Array.isArray(concepts) ? normalizeConcepts(concepts) : null;
     const conceptDocs = await Concept.find({}, { id: 1 }).lean();
     const conceptIdSet = new Set((conceptDocs || []).map((c) => String(c.id || '').trim()).filter(Boolean));
     const { modules: validatedModules, invalidConceptIds } = validateModulesByConceptIds(
@@ -183,15 +185,17 @@ router.put('/editor', authMiddleware, requireRole('teacher', 'admin'), async (re
       doc = new LearningPath({
         slug: 'main',
         modules: validatedModules,
-        concepts: normalizedConcepts,
+        concepts: normalizedConcepts ?? [],
         published: typeof published === 'boolean' ? published : true,
       });
     } else {
       doc.modules = validatedModules;
-      doc.concepts = normalizedConcepts;
+      if (normalizedConcepts !== null) {
+        doc.concepts = normalizedConcepts;
+        doc.markModified('concepts');
+      }
       doc.published = typeof published === 'boolean' ? published : true;
       doc.markModified('modules');
-      doc.markModified('concepts');
     }
     await doc.save();
     /** Đọc lại từ DB (lean) để response khớp dữ liệu đã ghi — tránh toObject() thiếu path lồng nhau */

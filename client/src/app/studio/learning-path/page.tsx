@@ -7,6 +7,14 @@ import { useRouter } from 'next/navigation'
 import {
   DEPTH_ORDER,
   DEPTH_META,
+  createEmptyLessonItem,
+  createEmptyModule,
+  createEmptyNode,
+  duplicateLearningModule,
+  insertModuleCloneAfter,
+  moveModuleStep,
+  renumberModuleOrders,
+  reorderModulesDragDrop,
   type DepthLevel,
   type LearningConcept,
   type LearningModule,
@@ -19,7 +27,20 @@ import { fetchEditorLearningPath, saveEditorLearningPath } from '@/lib/learningP
 import { fetchEditorConcepts } from '@/lib/conceptsApi'
 import type { Lesson } from '@/lib/coursesApi'
 import { useAuthStore } from '@/store/useAuthStore'
-import { BookOpen, ChevronRight, Layers, ListTree, Save, Sparkles } from 'lucide-react'
+import {
+  BookOpen,
+  ChevronDown,
+  ChevronRight,
+  ChevronUp,
+  Copy,
+  GripVertical,
+  Layers,
+  ListTree,
+  Plus,
+  Save,
+  Sparkles,
+  Trash2,
+} from 'lucide-react'
 import { NodeTopicWeightsEditor } from '@/components/studio/NodeTopicWeightsEditor'
 
 const BlockEditor = dynamic(() => import('@/components/studio/BlockEditor'), { ssr: false })
@@ -126,6 +147,35 @@ function updateNodeFields(
     return {
       ...m,
       nodes: m.nodes.map((n) => (n.id === nodeId ? { ...n, ...patch } : n)),
+    }
+  })
+}
+
+function updateModuleFields(
+  modules: LearningModule[],
+  moduleId: string,
+  patch: Partial<LearningModule>,
+): LearningModule[] {
+  return modules.map((m) => (m.id === moduleId ? { ...m, ...patch } : m))
+}
+
+function updateLessonList(
+  modules: LearningModule[],
+  moduleId: string,
+  nodeId: string,
+  depth: DepthLevel,
+  fn: (list: LessonItem[]) => LessonItem[],
+): LearningModule[] {
+  return modules.map((m) => {
+    if (m.id !== moduleId) return m
+    return {
+      ...m,
+      nodes: m.nodes.map((n) => {
+        if (n.id !== nodeId) return n
+        const list = [...(n.depths[depth] ?? [])]
+        const nextList = fn(list)
+        return { ...n, depths: { ...n.depths, [depth]: nextList } }
+      }),
     }
   })
 }
@@ -468,6 +518,7 @@ export default function StudioLearningPathPage() {
   /** Chỉ một bài được mở form chi tiết */
   const [activeLessonId, setActiveLessonId] = useState<string | null>(null)
   const [invalidConceptIds, setInvalidConceptIds] = useState<string[]>([])
+  const [dragOverModuleId, setDragOverModuleId] = useState<string | null>(null)
 
   useEffect(() => {
     if (checked && !user) router.replace('/login?redirect=/studio/learning-path')
@@ -581,6 +632,162 @@ export default function StudioLearningPathPage() {
     setActiveLessonId(n?.depths[d]?.[0]?.id ?? null)
   }
 
+  /** Khi xóa module / tải lại, moduleId có thể không còn — chọn lại module đầu; khi rỗng thì reset. */
+  useEffect(() => {
+    if (loading) return
+    if (modules.length === 0) {
+      setModuleId(null)
+      setNodeId(null)
+      setDepth(null)
+      setActiveLessonId(null)
+      return
+    }
+    if (moduleId && sortedModules.some((m) => m.id === moduleId)) return
+    const first = sortedModules[0]
+    const n0 = first.nodes[0]
+    setModuleId(first.id)
+    if (n0) {
+      setNodeId(n0.id)
+      const dep = DEPTH_ORDER.find((d) => (n0.depths[d]?.length ?? 0) > 0) ?? 'beginner'
+      setDepth(dep)
+      setActiveLessonId(n0.depths[dep]?.[0]?.id ?? null)
+    } else {
+      setNodeId(null)
+      setDepth(null)
+      setActiveLessonId(null)
+    }
+  }, [loading, modules, moduleId, sortedModules])
+
+  const addFirstModule = () => {
+    const m = createEmptyModule(1)
+    setModules([m])
+    setModuleId(m.id)
+    setNodeId(m.nodes[0]?.id ?? null)
+    setDepth('beginner')
+    setActiveLessonId(m.nodes[0]?.depths.beginner?.[0]?.id ?? null)
+  }
+
+  const appendModule = () => {
+    setModules((prev) => {
+      const maxOrder = prev.reduce((acc, x) => Math.max(acc, x.order), 0)
+      const m = createEmptyModule(maxOrder + 1)
+      queueMicrotask(() => {
+        setModuleId(m.id)
+        const nn = m.nodes[0]
+        if (nn) {
+          setNodeId(nn.id)
+          const dep = DEPTH_ORDER.find((d) => (nn.depths[d]?.length ?? 0) > 0) ?? 'beginner'
+          setDepth(dep)
+          setActiveLessonId(nn.depths[dep]?.[0]?.id ?? null)
+        }
+      })
+      return [...prev, m]
+    })
+  }
+
+  const removeCurrentModule = () => {
+    if (!currentModule) return
+    if (!confirm(`Xóa module "${currentModule.titleVi}" và toàn bộ chủ đề / bài bên trong?`)) return
+    const mid = currentModule.id
+    setModules((prev) => {
+      const next = renumberModuleOrders(prev.filter((x) => x.id !== mid))
+      queueMicrotask(() => {
+        if (next.length === 0) {
+          setModuleId(null)
+          setNodeId(null)
+          setDepth(null)
+          setActiveLessonId(null)
+        } else if (moduleId === mid) {
+          const nm = next[0]
+          setModuleId(nm.id)
+          const n0 = nm.nodes[0]
+          if (n0) {
+            setNodeId(n0.id)
+            const dep = DEPTH_ORDER.find((d) => (n0.depths[d]?.length ?? 0) > 0) ?? 'beginner'
+            setDepth(dep)
+            setActiveLessonId(n0.depths[dep]?.[0]?.id ?? null)
+          } else {
+            setNodeId(null)
+            setDepth(null)
+            setActiveLessonId(null)
+          }
+        }
+      })
+      return next
+    })
+  }
+
+  const appendNode = () => {
+    if (!currentModule) return
+    const mid = currentModule.id
+    const node = createEmptyNode(mid, 'Chủ đề mới')
+    node.depths.beginner = [createEmptyLessonItem(mid, node.id, 'beginner')]
+    setModules((prev) => {
+      const mod = prev.find((x) => x.id === mid)
+      if (!mod) return prev
+      return updateModuleFields(prev, mid, { nodes: [...mod.nodes, node] })
+    })
+    setNodeId(node.id)
+    setDepth('beginner')
+    setActiveLessonId(node.depths.beginner[0]?.id ?? null)
+  }
+
+  const removeCurrentNode = () => {
+    if (!currentModule || !currentNode) return
+    if (currentModule.nodes.length <= 1) {
+      alert('Mỗi module cần ít nhất một chủ đề. Thêm chủ đề mới trước khi xóa cái này.')
+      return
+    }
+    if (!confirm(`Xóa chủ đề "${currentNode.titleVi}" và mọi bài trong 3 tầng?`)) return
+    const mid = currentModule.id
+    const nid = currentNode.id
+    const remaining = currentModule.nodes.filter((n) => n.id !== nid)
+    const pick = remaining[0]
+    setModules((prev) =>
+      prev.map((m) => (m.id === mid ? { ...m, nodes: m.nodes.filter((n) => n.id !== nid) } : m)),
+    )
+    if (pick) {
+      setNodeId(pick.id)
+      const dep = DEPTH_ORDER.find((d) => (pick.depths[d]?.length ?? 0) > 0) ?? 'beginner'
+      setDepth(dep)
+      setActiveLessonId(pick.depths[dep]?.[0]?.id ?? null)
+    }
+  }
+
+  const appendLesson = () => {
+    if (!currentModule || !currentNode || !depth) return
+    const lesson = createEmptyLessonItem(currentModule.id, currentNode.id, depth)
+    setModules((prev) =>
+      updateLessonList(prev, currentModule.id, currentNode.id, depth, (list) => [...list, lesson]),
+    )
+    setActiveLessonId(lesson.id)
+  }
+
+  const removeCurrentLesson = () => {
+    if (!currentModule || !currentNode || !depth || !activeLesson) return
+    if (!confirm(`Xóa bài "${activeLesson.titleVi}"?`)) return
+    const lid = activeLesson.id
+    setModules((prev) =>
+      updateLessonList(prev, currentModule.id, currentNode.id, depth, (list) => list.filter((l) => l.id !== lid)),
+    )
+  }
+
+  const moveModuleUp = (mid: string) => {
+    setModules((prev) => moveModuleStep(prev, mid, -1))
+  }
+
+  const moveModuleDown = (mid: string) => {
+    setModules((prev) => moveModuleStep(prev, mid, 1))
+  }
+
+  const duplicateModuleAt = (mid: string) => {
+    const orig = sortedModules.find((m) => m.id === mid)
+    if (!orig) return
+    const copy = duplicateLearningModule(orig)
+    setModules((prev) => insertModuleCloneAfter(prev, mid, copy))
+    queueMicrotask(() => onSelectModule(copy.id))
+  }
+
   const save = async () => {
     const token = localStorage.getItem('galaxies_token')
     if (!token) return
@@ -617,7 +824,8 @@ export default function StudioLearningPathPage() {
               Learning Path Studio
             </h1>
             <p className="text-xs text-slate-400 mt-1 max-w-xl">
-              Chọn <strong className="text-slate-300">Module → Chủ đề → Tầng → Bài</strong>. Nội dung bài dùng{' '}
+              <strong className="text-slate-300">Tạo mới</strong> module / chủ đề / bài, hoặc chọn{' '}
+              <strong className="text-slate-300">Module → Chủ đề → Tầng → Bài</strong> để soạn. Nội dung bài dùng{' '}
               <strong className="text-cyan-200/90">cùng block kit với khóa học</strong> — không nhập HTML một ô.
             </p>
           </div>
@@ -661,33 +869,192 @@ export default function StudioLearningPathPage() {
         {loading ? (
           <p className="text-slate-500 py-12 text-center">Đang tải...</p>
         ) : modules.length === 0 ? (
-          <p className="text-slate-500 py-12 text-center">Chưa có dữ liệu. Khởi động API và GET /api/learning-path để seed.</p>
+          <div className="rounded-2xl border border-dashed border-white/20 bg-white/[0.03] p-10 text-center max-w-lg mx-auto">
+            <p className="text-slate-300 font-medium">Chưa có module nào trong Learning Path.</p>
+            <p className="text-xs text-slate-500 mt-2 mb-6">
+              Tạo module đầu tiên (có sẵn một chủ đề và một bài Cơ bản để bạn soạn), sau đó bấm &quot;Lưu toàn bộ&quot; để
+              ghi lên server.
+            </p>
+            <button
+              type="button"
+              onClick={addFirstModule}
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white text-sm font-medium"
+            >
+              <Plus className="w-4 h-4" />
+              Tạo module đầu tiên
+            </button>
+            <p className="text-[11px] text-slate-600 mt-6">
+              Hoặc chạy API và seed từ <code className="text-slate-400">learningPathDefault.json</code> rồi tải lại
+              trang.
+            </p>
+          </div>
         ) : (
           <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 lg:items-stretch min-h-[calc(100vh-12rem)]">
             {/* Cột trái: 3 bước điều hướng */}
             <aside className="w-full lg:w-[300px] shrink-0 flex flex-col gap-4">
               <section className="rounded-2xl border border-white/10 bg-[#0c1018] p-4">
-                <p className="text-[10px] uppercase tracking-wider text-slate-500 font-semibold mb-2 flex items-center gap-1">
+                <p className="text-[10px] uppercase tracking-wider text-slate-500 font-semibold mb-1 flex items-center gap-1">
                   <Layers className="w-3.5 h-3.5" /> 1. Module
                 </p>
-                <div className="space-y-1 max-h-[220px] overflow-y-auto pr-1">
-                  {sortedModules.map((m) => (
-                    <button
+                <p className="text-[10px] text-slate-600 mb-2 leading-snug">
+                  Kéo thả từ cột trái · nút ↑↓ đổi chỗ · nút copy nhân đôi (id & URL bài mới).
+                </p>
+                <div className="space-y-1.5 max-h-[280px] overflow-y-auto pr-1">
+                  {sortedModules.map((m, mi) => (
+                    <div
                       key={m.id}
-                      type="button"
-                      onClick={() => onSelectModule(m.id)}
-                      className={`w-full text-left rounded-xl px-3 py-2.5 text-sm transition-colors ${
+                      className={`flex items-stretch gap-0.5 rounded-xl border transition-colors ${
                         moduleId === m.id
-                          ? 'bg-cyan-500/20 border border-cyan-500/40 text-white'
-                          : 'border border-transparent text-slate-400 hover:bg-white/5 hover:text-slate-200'
+                          ? 'bg-cyan-500/15 border-cyan-500/40'
+                          : dragOverModuleId === m.id
+                            ? 'border-cyan-400/50 bg-cyan-500/10'
+                            : 'border-white/10 bg-black/20 hover:border-white/15'
                       }`}
+                      onDragOver={(e) => {
+                        e.preventDefault()
+                        e.dataTransfer.dropEffect = 'move'
+                        setDragOverModuleId(m.id)
+                      }}
+                      onDragLeave={(e) => {
+                        const rel = e.relatedTarget as Node | null
+                        if (rel && e.currentTarget.contains(rel)) return
+                        setDragOverModuleId(null)
+                      }}
+                      onDrop={(e) => {
+                        e.preventDefault()
+                        const from = e.dataTransfer.getData('text/plain')
+                        setDragOverModuleId(null)
+                        if (!from || from === m.id) return
+                        setModules((prev) => reorderModulesDragDrop(prev, from, m.id))
+                      }}
                     >
-                      <span className="mr-2">{m.emoji}</span>
-                      <span className="font-medium">{m.titleVi}</span>
-                      <span className="block text-[10px] text-slate-500 mt-0.5">#{m.order} · {m.id}</span>
-                    </button>
+                      <button
+                        type="button"
+                        aria-label="Kéo để đổi thứ tự module"
+                        draggable
+                        onDragStart={(e) => {
+                          e.dataTransfer.setData('text/plain', m.id)
+                          e.dataTransfer.effectAllowed = 'move'
+                          setDragOverModuleId(null)
+                        }}
+                        onDragEnd={() => setDragOverModuleId(null)}
+                        className="shrink-0 flex items-center px-1 text-slate-500 hover:text-slate-300 cursor-grab active:cursor-grabbing rounded-lg hover:bg-white/5 border-0 bg-transparent"
+                      >
+                        <GripVertical className="w-4 h-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onSelectModule(m.id)}
+                        className={`flex-1 min-w-0 text-left rounded-lg px-2 py-2 text-sm transition-colors ${
+                          moduleId === m.id ? 'text-white' : 'text-slate-400 hover:text-slate-200'
+                        }`}
+                      >
+                        <span className="mr-1">{m.emoji}</span>
+                        <span className="font-medium line-clamp-2">{m.titleVi}</span>
+                        <span className="block text-[10px] text-slate-500 mt-0.5">
+                          #{m.order} · {m.id}
+                        </span>
+                      </button>
+                      <div className="flex flex-col justify-center gap-0.5 shrink-0 py-1 pr-1">
+                        <button
+                          type="button"
+                          aria-label="Lên"
+                          disabled={mi === 0}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            moveModuleUp(m.id)
+                          }}
+                          className="rounded p-0.5 text-slate-500 hover:text-white hover:bg-white/10 disabled:opacity-25 disabled:pointer-events-none"
+                        >
+                          <ChevronUp className="w-4 h-4" />
+                        </button>
+                        <button
+                          type="button"
+                          aria-label="Xuống"
+                          disabled={mi === sortedModules.length - 1}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            moveModuleDown(m.id)
+                          }}
+                          className="rounded p-0.5 text-slate-500 hover:text-white hover:bg-white/10 disabled:opacity-25 disabled:pointer-events-none"
+                        >
+                          <ChevronDown className="w-4 h-4" />
+                        </button>
+                        <button
+                          type="button"
+                          aria-label="Nhân đôi module"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            duplicateModuleAt(m.id)
+                          }}
+                          className="rounded p-0.5 text-slate-500 hover:text-cyan-300 hover:bg-cyan-500/15"
+                          title="Nhân đôi (id & nội dung mới)"
+                        >
+                          <Copy className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
                   ))}
                 </div>
+                <button
+                  type="button"
+                  onClick={appendModule}
+                  className="mt-3 w-full inline-flex items-center justify-center gap-1.5 rounded-xl border border-cyan-500/35 bg-cyan-500/10 text-cyan-200 text-xs font-medium py-2 hover:bg-cyan-500/20"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  Thêm module
+                </button>
+                {currentModule && (
+                  <div className="mt-3 pt-3 border-t border-white/10 space-y-2">
+                    <p className="text-[10px] text-slate-500 uppercase font-semibold">Chỉnh module đang chọn</p>
+                    <label className="block text-[11px] text-slate-400">
+                      Tiêu đề (VI)
+                      <input
+                        value={currentModule.titleVi}
+                        onChange={(e) =>
+                          setModules((prev) =>
+                            updateModuleFields(prev, currentModule.id, { titleVi: e.target.value }),
+                          )
+                        }
+                        className={`mt-0.5 ${inputCls}`}
+                      />
+                    </label>
+                    <label className="block text-[11px] text-slate-400">
+                      Emoji
+                      <input
+                        value={currentModule.emoji}
+                        onChange={(e) =>
+                          setModules((prev) =>
+                            updateModuleFields(prev, currentModule.id, { emoji: e.target.value }),
+                          )
+                        }
+                        className={`mt-0.5 ${inputCls}`}
+                        maxLength={8}
+                      />
+                    </label>
+                    <label className="block text-[11px] text-slate-400">
+                      Mục tiêu (VI)
+                      <textarea
+                        value={currentModule.goalVi}
+                        onChange={(e) =>
+                          setModules((prev) =>
+                            updateModuleFields(prev, currentModule.id, { goalVi: e.target.value }),
+                          )
+                        }
+                        rows={2}
+                        className={`mt-0.5 ${inputCls} resize-y min-h-[48px]`}
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      onClick={removeCurrentModule}
+                      className="w-full inline-flex items-center justify-center gap-1.5 rounded-lg border border-red-500/30 text-red-300/90 text-xs py-1.5 hover:bg-red-500/10"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      Xóa module này
+                    </button>
+                  </div>
+                )}
               </section>
 
               <section className="rounded-2xl border border-white/10 bg-[#0c1018] p-4">
@@ -713,6 +1080,55 @@ export default function StudioLearningPathPage() {
                         {n.titleVi}
                       </button>
                     ))}
+                    <button
+                      type="button"
+                      onClick={appendNode}
+                      className="mt-2 w-full inline-flex items-center justify-center gap-1.5 rounded-xl border border-violet-500/35 bg-violet-500/10 text-violet-200 text-xs font-medium py-2 hover:bg-violet-500/20"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      Thêm chủ đề
+                    </button>
+                    {currentNode && (
+                      <div className="mt-3 pt-3 border-t border-white/10 space-y-2">
+                        <p className="text-[10px] text-slate-500 uppercase font-semibold">Chỉnh chủ đề</p>
+                        <label className="block text-[11px] text-slate-400">
+                          Tiêu đề (VI)
+                          <input
+                            value={currentNode.titleVi}
+                            onChange={(e) =>
+                              setModules((prev) =>
+                                updateNodeFields(prev, currentModule.id, currentNode.id, {
+                                  titleVi: e.target.value,
+                                }),
+                              )
+                            }
+                            className={`mt-0.5 ${inputCls}`}
+                          />
+                        </label>
+                        <label className="block text-[11px] text-slate-400">
+                          Title (EN)
+                          <input
+                            value={currentNode.title}
+                            onChange={(e) =>
+                              setModules((prev) =>
+                                updateNodeFields(prev, currentModule.id, currentNode.id, {
+                                  title: e.target.value,
+                                }),
+                              )
+                            }
+                            className={`mt-0.5 ${inputCls}`}
+                          />
+                        </label>
+                        <button
+                          type="button"
+                          onClick={removeCurrentNode}
+                          className="w-full inline-flex items-center justify-center gap-1.5 rounded-lg border border-red-500/30 text-red-300/90 text-xs py-1.5 hover:bg-red-500/10"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          Xóa chủ đề này
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
               </section>
@@ -791,24 +1207,22 @@ export default function StudioLearningPathPage() {
                     {DEPTH_ORDER.map((d) => {
                       const count = currentNode.depths[d]?.length ?? 0
                       const meta = DEPTH_META[d]
-                      const disabled = count === 0
                       return (
                         <button
                           key={d}
                           type="button"
-                          disabled={disabled}
                           onClick={() => onSelectDepth(d)}
                           className={`rounded-xl px-3 py-2.5 text-left text-sm border transition-all ${
-                            disabled
-                              ? 'opacity-40 cursor-not-allowed border-white/5 text-slate-600'
-                              : depth === d
-                                ? `bg-gradient-to-r ${meta.gradient} border-white/20 text-white shadow-lg`
-                                : 'border-white/10 text-slate-400 hover:border-white/20 hover:bg-white/5'
+                            depth === d
+                              ? `bg-gradient-to-r ${meta.gradient} border-white/20 text-white shadow-lg`
+                              : 'border-white/10 text-slate-400 hover:border-white/20 hover:bg-white/5'
                           }`}
                         >
                           <span className="mr-1">{meta.short}</span>
                           {meta.labelVi}
-                          <span className="float-right text-[10px] opacity-80">{count} bài</span>
+                          <span className="float-right text-[10px] opacity-80">
+                            {count === 0 ? 'chưa có bài' : `${count} bài`}
+                          </span>
                         </button>
                       )
                     })}
@@ -836,26 +1250,58 @@ export default function StudioLearningPathPage() {
                 <div className="w-full xl:w-[240px] shrink-0 border-b xl:border-b-0 xl:border-r border-white/10 p-3 max-h-[40vh] xl:max-h-none overflow-y-auto">
                   <p className="text-[10px] uppercase text-slate-500 font-semibold mb-2 px-1">4. Chọn bài</p>
                   {lessonsAtDepth.length === 0 ? (
-                    <p className="text-xs text-slate-600 px-2">Không có bài ở tầng này.</p>
+                    <div className="px-2 space-y-2">
+                      <p className="text-xs text-slate-600">Chưa có bài ở tầng này.</p>
+                      {currentModule && currentNode && depth ? (
+                        <button
+                          type="button"
+                          onClick={appendLesson}
+                          className="w-full inline-flex items-center justify-center gap-1.5 rounded-lg border border-cyan-500/35 bg-cyan-500/10 text-cyan-200 text-xs py-2 hover:bg-cyan-500/20"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          Thêm bài đầu tiên
+                        </button>
+                      ) : null}
+                    </div>
                   ) : (
-                    <ul className="space-y-1">
-                      {lessonsAtDepth.map((le, idx) => (
-                        <li key={le.id}>
-                          <button
-                            type="button"
-                            onClick={() => setActiveLessonId(le.id)}
-                            className={`w-full text-left rounded-lg px-3 py-2 text-sm transition-colors ${
-                              activeLessonId === le.id
-                                ? 'bg-white/10 text-white border border-cyan-500/30'
-                                : 'text-slate-400 hover:bg-white/5 border border-transparent'
-                            }`}
-                          >
-                            <span className="text-slate-600 text-xs mr-1">{idx + 1}.</span>
-                            <span className="line-clamp-2">{le.titleVi}</span>
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
+                    <>
+                      <ul className="space-y-1">
+                        {lessonsAtDepth.map((le, idx) => (
+                          <li key={le.id}>
+                            <button
+                              type="button"
+                              onClick={() => setActiveLessonId(le.id)}
+                              className={`w-full text-left rounded-lg px-3 py-2 text-sm transition-colors ${
+                                activeLessonId === le.id
+                                  ? 'bg-white/10 text-white border border-cyan-500/30'
+                                  : 'text-slate-400 hover:bg-white/5 border border-transparent'
+                              }`}
+                            >
+                              <span className="text-slate-600 text-xs mr-1">{idx + 1}.</span>
+                              <span className="line-clamp-2">{le.titleVi}</span>
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                      <button
+                        type="button"
+                        onClick={appendLesson}
+                        className="mt-2 w-full inline-flex items-center justify-center gap-1.5 rounded-lg border border-white/15 text-slate-300 text-xs py-2 hover:bg-white/5"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        Thêm bài
+                      </button>
+                      {activeLesson ? (
+                        <button
+                          type="button"
+                          onClick={removeCurrentLesson}
+                          className="mt-2 w-full inline-flex items-center justify-center gap-1.5 rounded-lg border border-red-500/25 text-red-300/80 text-xs py-1.5 hover:bg-red-500/10"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          Xóa bài đang chọn
+                        </button>
+                      ) : null}
+                    </>
                   )}
                 </div>
 
