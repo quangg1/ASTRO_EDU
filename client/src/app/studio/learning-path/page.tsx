@@ -24,7 +24,12 @@ import {
   type TopicWeight,
 } from '@/data/learningPathCurriculum'
 import { fetchEditorLearningPath, saveEditorLearningPath } from '@/lib/learningPathApi'
-import { fetchEditorConcepts } from '@/lib/conceptsApi'
+import {
+  FALLBACK_TAXONOMY_REGISTRY,
+  fetchEditorConcepts,
+  fetchTaxonomyRegistryEditor,
+  type TaxonomyRegistry,
+} from '@/lib/conceptsApi'
 import type { Lesson } from '@/lib/coursesApi'
 import { useAuthStore } from '@/store/useAuthStore'
 import {
@@ -115,21 +120,6 @@ function buildConceptUsage(modules: LearningModule[]): ConceptUsageItem[] {
 const inputCls =
   'w-full rounded-lg bg-black/50 border border-white/15 px-3 py-2 text-white text-sm focus:border-cyan-500/50 focus:outline-none transition-colors'
 
-const DEFAULT_TAXONOMY: Record<string, string[]> = {
-  astronomy: [
-    'fundamentals',
-    'orbital-mechanics',
-    'stellar-physics',
-    'galactic-cosmology',
-    'observational-astronomy',
-    'positional-astronomy',
-  ],
-  geology: ['tectonics', 'volcanology', 'stratigraphy', 'planetary-geology'],
-  biology: ['evolution', 'ecology', 'paleontology'],
-  physics: ['mechanics', 'thermodynamics', 'electromagnetism'],
-  chemistry: ['astrochemistry', 'geochemistry', 'atmospheric-chemistry'],
-}
-
 function updateLesson(
   modules: LearningModule[],
   moduleId: string,
@@ -202,6 +192,7 @@ function updateLessonList(
 function LearningPathLessonEditor({
   activeLesson,
   concepts,
+  taxonomyRegistry,
   moduleId,
   nodeId,
   depth,
@@ -213,6 +204,7 @@ function LearningPathLessonEditor({
 }: {
   activeLesson: LessonItem
   concepts: LearningConcept[]
+  taxonomyRegistry: TaxonomyRegistry
   moduleId: string
   nodeId: string
   depth: DepthLevel
@@ -224,17 +216,14 @@ function LearningPathLessonEditor({
 }) {
   const sections = activeLesson.sections ?? []
   const selectedConceptIds = activeLesson.conceptIds ?? []
+  const [previewConceptId, setPreviewConceptId] = useState<string | null>(null)
   const [conceptQuery, setConceptQuery] = useState('')
   const [conceptDomain, setConceptDomain] = useState('all')
   const [conceptSubdomain, setConceptSubdomain] = useState('all')
 
   const conceptDomains = useMemo(() => {
-    const set = new Set<string>(Object.keys(DEFAULT_TAXONOMY))
-    concepts.forEach((c) => {
-      if (c.domain) set.add(c.domain)
-    })
-    return Array.from(set).sort((a, b) => a.localeCompare(b, 'vi'))
-  }, [concepts])
+    return Object.keys(taxonomyRegistry).sort((a, b) => a.localeCompare(b, 'vi'))
+  }, [taxonomyRegistry])
 
   const filteredConceptCandidates = useMemo(() => {
     const q = safeLower(conceptQuery.trim())
@@ -258,16 +247,12 @@ function LearningPathLessonEditor({
   const conceptSubdomains = useMemo(() => {
     const set = new Set<string>()
     if (conceptDomain !== 'all') {
-      ;(DEFAULT_TAXONOMY[conceptDomain] || []).forEach((x) => set.add(x))
+      ;(taxonomyRegistry[conceptDomain] || []).forEach((x) => set.add(x))
     } else {
-      Object.values(DEFAULT_TAXONOMY).forEach((arr) => arr.forEach((x) => set.add(x)))
+      Object.values(taxonomyRegistry).forEach((arr) => arr.forEach((x) => set.add(x)))
     }
-    concepts.forEach((c) => {
-      if (!c.subdomain) return
-      if (conceptDomain === 'all' || c.domain === conceptDomain) set.add(c.subdomain)
-    })
     return Array.from(set).sort((a, b) => a.localeCompare(b, 'vi'))
-  }, [concepts, conceptDomain])
+  }, [conceptDomain, taxonomyRegistry])
 
   useEffect(() => {
     if (conceptSubdomain === 'all') return
@@ -280,10 +265,21 @@ function LearningPathLessonEditor({
         .filter((x): x is LearningConcept => !!x),
     [selectedConceptIds, concepts],
   )
+  const previewConcept = useMemo(
+    () => (previewConceptId ? concepts.find((c) => c.id === previewConceptId) ?? null : null),
+    [previewConceptId, concepts],
+  )
   const unselectedFilteredConcepts = useMemo(
     () => filteredConceptCandidates.filter((c) => !selectedConceptIds.includes(c.id)),
     [filteredConceptCandidates, selectedConceptIds],
   )
+
+  useEffect(() => {
+    if (!previewConceptId) return
+    if (!unselectedFilteredConcepts.some((c) => c.id === previewConceptId)) {
+      setPreviewConceptId(null)
+    }
+  }, [previewConceptId, unselectedFilteredConcepts])
 
   const patchLesson = (patch: Partial<LessonItem>) => {
     setModules((prev) => applyPatch(prev, moduleId, nodeId, depth, activeLesson.id, patch))
@@ -388,24 +384,65 @@ function LearningPathLessonEditor({
               {selectedConcepts.length > 0 ? (
                 <div className="flex flex-wrap gap-2">
                   {selectedConcepts.map((c) => (
-                    <button
-                      key={`selected-${c.id}`}
-                      type="button"
-                      onClick={() =>
-                        patchLesson({ conceptIds: selectedConceptIds.filter((id) => id !== c.id) })
-                      }
-                      className="inline-flex items-center gap-2 rounded-full border border-cyan-500/40 bg-cyan-500/15 px-3 py-1 text-xs text-cyan-100 hover:bg-cyan-500/25"
-                      title="Bỏ concept khỏi bài"
-                    >
-                      <span>#{c.id}</span>
-                      <span className="text-cyan-200/80">×</span>
-                    </button>
+                    <div key={`selected-${c.id}`} className="inline-flex items-center gap-1">
+                      <span className="inline-flex items-center gap-2 rounded-full border border-cyan-500/40 bg-cyan-500/15 px-3 py-1 text-xs text-cyan-100">
+                        #{c.id}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          patchLesson({ conceptIds: selectedConceptIds.filter((id) => id !== c.id) })
+                        }
+                        className="rounded-full border border-white/15 px-2 py-1 text-[11px] text-slate-300 hover:bg-white/10"
+                        title="Bỏ concept khỏi bài"
+                      >
+                        ×
+                      </button>
+                    </div>
                   ))}
                 </div>
               ) : (
                 <p className="text-[11px] text-slate-500">Chưa gắn concept nào cho bài này.</p>
               )}
             </div>
+            {previewConcept ? (
+              <div className="rounded-lg border border-cyan-500/25 bg-cyan-500/5 p-3 mb-2">
+                <div className="flex items-start justify-between gap-2">
+                  <p className="text-[11px] text-slate-400">Preview concept trước khi thêm</p>
+                  <button
+                    type="button"
+                    onClick={() => setPreviewConceptId(null)}
+                    className="text-[11px] rounded border border-white/15 px-2 py-0.5 text-slate-300 hover:bg-white/10"
+                  >
+                    Đóng preview
+                  </button>
+                </div>
+                <p className="text-xs font-semibold text-cyan-200 mt-1">
+                  {previewConcept.title || previewConcept.id} ({previewConcept.id})
+                </p>
+                <p className="text-xs text-slate-300 mt-2">
+                  {previewConcept.short_description || previewConcept.explanation || 'Chưa có nội dung mô tả.'}
+                </p>
+                {previewConcept.examples?.length ? (
+                  <ul className="mt-2 list-disc pl-4 space-y-1">
+                    {previewConcept.examples.slice(0, 3).map((ex, i) => (
+                      <li key={`${previewConcept.id}-preview-example-${i}`} className="text-[11px] text-slate-300">
+                        {ex}
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
+                <div className="mt-3">
+                  <button
+                    type="button"
+                    onClick={() => patchLesson({ conceptIds: [...new Set([...selectedConceptIds, previewConcept.id])] })}
+                    className="rounded-lg bg-cyan-600 px-3 py-1.5 text-xs text-white hover:bg-cyan-500"
+                  >
+                    Thêm vào bài
+                  </button>
+                </div>
+              </div>
+            ) : null}
             <p className="text-[11px] text-slate-400 mb-2">
               Thêm nhanh từ danh sách ({unselectedFilteredConcepts.length} concept phù hợp bộ lọc)
             </p>
@@ -414,8 +451,12 @@ function LearningPathLessonEditor({
                 <button
                   key={c.id}
                   type="button"
-                  onClick={() => patchLesson({ conceptIds: [...new Set([...selectedConceptIds, c.id])] })}
-                  className="text-left rounded-lg border border-white/10 bg-black/30 px-2.5 py-2 text-xs hover:border-cyan-500/40 hover:bg-cyan-500/10 transition-colors"
+                  onClick={() => setPreviewConceptId(c.id)}
+                  className={`text-left rounded-lg border px-2.5 py-2 text-xs transition-colors ${
+                    previewConceptId === c.id
+                      ? 'border-cyan-400/70 bg-cyan-500/15'
+                      : 'border-white/10 bg-black/30 hover:border-cyan-500/40 hover:bg-cyan-500/10'
+                  }`}
                   title={c.short_description || c.explanation}
                 >
                   <span className="text-cyan-200 block">+ #{c.id}</span>
@@ -676,6 +717,7 @@ export default function StudioLearningPathPage() {
   const { user, checked } = useAuthStore()
   const [modules, setModules] = useState<LearningModule[]>([])
   const [concepts, setConcepts] = useState<LearningConcept[]>([])
+  const [taxonomyRegistry, setTaxonomyRegistry] = useState<TaxonomyRegistry>(FALLBACK_TAXONOMY_REGISTRY)
   const [published, setPublished] = useState(true)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -703,11 +745,12 @@ export default function StudioLearningPathPage() {
       setLoading(false)
       return
     }
-    Promise.all([fetchEditorLearningPath(token), fetchEditorConcepts(token)])
-      .then(([d, cs]) => {
+    Promise.all([fetchEditorLearningPath(token), fetchEditorConcepts(token), fetchTaxonomyRegistryEditor(token)])
+      .then(([d, cs, tx]) => {
         if (!d) return
         setModules(d.modules || [])
         setConcepts(cs || [])
+        if (tx) setTaxonomyRegistry(tx)
         setPublished(d.published)
         if (!d.modules?.length) return
         const sorted = [...d.modules].sort((a, b) => a.order - b.order)
@@ -1484,6 +1527,7 @@ export default function StudioLearningPathPage() {
                     <LearningPathLessonEditor
                       activeLesson={activeLesson}
                       concepts={concepts}
+                      taxonomyRegistry={taxonomyRegistry}
                       moduleId={currentModule.id}
                       nodeId={currentNode.id}
                       depth={depth}

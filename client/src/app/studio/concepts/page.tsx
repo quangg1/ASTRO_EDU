@@ -6,7 +6,14 @@ import { useRouter } from 'next/navigation'
 import { useAuthStore } from '@/store/useAuthStore'
 import type { LearningConcept, LearningModule, DepthLevel } from '@/data/learningPathCurriculum'
 import { DEPTH_META, DEPTH_ORDER } from '@/data/learningPathCurriculum'
-import { fetchEditorConcepts, saveEditorConcepts } from '@/lib/conceptsApi'
+import {
+  FALLBACK_TAXONOMY_REGISTRY,
+  fetchEditorConcepts,
+  fetchTaxonomyRegistryEditor,
+  saveEditorConcepts,
+  saveTaxonomyRegistryEditor,
+  type TaxonomyRegistry,
+} from '@/lib/conceptsApi'
 import { fetchEditorLearningPath } from '@/lib/learningPathApi'
 
 const inputCls =
@@ -32,21 +39,6 @@ type UsageRow = {
   lessonTitle: string
 }
 
-const DEFAULT_TAXONOMY: Record<string, string[]> = {
-  astronomy: [
-    'fundamentals',
-    'orbital-mechanics',
-    'stellar-physics',
-    'galactic-cosmology',
-    'observational-astronomy',
-    'positional-astronomy',
-  ],
-  geology: ['tectonics', 'volcanology', 'stratigraphy', 'planetary-geology'],
-  biology: ['evolution', 'ecology', 'paleontology'],
-  physics: ['mechanics', 'thermodynamics', 'electromagnetism'],
-  chemistry: ['astrochemistry', 'geochemistry', 'atmospheric-chemistry'],
-}
-
 function parsePipeList(raw: string): string[] {
   return raw
     .split('|')
@@ -54,39 +46,38 @@ function parsePipeList(raw: string): string[] {
     .filter(Boolean)
 }
 
-function getSubdomainOptionsForDomain(domain: string, concepts: LearningConcept[]): string[] {
-  const set = new Set<string>(DEFAULT_TAXONOMY[domain] || [])
-  concepts.forEach((c) => {
-    if (c.domain === domain && c.subdomain) set.add(c.subdomain)
-  })
+function getSubdomainOptionsForDomain(
+  domain: string,
+  taxonomyRegistry: TaxonomyRegistry,
+): string[] {
+  const set = new Set<string>(taxonomyRegistry[domain] || [])
   return Array.from(set).sort((a, b) => a.localeCompare(b, 'vi'))
 }
 
 function inferTaxonomySuggestion(concept: LearningConcept): {
   domain: string
   subdomain: string
-  depth: DepthLevel
 } {
   const text = `${concept.id} ${concept.title} ${(concept.aliases || []).join(' ')}`.toLowerCase()
   if (/(orbit|aphelion|apastron|kepler|conjunction|transit)/.test(text)) {
-    return { domain: 'astronomy', subdomain: 'orbital-mechanics', depth: 'explorer' }
+    return { domain: 'astronomy', subdomain: 'orbital-mechanics' }
   }
   if (/(star|dwarf|supernova|fusion|magnitude|rayet)/.test(text)) {
-    return { domain: 'astronomy', subdomain: 'stellar-physics', depth: 'explorer' }
+    return { domain: 'astronomy', subdomain: 'stellar-physics' }
   }
   if (/(galaxy|cluster|cosmo|redshift|blueshift|universe)/.test(text)) {
-    return { domain: 'astronomy', subdomain: 'galactic-cosmology', depth: 'explorer' }
+    return { domain: 'astronomy', subdomain: 'galactic-cosmology' }
   }
   if (/(telescope|spectrum|wavelength|x_ray|ultraviolet|visible_light|light)/.test(text)) {
-    return { domain: 'astronomy', subdomain: 'observational-astronomy', depth: 'beginner' }
+    return { domain: 'astronomy', subdomain: 'observational-astronomy' }
   }
   if (/(declination|right_ascension|zenith|equinox|sidereal|universal_time)/.test(text)) {
-    return { domain: 'astronomy', subdomain: 'positional-astronomy', depth: 'explorer' }
+    return { domain: 'astronomy', subdomain: 'positional-astronomy' }
   }
   if (/(tectonic|volcano|subduction|tuff|tektite|vent)/.test(text)) {
-    return { domain: 'geology', subdomain: 'tectonics', depth: 'beginner' }
+    return { domain: 'geology', subdomain: 'tectonics' }
   }
-  return { domain: 'astronomy', subdomain: 'fundamentals', depth: 'beginner' }
+  return { domain: 'astronomy', subdomain: 'fundamentals' }
 }
 
 function buildUsage(modules: LearningModule[]): UsageRow[] {
@@ -115,6 +106,7 @@ export default function StudioConceptsPage() {
   const router = useRouter()
   const { user, checked } = useAuthStore()
   const [concepts, setConcepts] = useState<LearningConcept[]>([])
+  const [taxonomyRegistry, setTaxonomyRegistry] = useState<TaxonomyRegistry>(FALLBACK_TAXONOMY_REGISTRY)
   const [modules, setModules] = useState<LearningModule[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -122,7 +114,6 @@ export default function StudioConceptsPage() {
   const [conceptSearch, setConceptSearch] = useState('')
   const [domainFilter, setDomainFilter] = useState('all')
   const [subdomainFilter, setSubdomainFilter] = useState('all')
-  const [depthFilter, setDepthFilter] = useState<'all' | DepthLevel>('all')
 
   const [newConceptId, setNewConceptId] = useState('')
   const [newConceptTitle, setNewConceptTitle] = useState('')
@@ -132,13 +123,15 @@ export default function StudioConceptsPage() {
   const [newConceptRelated, setNewConceptRelated] = useState('')
   const [newConceptDomain, setNewConceptDomain] = useState('')
   const [newConceptSubdomain, setNewConceptSubdomain] = useState('')
-  const [newConceptDepth, setNewConceptDepth] = useState<'none' | DepthLevel>('none')
   const [newConceptAliases, setNewConceptAliases] = useState('')
   const [newConceptPrerequisites, setNewConceptPrerequisites] = useState<string[]>([])
   const [queueConceptId, setQueueConceptId] = useState<string | null>(null)
+  const [queueSelectedIds, setQueueSelectedIds] = useState<string[]>([])
   const [queueDomain, setQueueDomain] = useState('')
   const [queueSubdomain, setQueueSubdomain] = useState('')
-  const [queueDepth, setQueueDepth] = useState<DepthLevel>('beginner')
+  const [registryDomainName, setRegistryDomainName] = useState('')
+  const [registrySubdomainName, setRegistrySubdomainName] = useState('')
+  const [registryDomainTarget, setRegistryDomainTarget] = useState('')
 
   useEffect(() => {
     if (checked && !user) router.replace('/login?redirect=/studio/concepts')
@@ -152,10 +145,11 @@ export default function StudioConceptsPage() {
       setLoading(false)
       return
     }
-    Promise.all([fetchEditorConcepts(token), fetchEditorLearningPath(token)])
-      .then(([cs, lp]) => {
+    Promise.all([fetchEditorConcepts(token), fetchEditorLearningPath(token), fetchTaxonomyRegistryEditor(token)])
+      .then(([cs, lp, tx]) => {
         setConcepts(cs || [])
         setModules(lp?.modules || [])
+        if (tx) setTaxonomyRegistry(tx)
       })
       .finally(() => setLoading(false))
   }, [user])
@@ -175,8 +169,7 @@ export default function StudioConceptsPage() {
     return concepts.filter((c) => {
       const passesDomain = domainFilter === 'all' || (c.domain || '') === domainFilter
       const passesSubdomain = subdomainFilter === 'all' || (c.subdomain || '') === subdomainFilter
-      const passesDepth = depthFilter === 'all' || c.depth === depthFilter
-      if (!passesDomain || !passesSubdomain || !passesDepth) return false
+      if (!passesDomain || !passesSubdomain) return false
       if (!q) return true
       const rows = usageByConcept.get(c.id) || []
       const usageText = rows
@@ -195,46 +188,43 @@ export default function StudioConceptsPage() {
         usageLower.includes(q)
       )
     })
-  }, [conceptSearch, concepts, usageByConcept, domainFilter, subdomainFilter, depthFilter])
+  }, [conceptSearch, concepts, usageByConcept, domainFilter, subdomainFilter])
 
   const domainOptions = useMemo(() => {
-    const set = new Set<string>(Object.keys(DEFAULT_TAXONOMY))
-    concepts.forEach((c) => {
-      if (c.domain) set.add(c.domain)
-    })
-    return Array.from(set).sort((a, b) => a.localeCompare(b, 'vi'))
-  }, [concepts])
+    return Object.keys(taxonomyRegistry).sort((a, b) => a.localeCompare(b, 'vi'))
+  }, [taxonomyRegistry])
+
+  useEffect(() => {
+    if (registryDomainTarget && domainOptions.includes(registryDomainTarget)) return
+    setRegistryDomainTarget(domainOptions[0] || '')
+  }, [domainOptions, registryDomainTarget])
 
   const subdomainOptions = useMemo(() => {
     const set = new Set<string>()
     if (domainFilter !== 'all') {
-      ;(DEFAULT_TAXONOMY[domainFilter] || []).forEach((x) => set.add(x))
+      ;(taxonomyRegistry[domainFilter] || []).forEach((x) => set.add(x))
     } else {
-      Object.values(DEFAULT_TAXONOMY).forEach((arr) => arr.forEach((x) => set.add(x)))
+      Object.values(taxonomyRegistry).forEach((arr) => arr.forEach((x) => set.add(x)))
     }
-    concepts.forEach((c) => {
-      if (!c.subdomain) return
-      if (domainFilter === 'all' || c.domain === domainFilter) set.add(c.subdomain)
-    })
     return Array.from(set).sort((a, b) => a.localeCompare(b, 'vi'))
-  }, [concepts, domainFilter])
+  }, [domainFilter, taxonomyRegistry])
 
   const newConceptSubdomainOptions = useMemo(
-    () => (newConceptDomain ? getSubdomainOptionsForDomain(newConceptDomain, concepts) : []),
-    [newConceptDomain, concepts],
+    () => (newConceptDomain ? getSubdomainOptionsForDomain(newConceptDomain, taxonomyRegistry) : []),
+    [newConceptDomain, taxonomyRegistry],
   )
   const queueSubdomainOptions = useMemo(
-    () => (queueDomain ? getSubdomainOptionsForDomain(queueDomain, concepts) : []),
-    [queueDomain, concepts],
+    () => (queueDomain ? getSubdomainOptionsForDomain(queueDomain, taxonomyRegistry) : []),
+    [queueDomain, taxonomyRegistry],
   )
 
   const unclassifiedCount = useMemo(
-    () => concepts.filter((c) => !(c.domain && c.subdomain && c.depth)).length,
+    () => concepts.filter((c) => !(c.domain && c.subdomain)).length,
     [concepts],
   )
 
   const unclassifiedConcepts = useMemo(
-    () => concepts.filter((c) => !(c.domain && c.subdomain && c.depth)),
+    () => concepts.filter((c) => !(c.domain && c.subdomain)),
     [concepts],
   )
 
@@ -250,9 +240,9 @@ export default function StudioConceptsPage() {
     if (!activeQueueConcept) return
     const suggested = inferTaxonomySuggestion(activeQueueConcept)
     setQueueConceptId(activeQueueConcept.id)
+    setQueueSelectedIds((prev) => (prev.length === 0 ? [activeQueueConcept.id] : prev))
     setQueueDomain(activeQueueConcept.domain || suggested.domain)
     setQueueSubdomain(activeQueueConcept.subdomain || suggested.subdomain)
-    setQueueDepth(activeQueueConcept.depth || suggested.depth)
   }, [activeQueueConcept?.id])
 
   useEffect(() => {
@@ -260,34 +250,35 @@ export default function StudioConceptsPage() {
       setNewConceptSubdomain('')
       return
     }
-    const opts = getSubdomainOptionsForDomain(newConceptDomain, concepts)
+    const opts = getSubdomainOptionsForDomain(newConceptDomain, taxonomyRegistry)
     if (newConceptSubdomain && !opts.includes(newConceptSubdomain)) setNewConceptSubdomain('')
-  }, [newConceptDomain, concepts])
+  }, [newConceptDomain, taxonomyRegistry])
 
   useEffect(() => {
     if (!queueDomain) return
-    const opts = getSubdomainOptionsForDomain(queueDomain, concepts)
+    const opts = getSubdomainOptionsForDomain(queueDomain, taxonomyRegistry)
     if (queueSubdomain && !opts.includes(queueSubdomain)) setQueueSubdomain(opts[0] || '')
-  }, [queueDomain, concepts])
+  }, [queueDomain, taxonomyRegistry])
 
   const applyQueueTaxonomy = () => {
     if (!activeQueueConcept) return
-    const cid = activeQueueConcept.id
+    const targetIds = queueSelectedIds.length > 0 ? [...new Set(queueSelectedIds)] : [activeQueueConcept.id]
+    const targetSet = new Set(targetIds)
     setConcepts((prev) =>
       prev.map((c) =>
-        c.id === cid
+        targetSet.has(c.id)
           ? {
               ...c,
               domain: queueDomain || c.domain,
               subdomain: queueSubdomain || c.subdomain,
-              depth: queueDepth || c.depth,
             }
           : c,
       ),
     )
-    const remaining = unclassifiedConcepts.filter((c) => c.id !== cid)
+    const remaining = unclassifiedConcepts.filter((c) => !targetSet.has(c.id))
+    setQueueSelectedIds([])
     setQueueConceptId(remaining[0]?.id ?? null)
-    setMessage(`Đã gán taxonomy cho concept "${cid}".`)
+    setMessage(`Đã gán taxonomy cho ${targetIds.length} concept.`)
   }
 
   const applyQueueTaxonomyToSimilar = () => {
@@ -297,7 +288,7 @@ export default function StudioConceptsPage() {
     let affected = 0
     setConcepts((prev) =>
       prev.map((c) => {
-        if (c.domain && c.subdomain && c.depth) return c
+        if (c.domain && c.subdomain) return c
         const matchByPrefix = c.id.startsWith(`${prefix}_`)
         const matchByGuess = inferTaxonomySuggestion(c).subdomain === queueSubdomain
         if (!matchByPrefix && !matchByGuess) return c
@@ -306,11 +297,54 @@ export default function StudioConceptsPage() {
           ...c,
           domain: queueDomain || c.domain,
           subdomain: queueSubdomain || c.subdomain,
-          depth: queueDepth || c.depth,
         }
       }),
     )
     setMessage(`Đã áp dụng cho ${affected} concept tương tự.`)
+  }
+
+  const addRegistryDomain = () => {
+    const normalized = slugifyConceptId(registryDomainName)
+    if (!normalized) return
+    setTaxonomyRegistry((prev) => {
+      if (prev[normalized]) return prev
+      return { ...prev, [normalized]: [] }
+    })
+    setRegistryDomainTarget(normalized)
+    setRegistryDomainName('')
+  }
+
+  const removeRegistryDomain = (domain: string) => {
+    setTaxonomyRegistry((prev) => {
+      const next = { ...prev }
+      delete next[domain]
+      return next
+    })
+    setConcepts((prev) =>
+      prev.map((c) => (c.domain === domain ? { ...c, domain: '', subdomain: '' } : c)),
+    )
+    if (registryDomainTarget === domain) setRegistryDomainTarget('')
+  }
+
+  const addRegistrySubdomain = () => {
+    if (!registryDomainTarget) return
+    const normalized = slugifyConceptId(registrySubdomainName)
+    if (!normalized) return
+    setTaxonomyRegistry((prev) => ({
+      ...prev,
+      [registryDomainTarget]: [...new Set([...(prev[registryDomainTarget] || []), normalized])],
+    }))
+    setRegistrySubdomainName('')
+  }
+
+  const removeRegistrySubdomain = (domain: string, subdomain: string) => {
+    setTaxonomyRegistry((prev) => ({
+      ...prev,
+      [domain]: (prev[domain] || []).filter((x) => x !== subdomain),
+    }))
+    setConcepts((prev) =>
+      prev.map((c) => (c.domain === domain && c.subdomain === subdomain ? { ...c, subdomain: '' } : c)),
+    )
   }
 
   const save = async () => {
@@ -318,13 +352,17 @@ export default function StudioConceptsPage() {
     if (!token) return
     setSaving(true)
     setMessage('')
-    const r = await saveEditorConcepts(token, concepts)
-    if (r.ok) {
+    const [conceptSave, taxonomySave] = await Promise.all([
+      saveEditorConcepts(token, concepts),
+      saveTaxonomyRegistryEditor(token, taxonomyRegistry),
+    ])
+    if (conceptSave.ok && taxonomySave.ok) {
       const fresh = await fetchEditorConcepts(token)
       if (fresh) setConcepts(fresh)
+      if (taxonomySave.taxonomy) setTaxonomyRegistry(taxonomySave.taxonomy)
       setMessage('Đã lưu Concept Library vào server.')
     } else {
-      setMessage(r.error || 'Lỗi lưu concept')
+      setMessage(conceptSave.error || taxonomySave.error || 'Lỗi lưu concept')
     }
     setSaving(false)
   }
@@ -368,9 +406,103 @@ export default function StudioConceptsPage() {
         </header>
 
         {message ? <p className="text-sm text-emerald-400/90">{message}</p> : null}
+        <section className="rounded-2xl border border-white/10 bg-[#0b1220]/70 p-4 space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-sm font-semibold text-cyan-100">Taxonomy Registry</h2>
+            <p className="text-[11px] text-slate-400">Domain/Subdomain chỉ tạo tại đây</p>
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+            <div className="rounded-lg border border-white/10 bg-black/25 p-3 space-y-2">
+              <p className="text-xs text-slate-300">Thêm domain</p>
+              <div className="flex gap-2">
+                <input
+                  value={registryDomainName}
+                  onChange={(e) => setRegistryDomainName(e.target.value)}
+                  placeholder="vd: space-missions"
+                  className={`${inputCls} flex-1`}
+                />
+                <button
+                  type="button"
+                  onClick={addRegistryDomain}
+                  className="rounded-lg border border-cyan-500/40 px-3 text-xs text-cyan-200 hover:bg-cyan-500/10"
+                >
+                  Thêm
+                </button>
+              </div>
+              <div className="max-h-[130px] overflow-y-auto space-y-1">
+                {domainOptions.map((domain) => (
+                  <div key={`registry-domain-${domain}`} className="flex items-center justify-between text-xs">
+                    <button
+                      type="button"
+                      onClick={() => setRegistryDomainTarget(domain)}
+                      className={`text-left ${
+                        registryDomainTarget === domain ? 'text-cyan-200' : 'text-slate-300 hover:text-white'
+                      }`}
+                    >
+                      {domain}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => removeRegistryDomain(domain)}
+                      className="text-rose-300 hover:text-rose-200"
+                    >
+                      Xóa
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="rounded-lg border border-white/10 bg-black/25 p-3 space-y-2">
+              <p className="text-xs text-slate-300">Thêm subdomain</p>
+              <select
+                value={registryDomainTarget}
+                onChange={(e) => setRegistryDomainTarget(e.target.value)}
+                className={inputCls}
+              >
+                {domainOptions.map((domain) => (
+                  <option key={`registry-domain-opt-${domain}`} value={domain}>
+                    {domain}
+                  </option>
+                ))}
+              </select>
+              <div className="flex gap-2">
+                <input
+                  value={registrySubdomainName}
+                  onChange={(e) => setRegistrySubdomainName(e.target.value)}
+                  placeholder="vd: telescope-observation"
+                  className={`${inputCls} flex-1`}
+                />
+                <button
+                  type="button"
+                  onClick={addRegistrySubdomain}
+                  className="rounded-lg border border-cyan-500/40 px-3 text-xs text-cyan-200 hover:bg-cyan-500/10"
+                >
+                  Thêm
+                </button>
+              </div>
+              <div className="max-h-[130px] overflow-y-auto space-y-1">
+                {(taxonomyRegistry[registryDomainTarget] || []).map((subdomain) => (
+                  <div
+                    key={`registry-subdomain-${registryDomainTarget}-${subdomain}`}
+                    className="flex items-center justify-between text-xs"
+                  >
+                    <span className="text-slate-300">{subdomain}</span>
+                    <button
+                      type="button"
+                      onClick={() => removeRegistrySubdomain(registryDomainTarget, subdomain)}
+                      className="text-rose-300 hover:text-rose-200"
+                    >
+                      Xóa
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
         {unclassifiedCount > 0 ? (
           <p className="text-xs text-amber-300/90">
-            Có {unclassifiedCount} concept chưa gán đủ taxonomy (domain/subdomain/depth).
+            Có {unclassifiedCount} concept chưa gán đủ taxonomy (domain/subdomain).
           </p>
         ) : null}
         {unclassifiedConcepts.length > 0 && (
@@ -392,6 +524,39 @@ export default function StudioConceptsPage() {
                     </option>
                   ))}
                 </select>
+                <div className="rounded-lg border border-white/10 bg-black/25 p-2">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-[11px] text-slate-400">Chọn concept áp dụng cùng lúc</p>
+                    <button
+                      type="button"
+                      onClick={() => setQueueSelectedIds(unclassifiedConcepts.map((c) => c.id))}
+                      className="text-[10px] text-cyan-300 hover:text-cyan-100"
+                    >
+                      Chọn tất cả
+                    </button>
+                  </div>
+                  <div className="max-h-[120px] overflow-y-auto space-y-1">
+                    {unclassifiedConcepts.map((c) => {
+                      const checked = queueSelectedIds.includes(c.id)
+                      return (
+                        <label key={`queue-select-${c.id}`} className="flex items-center gap-2 text-xs text-slate-200">
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={(e) =>
+                              setQueueSelectedIds((prev) =>
+                                e.target.checked ? [...new Set([...prev, c.id])] : prev.filter((id) => id !== c.id),
+                              )
+                            }
+                          />
+                          <span>
+                            {c.id} — {c.title || c.id}
+                          </span>
+                        </label>
+                      )
+                    })}
+                  </div>
+                </div>
                 <div className="rounded-xl border border-white/10 bg-black/30 p-3">
                   <p className="text-xs text-cyan-200">#{activeQueueConcept.id}</p>
                   <p className="text-sm text-white font-medium">{activeQueueConcept.title || activeQueueConcept.id}</p>
@@ -399,7 +564,7 @@ export default function StudioConceptsPage() {
                     {activeQueueConcept.short_description || activeQueueConcept.explanation || 'Không có mô tả'}
                   </p>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                   <select value={queueDomain} onChange={(e) => setQueueDomain(e.target.value)} className={inputCls}>
                     {domainOptions.map((d) => (
                       <option key={d} value={d}>
@@ -419,17 +584,6 @@ export default function StudioConceptsPage() {
                       </option>
                     ))}
                   </select>
-                  <select
-                    value={queueDepth}
-                    onChange={(e) => setQueueDepth(e.target.value as DepthLevel)}
-                    className={inputCls}
-                  >
-                    {DEPTH_ORDER.map((d) => (
-                      <option key={d} value={d}>
-                        {DEPTH_META[d].labelVi}
-                      </option>
-                    ))}
-                  </select>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <button
@@ -437,7 +591,7 @@ export default function StudioConceptsPage() {
                     onClick={applyQueueTaxonomy}
                     className="rounded-lg bg-amber-600 text-white text-xs font-medium px-3 py-2 hover:bg-amber-500"
                   >
-                    Áp dụng & sang concept tiếp theo
+                    Áp dụng cho concept đã chọn
                   </button>
                   <button
                     type="button"
@@ -515,18 +669,6 @@ export default function StudioConceptsPage() {
                   </option>
                 ))}
               </select>
-              <select
-                value={newConceptDepth}
-                onChange={(e) => setNewConceptDepth(e.target.value as 'none' | DepthLevel)}
-                className={inputCls}
-              >
-                <option value="none">depth (không gán)</option>
-                {DEPTH_ORDER.map((d) => (
-                  <option key={d} value={d}>
-                    {DEPTH_META[d].labelVi}
-                  </option>
-                ))}
-              </select>
               <input
                 value={newConceptAliases}
                 onChange={(e) => setNewConceptAliases(e.target.value)}
@@ -583,7 +725,6 @@ export default function StudioConceptsPage() {
                         .filter(Boolean),
                       domain: newConceptDomain.trim() || undefined,
                       subdomain: newConceptSubdomain.trim() || undefined,
-                      depth: newConceptDepth === 'none' ? undefined : newConceptDepth,
                       aliases: parsePipeList(newConceptAliases),
                       prerequisites: newConceptPrerequisites,
                     },
@@ -596,7 +737,6 @@ export default function StudioConceptsPage() {
                   setNewConceptRelated('')
                   setNewConceptDomain('')
                   setNewConceptSubdomain('')
-                  setNewConceptDepth('none')
                   setNewConceptAliases('')
                   setNewConceptPrerequisites([])
                 }}
@@ -615,7 +755,7 @@ export default function StudioConceptsPage() {
                   className={inputCls}
                   placeholder="Tìm theo concept id/title/nội dung hoặc lesson/module..."
                 />
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                   <select
                     value={domainFilter}
                     onChange={(e) => {
@@ -640,18 +780,6 @@ export default function StudioConceptsPage() {
                     {subdomainOptions.map((d) => (
                       <option key={d} value={d}>
                         {d}
-                      </option>
-                    ))}
-                  </select>
-                  <select
-                    value={depthFilter}
-                    onChange={(e) => setDepthFilter(e.target.value as 'all' | DepthLevel)}
-                    className={inputCls}
-                  >
-                    <option value="all">Tất cả depth</option>
-                    {DEPTH_ORDER.map((d) => (
-                      <option key={d} value={d}>
-                        {DEPTH_META[d].labelVi}
                       </option>
                     ))}
                   </select>
@@ -689,7 +817,7 @@ export default function StudioConceptsPage() {
                         )}
                         <details className="mt-2 rounded-lg border border-white/10 bg-black/20 p-2">
                           <summary className="cursor-pointer text-[11px] text-slate-300">Taxonomy & mapping</summary>
-                          <div className="mt-2 grid grid-cols-1 md:grid-cols-3 gap-2">
+                          <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-2">
                           <label className="text-[10px] text-slate-500">
                             Domain
                             <select
@@ -738,33 +866,6 @@ export default function StudioConceptsPage() {
                               {getSubdomainOptionsForDomain(c.domain || '', concepts).map((d) => (
                                 <option key={`${c.id}-${d}`} value={d}>
                                   {d}
-                                </option>
-                              ))}
-                            </select>
-                          </label>
-                          <label className="text-[10px] text-slate-500">
-                            Depth
-                            <select
-                              value={c.depth || 'none'}
-                              onChange={(e) =>
-                                setConcepts((prev) =>
-                                  prev.map((x) =>
-                                    x.id === c.id
-                                      ? {
-                                          ...x,
-                                          depth:
-                                            e.target.value === 'none' ? undefined : (e.target.value as DepthLevel),
-                                        }
-                                      : x,
-                                  ),
-                                )
-                              }
-                              className={`mt-1 ${inputCls}`}
-                            >
-                              <option value="none">Không gán</option>
-                              {DEPTH_ORDER.map((d) => (
-                                <option key={d} value={d}>
-                                  {DEPTH_META[d].labelVi}
                                 </option>
                               ))}
                             </select>

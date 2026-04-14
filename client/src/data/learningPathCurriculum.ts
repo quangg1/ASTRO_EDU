@@ -71,8 +71,6 @@ export type LearningConcept = {
   domain?: string
   /** Taxonomy: nhóm con trong domain (vd: orbital-mechanics). */
   subdomain?: string
-  /** Mức độ concept trong learning path. */
-  depth?: DepthLevel
   /** Biến thể từ khóa / đồng nghĩa để search map nhanh hơn. */
   aliases?: string[]
   /** Concept cần biết trước khi học concept này. */

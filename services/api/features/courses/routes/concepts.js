@@ -2,9 +2,47 @@ const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const Concept = require('../models/Concept');
+const TaxonomyRegistry = require('../models/TaxonomyRegistry');
 const { authMiddleware, requireRole } = require('../../../shared/jwtAuth');
 
 const router = express.Router();
+
+const DEFAULT_TAXONOMY = {
+  astronomy: [
+    'fundamentals',
+    'orbital-mechanics',
+    'stellar-physics',
+    'galactic-cosmology',
+    'observational-astronomy',
+    'positional-astronomy',
+  ],
+  geology: ['tectonics', 'volcanology', 'stratigraphy', 'planetary-geology'],
+  biology: ['evolution', 'ecology', 'paleontology'],
+  physics: ['mechanics', 'thermodynamics', 'electromagnetism'],
+  chemistry: ['astrochemistry', 'geochemistry', 'atmospheric-chemistry'],
+};
+
+function slugToken(s) {
+  return String(s || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9-]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+function normalizeTaxonomyRegistry(input) {
+  const src = input && typeof input === 'object' ? input : DEFAULT_TAXONOMY;
+  const out = {};
+  for (const [domainRaw, subRaw] of Object.entries(src)) {
+    const domain = slugToken(domainRaw);
+    if (!domain) continue;
+    const arr = Array.isArray(subRaw) ? subRaw : [];
+    const subdomains = [...new Set(arr.map((x) => slugToken(x)).filter(Boolean))];
+    out[domain] = subdomains;
+  }
+  if (Object.keys(out).length === 0) return DEFAULT_TAXONOMY;
+  return out;
+}
 
 function loadConceptSeed() {
   try {
@@ -35,9 +73,6 @@ function normalizeConcepts(concepts) {
         : [],
       domain: String(c.domain || '').trim(),
       subdomain: String(c.subdomain || '').trim(),
-      depth: ['beginner', 'explorer', 'researcher'].includes(String(c.depth || '').trim())
-        ? String(c.depth || '').trim()
-        : '',
       aliases: Array.isArray(c.aliases)
         ? [...new Set(c.aliases.map((x) => String(x || '').trim()).filter(Boolean))]
         : [],
@@ -65,6 +100,16 @@ async function ensureConceptSeed() {
   await Concept.insertMany(seed, { ordered: false }).catch(() => {});
 }
 
+async function ensureTaxonomySeed() {
+  const existing = await TaxonomyRegistry.findOne({ key: 'default' }).lean();
+  if (existing && existing.taxonomy && Object.keys(existing.taxonomy).length > 0) return;
+  await TaxonomyRegistry.updateOne(
+    { key: 'default' },
+    { $set: { taxonomy: DEFAULT_TAXONOMY } },
+    { upsert: true },
+  );
+}
+
 router.get('/', async (req, res) => {
   try {
     await ensureConceptSeed();
@@ -87,6 +132,30 @@ router.get('/editor', authMiddleware, requireRole('teacher', 'admin'), async (re
   }
 });
 
+router.get('/taxonomy', async (req, res) => {
+  try {
+    await ensureTaxonomySeed();
+    const doc = await TaxonomyRegistry.findOne({ key: 'default' }).lean();
+    const taxonomy = normalizeTaxonomyRegistry(doc?.taxonomy);
+    res.json({ success: true, data: { taxonomy } });
+  } catch (err) {
+    console.error('GET taxonomy error:', err);
+    res.status(500).json({ success: false, error: 'Server error' });
+  }
+});
+
+router.get('/taxonomy/editor', authMiddleware, requireRole('teacher', 'admin'), async (req, res) => {
+  try {
+    await ensureTaxonomySeed();
+    const doc = await TaxonomyRegistry.findOne({ key: 'default' }).lean();
+    const taxonomy = normalizeTaxonomyRegistry(doc?.taxonomy);
+    res.json({ success: true, data: { taxonomy } });
+  } catch (err) {
+    console.error('GET taxonomy editor error:', err);
+    res.status(500).json({ success: false, error: 'Server error' });
+  }
+});
+
 router.put('/editor', authMiddleware, requireRole('teacher', 'admin'), async (req, res) => {
   try {
     const normalized = normalizeConcepts(req.body?.concepts);
@@ -96,6 +165,21 @@ router.put('/editor', authMiddleware, requireRole('teacher', 'admin'), async (re
     res.json({ success: true, data: { concepts: docs } });
   } catch (err) {
     console.error('PUT concepts editor error:', err);
+    res.status(500).json({ success: false, error: 'Server error' });
+  }
+});
+
+router.put('/taxonomy/editor', authMiddleware, requireRole('teacher', 'admin'), async (req, res) => {
+  try {
+    const taxonomy = normalizeTaxonomyRegistry(req.body?.taxonomy);
+    await TaxonomyRegistry.updateOne(
+      { key: 'default' },
+      { $set: { taxonomy } },
+      { upsert: true },
+    );
+    res.json({ success: true, data: { taxonomy } });
+  } catch (err) {
+    console.error('PUT taxonomy editor error:', err);
     res.status(500).json({ success: false, error: 'Server error' });
   }
 });

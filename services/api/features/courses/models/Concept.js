@@ -10,7 +10,6 @@ const conceptSchema = new mongoose.Schema(
     related: [{ type: String }],
     domain: { type: String, default: '' },
     subdomain: { type: String, default: '' },
-    depth: { type: String, enum: ['beginner', 'explorer', 'researcher', ''], default: '' },
     aliases: [{ type: String }],
     prerequisites: [{ type: String }],
     published: { type: Boolean, default: true },
