@@ -2,10 +2,15 @@
 
 import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useTutorContextStore } from '@/store/useTutorContextStore'
 import { useAuthStore } from '@/store/useAuthStore'
-import { parseTutorActions, type TutorAction } from './parseTutorActions'
+import {
+  mergeTutorActions,
+  parseTutorActions,
+  toolCallsToTutorActions,
+  type TutorAction,
+} from './parseTutorActions'
 
 /** Số tin nhắn tối đa gửi lên API (chỉ gửi đoạn gần nhất để tránh out of context trên máy local). */
 const MAX_MESSAGES_FOR_API = 10
@@ -43,6 +48,17 @@ function loadMessagesFromStorage(key: string): Message[] {
   }
 }
 
+function routeLabel(pathname: string): string | undefined {
+  if (!pathname || pathname === '/') return 'Trang chủ'
+  if (pathname.startsWith('/courses/')) return 'Trang khóa học'
+  if (pathname.startsWith('/courses')) return 'Danh sách khóa học'
+  if (pathname.startsWith('/explore')) return 'Khám phá'
+  if (pathname.startsWith('/dashboard')) return 'Dashboard'
+  if (pathname.startsWith('/my-courses')) return 'Khóa học của tôi'
+  if (pathname.startsWith('/studio')) return 'Studio'
+  return undefined
+}
+
 function saveMessagesToStorage(key: string, messages: Message[]) {
   if (typeof window === 'undefined') return
   try {
@@ -62,6 +78,8 @@ function saveMessagesToStorage(key: string, messages: Message[]) {
 
 export function AITutor() {
   const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
   const { user, checked } = useAuthStore()
   const { mode, course, requestAgentOpen, setRequestAgentOpen } = useTutorContextStore()
   const [open, setOpen] = useState(false)
@@ -79,8 +97,9 @@ export function AITutor() {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const isCourseMode = mode === 'course' && course
-  /** Trong course = Agent (tương tác trang); ngoài = Generative AI (chỉ trả lời). */
+  /** Trong course = Agent đầy đủ (bài + Khám phá); ngoài vẫn có thể điều hướng qua tool. */
   const isAgent = isCourseMode
+  const searchQs = searchParams.toString()
   const canUseAI = !!user
   const historyKey = user ? storageKey(user.id, mode, course?.courseSlug) : null
 
@@ -135,6 +154,15 @@ export function AITutor() {
     } else if (action.type === 'go_to_explore') {
       router.push(`/explore?stage=${action.stageTime}`)
       setOpen(false)
+    } else if (action.type === 'open_courses') {
+      router.push('/courses')
+      setOpen(false)
+    } else if (action.type === 'open_dashboard') {
+      router.push('/dashboard')
+      setOpen(false)
+    } else if (action.type === 'open_my_courses') {
+      router.push('/my-courses')
+      setOpen(false)
     }
     setTimeout(() => setExecuting(false), 800)
   }
@@ -185,6 +213,11 @@ export function AITutor() {
         messages: toSend,
         context: isCourseMode ? 'course' : 'general',
         course: isCourseMode ? course : null,
+        agent_state: {
+          pathname: pathname || '/',
+          search: searchQs ? `?${searchQs}` : null,
+          route_label: routeLabel(pathname || '/') ?? null,
+        },
       }
       if (attachmentImage) {
         body.image_base64 = attachmentImage.base64
@@ -205,13 +238,19 @@ export function AITutor() {
       }
 
       const rawContent = data.message?.content ?? ''
-      const { text: displayContent, actions } = isCourseMode ? parseTutorActions(rawContent) : { text: rawContent, actions: [] as TutorAction[] }
+      const parsed = parseTutorActions(rawContent)
+      const fromTools = toolCallsToTutorActions(data.tool_calls)
+      const fromText = isCourseMode
+        ? parsed.actions
+        : parsed.actions.filter((a) => a.type !== 'open_lesson')
+      const actions = mergeTutorActions(fromTools, fromText)
+      const display = parsed.text && parsed.text.trim() !== '' ? parsed.text : rawContent
 
       const assistantMsg: Message = {
         id: `a-${Date.now()}`,
         role: 'assistant',
         content: rawContent,
-        displayContent: displayContent || rawContent,
+        displayContent: display,
         actions: actions.length > 0 ? actions : undefined,
         createdAt: new Date(),
       }
@@ -252,7 +291,13 @@ export function AITutor() {
             : 'linear-gradient(135deg, #06b6d4 0%, #0891b2 50%, #0e7490 100%)',
           boxShadow: isAgent ? '0 4px 24px rgba(139, 92, 246, 0.45)' : '0 4px 24px rgba(6, 182, 212, 0.45)',
         }}
-        title={canUseAI ? (isAgent ? 'AI Agent – có thể mở bài, Khám phá' : 'AI Tutor – hỏi đáp') : 'Đăng nhập để dùng AI'}
+        title={
+          canUseAI
+            ? isAgent
+              ? 'AI Agent – mở bài, Khám phá'
+              : 'AI Tutor – hỏi đáp & điều hướng trang'
+            : 'Đăng nhập để dùng AI'
+        }
         aria-label={canUseAI ? (isAgent ? 'Mở AI Agent' : 'Mở AI Tutor') : 'Đăng nhập để dùng AI'}
       >
         <span className="text-2xl" aria-hidden>{isAgent ? '🎯' : '✨'}</span>
@@ -321,10 +366,12 @@ export function AITutor() {
                 <p className={`text-sm mb-2 ${isAgent ? 'text-violet-300/90' : 'text-cyan-300/90'}`}>
                   {isAgent
                     ? `Mình là Agent của khóa "${course?.courseTitle ?? ''}". Mình có thể mở bài, chuyển Khám phá, hoặc gợi ý bài tiếp theo khi bạn hỏi.`
-                    : 'Chào bạn! Mình là AI Tutor – trả lời câu hỏi về lịch sử Trái Đất, hóa thạch, thiên văn.'}
+                    : 'Chào bạn! Mình là AI Tutor – trả lời câu hỏi về lịch sử Trái Đất, hóa thạch, thiên văn; có thể mở Khám phá hoặc trang khóa học khi bạn yêu cầu.'}
                 </p>
                 <p className="text-gray-500 text-xs mb-4">
-                  {isAgent ? 'Hỏi "mở bài X" hoặc "xem Khám phá kỷ Cambrian" – mình sẽ thực hiện thao tác trên trang.' : 'Hỏi bất kỳ điều gì – mình chỉ trả lời, không thao tác trang.'}
+                  {isAgent
+                    ? 'Hỏi "mở bài X" hoặc "xem Khám phá kỷ Cambrian" – mình sẽ thực hiện thao tác trên trang.'
+                    : 'Hỏi kiến thức bất kỳ; hoặc nói rõ "mở Khám phá 540 Ma", "đưa tôi tới khóa học" để mình điều hướng.'}
                 </p>
                 <div className="flex flex-wrap gap-2 justify-center">
                   {(isAgent ? suggestionCourse : suggestionGeneral).map((s) => (
@@ -360,18 +407,23 @@ export function AITutor() {
                   </div>
                   {m.role === 'assistant' && m.actions && m.actions.length > 0 && (
                     <div className="mt-3 pt-3 border-t border-white/10 space-y-2">
-                      {isAgent && (
-                        <button
-                          type="button"
-                          onClick={() => executeFirstAction(m)}
-                          disabled={executing}
-                          className="w-full text-xs font-medium px-3 py-2 rounded-lg bg-violet-500/40 text-violet-100 hover:bg-violet-500/60 border border-violet-400/40 disabled:opacity-60 transition-colors"
-                        >
-                          {executing ? 'Đang thực hiện...' : '▶ Thực hiện ngay'}
-                        </button>
-                      )}
+                      <button
+                        type="button"
+                        onClick={() => executeFirstAction(m)}
+                        disabled={executing}
+                        className={`w-full text-xs font-medium px-3 py-2 rounded-lg border disabled:opacity-60 transition-colors ${
+                          isAgent
+                            ? 'bg-violet-500/40 text-violet-100 hover:bg-violet-500/60 border-violet-400/40'
+                            : 'bg-cyan-500/40 text-cyan-100 hover:bg-cyan-500/60 border-cyan-400/40'
+                        }`}
+                      >
+                        {executing ? 'Đang thực hiện...' : '▶ Thực hiện ngay'}
+                      </button>
                       <div className="flex flex-wrap gap-2">
                         {m.actions.map((a, i) => {
+                          const chip = isAgent
+                            ? 'bg-violet-500/30 text-violet-200 hover:bg-violet-500/50 border-violet-400/30'
+                            : 'bg-cyan-500/30 text-cyan-200 hover:bg-cyan-500/50 border-cyan-400/30'
                           if (a.type === 'open_lesson') {
                             const lesson = course?.lessons.find((l) => l.slug === a.lessonSlug)
                             return (
@@ -380,7 +432,7 @@ export function AITutor() {
                                 type="button"
                                 onClick={() => executeAction(a)}
                                 disabled={executing}
-                                className="text-xs px-3 py-1.5 rounded-lg bg-violet-500/30 text-violet-200 hover:bg-violet-500/50 border border-violet-400/30 transition-colors disabled:opacity-60"
+                                className={`text-xs px-3 py-1.5 rounded-lg border transition-colors disabled:opacity-60 ${chip}`}
                               >
                                 📖 {lesson?.title ?? a.lessonSlug}
                               </button>
@@ -393,9 +445,48 @@ export function AITutor() {
                                 type="button"
                                 onClick={() => executeAction(a)}
                                 disabled={executing}
-                                className="text-xs px-3 py-1.5 rounded-lg bg-cyan-500/30 text-cyan-200 hover:bg-cyan-500/50 border border-cyan-400/30 transition-colors disabled:opacity-60"
+                                className={`text-xs px-3 py-1.5 rounded-lg border transition-colors disabled:opacity-60 ${chip}`}
                               >
                                 🌍 Xem {a.stageTime} Ma trên Khám phá
+                              </button>
+                            )
+                          }
+                          if (a.type === 'open_courses') {
+                            return (
+                              <button
+                                key={i}
+                                type="button"
+                                onClick={() => executeAction(a)}
+                                disabled={executing}
+                                className={`text-xs px-3 py-1.5 rounded-lg border transition-colors disabled:opacity-60 ${chip}`}
+                              >
+                                📚 Mở danh sách khóa học
+                              </button>
+                            )
+                          }
+                          if (a.type === 'open_dashboard') {
+                            return (
+                              <button
+                                key={i}
+                                type="button"
+                                onClick={() => executeAction(a)}
+                                disabled={executing}
+                                className={`text-xs px-3 py-1.5 rounded-lg border transition-colors disabled:opacity-60 ${chip}`}
+                              >
+                                📊 Mở Dashboard
+                              </button>
+                            )
+                          }
+                          if (a.type === 'open_my_courses') {
+                            return (
+                              <button
+                                key={i}
+                                type="button"
+                                onClick={() => executeAction(a)}
+                                disabled={executing}
+                                className={`text-xs px-3 py-1.5 rounded-lg border transition-colors disabled:opacity-60 ${chip}`}
+                              >
+                                🎓 Khóa học của tôi
                               </button>
                             )
                           }

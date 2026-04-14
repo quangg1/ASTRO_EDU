@@ -1,0 +1,25 @@
+# Kiểm tra corpus Markdown khi có PR chỉnh sửa knowledge/corpus/
+name: Knowledge corpus
+
+on:
+  pull_request:
+    paths:
+      - "services/ai/knowledge/corpus/**"
+      - "services/ai/scripts/validate_corpus.py"
+      - ".github/workflows/knowledge-corpus.yml"
+  push:
+    branches: [main, master]
+    paths:
+      - "services/ai/knowledge/corpus/**"
+      - "services/ai/scripts/validate_corpus.py"
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Validate Markdown corpus
+        run: python services/ai/scripts/validate_corpus.py

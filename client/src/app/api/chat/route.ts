@@ -25,12 +25,18 @@ export async function POST(req: NextRequest) {
       course = null,
       image_base64: imageBase64 = null,
       image_media_type: imageMediaType = 'image/jpeg',
+      agent_state: agentState = null,
     } = body as {
       messages?: Array<{ role: string; content: string }>
       context?: 'general' | 'course'
       course?: unknown
       image_base64?: string | null
       image_media_type?: string
+      agent_state?: {
+        pathname?: string | null
+        search?: string | null
+        route_label?: string | null
+      } | null
     }
 
     if (!Array.isArray(messages) || messages.length === 0) {
@@ -46,6 +52,7 @@ export async function POST(req: NextRequest) {
         course,
         image_base64: imageBase64 || undefined,
         image_media_type: imageMediaType || 'image/jpeg',
+        agent_state: agentState || undefined,
       }),
       signal: AbortSignal.timeout(70000),
     })

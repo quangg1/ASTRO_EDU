@@ -51,6 +51,10 @@ function cloneJson<T>(obj: T): T {
   return JSON.parse(JSON.stringify(obj))
 }
 
+function safeLower(value: unknown): string {
+  return typeof value === 'string' ? value.toLowerCase() : ''
+}
+
 type ConceptUsageItem = {
   conceptId: string
   moduleId: string
@@ -110,6 +114,21 @@ function buildConceptUsage(modules: LearningModule[]): ConceptUsageItem[] {
 
 const inputCls =
   'w-full rounded-lg bg-black/50 border border-white/15 px-3 py-2 text-white text-sm focus:border-cyan-500/50 focus:outline-none transition-colors'
+
+const DEFAULT_TAXONOMY: Record<string, string[]> = {
+  astronomy: [
+    'fundamentals',
+    'orbital-mechanics',
+    'stellar-physics',
+    'galactic-cosmology',
+    'observational-astronomy',
+    'positional-astronomy',
+  ],
+  geology: ['tectonics', 'volcanology', 'stratigraphy', 'planetary-geology'],
+  biology: ['evolution', 'ecology', 'paleontology'],
+  physics: ['mechanics', 'thermodynamics', 'electromagnetism'],
+  chemistry: ['astrochemistry', 'geochemistry', 'atmospheric-chemistry'],
+}
 
 function updateLesson(
   modules: LearningModule[],
@@ -197,14 +216,74 @@ function LearningPathLessonEditor({
   moduleId: string
   nodeId: string
   depth: DepthLevel
-  editorTab: 'blocks' | 'preview'
-  setEditorTab: (t: 'blocks' | 'preview') => void
+  editorTab: 'blocks' | 'preview' | 'lesson-page'
+  setEditorTab: (t: 'blocks' | 'preview' | 'lesson-page') => void
   updateLesson: typeof updateLesson
   setModules: Dispatch<SetStateAction<LearningModule[]>>
   inputCls: string
 }) {
   const sections = activeLesson.sections ?? []
   const selectedConceptIds = activeLesson.conceptIds ?? []
+  const [conceptQuery, setConceptQuery] = useState('')
+  const [conceptDomain, setConceptDomain] = useState('all')
+  const [conceptSubdomain, setConceptSubdomain] = useState('all')
+
+  const conceptDomains = useMemo(() => {
+    const set = new Set<string>(Object.keys(DEFAULT_TAXONOMY))
+    concepts.forEach((c) => {
+      if (c.domain) set.add(c.domain)
+    })
+    return Array.from(set).sort((a, b) => a.localeCompare(b, 'vi'))
+  }, [concepts])
+
+  const filteredConceptCandidates = useMemo(() => {
+    const q = safeLower(conceptQuery.trim())
+    return concepts.filter((c) => {
+      if (conceptDomain !== 'all' && (c.domain || '') !== conceptDomain) return false
+      if (conceptSubdomain !== 'all' && (c.subdomain || '') !== conceptSubdomain) return false
+      if (!q) return true
+      const haystack = [
+        c.id,
+        c.title,
+        c.short_description,
+        c.explanation,
+        c.domain,
+        c.subdomain,
+        ...(c.aliases || []),
+      ]
+      return haystack.some((x) => safeLower(x).includes(q))
+    })
+  }, [concepts, conceptDomain, conceptSubdomain, conceptQuery])
+
+  const conceptSubdomains = useMemo(() => {
+    const set = new Set<string>()
+    if (conceptDomain !== 'all') {
+      ;(DEFAULT_TAXONOMY[conceptDomain] || []).forEach((x) => set.add(x))
+    } else {
+      Object.values(DEFAULT_TAXONOMY).forEach((arr) => arr.forEach((x) => set.add(x)))
+    }
+    concepts.forEach((c) => {
+      if (!c.subdomain) return
+      if (conceptDomain === 'all' || c.domain === conceptDomain) set.add(c.subdomain)
+    })
+    return Array.from(set).sort((a, b) => a.localeCompare(b, 'vi'))
+  }, [concepts, conceptDomain])
+
+  useEffect(() => {
+    if (conceptSubdomain === 'all') return
+    if (!conceptSubdomains.includes(conceptSubdomain)) setConceptSubdomain('all')
+  }, [conceptSubdomains, conceptSubdomain])
+  const selectedConcepts = useMemo(
+    () =>
+      selectedConceptIds
+        .map((id) => concepts.find((c) => c.id === id))
+        .filter((x): x is LearningConcept => !!x),
+    [selectedConceptIds, concepts],
+  )
+  const unselectedFilteredConcepts = useMemo(
+    () => filteredConceptCandidates.filter((c) => !selectedConceptIds.includes(c.id)),
+    [filteredConceptCandidates, selectedConceptIds],
+  )
 
   const patchLesson = (patch: Partial<LessonItem>) => {
     setModules((prev) => applyPatch(prev, moduleId, nodeId, depth, activeLesson.id, patch))
@@ -234,7 +313,6 @@ function LearningPathLessonEditor({
     }),
     [activeLesson],
   )
-
   return (
     <div className="max-w-4xl space-y-4">
       <div>
@@ -269,34 +347,87 @@ function LearningPathLessonEditor({
             Chưa có concept. Tạo concept ở panel bên trái rồi quay lại map cho bài này.
           </p>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1">
-            {concepts.map((c) => {
-              const checked = selectedConceptIds.includes(c.id)
-              return (
-                <label
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-[1fr,180px,180px] gap-2 mb-2">
+              <input
+                value={conceptQuery}
+                onChange={(e) => setConceptQuery(e.target.value)}
+                placeholder="Tìm concept theo id/title/aliases..."
+                className={inputCls}
+              />
+              <select
+                value={conceptDomain}
+                onChange={(e) => setConceptDomain(e.target.value)}
+                className={inputCls}
+              >
+                <option value="all">Tất cả domain</option>
+                {conceptDomains.map((d) => (
+                  <option key={d} value={d}>
+                    {d}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={conceptSubdomain}
+                onChange={(e) => setConceptSubdomain(e.target.value)}
+                className={inputCls}
+              >
+                <option value="all">Tất cả subdomain</option>
+                {conceptSubdomains.map((d) => (
+                  <option key={d} value={d}>
+                    {d}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <p className="text-[11px] text-slate-500 mb-2">
+              Đang chọn {selectedConcepts.length}/{concepts.length} concept
+            </p>
+            <div className="rounded-lg border border-white/10 bg-black/25 p-2.5 mb-2">
+              <p className="text-[11px] text-slate-400 mb-2">Concept đã gắn vào bài</p>
+              {selectedConcepts.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  {selectedConcepts.map((c) => (
+                    <button
+                      key={`selected-${c.id}`}
+                      type="button"
+                      onClick={() =>
+                        patchLesson({ conceptIds: selectedConceptIds.filter((id) => id !== c.id) })
+                      }
+                      className="inline-flex items-center gap-2 rounded-full border border-cyan-500/40 bg-cyan-500/15 px-3 py-1 text-xs text-cyan-100 hover:bg-cyan-500/25"
+                      title="Bỏ concept khỏi bài"
+                    >
+                      <span>#{c.id}</span>
+                      <span className="text-cyan-200/80">×</span>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-[11px] text-slate-500">Chưa gắn concept nào cho bài này.</p>
+              )}
+            </div>
+            <p className="text-[11px] text-slate-400 mb-2">
+              Thêm nhanh từ danh sách ({unselectedFilteredConcepts.length} concept phù hợp bộ lọc)
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1">
+              {unselectedFilteredConcepts.map((c) => (
+                <button
                   key={c.id}
-                  className="flex items-start gap-2 rounded-lg border border-white/10 bg-black/30 px-2.5 py-2 text-xs cursor-pointer"
+                  type="button"
+                  onClick={() => patchLesson({ conceptIds: [...new Set([...selectedConceptIds, c.id])] })}
+                  className="text-left rounded-lg border border-white/10 bg-black/30 px-2.5 py-2 text-xs hover:border-cyan-500/40 hover:bg-cyan-500/10 transition-colors"
                   title={c.short_description || c.explanation}
                 >
-                  <input
-                    type="checkbox"
-                    checked={checked}
-                    onChange={(e) => {
-                      const next = e.target.checked
-                        ? [...selectedConceptIds, c.id]
-                        : selectedConceptIds.filter((id) => id !== c.id)
-                      patchLesson({ conceptIds: [...new Set(next)] })
-                    }}
-                    className="mt-0.5"
-                  />
-                  <span className="min-w-0">
-                    <span className="text-cyan-200 block">#{c.id}</span>
-                    <span className="text-slate-200 block">{c.title || c.id}</span>
+                  <span className="text-cyan-200 block">+ #{c.id}</span>
+                  <span className="text-slate-200 block">{c.title || c.id}</span>
+                  <span className="text-[10px] text-slate-500 block">
+                    {c.domain || 'no-domain'}
+                    {c.subdomain ? ` / ${c.subdomain}` : ''}
                   </span>
-                </label>
-              )
-            })}
-          </div>
+                </button>
+              ))}
+            </div>
+          </>
         )}
       </div>
 
@@ -398,6 +529,17 @@ function LearningPathLessonEditor({
           >
             Preview
           </button>
+          <button
+            type="button"
+            onClick={() => setEditorTab('lesson-page')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+              editorTab === 'lesson-page'
+                ? 'bg-violet-600/90 text-white'
+                : 'text-slate-500 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            Full Lesson Page
+          </button>
         </div>
 
         {editorTab === 'blocks' && (
@@ -495,6 +637,35 @@ function LearningPathLessonEditor({
             </div>
           </div>
         )}
+
+        {editorTab === 'lesson-page' && (
+          <div className="border-t border-violet-500/10 bg-[#060b14]">
+            <div className="px-4 py-2 border-b border-violet-500/10 bg-violet-500/5 flex items-center gap-2">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-violet-400 animate-pulse" />
+                <span className="text-[11px] font-medium text-violet-300">
+                  Preview toàn trang bài học (render cục bộ)
+                </span>
+              </div>
+            </div>
+            <div className="p-4 md:p-6 bg-[#02040a]">
+              <div className="max-w-3xl mx-auto space-y-4">
+                <div className="rounded-2xl border border-white/10 bg-[#070b14]/90 p-4 md:p-5">
+                  <p className="text-[10px] uppercase tracking-wider text-slate-500 mb-2">
+                    Learning Path / Studio Preview
+                  </p>
+                  <h2 className="text-xl md:text-2xl font-bold text-white">{activeLesson.titleVi}</h2>
+                  {activeLesson.title ? <p className="text-slate-500 text-sm mt-1">{activeLesson.title}</p> : null}
+                </div>
+                <LessonPreview
+                  lesson={previewLesson}
+                  conceptAnchors={activeLesson.conceptAnchors}
+                  concepts={concepts}
+                />
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )
@@ -509,7 +680,7 @@ export default function StudioLearningPathPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
-  const [editorTab, setEditorTab] = useState<'blocks' | 'preview'>('blocks')
+  const [editorTab, setEditorTab] = useState<'blocks' | 'preview' | 'lesson-page'>('blocks')
 
   /** Điều hướng phân cấp */
   const [moduleId, setModuleId] = useState<string | null>(null)

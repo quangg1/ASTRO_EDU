@@ -1,0 +1,37 @@
+# Gọi POST /knowledge/rebuild trên service AI đã deploy (cần embedding + AI cùng chạy).
+# Cấu hình GitHub Secrets:
+#   AI_SERVICE_URL      — ví dụ https://ai.example.com (không có dấu / cuối)
+#   KNOWLEDGE_ADMIN_TOKEN — trùng biến môi trường trên server AI
+#
+# Chạy: Actions → Rebuild RAG index (remote) → Run workflow
+name: Rebuild RAG index (remote)
+
+on:
+  workflow_dispatch:
+    # Tuỳ chọn: thêm schedule khi đã có AI_SERVICE_URL + TOKEN, ví dụ:
+    # schedule:
+    #   - cron: "0 4 * * 1"
+
+jobs:
+  rebuild:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger rebuild on AI service
+        env:
+          BASE: ${{ secrets.AI_SERVICE_URL }}
+          TOKEN: ${{ secrets.KNOWLEDGE_ADMIN_TOKEN }}
+        run: |
+          if [ -z "$BASE" ] || [ -z "$TOKEN" ]; then
+            echo "Thiếu AI_SERVICE_URL hoặc KNOWLEDGE_ADMIN_TOKEN trong repo Secrets — bỏ qua."
+            exit 0
+          fi
+          url="${BASE%/}/knowledge/rebuild"
+          echo "POST $url"
+          code=$(curl -sS -o /tmp/rebuild_body.json -w "%{http_code}" -X POST "$url" \
+            -H "Authorization: Bearer ${TOKEN}" \
+            -H "Content-Type: application/json")
+          cat /tmp/rebuild_body.json
+          if [ "$code" != "200" ]; then
+            echo "HTTP $code"
+            exit 1
+          fi

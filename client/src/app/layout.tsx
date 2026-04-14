@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next'
+import { Suspense } from 'react'
 import './globals.css'
 import { getStaticAssetUrl } from '@/lib/apiConfig'
 import { AuthProvider } from '@/components/auth/AuthProvider'
@@ -61,7 +62,9 @@ export default function RootLayout({
             <PwaInstallPrompt />
             <PwaStatusBadge />
             <AppShell>{children}</AppShell>
-            <AITutor />
+            <Suspense fallback={null}>
+              <AITutor />
+            </Suspense>
           </ErrorBoundaryWrap>
         </AuthProvider>
       </body>

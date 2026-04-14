@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
@@ -100,6 +100,9 @@ export default function LearningLessonView({
   )
   const [activeConceptId, setActiveConceptId] = useState<string | null>(null)
   const [tooltip, setTooltip] = useState<{ id: string; x: number; y: number } | null>(null)
+  const [panelWidth, setPanelWidth] = useState(400)
+  const [resizingPanel, setResizingPanel] = useState(false)
+  const resizeStartRef = useRef<{ x: number; width: number } | null>(null)
   const anchors = lesson.conceptAnchors ?? []
   const highlightedLegacyHtml = useMemo(
     () => applyConceptAnchorsToHtml(legacyHtml, anchors, conceptMap),
@@ -118,6 +121,67 @@ export default function LearningLessonView({
     [sections, anchors, conceptMap],
   )
   const activeConcept = activeConceptId ? conceptMap.get(activeConceptId) ?? null : null
+  const isConceptPanelOpen = !!activeConcept
+  const relatedLessonsForActiveConcept = useMemo(() => {
+    if (!activeConceptId) return []
+    const rows: Array<{
+      lessonId: string
+      lessonTitle: string
+      moduleId: string
+      nodeId: string
+      score: number
+    }> = []
+    for (const m of modules) {
+      for (const n of m.nodes ?? []) {
+        const nodeLessons = [n.depths.beginner ?? [], n.depths.explorer ?? [], n.depths.researcher ?? []].flat()
+        for (const l of nodeLessons) {
+          if (l.id === lesson.id) continue
+          const ids = l.conceptIds ?? []
+          const hasConcept = ids.includes(activeConceptId)
+          if (!hasConcept) continue
+          const sameNode = n.id === displayNode.id
+          const sameModule = m.id === displayModule.id
+          rows.push({
+            lessonId: l.id,
+            lessonTitle: l.titleVi || l.title || l.id,
+            moduleId: m.id,
+            nodeId: n.id,
+            score: sameNode ? 2 : sameModule ? 1 : 0,
+          })
+        }
+      }
+    }
+    return rows
+      .sort((a, b) => b.score - a.score || a.lessonTitle.localeCompare(b.lessonTitle, 'vi'))
+      .slice(0, 8)
+  }, [activeConceptId, modules, lesson.id, displayNode.id, displayModule.id])
+  const prerequisiteGuides = useMemo(() => {
+    if (!activeConcept?.prerequisites?.length) return []
+    const rows: Array<{ conceptId: string; conceptTitle: string; lessonHref: string | null; lessonTitle: string | null }> = []
+    for (const pid of activeConcept.prerequisites) {
+      const pc = conceptMap.get(pid)
+      let best: { score: number; moduleId: string; nodeId: string; lessonId: string; lessonTitle: string } | null = null
+      for (const m of modules) {
+        for (const n of m.nodes ?? []) {
+          const nodeLessons = [n.depths.beginner ?? [], n.depths.explorer ?? [], n.depths.researcher ?? []].flat()
+          for (const l of nodeLessons) {
+            if (l.id === lesson.id) continue
+            if (!(l.conceptIds ?? []).includes(pid)) continue
+            const score = n.id === displayNode.id ? 2 : m.id === displayModule.id ? 1 : 0
+            const candidate = { score, moduleId: m.id, nodeId: n.id, lessonId: l.id, lessonTitle: l.titleVi || l.title || l.id }
+            if (!best || candidate.score > best.score) best = candidate
+          }
+        }
+      }
+      rows.push({
+        conceptId: pid,
+        conceptTitle: pc?.title || pid,
+        lessonHref: best ? `/tutorial/${best.moduleId}/${best.nodeId}/${encodeURIComponent(best.lessonId)}` : null,
+        lessonTitle: best?.lessonTitle || null,
+      })
+    }
+    return rows
+  }, [activeConcept, conceptMap, modules, lesson.id, displayNode.id, displayModule.id])
 
   const focusConceptInline = (conceptId: string) => {
     const el = document.querySelector(`[data-concept-id="${conceptId}"]`) as HTMLElement | null
@@ -147,6 +211,36 @@ export default function LearningLessonView({
     setActiveConceptId(id)
   }
 
+  useEffect(() => {
+    if (!isConceptPanelOpen) return
+    const onEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setActiveConceptId(null)
+    }
+    window.addEventListener('keydown', onEsc)
+    return () => window.removeEventListener('keydown', onEsc)
+  }, [isConceptPanelOpen])
+
+  useEffect(() => {
+    if (!resizingPanel) return
+    const onMove = (e: MouseEvent) => {
+      const start = resizeStartRef.current
+      if (!start) return
+      const next = start.width + (start.x - e.clientX)
+      const bounded = Math.min(560, Math.max(320, next))
+      setPanelWidth(bounded)
+    }
+    const onUp = () => {
+      setResizingPanel(false)
+      resizeStartRef.current = null
+    }
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+    return () => {
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup', onUp)
+    }
+  }, [resizingPanel])
+
   return (
     <div className="min-h-screen bg-[#02040a] relative overflow-hidden">
       <div
@@ -157,7 +251,12 @@ export default function LearningLessonView({
         }}
       />
 
-      <main className="relative z-10 pt-20 pb-24 px-4 max-w-3xl mx-auto">
+      <main
+        className={`relative z-10 pt-20 pb-24 px-4 max-w-3xl mx-auto transition-[margin] duration-300 ${
+          isConceptPanelOpen ? 'md:mr-4' : ''
+        }`}
+        style={isConceptPanelOpen ? { marginRight: `${panelWidth + 40}px` } : undefined}
+      >
         <nav className="text-xs text-slate-500 mb-6 flex flex-wrap items-center gap-2">
           <Link href="/tutorial" className="hover:text-cyan-400 transition-colors">
             Learning Path
@@ -259,62 +358,6 @@ export default function LearningLessonView({
           </aside>
         )}
 
-        {activeConcept && (
-          <section className="mb-8 rounded-2xl border border-cyan-500/30 bg-cyan-500/5 p-4">
-            <div className="flex items-start justify-between gap-3">
-              <h3 className="text-base font-semibold text-cyan-100">
-                {activeConcept.title} ({activeConcept.id})
-              </h3>
-              <button
-                type="button"
-                onClick={() => setActiveConceptId(null)}
-                className="text-xs rounded border border-white/15 px-2 py-1 text-slate-300 hover:bg-white/10"
-              >
-                Đóng
-              </button>
-            </div>
-            <p className="text-sm text-slate-300 mt-1">{activeConcept.explanation}</p>
-            {activeConcept.examples?.length ? (
-              <ul className="mt-2 list-disc pl-5">
-                {activeConcept.examples.map((ex, i) => (
-                  <li key={`${activeConcept.id}-detail-ex-${i}`} className="text-sm text-slate-300">
-                    {ex}
-                  </li>
-                ))}
-              </ul>
-            ) : null}
-            {activeConcept.related?.length ? (
-              <div className="mt-3">
-                <p className="text-xs text-slate-400 mb-1">Liên quan</p>
-                <div className="flex flex-wrap gap-2">
-                  {activeConcept.related.map((rid) => {
-                    const rel = conceptMap.get(rid)
-                    return (
-                      <button
-                        key={`${activeConcept.id}-related-${rid}`}
-                        type="button"
-                        onClick={() => {
-                          if (!rel) return
-                          setActiveConceptId(rid)
-                          focusConceptInline(rid)
-                        }}
-                        disabled={!rel}
-                        className={`rounded-full px-2 py-1 text-xs border ${
-                          rel
-                            ? 'border-cyan-500/40 text-cyan-200 hover:bg-cyan-500/10'
-                            : 'border-white/10 text-slate-500'
-                        }`}
-                      >
-                        {rid}
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-            ) : null}
-          </section>
-        )}
-
         <div className="flex flex-wrap gap-3 mb-12">
           <button
             type="button"
@@ -374,6 +417,127 @@ export default function LearningLessonView({
           )}
         </nav>
       </main>
+      {activeConcept && (
+        <>
+          <button
+            type="button"
+            aria-label="Đóng bảng concept"
+            className="fixed inset-0 z-[75] bg-black/50 backdrop-blur-[1px] md:hidden"
+            onClick={() => setActiveConceptId(null)}
+          />
+          <aside
+            className="fixed z-[80] w-full max-h-[82vh] md:max-h-[calc(100vh-7rem)] overflow-y-auto border border-cyan-500/25 bg-[#06101a]/98 shadow-2xl
+            left-0 right-0 bottom-0 rounded-t-2xl p-4 animate-slide-up-fade
+            md:left-auto md:right-4 md:top-20 md:bottom-6 md:rounded-2xl md:p-5"
+            style={{ width: `min(100vw, ${panelWidth}px)` }}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Chi tiết concept"
+          >
+            <button
+              type="button"
+              aria-label="Resize concept panel"
+              className="hidden md:block absolute left-0 top-0 h-full w-2 cursor-ew-resize"
+              onMouseDown={(e) => {
+                resizeStartRef.current = { x: e.clientX, width: panelWidth }
+                setResizingPanel(true)
+                e.preventDefault()
+              }}
+            />
+            <div className="flex items-start justify-between gap-3">
+              <h3 className="text-base font-semibold text-cyan-100">
+                {activeConcept.title} ({activeConcept.id})
+              </h3>
+              <button
+                type="button"
+                onClick={() => setActiveConceptId(null)}
+                className="text-xs rounded border border-white/15 px-2 py-1 text-slate-300 hover:bg-white/10"
+              >
+                Đóng
+              </button>
+            </div>
+            <p className="text-sm text-slate-300 mt-2">{activeConcept.explanation}</p>
+            {activeConcept.examples?.length ? (
+              <ul className="mt-3 list-disc pl-5 space-y-1">
+                {activeConcept.examples.map((ex, i) => (
+                  <li key={`${activeConcept.id}-detail-ex-${i}`} className="text-sm text-slate-300">
+                    {ex}
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+            {activeConcept.related?.length ? (
+              <div className="mt-4">
+                <p className="text-xs text-slate-400 mb-2">Concept liên quan</p>
+                <div className="flex flex-wrap gap-2">
+                  {activeConcept.related.map((rid) => {
+                    const rel = conceptMap.get(rid)
+                    return (
+                      <button
+                        key={`${activeConcept.id}-related-${rid}`}
+                        type="button"
+                        onClick={() => {
+                          if (!rel) return
+                          setActiveConceptId(rid)
+                          focusConceptInline(rid)
+                        }}
+                        disabled={!rel}
+                        className={`rounded-full px-2 py-1 text-xs border ${
+                          rel
+                            ? 'border-cyan-500/40 text-cyan-200 hover:bg-cyan-500/10'
+                            : 'border-white/10 text-slate-500'
+                        }`}
+                      >
+                        {rid}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            ) : null}
+            <div id="related-lessons-by-concept" className="mt-5 border-t border-white/10 pt-4">
+              <p className="text-xs text-slate-400 mb-2">Bài học liên quan</p>
+              {relatedLessonsForActiveConcept.length > 0 ? (
+                <div className="space-y-2">
+                  {relatedLessonsForActiveConcept.map((row) => (
+                    <Link
+                      key={`${activeConcept.id}-lesson-${row.lessonId}`}
+                      href={`/tutorial/${row.moduleId}/${row.nodeId}/${encodeURIComponent(row.lessonId)}`}
+                      className="block rounded-lg border border-white/10 bg-white/5 px-3 py-2 hover:border-cyan-500/35 hover:bg-cyan-500/10 transition-colors"
+                      onClick={() => setActiveConceptId(null)}
+                    >
+                      <p className="text-sm text-slate-100 line-clamp-2">{row.lessonTitle}</p>
+                    </Link>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-slate-500">Chưa có bài khác dùng concept này.</p>
+              )}
+            </div>
+            {prerequisiteGuides.length > 0 ? (
+              <div className="mt-4 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
+                <p className="text-xs font-medium text-amber-200 mb-2">Nên học trước</p>
+                <div className="space-y-2">
+                  {prerequisiteGuides.map((p) => (
+                    <div key={`${activeConcept.id}-pre-${p.conceptId}`} className="text-xs text-slate-200">
+                      <p>• {p.conceptTitle}</p>
+                      {p.lessonHref ? (
+                        <Link
+                          href={p.lessonHref}
+                          onClick={() => setActiveConceptId(null)}
+                          className="ml-3 inline-block text-cyan-300 hover:text-cyan-100 underline underline-offset-2"
+                        >
+                          Học trước: {p.lessonTitle}
+                        </Link>
+                      ) : null}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+          </aside>
+        </>
+      )}
       <style jsx global>{`
         .lp-concept-inline {
           background: rgba(34, 211, 238, 0.14);

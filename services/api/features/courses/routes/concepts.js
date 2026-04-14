@@ -33,6 +33,17 @@ function normalizeConcepts(concepts) {
       related: Array.isArray(c.related)
         ? [...new Set(c.related.map((x) => String(x || '').trim()).filter(Boolean))]
         : [],
+      domain: String(c.domain || '').trim(),
+      subdomain: String(c.subdomain || '').trim(),
+      depth: ['beginner', 'explorer', 'researcher'].includes(String(c.depth || '').trim())
+        ? String(c.depth || '').trim()
+        : '',
+      aliases: Array.isArray(c.aliases)
+        ? [...new Set(c.aliases.map((x) => String(x || '').trim()).filter(Boolean))]
+        : [],
+      prerequisites: Array.isArray(c.prerequisites)
+        ? [...new Set(c.prerequisites.map((x) => String(x || '').trim()).filter(Boolean))]
+        : [],
       published: c.published !== false,
     }))
     .filter((c) => c.id);
@@ -42,6 +53,7 @@ function normalizeConcepts(concepts) {
     ...c,
     title: c.title || c.id,
     related: c.related.filter((rid) => rid !== c.id && idSet.has(rid)),
+    prerequisites: c.prerequisites.filter((pid) => pid !== c.id && idSet.has(pid)),
   }));
 }
 

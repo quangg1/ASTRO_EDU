@@ -20,12 +20,73 @@ function slugifyConceptId(raw: string): string {
     .replace(/^_+|_+$/g, '')
 }
 
+function safeLower(value: unknown): string {
+  return typeof value === 'string' ? value.toLowerCase() : ''
+}
+
 type UsageRow = {
   conceptId: string
   moduleTitle: string
   nodeTitle: string
   depth: DepthLevel
   lessonTitle: string
+}
+
+const DEFAULT_TAXONOMY: Record<string, string[]> = {
+  astronomy: [
+    'fundamentals',
+    'orbital-mechanics',
+    'stellar-physics',
+    'galactic-cosmology',
+    'observational-astronomy',
+    'positional-astronomy',
+  ],
+  geology: ['tectonics', 'volcanology', 'stratigraphy', 'planetary-geology'],
+  biology: ['evolution', 'ecology', 'paleontology'],
+  physics: ['mechanics', 'thermodynamics', 'electromagnetism'],
+  chemistry: ['astrochemistry', 'geochemistry', 'atmospheric-chemistry'],
+}
+
+function parsePipeList(raw: string): string[] {
+  return raw
+    .split('|')
+    .map((x) => x.trim())
+    .filter(Boolean)
+}
+
+function getSubdomainOptionsForDomain(domain: string, concepts: LearningConcept[]): string[] {
+  const set = new Set<string>(DEFAULT_TAXONOMY[domain] || [])
+  concepts.forEach((c) => {
+    if (c.domain === domain && c.subdomain) set.add(c.subdomain)
+  })
+  return Array.from(set).sort((a, b) => a.localeCompare(b, 'vi'))
+}
+
+function inferTaxonomySuggestion(concept: LearningConcept): {
+  domain: string
+  subdomain: string
+  depth: DepthLevel
+} {
+  const text = `${concept.id} ${concept.title} ${(concept.aliases || []).join(' ')}`.toLowerCase()
+  if (/(orbit|aphelion|apastron|kepler|conjunction|transit)/.test(text)) {
+    return { domain: 'astronomy', subdomain: 'orbital-mechanics', depth: 'explorer' }
+  }
+  if (/(star|dwarf|supernova|fusion|magnitude|rayet)/.test(text)) {
+    return { domain: 'astronomy', subdomain: 'stellar-physics', depth: 'explorer' }
+  }
+  if (/(galaxy|cluster|cosmo|redshift|blueshift|universe)/.test(text)) {
+    return { domain: 'astronomy', subdomain: 'galactic-cosmology', depth: 'explorer' }
+  }
+  if (/(telescope|spectrum|wavelength|x_ray|ultraviolet|visible_light|light)/.test(text)) {
+    return { domain: 'astronomy', subdomain: 'observational-astronomy', depth: 'beginner' }
+  }
+  if (/(declination|right_ascension|zenith|equinox|sidereal|universal_time)/.test(text)) {
+    return { domain: 'astronomy', subdomain: 'positional-astronomy', depth: 'explorer' }
+  }
+  if (/(tectonic|volcano|subduction|tuff|tektite|vent)/.test(text)) {
+    return { domain: 'geology', subdomain: 'tectonics', depth: 'beginner' }
+  }
+  return { domain: 'astronomy', subdomain: 'fundamentals', depth: 'beginner' }
 }
 
 function buildUsage(modules: LearningModule[]): UsageRow[] {
@@ -58,6 +119,10 @@ export default function StudioConceptsPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
+  const [conceptSearch, setConceptSearch] = useState('')
+  const [domainFilter, setDomainFilter] = useState('all')
+  const [subdomainFilter, setSubdomainFilter] = useState('all')
+  const [depthFilter, setDepthFilter] = useState<'all' | DepthLevel>('all')
 
   const [newConceptId, setNewConceptId] = useState('')
   const [newConceptTitle, setNewConceptTitle] = useState('')
@@ -65,6 +130,15 @@ export default function StudioConceptsPage() {
   const [newConceptExplanation, setNewConceptExplanation] = useState('')
   const [newConceptExamples, setNewConceptExamples] = useState('')
   const [newConceptRelated, setNewConceptRelated] = useState('')
+  const [newConceptDomain, setNewConceptDomain] = useState('')
+  const [newConceptSubdomain, setNewConceptSubdomain] = useState('')
+  const [newConceptDepth, setNewConceptDepth] = useState<'none' | DepthLevel>('none')
+  const [newConceptAliases, setNewConceptAliases] = useState('')
+  const [newConceptPrerequisites, setNewConceptPrerequisites] = useState<string[]>([])
+  const [queueConceptId, setQueueConceptId] = useState<string | null>(null)
+  const [queueDomain, setQueueDomain] = useState('')
+  const [queueSubdomain, setQueueSubdomain] = useState('')
+  const [queueDepth, setQueueDepth] = useState<DepthLevel>('beginner')
 
   useEffect(() => {
     if (checked && !user) router.replace('/login?redirect=/studio/concepts')
@@ -96,15 +170,163 @@ export default function StudioConceptsPage() {
     return map
   }, [modules])
 
+  const filteredConcepts = useMemo(() => {
+    const q = safeLower(conceptSearch.trim())
+    return concepts.filter((c) => {
+      const passesDomain = domainFilter === 'all' || (c.domain || '') === domainFilter
+      const passesSubdomain = subdomainFilter === 'all' || (c.subdomain || '') === subdomainFilter
+      const passesDepth = depthFilter === 'all' || c.depth === depthFilter
+      if (!passesDomain || !passesSubdomain || !passesDepth) return false
+      if (!q) return true
+      const rows = usageByConcept.get(c.id) || []
+      const usageText = rows
+        .map((r) =>
+          `${r.moduleTitle || ''} ${r.nodeTitle || ''} ${r.lessonTitle || ''} ${DEPTH_META[r.depth]?.labelVi || ''}`,
+        )
+        .join(' ')
+      const usageLower = safeLower(usageText)
+      return (
+        safeLower(c.id).includes(q) ||
+        safeLower(c.title).includes(q) ||
+        safeLower(c.short_description).includes(q) ||
+        safeLower(c.explanation).includes(q) ||
+        (Array.isArray(c.examples) ? c.examples : []).some((x) => safeLower(x).includes(q)) ||
+        (Array.isArray(c.aliases) ? c.aliases : []).some((x) => safeLower(x).includes(q)) ||
+        usageLower.includes(q)
+      )
+    })
+  }, [conceptSearch, concepts, usageByConcept, domainFilter, subdomainFilter, depthFilter])
+
+  const domainOptions = useMemo(() => {
+    const set = new Set<string>(Object.keys(DEFAULT_TAXONOMY))
+    concepts.forEach((c) => {
+      if (c.domain) set.add(c.domain)
+    })
+    return Array.from(set).sort((a, b) => a.localeCompare(b, 'vi'))
+  }, [concepts])
+
+  const subdomainOptions = useMemo(() => {
+    const set = new Set<string>()
+    if (domainFilter !== 'all') {
+      ;(DEFAULT_TAXONOMY[domainFilter] || []).forEach((x) => set.add(x))
+    } else {
+      Object.values(DEFAULT_TAXONOMY).forEach((arr) => arr.forEach((x) => set.add(x)))
+    }
+    concepts.forEach((c) => {
+      if (!c.subdomain) return
+      if (domainFilter === 'all' || c.domain === domainFilter) set.add(c.subdomain)
+    })
+    return Array.from(set).sort((a, b) => a.localeCompare(b, 'vi'))
+  }, [concepts, domainFilter])
+
+  const newConceptSubdomainOptions = useMemo(
+    () => (newConceptDomain ? getSubdomainOptionsForDomain(newConceptDomain, concepts) : []),
+    [newConceptDomain, concepts],
+  )
+  const queueSubdomainOptions = useMemo(
+    () => (queueDomain ? getSubdomainOptionsForDomain(queueDomain, concepts) : []),
+    [queueDomain, concepts],
+  )
+
+  const unclassifiedCount = useMemo(
+    () => concepts.filter((c) => !(c.domain && c.subdomain && c.depth)).length,
+    [concepts],
+  )
+
+  const unclassifiedConcepts = useMemo(
+    () => concepts.filter((c) => !(c.domain && c.subdomain && c.depth)),
+    [concepts],
+  )
+
+  const activeQueueConcept = useMemo(
+    () =>
+      (queueConceptId ? unclassifiedConcepts.find((c) => c.id === queueConceptId) : null) ||
+      unclassifiedConcepts[0] ||
+      null,
+    [queueConceptId, unclassifiedConcepts],
+  )
+
+  useEffect(() => {
+    if (!activeQueueConcept) return
+    const suggested = inferTaxonomySuggestion(activeQueueConcept)
+    setQueueConceptId(activeQueueConcept.id)
+    setQueueDomain(activeQueueConcept.domain || suggested.domain)
+    setQueueSubdomain(activeQueueConcept.subdomain || suggested.subdomain)
+    setQueueDepth(activeQueueConcept.depth || suggested.depth)
+  }, [activeQueueConcept?.id])
+
+  useEffect(() => {
+    if (!newConceptDomain) {
+      setNewConceptSubdomain('')
+      return
+    }
+    const opts = getSubdomainOptionsForDomain(newConceptDomain, concepts)
+    if (newConceptSubdomain && !opts.includes(newConceptSubdomain)) setNewConceptSubdomain('')
+  }, [newConceptDomain, concepts])
+
+  useEffect(() => {
+    if (!queueDomain) return
+    const opts = getSubdomainOptionsForDomain(queueDomain, concepts)
+    if (queueSubdomain && !opts.includes(queueSubdomain)) setQueueSubdomain(opts[0] || '')
+  }, [queueDomain, concepts])
+
+  const applyQueueTaxonomy = () => {
+    if (!activeQueueConcept) return
+    const cid = activeQueueConcept.id
+    setConcepts((prev) =>
+      prev.map((c) =>
+        c.id === cid
+          ? {
+              ...c,
+              domain: queueDomain || c.domain,
+              subdomain: queueSubdomain || c.subdomain,
+              depth: queueDepth || c.depth,
+            }
+          : c,
+      ),
+    )
+    const remaining = unclassifiedConcepts.filter((c) => c.id !== cid)
+    setQueueConceptId(remaining[0]?.id ?? null)
+    setMessage(`Đã gán taxonomy cho concept "${cid}".`)
+  }
+
+  const applyQueueTaxonomyToSimilar = () => {
+    if (!activeQueueConcept) return
+    const base = activeQueueConcept.id
+    const prefix = base.split('_')[0]
+    let affected = 0
+    setConcepts((prev) =>
+      prev.map((c) => {
+        if (c.domain && c.subdomain && c.depth) return c
+        const matchByPrefix = c.id.startsWith(`${prefix}_`)
+        const matchByGuess = inferTaxonomySuggestion(c).subdomain === queueSubdomain
+        if (!matchByPrefix && !matchByGuess) return c
+        affected += 1
+        return {
+          ...c,
+          domain: queueDomain || c.domain,
+          subdomain: queueSubdomain || c.subdomain,
+          depth: queueDepth || c.depth,
+        }
+      }),
+    )
+    setMessage(`Đã áp dụng cho ${affected} concept tương tự.`)
+  }
+
   const save = async () => {
     const token = localStorage.getItem('galaxies_token')
     if (!token) return
     setSaving(true)
     setMessage('')
     const r = await saveEditorConcepts(token, concepts)
+    if (r.ok) {
+      const fresh = await fetchEditorConcepts(token)
+      if (fresh) setConcepts(fresh)
+      setMessage('Đã lưu Concept Library vào server.')
+    } else {
+      setMessage(r.error || 'Lỗi lưu concept')
+    }
     setSaving(false)
-    if (r.ok && r.concepts) setConcepts(r.concepts)
-    setMessage(r.ok ? 'Đã lưu Concept Library.' : r.error || 'Lỗi lưu concept')
   }
 
   if (!checked || !user) {
@@ -146,6 +368,89 @@ export default function StudioConceptsPage() {
         </header>
 
         {message ? <p className="text-sm text-emerald-400/90">{message}</p> : null}
+        {unclassifiedCount > 0 ? (
+          <p className="text-xs text-amber-300/90">
+            Có {unclassifiedCount} concept chưa gán đủ taxonomy (domain/subdomain/depth).
+          </p>
+        ) : null}
+        {unclassifiedConcepts.length > 0 && (
+          <section className="rounded-2xl border border-amber-500/30 bg-amber-500/5 p-4 space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h2 className="text-sm font-semibold text-amber-200">Unclassified Queue</h2>
+              <span className="text-[11px] text-amber-300/80">{unclassifiedConcepts.length} cần phân loại</span>
+            </div>
+            {activeQueueConcept && (
+              <>
+                <select
+                  value={activeQueueConcept.id}
+                  onChange={(e) => setQueueConceptId(e.target.value)}
+                  className={inputCls}
+                >
+                  {unclassifiedConcepts.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.id} — {c.title || c.id}
+                    </option>
+                  ))}
+                </select>
+                <div className="rounded-xl border border-white/10 bg-black/30 p-3">
+                  <p className="text-xs text-cyan-200">#{activeQueueConcept.id}</p>
+                  <p className="text-sm text-white font-medium">{activeQueueConcept.title || activeQueueConcept.id}</p>
+                  <p className="text-[11px] text-slate-400 mt-1">
+                    {activeQueueConcept.short_description || activeQueueConcept.explanation || 'Không có mô tả'}
+                  </p>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                  <select value={queueDomain} onChange={(e) => setQueueDomain(e.target.value)} className={inputCls}>
+                    {domainOptions.map((d) => (
+                      <option key={d} value={d}>
+                        {d}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    value={queueSubdomain}
+                    onChange={(e) => setQueueSubdomain(e.target.value)}
+                    className={inputCls}
+                  >
+                    {queueSubdomainOptions.length === 0 && <option value="">(không có subdomain)</option>}
+                    {queueSubdomainOptions.map((d) => (
+                      <option key={d} value={d}>
+                        {d}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    value={queueDepth}
+                    onChange={(e) => setQueueDepth(e.target.value as DepthLevel)}
+                    className={inputCls}
+                  >
+                    {DEPTH_ORDER.map((d) => (
+                      <option key={d} value={d}>
+                        {DEPTH_META[d].labelVi}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={applyQueueTaxonomy}
+                    className="rounded-lg bg-amber-600 text-white text-xs font-medium px-3 py-2 hover:bg-amber-500"
+                  >
+                    Áp dụng & sang concept tiếp theo
+                  </button>
+                  <button
+                    type="button"
+                    onClick={applyQueueTaxonomyToSimilar}
+                    className="rounded-lg border border-amber-500/40 text-amber-200 text-xs font-medium px-3 py-2 hover:bg-amber-500/10"
+                  >
+                    Áp dụng cho concept tương tự
+                  </button>
+                </div>
+              </>
+            )}
+          </section>
+        )}
 
         {loading ? (
           <p className="text-slate-500 py-12 text-center">Đang tải...</p>
@@ -189,6 +494,69 @@ export default function StudioConceptsPage() {
                 placeholder='related ids (vd: gravity|velocity)'
                 className={inputCls}
               />
+              <select value={newConceptDomain} onChange={(e) => setNewConceptDomain(e.target.value)} className={inputCls}>
+                <option value="">domain (chọn)</option>
+                {domainOptions.map((d) => (
+                  <option key={d} value={d}>
+                    {d}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={newConceptSubdomain}
+                onChange={(e) => setNewConceptSubdomain(e.target.value)}
+                className={inputCls}
+                disabled={!newConceptDomain}
+              >
+                <option value="">subdomain (chọn)</option>
+                {newConceptSubdomainOptions.map((d) => (
+                  <option key={d} value={d}>
+                    {d}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={newConceptDepth}
+                onChange={(e) => setNewConceptDepth(e.target.value as 'none' | DepthLevel)}
+                className={inputCls}
+              >
+                <option value="none">depth (không gán)</option>
+                {DEPTH_ORDER.map((d) => (
+                  <option key={d} value={d}>
+                    {DEPTH_META[d].labelVi}
+                  </option>
+                ))}
+              </select>
+              <input
+                value={newConceptAliases}
+                onChange={(e) => setNewConceptAliases(e.target.value)}
+                placeholder='aliases (vd: quỹ đạo elip|elliptical orbit)'
+                className={inputCls}
+              />
+              <label className="block text-xs text-slate-400">
+                Prerequisites mapping
+                <div className="mt-1 max-h-[140px] overflow-y-auto rounded-lg border border-white/15 bg-black/40 p-2 space-y-1">
+                  {concepts
+                    .filter((c) => c.id !== slugifyConceptId(newConceptId || newConceptTitle))
+                    .map((c) => {
+                      const checked = newConceptPrerequisites.includes(c.id)
+                      return (
+                        <label key={`new-pr-${c.id}`} className="flex items-center gap-2 text-xs text-slate-200">
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={(e) =>
+                              setNewConceptPrerequisites((prev) =>
+                                e.target.checked ? [...new Set([...prev, c.id])] : prev.filter((id) => id !== c.id),
+                              )
+                            }
+                          />
+                          <span>{c.id} — {c.title || c.id}</span>
+                        </label>
+                      )
+                    })}
+                </div>
+              </label>
               <button
                 type="button"
                 onClick={() => {
@@ -213,6 +581,11 @@ export default function StudioConceptsPage() {
                         .split('|')
                         .map((x) => slugifyConceptId(x))
                         .filter(Boolean),
+                      domain: newConceptDomain.trim() || undefined,
+                      subdomain: newConceptSubdomain.trim() || undefined,
+                      depth: newConceptDepth === 'none' ? undefined : newConceptDepth,
+                      aliases: parsePipeList(newConceptAliases),
+                      prerequisites: newConceptPrerequisites,
                     },
                   ])
                   setNewConceptId('')
@@ -221,6 +594,11 @@ export default function StudioConceptsPage() {
                   setNewConceptExplanation('')
                   setNewConceptExamples('')
                   setNewConceptRelated('')
+                  setNewConceptDomain('')
+                  setNewConceptSubdomain('')
+                  setNewConceptDepth('none')
+                  setNewConceptAliases('')
+                  setNewConceptPrerequisites([])
                 }}
                 className="w-full rounded-lg bg-emerald-600/80 hover:bg-emerald-500 text-white text-xs font-medium py-2"
               >
@@ -229,12 +607,64 @@ export default function StudioConceptsPage() {
             </section>
 
             <section className="rounded-2xl border border-white/10 bg-[#0a0f17] p-4">
-              <h2 className="text-sm font-semibold text-white mb-3">Concept usage report</h2>
+              <div className="mb-3 space-y-2">
+                <h2 className="text-sm font-semibold text-white">Concept usage report</h2>
+                <input
+                  value={conceptSearch}
+                  onChange={(e) => setConceptSearch(e.target.value)}
+                  className={inputCls}
+                  placeholder="Tìm theo concept id/title/nội dung hoặc lesson/module..."
+                />
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                  <select
+                    value={domainFilter}
+                    onChange={(e) => {
+                      setDomainFilter(e.target.value)
+                      setSubdomainFilter('all')
+                    }}
+                    className={inputCls}
+                  >
+                    <option value="all">Tất cả domain</option>
+                    {domainOptions.map((d) => (
+                      <option key={d} value={d}>
+                        {d}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    value={subdomainFilter}
+                    onChange={(e) => setSubdomainFilter(e.target.value)}
+                    className={inputCls}
+                  >
+                    <option value="all">Tất cả subdomain</option>
+                    {subdomainOptions.map((d) => (
+                      <option key={d} value={d}>
+                        {d}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    value={depthFilter}
+                    onChange={(e) => setDepthFilter(e.target.value as 'all' | DepthLevel)}
+                    className={inputCls}
+                  >
+                    <option value="all">Tất cả depth</option>
+                    {DEPTH_ORDER.map((d) => (
+                      <option key={d} value={d}>
+                        {DEPTH_META[d].labelVi}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <p className="text-[11px] text-slate-500">
+                  Hiển thị {filteredConcepts.length}/{concepts.length} concept
+                </p>
+              </div>
               <div className="space-y-2 max-h-[65vh] overflow-y-auto pr-1">
-                {concepts.length === 0 ? (
+                {filteredConcepts.length === 0 ? (
                   <p className="text-xs text-slate-600">Chưa có concept nào.</p>
                 ) : (
-                  concepts.map((c) => {
+                  filteredConcepts.map((c) => {
                     const rows = usageByConcept.get(c.id) || []
                     return (
                       <details key={c.id} className="rounded-lg border border-white/10 bg-black/30 px-3 py-2">
@@ -244,10 +674,12 @@ export default function StudioConceptsPage() {
                           </span>
                           <span className="text-[11px] text-slate-400">{rows.length} lesson(s)</span>
                         </summary>
-                        <p className="text-[11px] text-slate-400 mt-2">{c.short_description}</p>
-                        <p className="text-[11px] text-slate-300 mt-1">{c.explanation}</p>
+                        <div className="mt-2">
+                          <p className="text-[11px] text-slate-400">{c.short_description}</p>
+                          <p className="text-[11px] text-slate-300 mt-1">{c.explanation}</p>
+                        </div>
                         {c.examples?.length > 0 && (
-                          <ul className="mt-1 list-disc pl-4">
+                          <ul className="mt-2 list-disc pl-4">
                             {c.examples.map((ex, i) => (
                               <li key={`${c.id}-ex-${i}`} className="text-[11px] text-slate-300">
                                 {ex}
@@ -255,7 +687,152 @@ export default function StudioConceptsPage() {
                             ))}
                           </ul>
                         )}
-                        <div className="mt-2 space-y-1">
+                        <details className="mt-2 rounded-lg border border-white/10 bg-black/20 p-2">
+                          <summary className="cursor-pointer text-[11px] text-slate-300">Taxonomy & mapping</summary>
+                          <div className="mt-2 grid grid-cols-1 md:grid-cols-3 gap-2">
+                          <label className="text-[10px] text-slate-500">
+                            Domain
+                            <select
+                              value={c.domain || ''}
+                              onChange={(e) => {
+                                const v = e.target.value
+                                setConcepts((prev) =>
+                                  prev.map((x) =>
+                                    x.id === c.id
+                                      ? {
+                                          ...x,
+                                          domain: v || undefined,
+                                          subdomain:
+                                            v && x.domain !== v
+                                              ? getSubdomainOptionsForDomain(v, concepts)[0] || undefined
+                                              : x.subdomain,
+                                        }
+                                      : x,
+                                  ),
+                                )
+                              }}
+                              className={`mt-1 ${inputCls}`}
+                            >
+                              <option value="">Không gán</option>
+                              {domainOptions.map((d) => (
+                                <option key={d} value={d}>
+                                  {d}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                          <label className="text-[10px] text-slate-500">
+                            Subdomain
+                            <select
+                              value={c.subdomain || ''}
+                              onChange={(e) => {
+                                const v = e.target.value
+                                setConcepts((prev) =>
+                                  prev.map((x) => (x.id === c.id ? { ...x, subdomain: v || undefined } : x)),
+                                )
+                              }}
+                              className={`mt-1 ${inputCls}`}
+                              disabled={!c.domain}
+                            >
+                              <option value="">Không gán</option>
+                              {getSubdomainOptionsForDomain(c.domain || '', concepts).map((d) => (
+                                <option key={`${c.id}-${d}`} value={d}>
+                                  {d}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                          <label className="text-[10px] text-slate-500">
+                            Depth
+                            <select
+                              value={c.depth || 'none'}
+                              onChange={(e) =>
+                                setConcepts((prev) =>
+                                  prev.map((x) =>
+                                    x.id === c.id
+                                      ? {
+                                          ...x,
+                                          depth:
+                                            e.target.value === 'none' ? undefined : (e.target.value as DepthLevel),
+                                        }
+                                      : x,
+                                  ),
+                                )
+                              }
+                              className={`mt-1 ${inputCls}`}
+                            >
+                              <option value="none">Không gán</option>
+                              {DEPTH_ORDER.map((d) => (
+                                <option key={d} value={d}>
+                                  {DEPTH_META[d].labelVi}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                          </div>
+                        </details>
+                        <details className="mt-2 rounded-lg border border-white/10 bg-black/20 p-2">
+                          <summary className="cursor-pointer text-[11px] text-slate-300">
+                            Metadata nâng cao
+                          </summary>
+                        <details className="mt-2 rounded-lg border border-white/10 bg-black/20 p-2">
+                          <summary className="cursor-pointer text-[11px] text-slate-300">
+                            Aliases ({(c.aliases || []).length})
+                          </summary>
+                          <input
+                            value={(c.aliases || []).join('|')}
+                            onChange={(e) =>
+                              setConcepts((prev) =>
+                                prev.map((x) =>
+                                  x.id === c.id ? { ...x, aliases: parsePipeList(e.target.value) } : x,
+                                ),
+                              )
+                            }
+                            className={`mt-2 ${inputCls}`}
+                            placeholder="alias1|alias2|alias3"
+                          />
+                        </details>
+                        <details className="mt-2 rounded-lg border border-white/10 bg-black/20 p-2">
+                          <summary className="cursor-pointer text-[11px] text-slate-300">
+                            Prerequisites mapping ({(c.prerequisites || []).length})
+                          </summary>
+                          <div className="mt-2 max-h-[140px] overflow-y-auto rounded-lg border border-white/15 bg-black/40 p-2 space-y-1">
+                            {concepts
+                              .filter((cc) => cc.id !== c.id)
+                              .map((cc) => {
+                                const checked = (c.prerequisites || []).includes(cc.id)
+                                return (
+                                  <label key={`${c.id}-pr-${cc.id}`} className="flex items-center gap-2 text-xs text-slate-200">
+                                    <input
+                                      type="checkbox"
+                                      checked={checked}
+                                      onChange={(e) =>
+                                        setConcepts((prev) =>
+                                          prev.map((x) => {
+                                            if (x.id !== c.id) return x
+                                            const current = x.prerequisites || []
+                                            return {
+                                              ...x,
+                                              prerequisites: e.target.checked
+                                                ? [...new Set([...current, cc.id])]
+                                                : current.filter((id) => id !== cc.id),
+                                            }
+                                          }),
+                                        )
+                                      }
+                                    />
+                                    <span>{cc.id} — {cc.title || cc.id}</span>
+                                  </label>
+                                )
+                              })}
+                          </div>
+                        </details>
+                        </details>
+                        <details className="mt-2 rounded-lg border border-white/10 bg-black/20 p-2">
+                          <summary className="cursor-pointer text-[11px] text-slate-300">
+                            Lesson usage ({rows.length})
+                          </summary>
+                          <div className="mt-2 space-y-1">
                           {rows.length === 0 ? (
                             <p className="text-[11px] text-slate-500">Chưa được map vào lesson nào.</p>
                           ) : (
@@ -266,7 +843,8 @@ export default function StudioConceptsPage() {
                               </p>
                             ))
                           )}
-                        </div>
+                          </div>
+                        </details>
                         <div className="mt-2 flex justify-end">
                           <button
                             type="button"

@@ -13,7 +13,13 @@ EMBEDDING_URL = os.environ.get("EMBEDDING_URL", "http://localhost:5004")
 RAG_TOP_K = int(os.environ.get("RAG_TOP_K", "4"))
 RAG_INDEX_PATH = os.environ.get("RAG_INDEX_PATH", str(Path(__file__).parent / "data" / "rag_index.json"))
 
-_index: list[dict] | None = None  # [{ "text": str, "embedding": list[float] }, ...]
+_index: list[dict] | None = None  # [{ "text": str, "embedding": list[float], "source"?: str }, ...]
+
+
+def reload_index() -> None:
+    """Xóa cache trong RAM để lần retrieve sau đọc lại file (sau rebuild/append)."""
+    global _index
+    _index = None
 
 
 def _load_index() -> list[dict]:

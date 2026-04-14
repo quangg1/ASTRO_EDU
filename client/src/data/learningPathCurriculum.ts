@@ -67,6 +67,16 @@ export type LearningConcept = {
   explanation: string
   examples: string[]
   related: string[]
+  /** Taxonomy: ngành lớn (vd: astronomy, geology, biology). */
+  domain?: string
+  /** Taxonomy: nhóm con trong domain (vd: orbital-mechanics). */
+  subdomain?: string
+  /** Mức độ concept trong learning path. */
+  depth?: DepthLevel
+  /** Biến thể từ khóa / đồng nghĩa để search map nhanh hơn. */
+  aliases?: string[]
+  /** Concept cần biết trước khi học concept này. */
+  prerequisites?: string[]
 }
 
 export type LearningNode = {
