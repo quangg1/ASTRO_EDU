@@ -64,7 +64,7 @@ const router = express.Router();
 
 router.post('/upload', authMiddleware, requireRole('teacher', 'admin'), upload.single('file'), async (req, res) => {
   if (!req.file) {
-    return res.status(400).json({ success: false, error: 'No file uploaded or invalid type' });
+    return res.status(400).json({ success: false, code: 'MEDIA_INVALID_FILE', error: 'Chưa tải tệp lên hoặc định dạng tệp không hợp lệ' });
   }
   const filename = req.file.filename || safeFilename(req.file.originalname);
 
@@ -85,7 +85,7 @@ router.post('/upload', authMiddleware, requireRole('teacher', 'admin'), upload.s
       return res.json({ success: true, url, filename });
     } catch (err) {
       console.error('[media] S3 upload failed:', err);
-      return res.status(500).json({ success: false, error: 'Upload to storage failed' });
+      return res.status(500).json({ success: false, code: 'MEDIA_UPLOAD_FAILED', error: 'Tải tệp lên kho lưu trữ thất bại' });
     }
   }
 

@@ -1,11 +1,11 @@
 const express = require('express');
 const Course = require('../models/Course');
 const Enrollment = require('../models/Enrollment');
-const { authMiddleware, optionalAuth, requireRole } = require('../../../shared/jwtAuth');
+const { authMiddleware, optionalAuth, requireRole, canEditCourse } = require('../../../shared/jwtAuth');
+const { requireString } = require('../../../shared/validation');
+const { AppError } = require('../../../shared/errors');
 
 const router = express.Router();
-
-const INTERNAL_SECRET = process.env.INTERNAL_API_SECRET || 'galaxies-internal-secret';
 
 router.get('/', optionalAuth, async (req, res) => {
   try {
@@ -36,43 +36,6 @@ router.get('/', optionalAuth, async (req, res) => {
     res.json({ success: true, data: list });
   } catch (err) {
     console.error('List courses error:', err);
-    res.status(500).json({ success: false, error: 'Lỗi server' });
-  }
-});
-
-router.post('/internal/confirm-enroll', (req, res, next) => {
-  const secret = req.headers['x-internal-secret'];
-  if (secret !== INTERNAL_SECRET) {
-    return res.status(403).json({ success: false, error: 'Forbidden' });
-  }
-  next();
-}, async (req, res) => {
-  try {
-    const { userId, courseId, orderId } = req.body || {};
-    if (!userId || !courseId) {
-      return res.status(400).json({ success: false, error: 'Thiếu userId hoặc courseId' });
-    }
-    const course = await Course.findOne({ _id: courseId, published: true });
-    if (!course) {
-      return res.status(404).json({ success: false, error: 'Không tìm thấy khóa học' });
-    }
-    let enrollment = await Enrollment.findOne({ userId, courseId: course._id });
-    if (enrollment) {
-      return res.json({ success: true, message: 'Đã đăng ký từ trước' });
-    }
-    const progress = (course.lessons || []).map((l) => ({
-      lessonSlug: l.slug,
-      completed: false,
-      completedAt: null,
-    }));
-    await Enrollment.create({
-      userId,
-      courseId: course._id,
-      progress,
-    });
-    res.json({ success: true, message: 'Enroll thành công' });
-  } catch (err) {
-    console.error('Internal confirm-enroll error:', err);
     res.status(500).json({ success: false, error: 'Lỗi server' });
   }
 });
@@ -150,10 +113,8 @@ router.get('/my', authMiddleware, async (req, res) => {
 
 router.post('/', authMiddleware, requireRole('teacher', 'admin'), async (req, res) => {
   try {
-    const { title, slug } = req.body || {};
-    if (!title || !title.trim()) {
-      return res.status(400).json({ success: false, error: 'Tiêu đề khóa học là bắt buộc' });
-    }
+    const title = requireString(req.body?.title, 'title', 'Tiêu đề khóa học');
+    const { slug } = req.body || {};
     const rawSlug = (slug || title).toString().trim().toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '').slice(0, 80) || 'course-' + Date.now();
     const existing = await Course.findOne({ slug: rawSlug });
     if (existing) {
@@ -179,6 +140,9 @@ router.post('/', authMiddleware, requireRole('teacher', 'admin'), async (req, re
     });
   } catch (err) {
     console.error('Create course error:', err);
+    if (err instanceof AppError) {
+      return res.status(err.status).json({ success: false, code: err.code, error: err.message, details: err.details });
+    }
     res.status(500).json({ success: false, error: 'Lỗi tạo khóa học' });
   }
 });
@@ -279,10 +243,8 @@ router.patch('/:slug/progress', authMiddleware, async (req, res) => {
     if (!course) {
       return res.status(404).json({ success: false, error: 'Không tìm thấy khóa học' });
     }
-    const { lessonSlug, completed } = req.body || {};
-    if (!lessonSlug) {
-      return res.status(400).json({ success: false, error: 'Thiếu lessonSlug' });
-    }
+    const { completed } = req.body || {};
+    const lessonSlug = requireString(req.body?.lessonSlug, 'lessonSlug', 'lessonSlug');
     let enrollment = await Enrollment.findOne({
       userId: req.userId,
       courseId: course._id,
@@ -306,6 +268,9 @@ router.patch('/:slug/progress', authMiddleware, async (req, res) => {
     });
   } catch (err) {
     console.error('Progress error:', err);
+    if (err instanceof AppError) {
+      return res.status(err.status).json({ success: false, code: err.code, error: err.message, details: err.details });
+    }
     res.status(500).json({ success: false, error: 'Lỗi server' });
   }
 });
@@ -316,12 +281,9 @@ router.get('/:slug/editor', authMiddleware, requireRole('teacher', 'admin'), asy
     if (!course) {
       return res.status(404).json({ success: false, error: 'Không tìm thấy khóa học' });
     }
-    // Phân quyền: teacher chỉ sửa course của mình. Khóa cũ chưa gán teacherId sẽ tự gán về teacher đầu tiên mở.
+    // Chỉ đọc dữ liệu ở GET; việc claim ownership chỉ được thực hiện ở mutation route.
     if (req.userRole === 'teacher') {
-      if (!course.teacherId) {
-        course.teacherId = req.userId;
-        await course.save();
-      } else if (course.teacherId !== req.userId) {
+      if (!canEditCourse(course, { id: req.userId, role: req.userRole })) {
         return res.status(403).json({ success: false, error: 'Không có quyền sửa khóa học này' });
       }
     }
@@ -362,7 +324,7 @@ router.put('/:slug/editor', authMiddleware, requireRole('teacher', 'admin'), asy
     if (req.userRole === 'teacher') {
       if (!course.teacherId) {
         course.teacherId = req.userId;
-      } else if (course.teacherId !== req.userId) {
+      } else if (!canEditCourse(course, { id: req.userId, role: req.userRole })) {
         return res.status(403).json({ success: false, error: 'Không có quyền sửa khóa học này' });
       }
     }

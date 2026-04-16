@@ -26,7 +26,7 @@ const tutorialCategorySchema = new mongoose.Schema({
 
 const tutorialSchema = new mongoose.Schema({
   title: { type: String, required: true },
-  slug: { type: String, required: true },
+  slug: { type: String, required: true, unique: true },
   summary: { type: String, default: '' },
   categoryId: { type: mongoose.Schema.Types.ObjectId, ref: 'TutorialCategory', default: null },
   readTime: { type: Number, default: 5 },
@@ -42,7 +42,6 @@ const tutorialSchema = new mongoose.Schema({
   authorId: { type: String, default: null },
 }, { timestamps: true });
 
-tutorialSchema.index({ slug: 1 }, { unique: true });
 tutorialSchema.index({ categoryId: 1 });
 tutorialSchema.index({ published: 1 });
 tutorialSchema.index({ authorId: 1 });

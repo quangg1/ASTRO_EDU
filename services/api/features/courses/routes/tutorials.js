@@ -2,7 +2,7 @@ const express = require('express');
 const { Tutorial, TutorialCategory } = require('../models/Tutorial');
 const TutorialTrack = require('../models/TutorialTrack');
 const TutorialProgress = require('../models/TutorialProgress');
-const { authMiddleware, requireRole } = require('../../../shared/jwtAuth');
+const { authMiddleware, requireRole, canEditTutorial } = require('../../../shared/jwtAuth');
 
 const router = express.Router();
 
@@ -74,10 +74,7 @@ router.get('/editor/:slug', authMiddleware, requireRole('teacher', 'admin'), asy
     const t = await Tutorial.findOne({ slug: req.params.slug });
     if (!t) return res.status(404).json({ success: false, error: 'Không tìm thấy' });
     if (req.userRole === 'teacher') {
-      if (!t.authorId) {
-        t.authorId = req.userId;
-        await t.save();
-      } else if (t.authorId !== req.userId) {
+      if (!canEditTutorial(t, { id: req.userId, role: req.userRole })) {
         return res.status(403).json({ success: false, error: 'Không có quyền sửa tutorial này' });
       }
     }
@@ -200,7 +197,7 @@ router.put('/editor/:slug', authMiddleware, requireRole('teacher', 'admin'), asy
     if (req.userRole === 'teacher') {
       if (!t.authorId) {
         t.authorId = req.userId;
-      } else if (t.authorId !== req.userId) {
+      } else if (!canEditTutorial(t, { id: req.userId, role: req.userRole })) {
         return res.status(403).json({ success: false, error: 'Không có quyền sửa tutorial này' });
       }
     }

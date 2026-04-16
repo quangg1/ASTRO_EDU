@@ -3,6 +3,8 @@
 import { Suspense, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
+import { trackEvent } from '@/lib/analytics'
+import { viText } from '@/messages/vi'
 
 function PaymentReturnContent() {
   const searchParams = useSearchParams()
@@ -12,11 +14,19 @@ function PaymentReturnContent() {
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => setMounted(true), [])
+  useEffect(() => {
+    if (!mounted) return
+    trackEvent('payment_return_viewed', {
+      success,
+      slug: slug || null,
+      error: error || null,
+    })
+  }, [mounted, success, slug, error])
 
   if (!mounted) {
     return (
       <div className="min-h-screen bg-black pt-20 flex items-center justify-center">
-        <p className="text-gray-500">Loading...</p>
+        <p className="text-gray-500">{viText.common.loading}</p>
       </div>
     )
   }
@@ -26,40 +36,40 @@ function PaymentReturnContent() {
       <div className="max-w-md w-full rounded-2xl border border-white/10 bg-[#0a0f17] p-8 text-center">
         {success ? (
           <>
-            <p className="text-2xl mb-2">✓ Payment successful</p>
-            <p className="text-gray-400 text-sm mb-6">Your course is unlocked. Start learning now.</p>
+            <p className="text-2xl mb-2">✓ {viText.payment.successTitle}</p>
+            <p className="text-gray-400 text-sm mb-6">{viText.payment.successSubtitle}</p>
             {slug ? (
               <Link
                 href={`/courses/${slug}`}
                 className="inline-block px-6 py-3 rounded-xl bg-cyan-600 text-white font-medium hover:bg-cyan-500"
               >
-                Go to course
+                {viText.payment.goToCourse}
               </Link>
             ) : (
               <Link href="/courses" className="inline-block px-6 py-3 rounded-xl bg-cyan-600 text-white font-medium hover:bg-cyan-500">
-                Browse courses
+                {viText.payment.browseCourses}
               </Link>
             )}
           </>
         ) : (
           <>
-            <p className="text-xl text-amber-300 mb-2">Payment not completed</p>
+            <p className="text-xl text-amber-300 mb-2">{viText.payment.failedTitle}</p>
             <p className="text-gray-400 text-sm mb-6">
-              {error === 'payment_failed' && 'The transaction failed or was cancelled.'}
-              {error === 'order_not_found' && 'Order not found.'}
-              {error === 'server' && 'Server error. Please try again later.'}
-              {!error && 'You exited the checkout page.'}
+              {error === 'payment_failed' && viText.payment.failedPayment}
+              {error === 'order_not_found' && viText.payment.failedOrder}
+              {error === 'server' && viText.payment.failedServer}
+              {!error && viText.payment.failedDefault}
             </p>
             {slug ? (
               <Link
                 href={`/courses/${slug}`}
                 className="inline-block px-6 py-3 rounded-xl bg-white/10 text-gray-300 hover:bg-white/20"
               >
-                Back to course
+                {viText.payment.backToCourse}
               </Link>
             ) : (
               <Link href="/courses" className="inline-block px-6 py-3 rounded-xl bg-white/10 text-gray-300 hover:bg-white/20">
-                Courses
+                {viText.nav.courses}
               </Link>
             )}
           </>
@@ -71,7 +81,7 @@ function PaymentReturnContent() {
 
 export default function PaymentReturnPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-black pt-20 flex items-center justify-center"><p className="text-gray-500">Loading...</p></div>}>
+    <Suspense fallback={<div className="min-h-screen bg-black pt-20 flex items-center justify-center"><p className="text-gray-500">{viText.common.loading}</p></div>}>
       <PaymentReturnContent />
     </Suspense>
   )

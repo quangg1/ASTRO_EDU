@@ -11,6 +11,8 @@ import { getStaticAssetUrl } from '@/lib/apiConfig'
 import { useAuthStore } from '@/store/useAuthStore'
 import { SiteLogo } from '@/components/ui/SiteLogo'
 import { sr } from '@/lib/ssrStableRandom'
+import { trackEvent } from '@/lib/analytics'
+import { viText } from '@/messages/vi'
 
 function FloatingParticles() {
   const particles = Array.from({ length: 30 }, (_, i) => ({
@@ -66,20 +68,21 @@ export default function RegisterPage() {
     e.preventDefault()
     setError('')
     if (password.length < 6) {
-      setError('Password must be at least 6 characters')
+      setError(viText.auth.passwordMinLength)
       return
     }
     setLoading(true)
     try {
       const res = await register(email, password, displayName || undefined)
       if (res.success && res.user) {
+        trackEvent('register_success', { provider: 'local' })
         setUser(res.user)
         router.push('/dashboard')
         return
       }
-      setError(res.error || 'Sign-up failed')
+      setError(res.error || viText.auth.registerFailed)
     } catch {
-      setError('Network error')
+      setError(viText.auth.networkError)
     } finally {
       setLoading(false)
     }
@@ -118,10 +121,10 @@ export default function RegisterPage() {
             transition={{ delay: 0.3, duration: 0.8 }}
           >
             <h1 className="font-[Poppins,sans-serif] font-semibold text-[56px] text-white leading-[64px] mb-4">
-              Start your journey
+              Bắt đầu hành trình của bạn
             </h1>
             <p className="font-[Poppins,sans-serif] text-[20px] text-white/90 max-w-[500px] leading-relaxed">
-              Create an account to join Cosmo Learn — explore astronomy with interactive 3D simulations.
+              Tạo tài khoản để tham gia Cosmo Learn — khám phá thiên văn bằng mô phỏng 3D tương tác.
             </p>
           </motion.div>
         </div>
@@ -188,12 +191,12 @@ export default function RegisterPage() {
           className="hidden sm:block absolute top-6 sm:top-12 right-4 sm:right-12 z-20"
         >
           <p className="font-[Poppins,sans-serif] text-[16px] text-white/80">
-            Already have an account?{' '}
+            Đã có tài khoản?{' '}
             <Link
               href="/login"
               className="inline-flex items-center gap-1 text-white font-medium underline hover:text-amber-300 transition-colors"
             >
-              Sign in
+              Đăng nhập
               <Sparkles className="size-4" />
             </Link>
           </p>
@@ -211,7 +214,7 @@ export default function RegisterPage() {
             className="w-full max-w-[568px] flex flex-col gap-8 sm:gap-12 pt-16 sm:pt-0"
           >
             <h2 className="font-[Poppins,sans-serif] font-medium text-[30px] sm:text-[40px] text-white">
-              Create account
+              {viText.auth.createAccount}
             </h2>
 
             <div className="flex flex-col gap-4">
@@ -220,7 +223,7 @@ export default function RegisterPage() {
 
             <div className="flex items-center gap-6">
               <div className="flex-1 h-[2px] bg-gradient-to-r from-transparent via-white/20 to-white/20" />
-              <span className="font-medium text-[18px] text-white/60">OR</span>
+              <span className="font-medium text-[18px] text-white/60">HOẶC</span>
               <div className="flex-1 h-[2px] bg-gradient-to-l from-transparent via-white/20 to-white/20" />
             </div>
 
@@ -233,13 +236,13 @@ export default function RegisterPage() {
 
               <div className="flex flex-col gap-[4px] w-full">
                 <label className="font-[Poppins,sans-serif] text-white/80 text-[16px]">
-                  Display name (optional)
+                  Tên hiển thị (không bắt buộc)
                 </label>
                 <input
                   type="text"
                   value={displayName}
                   onChange={(e) => setDisplayName(e.target.value)}
-                  placeholder="Your name"
+                  placeholder="Tên của bạn"
                   className="h-[56px] w-full rounded-[12px] bg-white/10 backdrop-blur-md border border-white/20 px-4 text-white placeholder:text-white/40 focus:outline-none focus:border-amber-400/60 focus:bg-white/15 transition-all duration-300"
                 />
               </div>
@@ -252,7 +255,7 @@ export default function RegisterPage() {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Enter your email"
+                  placeholder="Nhập email của bạn"
                   required
                   className="h-[56px] w-full rounded-[12px] bg-white/10 backdrop-blur-md border border-white/20 px-4 text-white placeholder:text-white/40 focus:outline-none focus:border-amber-400/60 focus:bg-white/15 transition-all duration-300"
                 />
@@ -261,7 +264,7 @@ export default function RegisterPage() {
               <div className="flex flex-col gap-2">
                 <div className="flex items-center justify-between">
                   <label className="font-[Poppins,sans-serif] text-white/80 text-[16px]">
-                    Password (min. 6 characters)
+                    Mật khẩu (ít nhất 6 ký tự)
                   </label>
                   <button
                     type="button"
@@ -269,9 +272,9 @@ export default function RegisterPage() {
                     className="flex items-center gap-2 text-white/60 hover:text-white/80 transition-colors text-[14px]"
                   >
                     {showPassword ? (
-                      <><EyeOff className="size-4" /> Hide</>
+                      <><EyeOff className="size-4" /> Ẩn</>
                     ) : (
-                      <><Eye className="size-4" /> Show</>
+                      <><Eye className="size-4" /> Hiện</>
                     )}
                   </button>
                 </div>
@@ -279,7 +282,7 @@ export default function RegisterPage() {
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Create a password"
+                  placeholder="Tạo mật khẩu"
                   required
                   minLength={6}
                   className="h-[56px] w-full rounded-[12px] bg-white/10 backdrop-blur-md border border-white/20 px-4 text-white placeholder:text-white/40 focus:outline-none focus:border-amber-400/60 focus:bg-white/15 transition-all duration-300"
@@ -299,18 +302,18 @@ export default function RegisterPage() {
                   transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}
                 />
                 <span className="relative z-10">
-                  {loading ? 'Creating account...' : 'Sign up'}
+                  {loading ? viText.auth.creatingAccount : viText.nav.signUp}
                 </span>
               </motion.button>
 
               <div className="lg:hidden text-center">
                 <p className="font-[Poppins,sans-serif] text-[16px] text-white/80">
-                  Already have an account?{' '}
+                  Đã có tài khoản?{' '}
                   <Link
                     href="/login"
                     className="text-white font-medium underline hover:text-amber-300"
                   >
-                    Sign in
+                    Đăng nhập
                   </Link>
                 </p>
               </div>

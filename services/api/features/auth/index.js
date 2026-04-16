@@ -5,23 +5,50 @@ const { issueToken, verifyToken } = require('./lib/jwt');
 const { findOrLinkFirebaseUser } = require('./lib/oauthUser');
 const { getFirebaseAdmin } = require('./lib/firebaseAdmin');
 const { authMiddleware, requireRole } = require('../../shared/jwtAuth');
+const { listAdminUsers, updateAdminUserRole } = require('../../services/adminUserService');
+const { requireString } = require('../../shared/validation');
+const { AppError } = require('../../shared/errors');
 
 const ROLES = ['student', 'teacher', 'moderator', 'admin'];
 
 const router = express.Router();
 
+function normalizeAuthUser(user) {
+  return {
+    id: user._id,
+    email: user.email,
+    displayName: user.displayName,
+    avatar: user.avatar,
+    provider: user.provider,
+    role: user.role || 'student',
+    accountStatus: user.accountStatus || 'active',
+  };
+}
+
+function ensureUserIsActive(user) {
+  if (user?.accountStatus === 'deactivated') {
+    throw new AppError(403, 'ACCOUNT_DEACTIVATED', 'Tài khoản đã ngừng hoạt động');
+  }
+}
+
 // --- Local register ---
 router.post('/register', async (req, res) => {
   try {
-    const { email, password, displayName } = req.body || {};
-    if (!email || !password) {
-      return res.status(400).json({ success: false, error: 'Email và mật khẩu là bắt buộc' });
-    }
+    const email = requireString(req.body?.email, 'email', 'Email');
+    const password = requireString(req.body?.password, 'password', 'Mật khẩu');
+    const { displayName } = req.body || {};
     if (password.length < 6) {
       return res.status(400).json({ success: false, error: 'Mật khẩu tối thiểu 6 ký tự' });
     }
     const existing = await User.findOne({ email: email.trim().toLowerCase() });
     if (existing) {
+      if (existing.accountStatus === 'deactivated') {
+        return res.status(409).json({
+          success: false,
+          code: 'ACCOUNT_DEACTIVATED',
+          error: 'Email này thuộc về tài khoản đã ngừng hoạt động. Liên hệ quản trị viên để khôi phục.',
+        });
+      }
       const socialOnly = !existing.password;
       return res.status(409).json({
         success: false,
@@ -40,17 +67,13 @@ router.post('/register', async (req, res) => {
     res.status(201).json({
       success: true,
       token,
-      user: {
-        id: user._id,
-        email: user.email,
-        displayName: user.displayName,
-        avatar: user.avatar,
-        provider: user.provider,
-        role: user.role || 'student',
-      },
+      user: normalizeAuthUser(user),
     });
   } catch (err) {
     console.error('Register error:', err);
+    if (err instanceof AppError) {
+      return res.status(err.status).json({ success: false, code: err.code, error: err.message, details: err.details });
+    }
     res.status(500).json({ success: false, error: 'Lỗi đăng ký' });
   }
 });
@@ -58,10 +81,8 @@ router.post('/register', async (req, res) => {
 // --- Local login ---
 router.post('/login', async (req, res) => {
   try {
-    const { email, password } = req.body || {};
-    if (!email || !password) {
-      return res.status(400).json({ success: false, error: 'Email và mật khẩu là bắt buộc' });
-    }
+    const email = requireString(req.body?.email, 'email', 'Email');
+    const password = requireString(req.body?.password, 'password', 'Mật khẩu');
     const user = await User.findOne({ email: email.trim().toLowerCase() }).select('+password');
     if (!user || !user.password) {
       if (user && !user.password) {
@@ -73,6 +94,7 @@ router.post('/login', async (req, res) => {
       }
       return res.status(401).json({ success: false, error: 'Email hoặc mật khẩu không đúng' });
     }
+    ensureUserIsActive(user);
     const ok = await user.comparePassword(password);
     if (!ok) {
       return res.status(401).json({ success: false, error: 'Email hoặc mật khẩu không đúng' });
@@ -82,17 +104,13 @@ router.post('/login', async (req, res) => {
     res.json({
       success: true,
       token,
-      user: {
-        id: user._id,
-        email: user.email,
-        displayName: user.displayName,
-        avatar: user.avatar,
-        provider: user.provider,
-        role: user.role || 'student',
-      },
+      user: normalizeAuthUser(user),
     });
   } catch (err) {
     console.error('Login error:', err);
+    if (err instanceof AppError) {
+      return res.status(err.status).json({ success: false, code: err.code, error: err.message, details: err.details });
+    }
     res.status(500).json({ success: false, error: 'Lỗi đăng nhập' });
   }
 });
@@ -124,18 +142,12 @@ router.post('/firebase', async (req, res) => {
       avatar: decoded.picture || null,
       signInProvider: decoded.firebase?.sign_in_provider || '',
     });
+    ensureUserIsActive(user);
     const token = issueToken(user);
     res.json({
       success: true,
       token,
-      user: {
-        id: user._id,
-        email: user.email,
-        displayName: user.displayName,
-        avatar: user.avatar,
-        provider: user.provider,
-        role: user.role || 'student',
-      },
+      user: normalizeAuthUser(user),
     });
   } catch (err) {
     console.error('Firebase auth:', err);
@@ -162,16 +174,12 @@ router.get('/me', (req, res) => {
       if (!user) {
         return res.status(401).json({ success: false, error: 'Người dùng không tồn tại' });
       }
+      if (user.accountStatus === 'deactivated') {
+        return res.status(403).json({ success: false, code: 'ACCOUNT_DEACTIVATED', error: 'Tài khoản đã ngừng hoạt động' });
+      }
       res.json({
         success: true,
-        user: {
-          id: user._id,
-          email: user.email,
-          displayName: user.displayName,
-          avatar: user.avatar,
-          provider: user.provider,
-          role: user.role || 'student',
-        },
+        user: normalizeAuthUser(user),
       });
     })
     .catch((err) => {
@@ -196,14 +204,7 @@ router.patch('/me', authMiddleware, async (req, res) => {
     }
     res.json({
       success: true,
-      user: {
-        id: user._id,
-        email: user.email,
-        displayName: user.displayName,
-        avatar: user.avatar,
-        provider: user.provider,
-        role: user.role || 'student',
-      },
+      user: normalizeAuthUser(user),
     });
   } catch (err) {
     console.error('Patch me error:', err);
@@ -211,12 +212,38 @@ router.patch('/me', authMiddleware, async (req, res) => {
   }
 });
 
+router.delete('/me', authMiddleware, async (req, res) => {
+  try {
+    const reason = typeof req.body?.reason === 'string' ? req.body.reason.trim() : '';
+    const user = await User.findByIdAndUpdate(
+      req.userId,
+      {
+        $set: {
+          accountStatus: 'deactivated',
+          deactivatedAt: new Date(),
+          deactivatedByUserId: String(req.userId),
+          deactivationReason: reason,
+        },
+        $unset: {
+          restoredAt: 1,
+        },
+      },
+      { new: true, runValidators: true }
+    );
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'Người dùng không tồn tại' });
+    }
+    res.json({ success: true, message: 'Tài khoản đã được đánh dấu ngừng hoạt động' });
+  } catch (err) {
+    console.error('Deactivate me error:', err);
+    res.status(500).json({ success: false, error: 'Lỗi ngừng hoạt động tài khoản' });
+  }
+});
+
 router.post('/change-password', authMiddleware, async (req, res) => {
   try {
-    const { currentPassword, newPassword } = req.body || {};
-    if (!currentPassword || !newPassword) {
-      return res.status(400).json({ success: false, error: 'Cần mật khẩu hiện tại và mật khẩu mới' });
-    }
+    const currentPassword = requireString(req.body?.currentPassword, 'currentPassword', 'Mật khẩu hiện tại');
+    const newPassword = requireString(req.body?.newPassword, 'newPassword', 'Mật khẩu mới');
     if (newPassword.length < 6) {
       return res.status(400).json({ success: false, error: 'Mật khẩu mới tối thiểu 6 ký tự' });
     }
@@ -233,17 +260,17 @@ router.post('/change-password', authMiddleware, async (req, res) => {
     res.json({ success: true, message: 'Đã đổi mật khẩu' });
   } catch (err) {
     console.error('Change password error:', err);
+    if (err instanceof AppError) {
+      return res.status(err.status).json({ success: false, code: err.code, error: err.message, details: err.details });
+    }
     res.status(500).json({ success: false, error: 'Lỗi đổi mật khẩu' });
   }
 });
 
 router.post('/forgot-password', async (req, res) => {
   try {
-    const { email } = req.body || {};
-    if (!email || !email.trim()) {
-      return res.status(400).json({ success: false, error: 'Vui lòng nhập email' });
-    }
-    const user = await User.findOne({ email: email.trim().toLowerCase(), provider: 'local' }).select('+resetToken +resetTokenExpires');
+    const email = requireString(req.body?.email, 'email', 'Email');
+    const user = await User.findOne({ email: email.trim().toLowerCase(), provider: 'local', accountStatus: 'active' }).select('+resetToken +resetTokenExpires');
     if (!user) {
       return res.json({ success: true, message: 'Nếu email tồn tại, bạn sẽ nhận được link đặt lại mật khẩu.' });
     }
@@ -256,16 +283,17 @@ router.post('/forgot-password', async (req, res) => {
     res.json({ success: true, message: 'Kiểm tra email của bạn.', resetLink });
   } catch (err) {
     console.error('Forgot password error:', err);
+    if (err instanceof AppError) {
+      return res.status(err.status).json({ success: false, code: err.code, error: err.message, details: err.details });
+    }
     res.status(500).json({ success: false, error: 'Lỗi xử lý' });
   }
 });
 
 router.post('/reset-password', async (req, res) => {
   try {
-    const { token, newPassword } = req.body || {};
-    if (!token || !newPassword) {
-      return res.status(400).json({ success: false, error: 'Thiếu token hoặc mật khẩu mới' });
-    }
+    const token = requireString(req.body?.token, 'token', 'Token');
+    const newPassword = requireString(req.body?.newPassword, 'newPassword', 'Mật khẩu mới');
     if (newPassword.length < 6) {
       return res.status(400).json({ success: false, error: 'Mật khẩu mới tối thiểu 6 ký tự' });
     }
@@ -273,6 +301,7 @@ router.post('/reset-password', async (req, res) => {
       resetToken: token,
       resetTokenExpires: { $gt: new Date() },
       provider: 'local',
+      accountStatus: 'active',
     }).select('+password +resetToken +resetTokenExpires');
     if (!user) {
       return res.status(400).json({ success: false, error: 'Link đặt lại mật khẩu không hợp lệ hoặc đã hết hạn' });
@@ -284,22 +313,16 @@ router.post('/reset-password', async (req, res) => {
     res.json({ success: true, message: 'Đã đặt lại mật khẩu. Bạn có thể đăng nhập.' });
   } catch (err) {
     console.error('Reset password error:', err);
+    if (err instanceof AppError) {
+      return res.status(err.status).json({ success: false, code: err.code, error: err.message, details: err.details });
+    }
     res.status(500).json({ success: false, error: 'Lỗi đặt lại mật khẩu' });
   }
 });
 
 router.get('/admin/users', authMiddleware, requireRole('admin'), async (req, res) => {
   try {
-    const users = await User.find().select('email displayName avatar provider role createdAt').sort({ createdAt: -1 }).limit(500).lean();
-    const list = users.map((u) => ({
-      id: u._id,
-      email: u.email,
-      displayName: u.displayName,
-      avatar: u.avatar,
-      provider: u.provider,
-      role: u.role || 'student',
-      createdAt: u.createdAt,
-    }));
+    const list = await listAdminUsers();
     res.json({ success: true, data: list });
   } catch (err) {
     console.error('Admin users error:', err);
@@ -309,37 +332,18 @@ router.get('/admin/users', authMiddleware, requireRole('admin'), async (req, res
 
 router.patch('/admin/users/:id', authMiddleware, requireRole('admin'), async (req, res) => {
   try {
-    const { id } = req.params;
-    const { role } = req.body || {};
-    if (!ROLES.includes(role)) {
-      return res.status(400).json({ success: false, error: 'Role không hợp lệ. Chọn: student, teacher, moderator, admin' });
-    }
-    if (id === req.userId && role !== 'admin') {
-      return res.status(400).json({ success: false, error: 'Admin không được tự hạ quyền của chính mình' });
-    }
-    const user = await User.findByIdAndUpdate(
-      id,
-      { $set: { role } },
-      { new: true, runValidators: true }
-    ).select('email displayName avatar provider role createdAt');
-    if (!user) {
-      return res.status(404).json({ success: false, error: 'Không tìm thấy user' });
-    }
+    const user = await updateAdminUserRole({
+      actorUserId: req.userId,
+      targetUserId: req.params.id,
+      role: req.body?.role,
+    });
     res.json({
       success: true,
-      user: {
-        id: user._id,
-        email: user.email,
-        displayName: user.displayName,
-        avatar: user.avatar,
-        provider: user.provider,
-        role: user.role || 'student',
-        createdAt: user.createdAt,
-      },
+      user,
     });
   } catch (err) {
     console.error('Admin update user role error:', err);
-    res.status(500).json({ success: false, error: 'Lỗi cập nhật role' });
+    res.status(err.status || 500).json({ success: false, code: err.code || 'ADMIN_USER_ROLE_UPDATE_FAILED', error: err.message || 'Lỗi cập nhật vai trò' });
   }
 });
 

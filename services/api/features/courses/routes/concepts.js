@@ -117,7 +117,7 @@ router.get('/', async (req, res) => {
     res.json({ success: true, data: { concepts: docs } });
   } catch (err) {
     console.error('GET concepts error:', err);
-    res.status(500).json({ success: false, error: 'Server error' });
+    res.status(500).json({ success: false, code: 'CONCEPTS_GET_FAILED', error: 'Lỗi máy chủ' });
   }
 });
 
@@ -128,7 +128,7 @@ router.get('/editor', authMiddleware, requireRole('teacher', 'admin'), async (re
     res.json({ success: true, data: { concepts: docs } });
   } catch (err) {
     console.error('GET concepts editor error:', err);
-    res.status(500).json({ success: false, error: 'Server error' });
+    res.status(500).json({ success: false, code: 'CONCEPTS_EDITOR_GET_FAILED', error: 'Lỗi máy chủ' });
   }
 });
 
@@ -140,7 +140,7 @@ router.get('/taxonomy', async (req, res) => {
     res.json({ success: true, data: { taxonomy } });
   } catch (err) {
     console.error('GET taxonomy error:', err);
-    res.status(500).json({ success: false, error: 'Server error' });
+    res.status(500).json({ success: false, code: 'TAXONOMY_GET_FAILED', error: 'Lỗi máy chủ' });
   }
 });
 
@@ -152,7 +152,7 @@ router.get('/taxonomy/editor', authMiddleware, requireRole('teacher', 'admin'), 
     res.json({ success: true, data: { taxonomy } });
   } catch (err) {
     console.error('GET taxonomy editor error:', err);
-    res.status(500).json({ success: false, error: 'Server error' });
+    res.status(500).json({ success: false, code: 'TAXONOMY_EDITOR_GET_FAILED', error: 'Lỗi máy chủ' });
   }
 });
 
@@ -165,7 +165,7 @@ router.put('/editor', authMiddleware, requireRole('teacher', 'admin'), async (re
     res.json({ success: true, data: { concepts: docs } });
   } catch (err) {
     console.error('PUT concepts editor error:', err);
-    res.status(500).json({ success: false, error: 'Server error' });
+    res.status(500).json({ success: false, code: 'CONCEPTS_EDITOR_SAVE_FAILED', error: 'Lỗi máy chủ' });
   }
 });
 
@@ -180,7 +180,7 @@ router.put('/taxonomy/editor', authMiddleware, requireRole('teacher', 'admin'), 
     res.json({ success: true, data: { taxonomy } });
   } catch (err) {
     console.error('PUT taxonomy editor error:', err);
-    res.status(500).json({ success: false, error: 'Server error' });
+    res.status(500).json({ success: false, code: 'TAXONOMY_EDITOR_SAVE_FAILED', error: 'Lỗi máy chủ' });
   }
 });
 

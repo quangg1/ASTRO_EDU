@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect } from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
@@ -7,6 +8,7 @@ import type { LearningModule, LearningNode } from '@/data/learningPathCurriculum
 import { getLearningPathNeighbors } from '@/data/learningPathCurriculum'
 import NodeDepthPanel from '@/components/learning-path/NodeDepthPanel'
 import { useLearningPath } from '@/hooks/useLearningPath'
+import { trackLearningPathBehavior } from '@/lib/learningPathBehavior'
 
 type Props = {
   module: LearningModule
@@ -18,6 +20,14 @@ export default function LearningNodeView({ module, node }: Props) {
   const m = modules.find((x) => x.id === module.id) ?? module
   const n = m.nodes.find((x) => x.id === node.id) ?? node
   const { prev, next } = getLearningPathNeighbors(m.id, n.id, modules)
+
+  useEffect(() => {
+    trackLearningPathBehavior({
+      eventName: 'lp_node_viewed',
+      moduleId: m.id,
+      nodeId: n.id,
+    })
+  }, [m.id, n.id])
 
   return (
     <div className="min-h-screen bg-[#02040a] relative overflow-hidden">

@@ -39,7 +39,7 @@ export async function fetchMyOrders(): Promise<Order[]> {
 }
 
 export async function fetchAdminOrderStats(): Promise<{ stats: AdminOrderStats | null; orders: Order[] }> {
-  const res = await fetch(`${API_BASE}/payments/admin/overview`, { headers: authHeaders() })
+  const res = await fetch(`${API_BASE}/admin/orders/overview`, { headers: authHeaders() })
   const data = await res.json()
   if (!data.success) return { stats: null, orders: [] }
   return {

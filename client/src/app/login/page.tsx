@@ -11,6 +11,8 @@ import { getStaticAssetUrl } from '@/lib/apiConfig'
 import { useAuthStore } from '@/store/useAuthStore'
 import { SiteLogo } from '@/components/ui/SiteLogo'
 import { sr } from '@/lib/ssrStableRandom'
+import { trackEvent } from '@/lib/analytics'
+import { viText } from '@/messages/vi'
 
 function FloatingParticles() {
   const particles = Array.from({ length: 30 }, (_, i) => ({
@@ -74,13 +76,14 @@ function LoginPageContent() {
     try {
       const res = await login(email, password)
       if (res.success && res.user) {
+        trackEvent('login_success', { provider: 'local' })
         setUser(res.user)
         router.push(redirectTo)
         return
       }
-      setError(res.error || 'Sign-in failed')
+      setError(res.error || viText.auth.signInFailed)
     } catch {
-      setError('Network error')
+      setError(viText.auth.networkError)
     } finally {
       setLoading(false)
     }
@@ -119,10 +122,10 @@ function LoginPageContent() {
             transition={{ delay: 0.3, duration: 0.8 }}
           >
             <h1 className="font-[Poppins,sans-serif] font-semibold text-[56px] text-white leading-[64px] mb-4">
-              Explore the Universe
+              Khám phá vũ trụ
             </h1>
             <p className="font-[Poppins,sans-serif] text-[20px] text-white/90 max-w-[500px] leading-relaxed">
-              Cosmo Learn — learn astronomy through interactive 3D simulations. Join the community and start exploring stars, planets, and galaxies.
+              Cosmo Learn — học thiên văn qua mô phỏng 3D tương tác. Tham gia cộng đồng và bắt đầu khám phá sao, hành tinh và thiên hà.
             </p>
           </motion.div>
         </div>
@@ -191,12 +194,12 @@ function LoginPageContent() {
           className="hidden sm:block absolute top-6 sm:top-12 right-4 sm:right-12 z-20"
         >
           <p className="font-[Poppins,sans-serif] text-[16px] text-white/80">
-            New here?{' '}
+            Bạn mới ở đây?{' '}
             <Link
               href="/register"
               className="inline-flex items-center gap-1 text-white font-medium underline hover:text-amber-300 transition-colors"
             >
-              Sign up
+              Đăng ký
               <Sparkles className="size-4" />
             </Link>
           </p>
@@ -216,7 +219,7 @@ function LoginPageContent() {
             className="w-full max-w-[568px] flex flex-col gap-8 sm:gap-12 pt-16 sm:pt-0"
           >
             <h2 className="font-[Poppins,sans-serif] font-medium text-[30px] sm:text-[40px] text-white">
-              Welcome back
+              {viText.auth.welcomeBack}
             </h2>
 
             <div className="flex flex-col gap-4">
@@ -225,7 +228,7 @@ function LoginPageContent() {
 
             <div className="flex items-center gap-6">
               <div className="flex-1 h-[2px] bg-gradient-to-r from-transparent via-white/20 to-white/20" />
-              <span className="font-medium text-[18px] text-white/60">OR</span>
+              <span className="font-medium text-[18px] text-white/60">HOẶC</span>
               <div className="flex-1 h-[2px] bg-gradient-to-l from-transparent via-white/20 to-white/20" />
             </div>
 
@@ -244,7 +247,7 @@ function LoginPageContent() {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Enter your email"
+                  placeholder="Nhập email của bạn"
                   required
                   className="h-[56px] w-full rounded-[12px] bg-white/10 backdrop-blur-md border border-white/20 px-4 text-white placeholder:text-white/40 focus:outline-none focus:border-amber-400/60 focus:bg-white/15 transition-all duration-300"
                 />
@@ -253,7 +256,7 @@ function LoginPageContent() {
               <div className="flex flex-col gap-2">
                 <div className="flex items-center justify-between">
                   <label className="font-[Poppins,sans-serif] text-white/80 text-[16px]">
-                    Password
+                    Mật khẩu
                   </label>
                   <button
                     type="button"
@@ -261,9 +264,9 @@ function LoginPageContent() {
                     className="flex items-center gap-2 text-white/60 hover:text-white/80 transition-colors text-[14px]"
                   >
                     {showPassword ? (
-                      <><EyeOff className="size-4" /> Hide</>
+                      <><EyeOff className="size-4" /> Ẩn</>
                     ) : (
-                      <><Eye className="size-4" /> Show</>
+                      <><Eye className="size-4" /> Hiện</>
                     )}
                   </button>
                 </div>
@@ -271,7 +274,7 @@ function LoginPageContent() {
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter your password"
+                  placeholder="Nhập mật khẩu"
                   required
                   className="h-[56px] w-full rounded-[12px] bg-white/10 backdrop-blur-md border border-white/20 px-4 text-white placeholder:text-white/40 focus:outline-none focus:border-amber-400/60 focus:bg-white/15 transition-all duration-300"
                 />
@@ -290,18 +293,18 @@ function LoginPageContent() {
                   transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}
                 />
                 <span className="relative z-10">
-                  {loading ? 'Signing in...' : 'Sign in'}
+                  {loading ? 'Đang đăng nhập...' : viText.auth.signIn}
                 </span>
               </motion.button>
 
               <div className="lg:hidden text-center">
                 <p className="font-[Poppins,sans-serif] text-[16px] text-white/80">
-                  New here?{' '}
+                  Bạn mới ở đây?{' '}
                   <Link
                     href="/register"
                     className="text-white font-medium underline hover:text-amber-300"
                   >
-                    Sign up
+                    Đăng ký
                   </Link>
                 </p>
               </div>

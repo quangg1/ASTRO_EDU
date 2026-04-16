@@ -47,7 +47,6 @@ const tutorialTrackSchema = new mongoose.Schema(
   { timestamps: true },
 );
 
-tutorialTrackSchema.index({ slug: 1 });
 tutorialTrackSchema.index({ level: 1, order: 1 });
 
 module.exports = mongoose.model('TutorialTrack', tutorialTrackSchema);

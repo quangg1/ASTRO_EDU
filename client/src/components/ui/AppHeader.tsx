@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation'
 import { useAuthStore } from '@/store/useAuthStore'
 import { clearToken } from '@/lib/authApi'
 import { SiteLogo } from '@/components/ui/SiteLogo'
+import { viText } from '@/messages/vi'
 import {
   BookOpen,
   ChevronDown,
@@ -48,9 +49,6 @@ export function AppHeader() {
     }
   }, [userMenuOpen])
 
-  /** Phải đứng sau mọi hook — không return sớm trước useEffect (lỗi "Rendered fewer hooks" khi đổi route). */
-  if (pathname === '/login' || pathname === '/register') return null
-
   const handleLogout = () => {
     clearToken()
     useAuthStore.getState().setUser(null)
@@ -81,7 +79,7 @@ export function AppHeader() {
                 }`}
               >
                 <LayoutDashboard className="w-4 h-4 opacity-90" aria-hidden />
-                Dashboard
+                {viText.nav.dashboard}
               </Link>
               <Link
                 href="/community"
@@ -92,7 +90,7 @@ export function AppHeader() {
                 }`}
               >
                 <MessageCircle className="w-4 h-4 opacity-90" aria-hidden />
-                Community
+                {viText.nav.community}
               </Link>
 
               <div className="relative ml-1" ref={userMenuRef}>
@@ -118,7 +116,7 @@ export function AppHeader() {
                       {(user.displayName || user.email || '?').slice(0, 1).toUpperCase()}
                     </span>
                   )}
-                  <span className="max-w-[120px] truncate text-sm hidden lg:inline">{user.displayName || user.email || 'Account'}</span>
+                  <span className="max-w-[120px] truncate text-sm hidden lg:inline">{user.displayName || user.email || viText.nav.account}</span>
                   <ChevronDown className={`w-4 h-4 text-slate-500 transition-transform ${userMenuOpen ? 'rotate-180' : ''}`} />
                 </button>
 
@@ -135,7 +133,7 @@ export function AppHeader() {
                       onClick={() => setUserMenuOpen(false)}
                     >
                       <UserRound className="w-4 h-4 text-slate-500" />
-                      Profile
+                      {viText.nav.profile}
                     </Link>
                     <div className="my-1 h-px bg-white/[0.06]" />
                     <p className="px-3 py-1.5 text-[10px] uppercase tracking-wider text-slate-500">Học tập</p>
@@ -146,7 +144,7 @@ export function AppHeader() {
                       onClick={() => setUserMenuOpen(false)}
                     >
                       <BookOpen className="w-4 h-4 text-slate-500" />
-                      My Learning
+                      {viText.nav.myLearning}
                     </Link>
                     <Link
                       href="/courses"
@@ -155,7 +153,7 @@ export function AppHeader() {
                       onClick={() => setUserMenuOpen(false)}
                     >
                       <Sparkles className="w-4 h-4 text-slate-500" />
-                      Courses
+                      {viText.nav.courses}
                     </Link>
                     <Link
                       href="/tutorial"
@@ -164,7 +162,7 @@ export function AppHeader() {
                       onClick={() => setUserMenuOpen(false)}
                     >
                       <ListTree className="w-4 h-4 text-slate-500" />
-                      Learning path
+                      {viText.nav.learningPath}
                     </Link>
                     <Link
                       href="/explore"
@@ -173,7 +171,7 @@ export function AppHeader() {
                       onClick={() => setUserMenuOpen(false)}
                     >
                       <Compass className="w-4 h-4 text-slate-500" />
-                      Explore
+                      {viText.nav.explore}
                     </Link>
                     <Link
                       href="/search"
@@ -182,7 +180,7 @@ export function AppHeader() {
                       onClick={() => setUserMenuOpen(false)}
                     >
                       <Search className="w-4 h-4 text-slate-500" />
-                      Search
+                      {viText.nav.search}
                     </Link>
                     {isTeacher && (
                       <>
@@ -207,7 +205,7 @@ export function AppHeader() {
                         onClick={() => setUserMenuOpen(false)}
                       >
                         <Shield className="w-4 h-4 text-amber-400/80" />
-                        Admin
+                        {viText.nav.admin}
                       </Link>
                     )}
                     <div className="my-1 h-px bg-white/[0.06]" />
@@ -218,7 +216,7 @@ export function AppHeader() {
                       onClick={handleLogout}
                     >
                       <LogOut className="w-4 h-4" />
-                      Sign out
+                      {viText.nav.signOut}
                     </button>
                   </div>
                 )}
@@ -230,19 +228,19 @@ export function AppHeader() {
                 href="/courses"
                 className="text-sm font-medium text-slate-400 hover:text-white px-3 py-1.5 rounded-full hover:bg-white/[0.06] transition-colors"
               >
-                Courses
+                {viText.nav.courses}
               </Link>
               <Link
                 href="/login"
                 className="text-sm font-medium text-slate-300 px-3 py-1.5 rounded-full border border-white/10 hover:border-cyan-500/40 hover:bg-white/[0.04] transition-colors"
               >
-                Sign in
+                {viText.nav.signIn}
               </Link>
               <Link
                 href="/register"
                 className="text-sm font-semibold text-white px-3.5 py-1.5 rounded-full bg-gradient-to-r from-cyan-600 to-violet-600 hover:from-cyan-500 hover:to-violet-500 shadow-[0_0_20px_rgba(34,211,238,0.2)] transition-colors"
               >
-                Sign up
+                {viText.nav.signUp}
               </Link>
             </div>
           )}
@@ -260,10 +258,10 @@ export function AppHeader() {
             type="button"
             onClick={() => setMobileOpen((v) => !v)}
             className="h-10 min-w-[4.5rem] px-3 rounded-xl border border-white/10 bg-white/[0.04] text-slate-200 text-sm font-medium hover:bg-white/[0.08] active:scale-[0.98] transition"
-            aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
+            aria-label={mobileOpen ? 'Đóng menu' : 'Mở menu'}
             aria-expanded={mobileOpen}
           >
-            {mobileOpen ? 'Close' : 'Menu'}
+            {mobileOpen ? viText.common.close : viText.common.menu}
           </button>
         </div>
       </div>
@@ -272,7 +270,7 @@ export function AppHeader() {
         <div className="md:hidden border-t border-white/[0.06] bg-[#0a0f17]/98 backdrop-blur">
           <nav className="px-3 py-3 space-y-1 max-h-[calc(100vh-3.5rem)] overflow-y-auto pb-[env(safe-area-inset-bottom)]">
             {!checked || loading ? (
-              <div className="px-3 py-2 text-sm text-slate-500">Loading…</div>
+              <div className="px-3 py-2 text-sm text-slate-500">{viText.common.loading}</div>
             ) : user ? (
               <>
                 <Link
@@ -282,7 +280,7 @@ export function AppHeader() {
                   }`}
                 >
                   <LayoutDashboard className="w-4 h-4" />
-                  Dashboard
+                  {viText.nav.dashboard}
                 </Link>
                 <Link
                   href="/community"
@@ -291,27 +289,27 @@ export function AppHeader() {
                   }`}
                 >
                   <MessageCircle className="w-4 h-4" />
-                  Community
+                  {viText.nav.community}
                 </Link>
                 <div className="my-2 h-px bg-white/[0.06]" />
-                <p className="px-3 text-[10px] uppercase tracking-wider text-slate-500">More</p>
+                <p className="px-3 text-[10px] uppercase tracking-wider text-slate-500">{viText.nav.more}</p>
                 <Link href="/profile" className="block rounded-xl px-3 py-2.5 text-sm text-slate-300 hover:bg-white/[0.06]">
-                  Profile
+                  {viText.nav.profile}
                 </Link>
                 <Link href="/my-courses" className="block rounded-xl px-3 py-2.5 text-sm text-slate-300 hover:bg-white/[0.06]">
-                  My Learning
+                  {viText.nav.myLearning}
                 </Link>
                 <Link href="/courses" className="block rounded-xl px-3 py-2.5 text-sm text-slate-300 hover:bg-white/[0.06]">
-                  Courses
+                  {viText.nav.courses}
                 </Link>
                 <Link href="/tutorial" className="block rounded-xl px-3 py-2.5 text-sm text-slate-300 hover:bg-white/[0.06]">
-                  Learning path
+                  {viText.nav.learningPath}
                 </Link>
                 <Link href="/explore" className="block rounded-xl px-3 py-2.5 text-sm text-slate-300 hover:bg-white/[0.06]">
-                  Explore
+                  {viText.nav.explore}
                 </Link>
                 <Link href="/search" className="block rounded-xl px-3 py-2.5 text-sm text-slate-300 hover:bg-white/[0.06]">
-                  Search
+                  {viText.nav.search}
                 </Link>
                 {isTeacher && (
                   <Link href="/studio" className="block rounded-xl px-3 py-2.5 text-sm text-slate-300 hover:bg-white/[0.06]">
@@ -320,7 +318,7 @@ export function AppHeader() {
                 )}
                 {isAdmin && (
                   <Link href="/admin" className="block rounded-xl px-3 py-2.5 text-sm text-amber-200/90 hover:bg-amber-500/10">
-                    Admin
+                    {viText.nav.admin}
                   </Link>
                 )}
                 <button
@@ -328,7 +326,7 @@ export function AppHeader() {
                   onClick={handleLogout}
                   className="w-full mt-2 rounded-xl px-3 py-3 text-sm font-medium text-red-300 bg-red-500/10 hover:bg-red-500/15"
                 >
-                  Sign out
+                  {viText.nav.signOut}
                 </button>
               </>
             ) : (
@@ -337,20 +335,20 @@ export function AppHeader() {
                   href="/courses"
                   className="block rounded-xl px-3 py-3 text-sm font-medium text-slate-200 hover:bg-white/[0.06]"
                 >
-                  Courses
+                  {viText.nav.courses}
                 </Link>
                 <div className="grid grid-cols-2 gap-2 pt-1">
                   <Link
                     href="/login"
                     className="min-h-11 rounded-xl border border-white/15 text-center text-sm font-medium text-slate-200 inline-flex items-center justify-center hover:bg-white/[0.06]"
                   >
-                    Sign in
+                    {viText.nav.signIn}
                   </Link>
                   <Link
                     href="/register"
                     className="min-h-11 rounded-xl bg-gradient-to-r from-cyan-600 to-violet-600 text-center text-sm font-semibold text-white inline-flex items-center justify-center"
                   >
-                    Sign up
+                    {viText.nav.signUp}
                   </Link>
                 </div>
               </div>

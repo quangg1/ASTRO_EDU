@@ -1,70 +1,43 @@
 const express = require('express');
-const fs = require('fs');
-const path = require('path');
 const LearningPath = require('../models/LearningPath');
-const Concept = require('../models/Concept');
 const UserProgress = require('../models/UserProgress');
-const { authMiddleware, requireRole } = require('../../../shared/jwtAuth');
+const LearningPathEvent = require('../models/LearningPathEvent');
+const Concept = require('../models/Concept');
+const { authMiddleware, optionalAuth, requireRole } = require('../../../shared/jwtAuth');
 
 const router = express.Router();
-
-function loadDefaultSeed() {
-  try {
-    const p = path.join(__dirname, '../../../data/learningPathDefault.json');
-    if (!fs.existsSync(p)) return null;
-    const raw = fs.readFileSync(p, 'utf8');
-    const data = JSON.parse(raw);
-    if (!data.modules || !Array.isArray(data.modules)) return null;
-    return {
-      modules: data.modules,
-      concepts: Array.isArray(data.concepts) ? data.concepts : [],
-    };
-  } catch (e) {
-    console.error('learningPath default seed read error:', e);
-    return null;
-  }
-}
-
-async function ensureMainPath() {
-  let doc = await LearningPath.findOne({ slug: 'main' }).lean();
-  if (doc) return doc;
-  const seed = loadDefaultSeed();
-  const modules = seed?.modules;
-  const concepts = seed?.concepts || [];
-  if (!modules || modules.length === 0) {
-    console.warn('LearningPath: no seed file; create empty document');
-    doc = await LearningPath.create({ slug: 'main', published: true, modules: [], concepts: [] });
-    return doc.toObject();
-  }
-  doc = await LearningPath.create({ slug: 'main', published: true, modules, concepts });
-  return doc.toObject();
-}
 
 /** Public: published learning path */
 router.get('/', async (req, res) => {
   try {
-    const doc = await ensureMainPath();
+    const doc = await LearningPath.findOne({ slug: 'main' }).lean();
+    if (!doc) {
+      return res.status(404).json({ success: false, code: 'LEARNING_PATH_MISSING', error: 'Chưa có dữ liệu lộ trình' });
+    }
     if (!doc.published) {
-      return res.status(404).json({ success: false, error: 'Not available' });
+      return res.status(404).json({ success: false, code: 'LEARNING_PATH_UNAVAILABLE', error: 'Lộ trình chưa khả dụng' });
     }
     res.json({ success: true, data: { modules: doc.modules || [], concepts: doc.concepts || [] } });
   } catch (err) {
     console.error('GET learning-path error:', err);
-    res.status(500).json({ success: false, error: 'Server error' });
+    res.status(500).json({ success: false, code: 'LEARNING_PATH_GET_FAILED', error: 'Lỗi máy chủ' });
   }
 });
 
 /** Editor: full document (teacher/admin) */
 router.get('/editor', authMiddleware, requireRole('teacher', 'admin'), async (req, res) => {
   try {
-    const doc = await ensureMainPath();
+    const doc = await LearningPath.findOne({ slug: 'main' }).lean();
+    if (!doc) {
+      return res.status(404).json({ success: false, code: 'LEARNING_PATH_MISSING', error: 'Chưa có dữ liệu lộ trình' });
+    }
     res.json({
       success: true,
       data: { modules: doc.modules || [], concepts: doc.concepts || [], published: doc.published },
     });
   } catch (err) {
     console.error('GET learning-path editor error:', err);
-    res.status(500).json({ success: false, error: 'Server error' });
+    res.status(500).json({ success: false, code: 'LEARNING_PATH_EDITOR_GET_FAILED', error: 'Lỗi máy chủ' });
   }
 });
 
@@ -211,7 +184,7 @@ router.put('/editor', authMiddleware, requireRole('teacher', 'admin'), async (re
     });
   } catch (err) {
     console.error('PUT learning-path editor error:', err);
-    res.status(500).json({ success: false, error: 'Server error' });
+    res.status(500).json({ success: false, code: 'LEARNING_PATH_EDITOR_SAVE_FAILED', error: 'Lỗi máy chủ' });
   }
 });
 
@@ -232,7 +205,7 @@ router.get('/progress', authMiddleware, async (req, res) => {
     });
   } catch (err) {
     console.error('GET learning-path progress error:', err);
-    res.status(500).json({ success: false, error: 'Server error' });
+    res.status(500).json({ success: false, code: 'LEARNING_PATH_PROGRESS_GET_FAILED', error: 'Lỗi máy chủ' });
   }
 });
 
@@ -255,7 +228,7 @@ router.put('/progress', authMiddleware, async (req, res) => {
     });
   } catch (err) {
     console.error('PUT learning-path progress error:', err);
-    res.status(500).json({ success: false, error: 'Server error' });
+    res.status(500).json({ success: false, code: 'LEARNING_PATH_PROGRESS_SAVE_FAILED', error: 'Lỗi máy chủ' });
   }
 });
 
@@ -270,7 +243,7 @@ router.get('/solar-journey/progress', authMiddleware, async (req, res) => {
     });
   } catch (err) {
     console.error('GET solar journey progress error:', err);
-    res.status(500).json({ success: false, error: 'Server error' });
+    res.status(500).json({ success: false, code: 'SOLAR_PROGRESS_GET_FAILED', error: 'Lỗi máy chủ' });
   }
 });
 
@@ -290,7 +263,96 @@ router.put('/solar-journey/progress', authMiddleware, async (req, res) => {
     });
   } catch (err) {
     console.error('PUT solar journey progress error:', err);
-    res.status(500).json({ success: false, error: 'Server error' });
+    res.status(500).json({ success: false, code: 'SOLAR_PROGRESS_SAVE_FAILED', error: 'Lỗi máy chủ' });
+  }
+});
+
+function normalizeClient(raw) {
+  const value = String(raw || '').trim().toLowerCase();
+  if (value === 'android' || value === 'ios') return value;
+  return 'web';
+}
+
+function normalizeEvent(rawEvent, userId) {
+  const allowed = new Set([
+    'lp_module_viewed',
+    'lp_node_viewed',
+    'lp_lesson_opened',
+    'lp_lesson_completed_toggled',
+    'lp_lesson_dwell',
+    'lp_concept_opened',
+    'lp_concept_anchor_clicked',
+    'lp_depth_switched',
+    'lp_path_exited',
+  ]);
+
+  const eventName = String(rawEvent?.eventName || '').trim();
+  const sessionId = String(rawEvent?.sessionId || '').trim();
+  const depthRaw = String(rawEvent?.depth || '').trim();
+  const depth = ['beginner', 'explorer', 'researcher'].includes(depthRaw) ? depthRaw : null;
+
+  if (!eventName || !allowed.has(eventName)) return null;
+  if (!sessionId) return null;
+
+  const timestampRaw = rawEvent?.timestamp ? new Date(rawEvent.timestamp) : new Date();
+  const timestamp = Number.isNaN(timestampRaw.getTime()) ? new Date() : timestampRaw;
+
+  return {
+    userId: userId || null,
+    sessionId,
+    eventName,
+    timestamp,
+    moduleId: rawEvent?.moduleId ? String(rawEvent.moduleId).trim() : null,
+    nodeId: rawEvent?.nodeId ? String(rawEvent.nodeId).trim() : null,
+    lessonId: rawEvent?.lessonId ? String(rawEvent.lessonId).trim() : null,
+    depth,
+    durationSec: Number.isFinite(Number(rawEvent?.durationSec)) ? Number(rawEvent.durationSec) : null,
+    activeSec: Number.isFinite(Number(rawEvent?.activeSec)) ? Number(rawEvent.activeSec) : null,
+    idleSec: Number.isFinite(Number(rawEvent?.idleSec)) ? Number(rawEvent.idleSec) : null,
+    completed: typeof rawEvent?.completed === 'boolean' ? rawEvent.completed : null,
+    client: normalizeClient(rawEvent?.client),
+    appVersion: rawEvent?.appVersion ? String(rawEvent.appVersion).trim() : null,
+    metadata: rawEvent?.metadata && typeof rawEvent.metadata === 'object' ? rawEvent.metadata : {},
+  };
+}
+
+router.post('/events/batch', optionalAuth, async (req, res) => {
+  try {
+    const events = Array.isArray(req.body?.events) ? req.body.events : [];
+    if (!events.length) {
+      return res.status(400).json({ success: false, code: 'LEARNING_PATH_EVENTS_EMPTY', error: 'events phải là mảng có dữ liệu' });
+    }
+    if (events.length > 100) {
+      return res.status(400).json({ success: false, code: 'LEARNING_PATH_EVENTS_TOO_LARGE', error: 'Tối đa 100 events mỗi batch' });
+    }
+
+    const normalized = [];
+    const rejections = [];
+
+    events.forEach((event, index) => {
+      const item = normalizeEvent(event, req.userId || null);
+      if (!item) {
+        rejections.push({ index, reason: 'invalid_event_shape' });
+        return;
+      }
+      normalized.push(item);
+    });
+
+    if (normalized.length > 0) {
+      await LearningPathEvent.insertMany(normalized, { ordered: false });
+    }
+
+    res.json({
+      success: true,
+      data: {
+        acceptedCount: normalized.length,
+        rejectedCount: rejections.length,
+        rejections,
+      },
+    });
+  } catch (err) {
+    console.error('POST learning-path events batch error:', err);
+    res.status(500).json({ success: false, code: 'LEARNING_PATH_EVENTS_BATCH_FAILED', error: 'Lỗi máy chủ' });
   }
 });
 

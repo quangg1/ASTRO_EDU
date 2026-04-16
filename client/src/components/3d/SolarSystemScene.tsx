@@ -2,7 +2,7 @@
 
 import { Canvas, useFrame, useLoader, useThree } from '@react-three/fiber'
 import { Html, OrbitControls, Stars, Preload } from '@react-three/drei'
-import { Suspense, useRef, useMemo, useState, useEffect, useLayoutEffect } from 'react'
+import { Suspense, createElement, useRef, useMemo, useState, useEffect, useLayoutEffect } from 'react'
 import { applyGlobeTextureQuality } from '@/lib/planetTextureQuality'
 import * as THREE from 'three'
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib'
@@ -470,7 +470,9 @@ function EarthMarsLearningPath({
 
   return (
     <group visible={isRouteFocused}>
-      <line ref={routeRef}>
+      {createElement(
+        'line' as never,
+        { ref: routeRef },
         <bufferGeometry>
           <bufferAttribute
             attach="attributes-position"
@@ -478,9 +480,9 @@ function EarthMarsLearningPath({
             itemSize={3}
             array={new Float32Array(5 * 3)}
           />
-        </bufferGeometry>
-        <lineBasicMaterial color="#f5a623" transparent opacity={0.8} />
-      </line>
+        </bufferGeometry>,
+        <lineBasicMaterial color="#f5a623" transparent opacity={0.8} />,
+      )}
 
       <group ref={moonRef}>
         <mesh>

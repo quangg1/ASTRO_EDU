@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useAuthStore } from '@/store/useAuthStore'
-import { updateProfile, changePassword } from '@/lib/authApi'
+import { updateProfile, changePassword, deactivateMyAccount } from '@/lib/authApi'
 
 export default function ProfilePage() {
   const router = useRouter()
@@ -20,6 +20,8 @@ export default function ProfilePage() {
   const [passwordError, setPasswordError] = useState('')
   const [loadingProfile, setLoadingProfile] = useState(false)
   const [loadingPassword, setLoadingPassword] = useState(false)
+  const [loadingDeactivate, setLoadingDeactivate] = useState(false)
+  const [deactivateError, setDeactivateError] = useState('')
 
   useEffect(() => {
     if (checked && !user) {
@@ -74,6 +76,21 @@ export default function ProfilePage() {
       setPasswordMessage('error')
       setPasswordError(res.error || 'Password change failed')
     }
+  }
+
+  const handleDeactivateAccount = async () => {
+    const confirmed = window.confirm('Tài khoản sẽ được đánh dấu ngừng hoạt động thay vì xóa hẳn. Bạn có chắc chắn muốn tiếp tục?')
+    if (!confirmed) return
+    setDeactivateError('')
+    setLoadingDeactivate(true)
+    const res = await deactivateMyAccount('Người dùng tự ngừng hoạt động tài khoản từ trang hồ sơ')
+    setLoadingDeactivate(false)
+    if (res.success) {
+      useAuthStore.getState().setUser(null)
+      router.replace('/login')
+      return
+    }
+    setDeactivateError(res.error || 'Không thể ngừng hoạt động tài khoản')
   }
 
   if (!checked || !user) {
@@ -210,6 +227,21 @@ export default function ProfilePage() {
             Forgot password?
           </Link>
         </p>
+        <section className="glass rounded-2xl p-6 mt-8 border border-red-500/20">
+          <h2 className="text-lg font-semibold text-red-300 mb-2">Ngừng hoạt động tài khoản</h2>
+          <p className="text-sm text-gray-400 mb-4">
+            Tài khoản sẽ không bị xóa vĩnh viễn. Hệ thống chỉ đánh dấu ngừng hoạt động để có thể khôi phục hoặc kiểm tra khi cần.
+          </p>
+          {deactivateError ? <p className="text-sm text-red-400 mb-3">{deactivateError}</p> : null}
+          <button
+            type="button"
+            onClick={handleDeactivateAccount}
+            disabled={loadingDeactivate}
+            className="w-full py-2.5 rounded-lg bg-red-600/20 border border-red-500/30 text-red-200 font-medium hover:bg-red-600/30 disabled:opacity-50"
+          >
+            {loadingDeactivate ? 'Đang xử lý...' : 'Ngừng hoạt động tài khoản'}
+          </button>
+        </section>
       </main>
     </div>
   )

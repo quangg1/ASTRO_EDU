@@ -9,6 +9,7 @@ import { ChevronRight, Layers } from 'lucide-react'
 import { loadLessonCompletion, moduleProgressPercent, syncLearningPathCompletion } from '@/lib/learningPathProgress'
 import { useLearningPath } from '@/hooks/useLearningPath'
 import { useAuthStore } from '@/store/useAuthStore'
+import { trackLearningPathBehavior } from '@/lib/learningPathBehavior'
 
 type Props = { module: LearningModule }
 
@@ -41,6 +42,14 @@ export default function LearningModuleView({ module }: Props) {
       window.removeEventListener('lp-progress-changed', refreshAndSync)
     }
   }, [m.id, modules, userId])
+
+  useEffect(() => {
+    trackLearningPathBehavior({
+      eventName: 'lp_module_viewed',
+      moduleId: m.id,
+      metadata: { moduleOrder: m.order },
+    })
+  }, [m.id, m.order])
 
   return (
     <div className="min-h-screen bg-[#02040a] relative overflow-hidden">

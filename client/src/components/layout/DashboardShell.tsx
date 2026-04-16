@@ -32,7 +32,7 @@ const sections: { title: string; items: { href: string; label: string; badge?: s
     title: 'Phần thưởng',
     items: [
       { href: '/gem', label: 'Gem' },
-      { href: '/gem-shop', label: 'Gem Shop', badge: 'SOON' },
+      { href: '/gem-shop', label: 'Cửa hàng Gem', badge: 'SẮP RA MẮT' },
     ],
   },
 ]
@@ -98,7 +98,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                         : 'text-slate-400 hover:bg-white/5'
                     }`}
                   >
-                    Studio
+                    Studio giảng dạy
                   </Link>
                 </li>
               </ul>
@@ -117,7 +117,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                         : 'text-slate-400 hover:bg-white/5'
                     }`}
                   >
-                    Admin
+                    Quản trị hệ thống
                   </Link>
                 </li>
               </ul>

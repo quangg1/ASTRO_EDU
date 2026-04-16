@@ -11,6 +11,7 @@ import {
   isLessonComplete,
   type LessonCompletionMap,
 } from '@/lib/learningPathProgress'
+import { trackLearningPathBehavior } from '@/lib/learningPathBehavior'
 import { CheckCircle2, ChevronRight } from 'lucide-react'
 import { useAuthStore } from '@/store/useAuthStore'
 
@@ -65,7 +66,18 @@ export default function NodeDepthPanel({ module, node }: Props) {
               type="button"
               role="tab"
               aria-selected={isOn}
-              onClick={() => setActive(d)}
+              onClick={() => {
+                if (d !== active) {
+                  trackLearningPathBehavior({
+                    eventName: 'lp_depth_switched',
+                    moduleId: module.id,
+                    nodeId: node.id,
+                    depth: d,
+                    metadata: { fromDepth: active, toDepth: d },
+                  })
+                }
+                setActive(d)
+              }}
               className={`relative flex-1 min-w-[140px] rounded-xl px-4 py-3 text-left transition-all duration-300 ${
                 isOn
                   ? `bg-gradient-to-br ${meta.gradient} border border-white/20 shadow-[0_0_24px_rgba(56,189,248,0.15)]`

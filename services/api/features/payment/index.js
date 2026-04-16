@@ -2,22 +2,19 @@ const express = require('express');
 const Order = require('./models/Order');
 const { buildPaymentUrl, verifyReturnUrl } = require('./lib/vnpay');
 const { authMiddleware, requireRole } = require('../../shared/jwtAuth');
-const fetch = require('node-fetch');
+const { completeOrderAndEnroll } = require('../../services/paymentFulfillmentService');
+const { getAdminOrderOverview } = require('../../services/adminOrderService');
+const { requireString, requirePositiveNumber } = require('../../shared/validation');
+const { AppError } = require('../../shared/errors');
 
 const router = express.Router();
-const API_BASE = process.env.API_BASE_URL || 'http://localhost:3001';
-const INTERNAL_SECRET = process.env.INTERNAL_API_SECRET || 'galaxies-internal-secret';
 
 router.post('/create', authMiddleware, async (req, res) => {
   try {
-    const { courseId, courseSlug, amount, currency } = req.body || {};
-    if (!courseId || !courseSlug) {
-      return res.status(400).json({ success: false, error: 'Thiếu courseId hoặc courseSlug' });
-    }
-    const amt = Math.max(0, Number(amount) || 0);
-    if (amt <= 0) {
-      return res.status(400).json({ success: false, error: 'Số tiền không hợp lệ' });
-    }
+    const courseId = requireString(req.body?.courseId, 'courseId');
+    const courseSlug = requireString(req.body?.courseSlug, 'courseSlug');
+    const amt = requirePositiveNumber(req.body?.amount, 'amount', 'Số tiền');
+    const currency = req.body?.currency;
     const txnRef = `GAL${Date.now()}-${req.userId.slice(-6)}`;
     const returnUrl = `${process.env.CLIENT_URL || 'http://localhost:3000'}/payment/return?slug=${encodeURIComponent(courseSlug)}`;
     const order = await Order.create({
@@ -44,7 +41,10 @@ router.post('/create', authMiddleware, async (req, res) => {
       data: { paymentUrl, orderId: order._id, txnRef: order.txnRef },
     });
   } catch (err) {
-    console.error('Create payment error:', err);
+    req.logger?.error('create_payment_failed', { error: err.message });
+    if (err instanceof AppError) {
+      return res.status(err.status).json({ success: false, code: err.code, error: err.message, details: err.details });
+    }
     res.status(500).json({ success: false, error: 'Lỗi tạo thanh toán' });
   }
 });
@@ -72,35 +72,18 @@ router.get('/callback/vnpay', async (req, res) => {
       return res.redirect(`${process.env.CLIENT_URL || 'http://localhost:3000'}/payment/return?success=0&slug=${encodeURIComponent(order.courseSlug)}&error=payment_failed`);
     }
 
-    order.status = 'completed';
-    order.transactionId = transactionId;
-    order.paidAt = new Date();
-    await order.save();
-
-    const confirmUrl = `${API_BASE}/api/courses/internal/confirm-enroll`;
-    const confirmRes = await fetch(confirmUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Internal-Secret': INTERNAL_SECRET,
-      },
-      body: JSON.stringify({
-        userId: order.userId,
-        courseId: order.courseId,
-        orderId: String(order._id),
-      }),
-    }).catch((e) => {
-      console.error('Confirm enroll error:', e);
-      return null;
+    await completeOrderAndEnroll({ txnRef, transactionId });
+    req.logger?.info('payment_fulfilled', {
+      txnRef,
+      transactionId,
+      orderId: String(order._id),
+      userId: order.userId,
+      courseId: order.courseId,
     });
-
-    if (!confirmRes || !confirmRes.ok) {
-      console.error('Confirm enroll failed:', await confirmRes?.text?.());
-    }
 
     res.redirect(`${process.env.CLIENT_URL || 'http://localhost:3000'}/courses/${order.courseSlug}?enrolled=1`);
   } catch (err) {
-    console.error('VNPay callback error:', err);
+    req.logger?.error('vnpay_callback_failed', { error: err.message });
     res.redirect(`${process.env.CLIENT_URL || 'http://localhost:3000'}/payment/return?success=0&error=server`);
   }
 });
@@ -118,25 +101,14 @@ router.get('/orders', authMiddleware, async (req, res) => {
 // Admin: thống kê cơ bản + danh sách đơn gần đây
 router.get('/admin/overview', authMiddleware, requireRole('admin'), async (req, res) => {
   try {
-    const totalOrders = await Order.countDocuments({});
-    const completedOrders = await Order.countDocuments({ status: 'completed' });
-    const failedOrders = await Order.countDocuments({ status: 'failed' });
-    const agg = await Order.aggregate([
-      { $match: { status: 'completed' } },
-      { $group: { _id: null, sum: { $sum: '$amount' } } },
-    ]);
-    const totalRevenue = agg.length > 0 ? agg[0].sum : 0;
-    const recentOrders = await Order.find({})
-      .sort({ createdAt: -1 })
-      .limit(50)
-      .lean();
+    const { stats, orders } = await getAdminOrderOverview();
     res.json({
       success: true,
-      stats: { totalOrders, completedOrders, failedOrders, totalRevenue },
-      orders: recentOrders,
+      stats,
+      orders,
     });
   } catch (err) {
-    console.error('Admin overview orders error:', err);
+    req.logger?.error('admin_orders_overview_failed', { error: err.message });
     res.status(500).json({ success: false, error: 'Lỗi server' });
   }
 });

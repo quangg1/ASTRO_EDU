@@ -3,8 +3,7 @@ import { Suspense } from 'react'
 import './globals.css'
 import { getStaticAssetUrl } from '@/lib/apiConfig'
 import { AuthProvider } from '@/components/auth/AuthProvider'
-import { AppHeader } from '@/components/ui/AppHeader'
-import { AppShell } from '@/components/ui/AppShell'
+import { AppChrome } from '@/components/ui/AppChrome'
 import { AITutor } from '@/components/ai-tutor/AITutor'
 import { ErrorBoundaryWrap } from '@/components/ui/ErrorBoundaryWrap'
 import { Analytics } from '@/components/ui/Analytics'
@@ -13,15 +12,16 @@ import { PwaInstallPrompt } from '@/components/ui/PwaInstallPrompt'
 import { PwaStatusBadge } from '@/components/ui/PwaStatusBadge'
 import { HybridBootstrap } from '@/components/ui/HybridBootstrap'
 import { ChunkLoadRecovery } from '@/components/ui/ChunkLoadRecovery'
+import { LayoutChromeProvider } from '@/components/ui/LayoutChromeContext'
 
 export const metadata: Metadata = {
-  title: { default: 'Cosmo Learn – Astronomy | Earth History | Solar System', template: '%s | Cosmo Learn' },
+  title: { default: 'Cosmo Learn – Học thiên văn tương tác 3D', template: '%s | Cosmo Learn' },
   applicationName: 'Cosmo Learn',
-  description: 'Learn astronomy through courses and 3D simulations: Earth History, the Solar System, and the Milky Way. Tutorials, in-depth courses, and community.',
-  keywords: ['astronomy', 'earth history', 'solar system', 'milky way', 'courses', 'education', '3D'],
+  description: 'Học thiên văn qua khóa học và mô phỏng 3D: Lịch sử Trái Đất, Hệ Mặt Trời và Ngân Hà. Có lộ trình, khóa học chuyên sâu và cộng đồng.',
+  keywords: ['thiên văn', 'lịch sử trái đất', 'hệ mặt trời', 'ngân hà', 'khóa học', 'giáo dục', '3D'],
   openGraph: {
-    title: 'Cosmo Learn – Learn astronomy with 3D simulations',
-    description: 'Courses, tutorials, and 3D simulations: Earth History, the Solar System, and the Milky Way.',
+    title: 'Cosmo Learn – Học thiên văn với mô phỏng 3D',
+    description: 'Khóa học, lộ trình và mô phỏng 3D: Lịch sử Trái Đất, Hệ Mặt Trời và Ngân Hà.',
     type: 'website',
   },
   robots: { index: true, follow: true },
@@ -50,22 +50,25 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en">
+    <html lang="vi">
       <body className="antialiased">
-        <Analytics />
+        <Suspense fallback={null}>
+          <Analytics />
+        </Suspense>
         <ChunkLoadRecovery />
         <PwaRegister />
         <HybridBootstrap />
         <AuthProvider>
-          <ErrorBoundaryWrap>
-            <AppHeader />
-            <PwaInstallPrompt />
-            <PwaStatusBadge />
-            <AppShell>{children}</AppShell>
-            <Suspense fallback={null}>
-              <AITutor />
-            </Suspense>
-          </ErrorBoundaryWrap>
+          <LayoutChromeProvider>
+            <ErrorBoundaryWrap>
+              <PwaInstallPrompt />
+              <PwaStatusBadge />
+              <AppChrome>{children}</AppChrome>
+              <Suspense fallback={null}>
+                <AITutor />
+              </Suspense>
+            </ErrorBoundaryWrap>
+          </LayoutChromeProvider>
         </AuthProvider>
       </body>
     </html>

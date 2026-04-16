@@ -17,7 +17,7 @@ import { loadGemWallet, syncGemWallet } from '@/lib/gemWallet'
 
 /** Tổng quan: chỉ số chung + 2 cột Khóa học / Hoạt động (cấu trúc giống ảnh). */
 export default function DashboardOverviewPage() {
-  const { user } = useAuthStore()
+  const { user, checked, loading } = useAuthStore()
   const userId = user?.id ?? null
   const { modules } = useLearningPath()
   const [learningPathPct, setLearningPathPct] = useState(0)
@@ -77,14 +77,22 @@ export default function DashboardOverviewPage() {
   }, [currentLearningPathModule, userId])
 
   const pathTitle = currentLearningPathModule?.module.titleVi ?? 'Lộ trình học'
-  const pathSubtitle = 'Tiến độ Learning Path & khóa đã ghi danh'
+  const pathSubtitle = 'Tiến độ lộ trình học và khóa đã ghi danh'
+
+  if (!checked && loading) {
+    return (
+      <div className="rounded-2xl border border-white/10 bg-[#0c0a12] p-6 text-sm text-slate-400">
+        Đang đồng bộ thông tin học tập...
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-8">
       <header>
         <h1 className="text-2xl sm:text-3xl font-semibold text-white tracking-tight">Tổng quan</h1>
         <p className="mt-1 text-sm text-slate-500">
-          Check your progress and resume your learning journeys.
+          Theo dõi tiến độ và tiếp tục hành trình học của bạn.
         </p>
       </header>
 
@@ -141,22 +149,22 @@ export default function DashboardOverviewPage() {
               href="/gem"
               className="inline-flex items-center gap-1.5 rounded-lg border border-cyan-500/30 bg-cyan-500/10 px-3 py-1.5 text-xs text-cyan-200 hover:bg-cyan-500/20"
             >
-              <Gem className="w-3.5 h-3.5" /> Gem Wallet
+              <Gem className="w-3.5 h-3.5" /> Ví Gem
             </Link>
             <Link
               href="/tutorial"
               className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-slate-300 hover:bg-white/10"
             >
-              <BookOpen className="w-3.5 h-3.5" /> Browse Paths
+              <BookOpen className="w-3.5 h-3.5" /> Xem lộ trình
             </Link>
             <Link
               href="/community"
               className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-slate-300 hover:bg-white/10"
             >
-              <TrendingUp className="w-3.5 h-3.5" /> Community
+              <TrendingUp className="w-3.5 h-3.5" /> Cộng đồng
             </Link>
           </div>
-          <p className="text-[10px] text-slate-600 mt-3">Solar milestones: {solarDoneCount}</p>
+          <p className="text-[10px] text-slate-600 mt-3">Mốc Solar đã hoàn thành: {solarDoneCount}</p>
         </article>
       </section>
 
@@ -187,7 +195,7 @@ export default function DashboardOverviewPage() {
                   <p className="text-sm text-slate-400 truncate">{pathSubtitle}</p>
                   <div className="mt-3">
                     <div className="flex justify-between text-[10px] text-slate-500 mb-1">
-                      <span>Progress</span>
+                      <span>Tiến độ</span>
                       <span className="text-cyan-300 tabular-nums">{currentModulePct}%</span>
                     </div>
                     <div className="h-1.5 rounded-full bg-white/10 overflow-hidden">
@@ -204,7 +212,7 @@ export default function DashboardOverviewPage() {
             <div className="rounded-xl border border-dashed border-white/15 bg-white/[0.02] p-6 text-center">
               <p className="text-sm text-slate-500 mb-3">
                 {userId
-                  ? 'Hoàn thành một bài trong Learning Path để thấy tiến độ tại đây.'
+                  ? 'Hoàn thành một bài trong lộ trình học để thấy tiến độ tại đây.'
                   : 'Đăng nhập để đồng bộ tiến độ.'}
               </p>
               <Link href="/tutorial" className="text-sm text-cyan-400 hover:underline">
@@ -226,7 +234,7 @@ export default function DashboardOverviewPage() {
                   ✓
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm text-slate-200">Learning Path — {learningPathDoneCount} bài đã hoàn thành</p>
+                  <p className="text-sm text-slate-200">Lộ trình học — {learningPathDoneCount} bài đã hoàn thành</p>
                   <p className="text-[10px] text-slate-500 mt-0.5">{learningPathPct}% tổng lộ trình</p>
                 </div>
                 <span className="text-xs text-emerald-400/90 tabular-nums">+{learningPathDoneCount * 10} XP</span>
@@ -240,7 +248,7 @@ export default function DashboardOverviewPage() {
                   ✓
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm text-slate-200">Explore — {solarDoneCount} mốc hành trình</p>
+                  <p className="text-sm text-slate-200">Khám phá — {solarDoneCount} mốc hành trình</p>
                 </div>
               </li>
             )}

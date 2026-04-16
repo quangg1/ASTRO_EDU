@@ -1,27 +1,16 @@
 'use client'
 
-import { usePathname } from 'next/navigation'
 import { MobileBottomNav } from '@/components/ui/MobileBottomNav'
 
-function shouldShowMobileNav(pathname: string | null): boolean {
-  if (!pathname) return true
-  if (pathname === '/login' || pathname === '/register') return false
-  /** Studio / Admin: màn soạn hoặc bảng điều khiển — không chồng bottom bar */
-  if (pathname.startsWith('/studio') || pathname.startsWith('/admin')) return false
-  return true
-}
-
-function shouldShowEndUserStarfield(pathname: string | null): boolean {
-  if (!pathname) return true
-  if (pathname.startsWith('/studio') || pathname.startsWith('/admin')) return false
-  return true
-}
-
-export function AppShell({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname()
-  const show = shouldShowMobileNav(pathname)
-  const showStarfield = shouldShowEndUserStarfield(pathname)
-
+export function AppShell({
+  children,
+  showMobileNav = true,
+  showStarfield = true,
+}: {
+  children: React.ReactNode
+  showMobileNav?: boolean
+  showStarfield?: boolean
+}) {
   return (
     <>
       {showStarfield ? (
@@ -33,14 +22,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       ) : null}
       <div
         className={
-          show
+          showMobileNav
             ? 'relative z-[1] min-h-screen pb-[calc(4.25rem+env(safe-area-inset-bottom))] md:pb-0'
             : 'relative z-[1] min-h-screen'
         }
       >
         {children}
       </div>
-      {show ? <MobileBottomNav /> : null}
+      {showMobileNav ? <MobileBottomNav /> : null}
     </>
   )
 }

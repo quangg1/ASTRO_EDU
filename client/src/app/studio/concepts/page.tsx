@@ -832,7 +832,7 @@ export default function StudioConceptsPage() {
                                           domain: v || undefined,
                                           subdomain:
                                             v && x.domain !== v
-                                              ? getSubdomainOptionsForDomain(v, concepts)[0] || undefined
+                                              ? getSubdomainOptionsForDomain(v, taxonomyRegistry)[0] || undefined
                                               : x.subdomain,
                                         }
                                       : x,
@@ -863,7 +863,7 @@ export default function StudioConceptsPage() {
                               disabled={!c.domain}
                             >
                               <option value="">Không gán</option>
-                              {getSubdomainOptionsForDomain(c.domain || '', concepts).map((d) => (
+                              {getSubdomainOptionsForDomain(c.domain || '', taxonomyRegistry).map((d) => (
                                 <option key={`${c.id}-${d}`} value={d}>
                                   {d}
                                 </option>

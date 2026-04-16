@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 
 const userProgressSchema = new mongoose.Schema(
   {
-    userId: { type: String, required: true, unique: true, index: true },
+    userId: { type: String, required: true, unique: true },
     learningPathCompletedLessonIds: { type: [String], default: [] },
     learningPathLastLessonId: { type: String, default: '' },
     solarJourneyCompletedMilestoneIds: { type: [String], default: [] },

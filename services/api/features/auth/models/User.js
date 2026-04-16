@@ -8,6 +8,7 @@ const userSchema = new mongoose.Schema(
       trim: true,
       lowercase: true,
       sparse: true,
+      unique: true,
     },
     password: {
       type: String,
@@ -30,8 +31,31 @@ const userSchema = new mongoose.Schema(
     },
     role: {
       type: String,
-      enum: ['student', 'teacher', 'admin'],
+      enum: ['student', 'teacher', 'moderator', 'admin'],
       default: 'student',
+    },
+    accountStatus: {
+      type: String,
+      enum: ['active', 'deactivated'],
+      default: 'active',
+      index: true,
+    },
+    deactivatedAt: {
+      type: Date,
+      default: null,
+    },
+    deactivatedByUserId: {
+      type: String,
+      default: null,
+    },
+    deactivationReason: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    restoredAt: {
+      type: Date,
+      default: null,
     },
     /** Legacy — ưu tiên dùng googleId / facebookId */
     providerId: {
@@ -43,27 +67,25 @@ const userSchema = new mongoose.Schema(
     googleId: {
       type: String,
       sparse: true,
+      unique: true,
     },
     /** Facebook OAuth id */
     facebookId: {
       type: String,
       sparse: true,
+      unique: true,
     },
     /** Firebase Auth uid — một user có thể đăng nhập GG/FB qua Firebase cùng email */
     firebaseUid: {
       type: String,
       sparse: true,
+      unique: true,
     },
     resetToken: { type: String, select: false },
     resetTokenExpires: { type: Date, select: false },
   },
   { timestamps: true }
 );
-
-userSchema.index({ email: 1 }, { unique: true, sparse: true });
-userSchema.index({ googleId: 1 }, { unique: true, sparse: true });
-userSchema.index({ facebookId: 1 }, { unique: true, sparse: true });
-userSchema.index({ firebaseUid: 1 }, { unique: true, sparse: true });
 
 userSchema.pre('save', async function (next) {
   if (!this.isModified('password') || !this.password) return next();

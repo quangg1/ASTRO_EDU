@@ -88,7 +88,6 @@ const courseSchema = new mongoose.Schema({
   published: { type: Boolean, default: false },
 }, { timestamps: true });
 
-courseSchema.index({ slug: 1 });
 courseSchema.index({ published: 1 });
 
 module.exports = mongoose.model('Course', courseSchema);

@@ -9,6 +9,7 @@ export interface AuthUser {
   avatar: string | null
   provider: string
   role?: 'student' | 'teacher' | 'moderator' | 'admin'
+  accountStatus?: 'active' | 'deactivated'
 }
 
 export interface AuthResponse {
@@ -22,6 +23,51 @@ const TOKEN_KEY = 'galaxies_token'
 
 function isTokenFormatValid(token: string): boolean {
   return token.split('.').length === 3 && token.length > 20
+}
+
+function decodeBase64Url(segment: string): string | null {
+  try {
+    const normalized = segment.replace(/-/g, '+').replace(/_/g, '/')
+    const padded = normalized + '='.repeat((4 - (normalized.length % 4)) % 4)
+    return atob(padded)
+  } catch {
+    return null
+  }
+}
+
+export function getUserFromStoredToken(): AuthUser | null {
+  const token = getToken()
+  if (!token || typeof window === 'undefined') return null
+  const payloadSegment = token.split('.')[1]
+  const decoded = payloadSegment ? decodeBase64Url(payloadSegment) : null
+  if (!decoded) return null
+
+  try {
+    const payload = JSON.parse(decoded) as {
+      sub?: string
+      email?: string | null
+      displayName?: string
+      avatar?: string | null
+      provider?: string
+      role?: AuthUser['role']
+      exp?: number
+    }
+    if (payload.exp && payload.exp * 1000 <= Date.now()) {
+      clearToken()
+      return null
+    }
+    if (!payload.sub) return null
+    return {
+      id: payload.sub,
+      email: payload.email || null,
+      displayName: payload.displayName || payload.email?.split('@')[0] || 'Người dùng',
+      avatar: payload.avatar || null,
+      provider: payload.provider || 'local',
+      role: payload.role || 'student',
+    }
+  } catch {
+    return null
+  }
 }
 
 async function authFetch(url: string, init?: RequestInit): Promise<Response> {
@@ -181,13 +227,18 @@ export interface AdminUser {
   avatar: string | null
   provider: string
   role: string
+  accountStatus: 'active' | 'deactivated'
+  deactivatedAt: string | null
+  deactivatedByUserId: string | null
+  deactivationReason: string
+  restoredAt: string | null
   createdAt: string
 }
 
 export async function fetchAdminUsers(): Promise<{ success: boolean; data?: AdminUser[]; error?: string }> {
   const token = getToken()
   if (!token) return { success: false, error: 'Not signed in' }
-  const res = await authFetch(`${AUTH_BASE}/auth/admin/users`, {
+  const res = await authFetch(`${AUTH_BASE}/api/admin/users`, {
     headers: { Authorization: `Bearer ${token}` },
   })
   const data = await res.json()
@@ -196,6 +247,7 @@ export async function fetchAdminUsers(): Promise<{ success: boolean; data?: Admi
 }
 
 export type UserRole = 'student' | 'teacher' | 'moderator' | 'admin'
+export type AccountStatus = 'active' | 'deactivated'
 
 export async function updateUserRole(
   userId: string,
@@ -203,7 +255,7 @@ export async function updateUserRole(
 ): Promise<{ success: boolean; user?: AdminUser; error?: string }> {
   const token = getToken()
   if (!token) return { success: false, error: 'Not signed in' }
-  const res = await authFetch(`${AUTH_BASE}/auth/admin/users/${encodeURIComponent(userId)}`, {
+  const res = await authFetch(`${AUTH_BASE}/api/admin/users/${encodeURIComponent(userId)}/role`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
     body: JSON.stringify({ role }),
@@ -211,4 +263,37 @@ export async function updateUserRole(
   const data = await res.json()
   if (data.success && data.user) return { success: true, user: data.user }
   return { success: false, error: data.error || 'Cập nhật role thất bại' }
+}
+
+export async function updateUserStatus(
+  userId: string,
+  accountStatus: AccountStatus,
+  reason?: string
+): Promise<{ success: boolean; user?: AdminUser; error?: string }> {
+  const token = getToken()
+  if (!token) return { success: false, error: 'Not signed in' }
+  const res = await authFetch(`${AUTH_BASE}/api/admin/users/${encodeURIComponent(userId)}/status`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ accountStatus, reason }),
+  })
+  const data = await res.json()
+  if (data.success && data.user) return { success: true, user: data.user }
+  return { success: false, error: data.error || 'Cập nhật trạng thái tài khoản thất bại' }
+}
+
+export async function deactivateMyAccount(reason?: string): Promise<{ success: boolean; error?: string }> {
+  const token = getToken()
+  if (!token) return { success: false, error: 'Not signed in' }
+  const res = await authFetch(`${AUTH_BASE}/auth/me`, {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ reason }),
+  })
+  const data = await res.json()
+  if (data.success) {
+    clearToken()
+    return { success: true }
+  }
+  return { success: false, error: data.error || 'Ngừng hoạt động tài khoản thất bại' }
 }

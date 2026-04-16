@@ -27,6 +27,8 @@ import { useLearningPath } from '@/hooks/useLearningPath'
 import { useAuthStore } from '@/store/useAuthStore'
 import { SectionPreview } from '@/components/studio/LessonPreview'
 import { applyConceptAnchorsToHtml } from '@/lib/conceptAnchorsHtml'
+import { trackEvent } from '@/lib/analytics'
+import { flushLearningPathBehavior, trackLearningPathBehavior } from '@/lib/learningPathBehavior'
 
 type Props = {
   /** Từ server merge API — đồng bộ SSR */
@@ -43,7 +45,7 @@ function escapeHtmlTitle(s: string) {
 }
 
 function placeholderBody(lesson: LessonItem) {
-  return `<p class="text-slate-300 leading-relaxed">Nội dung bài học đang được biên soạn. Tiêu đề: <strong>${escapeHtmlTitle(lesson.titleVi)}</strong></p><p class="text-slate-500 text-sm mt-4">Giáo viên có thể thêm nội dung trong Studio → Learning Path.</p>`
+  return `<p class="text-slate-300 leading-relaxed">Nội dung bài học đang được biên soạn. Tiêu đề: <strong>${escapeHtmlTitle(lesson.titleVi)}</strong></p><p class="text-slate-500 text-sm mt-4">Giáo viên có thể thêm nội dung trong Studio → Lộ trình học.</p>`
 }
 
 export default function LearningLessonView({
@@ -83,6 +85,20 @@ export default function LearningLessonView({
     if (markingComplete) {
       awardGemsForLearningPathLesson(lesson.id, userId)
     }
+    trackEvent('lesson_complete_toggled', {
+      lesson_id: lesson.id,
+      module_id: displayModule.id,
+      node_id: displayNode.id,
+      completed: markingComplete,
+    })
+    trackLearningPathBehavior({
+      eventName: 'lp_lesson_completed_toggled',
+      moduleId: displayModule.id,
+      nodeId: displayNode.id,
+      lessonId: lesson.id,
+      depth,
+      completed: markingComplete,
+    })
     window.dispatchEvent(new Event('lp-progress-changed'))
   }
 
@@ -103,6 +119,7 @@ export default function LearningLessonView({
   const [panelWidth, setPanelWidth] = useState(400)
   const [resizingPanel, setResizingPanel] = useState(false)
   const resizeStartRef = useRef<{ x: number; width: number } | null>(null)
+  const lessonEnterAtRef = useRef<number>(Date.now())
   const anchors = lesson.conceptAnchors ?? []
   const highlightedLegacyHtml = useMemo(
     () => applyConceptAnchorsToHtml(legacyHtml, anchors, conceptMap),
@@ -209,7 +226,43 @@ export default function LearningLessonView({
     if (!id) return
     e.preventDefault()
     setActiveConceptId(id)
+    trackEvent('concept_panel_opened', {
+      concept_id: id,
+      lesson_id: lesson.id,
+    })
+    trackLearningPathBehavior({
+      eventName: 'lp_concept_opened',
+      moduleId: displayModule.id,
+      nodeId: displayNode.id,
+      lessonId: lesson.id,
+      depth,
+      metadata: { conceptId: id, source: 'inline-anchor' },
+    })
   }
+
+  useEffect(() => {
+    lessonEnterAtRef.current = Date.now()
+    trackLearningPathBehavior({
+      eventName: 'lp_lesson_opened',
+      moduleId: displayModule.id,
+      nodeId: displayNode.id,
+      lessonId: lesson.id,
+      depth,
+    })
+
+    return () => {
+      const durationSec = Math.max(1, Math.round((Date.now() - lessonEnterAtRef.current) / 1000))
+      trackLearningPathBehavior({
+        eventName: 'lp_lesson_dwell',
+        moduleId: displayModule.id,
+        nodeId: displayNode.id,
+        lessonId: lesson.id,
+        depth,
+        durationSec,
+      })
+      void flushLearningPathBehavior()
+    }
+  }, [displayModule.id, displayNode.id, lesson.id, depth])
 
   useEffect(() => {
     if (!isConceptPanelOpen) return
@@ -259,7 +312,7 @@ export default function LearningLessonView({
       >
         <nav className="text-xs text-slate-500 mb-6 flex flex-wrap items-center gap-2">
           <Link href="/tutorial" className="hover:text-cyan-400 transition-colors">
-            Learning Path
+            Lộ trình học
           </Link>
           <span className="opacity-50">/</span>
           <Link href={`/tutorial/${displayModule.id}`} className="hover:text-cyan-400 transition-colors truncate max-w-[32vw]">
@@ -286,7 +339,7 @@ export default function LearningLessonView({
               {meta.short} {meta.labelVi}
             </span>
             <span className="text-[10px] uppercase tracking-widest text-slate-500">
-              {displayModule.emoji} Module {displayModule.order}
+              {displayModule.emoji} Mô-đun {displayModule.order}
             </span>
           </div>
           <h1
@@ -335,7 +388,7 @@ export default function LearningLessonView({
 
         {linkedConcepts.length > 0 && (
           <aside className="mb-8 rounded-2xl border border-cyan-500/20 bg-[#071018]/80 p-4">
-            <h3 className="text-sm font-semibold text-cyan-100 mb-2">Concepts trong bài</h3>
+            <h3 className="text-sm font-semibold text-cyan-100 mb-2">Khái niệm trong bài</h3>
             <div className="flex flex-wrap gap-2">
               {linkedConcepts.map((c) => (
                 <button
@@ -344,6 +397,14 @@ export default function LearningLessonView({
                   onClick={() => {
                     setActiveConceptId(c.id)
                     focusConceptInline(c.id)
+                    trackLearningPathBehavior({
+                      eventName: 'lp_concept_opened',
+                      moduleId: displayModule.id,
+                      nodeId: displayNode.id,
+                      lessonId: lesson.id,
+                      depth,
+                      metadata: { conceptId: c.id, source: 'concept-chip' },
+                    })
                   }}
                   className={`rounded-full px-2.5 py-1 text-xs border transition-colors ${
                     activeConceptId === c.id
@@ -436,7 +497,7 @@ export default function LearningLessonView({
           >
             <button
               type="button"
-              aria-label="Resize concept panel"
+              aria-label="Thay đổi kích thước bảng khái niệm"
               className="hidden md:block absolute left-0 top-0 h-full w-2 cursor-ew-resize"
               onMouseDown={(e) => {
                 resizeStartRef.current = { x: e.clientX, width: panelWidth }
@@ -468,7 +529,7 @@ export default function LearningLessonView({
             ) : null}
             {activeConcept.related?.length ? (
               <div className="mt-4">
-                <p className="text-xs text-slate-400 mb-2">Concept liên quan</p>
+                <p className="text-xs text-slate-400 mb-2">Khái niệm liên quan</p>
                 <div className="flex flex-wrap gap-2">
                   {activeConcept.related.map((rid) => {
                     const rel = conceptMap.get(rid)
@@ -480,6 +541,14 @@ export default function LearningLessonView({
                           if (!rel) return
                           setActiveConceptId(rid)
                           focusConceptInline(rid)
+                          trackLearningPathBehavior({
+                            eventName: 'lp_concept_opened',
+                            moduleId: displayModule.id,
+                            nodeId: displayNode.id,
+                            lessonId: lesson.id,
+                            depth,
+                            metadata: { conceptId: rid, source: 'related-concept' },
+                          })
                         }}
                         disabled={!rel}
                         className={`rounded-full px-2 py-1 text-xs border ${
