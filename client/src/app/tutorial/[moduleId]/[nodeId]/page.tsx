@@ -1,12 +1,13 @@
 import { notFound } from 'next/navigation'
-import { getModuleById, getNodeByIds } from '@/data/learningPathCurriculum'
+import { getMergedLearningModules } from '@/lib/learningPathServer'
 import LearningNodeView from '@/components/learning-path/LearningNodeView'
 
 type Props = { params: { moduleId: string; nodeId: string } }
 
-export function generateMetadata({ params }: Props) {
-  const mod = getModuleById(params.moduleId)
-  const node = getNodeByIds(params.moduleId, params.nodeId)
+export async function generateMetadata({ params }: Props) {
+  const modules = await getMergedLearningModules()
+  const mod = modules.find((m) => m.id === params.moduleId)
+  const node = mod?.nodes.find((n) => n.id === params.nodeId)
   if (!mod || !node) return { title: 'Chủ đề | Galaxies' }
   return {
     title: `${node.titleVi} | ${mod.titleVi}`,
@@ -14,9 +15,12 @@ export function generateMetadata({ params }: Props) {
   }
 }
 
-export default function TutorialNodePage({ params }: Props) {
-  const mod = getModuleById(params.moduleId)
-  const node = getNodeByIds(params.moduleId, params.nodeId)
+export const dynamic = 'force-dynamic'
+
+export default async function TutorialNodePage({ params }: Props) {
+  const modules = await getMergedLearningModules()
+  const mod = modules.find((m) => m.id === params.moduleId)
+  const node = mod?.nodes.find((n) => n.id === params.nodeId)
   if (!mod || !node) notFound()
   return <LearningNodeView module={mod} node={node} />
 }

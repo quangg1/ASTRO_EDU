@@ -1,11 +1,12 @@
 import { notFound } from 'next/navigation'
-import { getModuleById } from '@/data/learningPathCurriculum'
+import { getMergedLearningModules } from '@/lib/learningPathServer'
 import LearningModuleView from '@/components/learning-path/LearningModuleView'
 
 type Props = { params: { moduleId: string } }
 
-export function generateMetadata({ params }: Props) {
-  const mod = getModuleById(params.moduleId)
+export async function generateMetadata({ params }: Props) {
+  const modules = await getMergedLearningModules()
+  const mod = modules.find((m) => m.id === params.moduleId)
   if (!mod) return { title: 'Module | Galaxies' }
   return {
     title: `${mod.titleVi} | Learning Path`,
@@ -13,8 +14,11 @@ export function generateMetadata({ params }: Props) {
   }
 }
 
-export default function TutorialModulePage({ params }: Props) {
-  const mod = getModuleById(params.moduleId)
+export const dynamic = 'force-dynamic'
+
+export default async function TutorialModulePage({ params }: Props) {
+  const modules = await getMergedLearningModules()
+  const mod = modules.find((m) => m.id === params.moduleId)
   if (!mod) notFound()
   return <LearningModuleView module={mod} />
 }
