@@ -358,8 +358,42 @@ function LearningPathLessonEditor({
     }),
     [activeLesson],
   )
+  const sectionOutline = useMemo(
+    () =>
+      sections.map((sec, idx) => ({
+        idx,
+        id: `lp-studio-block-${idx}`,
+        title: sec.title?.trim() || `Block ${idx + 1}`,
+        type: sec.type,
+        level: sec.sectionLevel ?? 'main',
+      })),
+    [sections],
+  )
+  const tocGroups = useMemo(() => {
+    type OutlineItem = (typeof sectionOutline)[number]
+    const groups: Array<{ parent: OutlineItem; children: OutlineItem[] }> = []
+    let lastParent = -1
+    for (const item of sectionOutline) {
+      if (item.level === 'sub' && lastParent >= 0) {
+        groups[lastParent].children.push(item)
+      } else {
+        groups.push({ parent: item, children: [] })
+        lastParent = groups.length - 1
+      }
+    }
+    return groups
+  }, [sectionOutline])
+
+  const moveSection = (from: number, to: number) => {
+    if (to < 0 || to >= sections.length || from === to) return
+    const next = [...sections]
+    const [picked] = next.splice(from, 1)
+    next.splice(to, 0, picked)
+    patchLesson({ sections: next })
+  }
+
   return (
-    <div className="max-w-4xl space-y-4">
+    <div className="w-full max-w-none space-y-4">
       <div>
         <p className="text-[10px] text-slate-600 font-mono break-all mb-2">{activeLesson.id}</p>
         <h2 className="text-lg font-semibold text-white">Soạn bài học</h2>
@@ -659,7 +693,8 @@ function LearningPathLessonEditor({
       </div>
 
       <div className="rounded-xl border border-white/10 bg-black/20 overflow-hidden">
-        <div className="flex gap-0.5 px-3 py-2 border-b border-white/10">
+        <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-white/10">
+          <div className="flex gap-0.5">
           <button
             type="button"
             onClick={() => setEditorTab('blocks')}
@@ -693,85 +728,115 @@ function LearningPathLessonEditor({
           >
             Full Lesson Page
           </button>
+          </div>
         </div>
 
         {editorTab === 'blocks' && (
-          <div className="p-4 space-y-3">
-            {sections.map((sec, bi) => (
-              <div
-                key={bi}
-                className="rounded-2xl border border-white/10 bg-[#0a0f17]/80 p-4 space-y-3 group/block relative"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-mono text-slate-600 w-5 text-right">{bi + 1}</span>
-                    <div className="h-3 w-px bg-white/10" />
+          <div className="p-4">
+            <div className="space-y-3 min-w-0">
+              {sections.map((sec, bi) => (
+                <div
+                  key={bi}
+                  id={`lp-studio-block-${bi}`}
+                  className="rounded-2xl border border-white/10 bg-[#0a0f17]/80 p-4 space-y-3 group/block relative scroll-mt-24"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-mono text-slate-600 w-5 text-right">{bi + 1}</span>
+                      <div className="h-3 w-px bg-white/10" />
+                    </div>
+                    <div className="flex items-center gap-1 opacity-0 group-hover/block:opacity-100 transition-opacity">
+                      <button
+                        type="button"
+                        onClick={() => moveSection(bi, bi - 1)}
+                        disabled={bi === 0}
+                        className="text-[10px] text-slate-600 hover:text-white disabled:opacity-20 px-1"
+                      >
+                        ↑
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => moveSection(bi, bi + 1)}
+                        disabled={bi === sections.length - 1}
+                        className="text-[10px] text-slate-600 hover:text-white disabled:opacity-20 px-1"
+                      >
+                        ↓
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const s = [...sections]
+                          s.splice(bi + 1, 0, cloneJson(s[bi]))
+                          patchLesson({ sections: s })
+                        }}
+                        className="text-[10px] text-slate-600 hover:text-cyan-300 px-1"
+                        title="Nhân đôi block"
+                      >
+                        ⧉
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const s = [...sections]
+                          s.splice(bi, 1)
+                          patchLesson({ sections: s })
+                        }}
+                        className="text-[10px] text-red-500/50 hover:text-red-400 px-1"
+                      >
+                        ×
+                      </button>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-1 opacity-0 group-hover/block:opacity-100 transition-opacity">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const s = [...sections]
-                        if (bi > 0) {
-                          ;[s[bi - 1], s[bi]] = [s[bi], s[bi - 1]]
-                          patchLesson({ sections: s })
-                        }
-                      }}
-                      disabled={bi === 0}
-                      className="text-[10px] text-slate-600 hover:text-white disabled:opacity-20 px-1"
-                    >
-                      ↑
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const s = [...sections]
-                        if (bi < s.length - 1) {
-                          ;[s[bi], s[bi + 1]] = [s[bi + 1], s[bi]]
-                          patchLesson({ sections: s })
-                        }
-                      }}
-                      disabled={bi === sections.length - 1}
-                      className="text-[10px] text-slate-600 hover:text-white disabled:opacity-20 px-1"
-                    >
-                      ↓
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const s = [...sections]
-                        s.splice(bi + 1, 0, cloneJson(s[bi]))
-                        patchLesson({ sections: s })
-                      }}
-                      className="text-[10px] text-slate-600 hover:text-cyan-300 px-1"
-                      title="Nhân đôi block"
-                    >
-                      ⧉
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const s = [...sections]
-                        s.splice(bi, 1)
-                        patchLesson({ sections: s })
-                      }}
-                      className="text-[10px] text-red-500/50 hover:text-red-400 px-1"
-                    >
-                      ×
-                    </button>
+                  <BlockEditor
+                    section={sec}
+                    onChange={(updated) => {
+                      const s = [...sections]
+                      s[bi] = updated
+                      patchLesson({ sections: s })
+                    }}
+                  />
+                </div>
+              ))}
+              <BlockPalette onAdd={(sec) => patchLesson({ sections: [...sections, sec] })} />
+            </div>
+            <aside className="hidden xl:block fixed right-4 top-24 w-[300px] z-30">
+                <div className="rounded-xl border border-white/10 bg-[#060b14]/95 p-3 shadow-xl">
+                  <p className="text-[11px] uppercase tracking-wider text-slate-500 mb-2">TOC (theo lesson view)</p>
+                  <div className="space-y-1.5 max-h-[65vh] overflow-y-auto pr-1">
+                    {tocGroups.map((group) => {
+                      return (
+                        <div key={`studio-toc-${group.parent.id}`} className="space-y-1">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              document.getElementById(group.parent.id)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                            }
+                            className="w-full text-left rounded-md px-2.5 py-2 text-xs transition-colors border border-transparent text-slate-300 hover:bg-white/5 hover:border-cyan-500/30"
+                          >
+                            {group.parent.title}
+                          </button>
+                          {group.children.length > 0 ? (
+                            <div className="ml-2 pl-2 border-l border-white/10 space-y-1">
+                              {group.children.map((child) => (
+                                <button
+                                  key={child.id}
+                                  type="button"
+                                  onClick={() =>
+                                    document.getElementById(child.id)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                                  }
+                                  className="w-full text-left rounded-md px-2 py-1 text-[11px] transition-colors text-slate-500 hover:text-slate-300 hover:bg-white/5 border border-transparent hover:border-cyan-500/20"
+                                >
+                                  {child.title}
+                                </button>
+                              ))}
+                            </div>
+                          ) : null}
+                        </div>
+                      )
+                    })}
                   </div>
                 </div>
-                <BlockEditor
-                  section={sec}
-                  onChange={(updated) => {
-                    const s = [...sections]
-                    s[bi] = updated
-                    patchLesson({ sections: s })
-                  }}
-                />
-              </div>
-            ))}
-            <BlockPalette onAdd={(sec) => patchLesson({ sections: [...sections, sec] })} />
+            </aside>
           </div>
         )}
 
@@ -1601,7 +1666,7 @@ export default function StudioLearningPathPage() {
 
               <div className="flex flex-col xl:flex-row flex-1 min-h-0">
                 {/* Danh sách bài (chỉ tiêu đề) */}
-                <div className="w-full xl:w-[240px] shrink-0 border-b xl:border-b-0 xl:border-r border-white/10 p-3 max-h-[40vh] xl:max-h-none overflow-y-auto">
+                <div className="w-full xl:w-[200px] 2xl:w-[220px] shrink-0 border-b xl:border-b-0 xl:border-r border-white/10 p-3 max-h-[40vh] xl:max-h-none overflow-y-auto">
                   <p className="text-[10px] uppercase text-slate-500 font-semibold mb-2 px-1">4. Chọn bài</p>
                   {lessonsAtDepth.length === 0 ? (
                     <div className="px-2 space-y-2">

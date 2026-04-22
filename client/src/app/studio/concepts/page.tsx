@@ -806,6 +806,98 @@ export default function StudioConceptsPage() {
                           <p className="text-[11px] text-slate-400">{c.short_description}</p>
                           <p className="text-[11px] text-slate-300 mt-1">{c.explanation}</p>
                         </div>
+                        <details className="mt-2 rounded-lg border border-white/10 bg-black/20 p-2">
+                          <summary className="cursor-pointer text-[11px] text-slate-300">Thông tin chính (full fields)</summary>
+                          <div className="mt-2 space-y-2">
+                            <label className="block text-[10px] text-slate-500">
+                              Title
+                              <input
+                                value={c.title || ''}
+                                onChange={(e) =>
+                                  setConcepts((prev) =>
+                                    prev.map((x) => (x.id === c.id ? { ...x, title: e.target.value } : x)),
+                                  )
+                                }
+                                className={`mt-1 ${inputCls}`}
+                              />
+                            </label>
+                            <label className="block text-[10px] text-slate-500">
+                              Short description
+                              <input
+                                value={c.short_description || ''}
+                                onChange={(e) =>
+                                  setConcepts((prev) =>
+                                    prev.map((x) =>
+                                      x.id === c.id ? { ...x, short_description: e.target.value } : x,
+                                    ),
+                                  )
+                                }
+                                className={`mt-1 ${inputCls}`}
+                              />
+                            </label>
+                            <label className="block text-[10px] text-slate-500">
+                              Explanation
+                              <textarea
+                                value={c.explanation || ''}
+                                onChange={(e) =>
+                                  setConcepts((prev) =>
+                                    prev.map((x) => (x.id === c.id ? { ...x, explanation: e.target.value } : x)),
+                                  )
+                                }
+                                className={`mt-1 ${inputCls} min-h-[90px]`}
+                              />
+                            </label>
+                            <label className="block text-[10px] text-slate-500">
+                              Examples (phân tách bởi "|")
+                              <input
+                                value={(c.examples || []).join('|')}
+                                onChange={(e) =>
+                                  setConcepts((prev) =>
+                                    prev.map((x) =>
+                                      x.id === c.id ? { ...x, examples: parsePipeList(e.target.value) } : x,
+                                    ),
+                                  )
+                                }
+                                className={`mt-1 ${inputCls}`}
+                                placeholder="ví dụ 1|ví dụ 2|ví dụ 3"
+                              />
+                            </label>
+                            <label className="block text-[10px] text-slate-500">
+                              Related (ids, phân tách bởi "|")
+                              <input
+                                value={(c.related || []).join('|')}
+                                onChange={(e) =>
+                                  setConcepts((prev) =>
+                                    prev.map((x) =>
+                                      x.id === c.id
+                                        ? {
+                                            ...x,
+                                            related: parsePipeList(e.target.value).map((id) => slugifyConceptId(id)),
+                                          }
+                                        : x,
+                                    ),
+                                  )
+                                }
+                                className={`mt-1 ${inputCls}`}
+                                placeholder="gravity|velocity|orbital_period"
+                              />
+                            </label>
+                            <label className="inline-flex items-center gap-2 text-[11px] text-slate-300">
+                              <input
+                                type="checkbox"
+                                checked={c.published !== false}
+                                onChange={(e) =>
+                                  setConcepts((prev) =>
+                                    prev.map((x) =>
+                                      x.id === c.id ? { ...x, published: e.target.checked } : x,
+                                    ),
+                                  )
+                                }
+                              />
+                              Published
+                            </label>
+                          </div>
+                        </details>
                         {c.examples?.length > 0 && (
                           <ul className="mt-2 list-disc pl-4">
                             {c.examples.map((ex, i) => (
