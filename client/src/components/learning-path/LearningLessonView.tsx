@@ -364,7 +364,7 @@ export default function LearningLessonView({
           </div>
         ) : (
           <article
-            className="prose prose-invert prose-sm md:prose-base max-w-none rounded-2xl border border-white/10 bg-[#070b14]/90 p-6 md:p-8 mb-8 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] [&_a]:text-cyan-400 [&_strong]:text-white"
+            className="prose prose-invert prose-sm md:prose-base max-w-none rounded-2xl border border-white/10 bg-[#070b14]/90 p-6 md:p-8 mb-8 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] [&_p]:my-4 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0 [&_a]:text-cyan-400 [&_strong]:text-white"
             onMouseMove={onConceptMouseMove}
             onMouseLeave={() => setTooltip(null)}
             onClick={onConceptClick}

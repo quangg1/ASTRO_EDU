@@ -47,7 +47,7 @@ export function SectionPreview({ sec, index, conceptAnchors, concepts }: Section
         <div className="space-y-2">
           {sec.title && <h3 className="text-base font-semibold text-white">{index + 1}. {sec.title}</h3>}
           <div
-            className="prose prose-invert prose-sm max-w-none text-gray-200 leading-relaxed [&_h1]:text-xl [&_h1]:font-bold [&_h2]:text-lg [&_h2]:font-semibold [&_h3]:text-base [&_h3]:font-semibold [&_a]:text-cyan-400 [&_blockquote]:border-l-cyan-500/40 [&_blockquote]:text-gray-400 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_code]:bg-white/10 [&_code]:px-1 [&_code]:rounded [&_img]:rounded-xl [&_img]:max-h-80"
+            className="prose prose-invert prose-sm max-w-none text-gray-200 leading-relaxed [&_p]:my-4 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0 [&_h1]:text-xl [&_h1]:font-bold [&_h2]:text-lg [&_h2]:font-semibold [&_h3]:text-base [&_h3]:font-semibold [&_a]:text-cyan-400 [&_blockquote]:border-l-cyan-500/40 [&_blockquote]:text-gray-400 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_code]:bg-white/10 [&_code]:px-1 [&_code]:rounded [&_img]:rounded-xl [&_img]:max-h-80"
             dangerouslySetInnerHTML={{ __html: html }}
           />
         </div>
