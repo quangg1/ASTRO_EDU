@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useAuthStore } from '@/store/useAuthStore'
+import { canModerate } from '@/lib/roles'
 
 function navItemActive(href: string, pathname: string): boolean {
   if (href === '/dashboard') return pathname === '/dashboard' || pathname === '/dashboard/'
@@ -85,6 +86,25 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             </div>
           ))}
 
+          {user?.role === 'student' && (
+            <div>
+              <p className="px-3 mb-1.5 text-[10px] uppercase tracking-wider text-slate-500">Trở thành giảng viên</p>
+              <ul>
+                <li>
+                  <Link
+                    href="/apply-teacher"
+                    className={`block rounded-xl px-3 py-2.5 text-sm ${
+                      pathname.startsWith('/apply-teacher')
+                        ? 'bg-violet-600/40 text-white border border-violet-400/30'
+                        : 'text-slate-400 hover:bg-white/5'
+                    }`}
+                  >
+                    Xin quyền giảng viên
+                  </Link>
+                </li>
+              </ul>
+            </div>
+          )}
           {user && (user.role === 'teacher' || user.role === 'admin') && (
             <div>
               <p className="px-3 mb-1.5 text-[10px] uppercase tracking-wider text-slate-500">Giảng viên</p>
@@ -99,6 +119,37 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                     }`}
                   >
                     Studio giảng dạy
+                  </Link>
+                </li>
+              </ul>
+            </div>
+          )}
+          {user && canModerate(user) && (
+            <div>
+              <p className="px-3 mb-1.5 text-[10px] uppercase tracking-wider text-slate-500">Kiểm duyệt</p>
+              <ul className="space-y-0.5">
+                <li>
+                  <Link
+                    href="/dashboard/moderate"
+                    className={`block rounded-xl px-3 py-2.5 text-sm ${
+                      pathname.startsWith('/dashboard/moderate')
+                        ? 'bg-violet-600/40 text-white border border-violet-400/30'
+                        : 'text-slate-400 hover:bg-white/5'
+                    }`}
+                  >
+                    Trung tâm kiểm duyệt
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/community/tin-thien-van"
+                    className={`block rounded-xl px-3 py-2.5 text-sm ${
+                      pathname.startsWith('/community/tin-thien-van')
+                        ? 'bg-violet-600/40 text-white border border-violet-400/30'
+                        : 'text-slate-400 hover:bg-white/5'
+                    }`}
+                  >
+                    Tin thiên văn
                   </Link>
                 </li>
               </ul>

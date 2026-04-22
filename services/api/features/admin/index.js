@@ -1,6 +1,7 @@
 const express = require('express');
 const { authMiddleware, requireRole } = require('../../shared/jwtAuth');
 const { listAdminUsers, updateAdminUserRole, updateAdminUserStatus } = require('../../services/adminUserService');
+const { listApplicationsForAdmin, reviewApplication } = require('../../services/teacherApplicationService');
 const { getAdminOrderOverview } = require('../../services/adminOrderService');
 const User = require('../auth/models/User');
 const Enrollment = require('../courses/models/Enrollment');
@@ -110,6 +111,32 @@ router.patch('/users/:id/role', authMiddleware, requireRole('admin'), async (req
   } catch (err) {
     req.logger?.error('admin_update_role_failed', { error: err.message, targetUserId: req.params.id });
     res.status(err.status || 500).json({ success: false, code: err.code || 'ADMIN_USER_ROLE_UPDATE_FAILED', error: err.message || 'Lỗi cập nhật vai trò' });
+  }
+});
+
+router.get('/teacher-applications', authMiddleware, requireRole('admin'), async (req, res) => {
+  try {
+    const status = String(req.query.status || 'pending');
+    const data = await listApplicationsForAdmin({ status });
+    res.json({ success: true, data });
+  } catch (err) {
+    req.logger?.error('admin_teacher_applications_list_failed', { error: err.message });
+    res.status(err.status || 500).json({ success: false, code: err.code, error: err.message || 'Lỗi tải đơn' });
+  }
+});
+
+router.patch('/teacher-applications/:id', authMiddleware, requireRole('admin'), async (req, res) => {
+  try {
+    const application = await reviewApplication({
+      actorUserId: req.userId,
+      applicationId: req.params.id,
+      action: req.body?.action,
+      note: req.body?.note,
+    });
+    res.json({ success: true, application });
+  } catch (err) {
+    req.logger?.error('admin_teacher_application_review_failed', { error: err.message, id: req.params.id });
+    res.status(err.status || 500).json({ success: false, code: err.code, error: err.message || 'Lỗi xử lý đơn' });
   }
 });
 

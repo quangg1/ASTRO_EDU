@@ -26,6 +26,6 @@ export function applyGlobeTextureQuality(
     typeof gl.capabilities.getMaxAnisotropy === 'function'
       ? gl.capabilities.getMaxAnisotropy()
       : 1
-  map.anisotropy = Math.min(16, max)
+  map.anisotropy = Math.min(24, max)
   map.needsUpdate = true
 }

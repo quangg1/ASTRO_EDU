@@ -7,6 +7,7 @@ import { useAuthStore } from '@/store/useAuthStore'
 import { clearToken } from '@/lib/authApi'
 import { SiteLogo } from '@/components/ui/SiteLogo'
 import { viText } from '@/messages/vi'
+import { canModerate } from '@/lib/roles'
 import {
   BookOpen,
   ChevronDown,
@@ -18,6 +19,7 @@ import {
   MessageCircle,
   Search,
   Sparkles,
+  Gavel,
   Shield,
   UserRound,
 } from 'lucide-react'
@@ -58,6 +60,7 @@ export function AppHeader() {
 
   const isTeacher = !!user && (user.role === 'teacher' || user.role === 'admin')
   const isAdmin = !!user && user.role === 'admin'
+  const showModerate = !!user && canModerate(user)
 
   return (
     <header className="app-header fixed top-0 left-0 right-0 z-40 border-b border-white/[0.07] bg-[#070a10]/85 backdrop-blur-xl supports-[backdrop-filter]:bg-[#070a10]/75 shadow-[0_1px_0_rgba(34,211,238,0.06)]">
@@ -197,6 +200,17 @@ export function AppHeader() {
                         </Link>
                       </>
                     )}
+                    {showModerate && (
+                      <Link
+                        href="/dashboard/moderate"
+                        role="menuitem"
+                        className="flex items-center gap-2 px-3 py-2 text-sm text-violet-200/95 hover:bg-violet-500/10"
+                        onClick={() => setUserMenuOpen(false)}
+                      >
+                        <Gavel className="w-4 h-4 text-violet-400/90" />
+                        {viText.nav.moderate}
+                      </Link>
+                    )}
                     {isAdmin && (
                       <Link
                         href="/admin"
@@ -314,6 +328,15 @@ export function AppHeader() {
                 {isTeacher && (
                   <Link href="/studio" className="block rounded-xl px-3 py-2.5 text-sm text-slate-300 hover:bg-white/[0.06]">
                     Studio
+                  </Link>
+                )}
+                {showModerate && (
+                  <Link
+                    href="/dashboard/moderate"
+                    className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm text-violet-200/95 hover:bg-violet-500/10"
+                  >
+                    <Gavel className="w-4 h-4 shrink-0 text-violet-400/90" />
+                    {viText.nav.moderate}
                   </Link>
                 )}
                 {isAdmin && (

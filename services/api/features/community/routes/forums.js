@@ -1,7 +1,9 @@
 const express = require('express');
 const Forum = require('../models/Forum');
 const Post = require('../models/Post');
+const { findPostsHot } = require('../postSort');
 const { optionalAuth, authMiddleware } = require('../../../shared/jwtAuth');
+const { escapeRegex } = require('../../../shared/escapeRegex');
 
 const router = express.Router();
 
@@ -31,21 +33,42 @@ router.get('/:slug/posts', optionalAuth, async (req, res) => {
     const forum = await Forum.findOne({ slug: req.params.slug });
     if (!forum) return res.status(404).json({ success: false, error: 'Không tìm thấy diễn đàn' });
 
-    const { page = 1, limit = 20, sort = 'newest' } = req.query;
+    const { page = 1, limit = 20, sort = 'newest', category, q } = req.query;
     const skip = (Math.max(1, parseInt(page, 10)) - 1) * Math.min(50, parseInt(limit, 10) || 20);
     const limitNum = Math.min(50, parseInt(limit, 10) || 20);
 
     let sortOpt = { isPinned: -1, createdAt: -1 };
     if (sort === 'top') sortOpt = { isPinned: -1, voteCount: -1, createdAt: -1 };
-    if (sort === 'hot') sortOpt = { isPinned: -1, commentCount: -1, voteCount: -1, createdAt: -1 };
 
-    const posts = await Post.find({ forumId: forum._id })
-      .sort(sortOpt)
-      .skip(skip)
-      .limit(limitNum)
-      .lean();
+    const postFilter = { forumId: forum._id };
+    const cat = typeof category === 'string' ? category.trim() : '';
+    const qStr = typeof q === 'string' ? q.trim() : '';
+    const extra = [];
+    if (cat) {
+      extra.push({
+        rssCategories: new RegExp(`^${escapeRegex(cat)}$`, 'i'),
+      });
+    }
+    if (qStr.length >= 2) {
+      extra.push({ title: new RegExp(escapeRegex(qStr), 'i') });
+    }
+    const filter =
+      extra.length === 0
+        ? postFilter
+        : extra.length === 1
+          ? { ...postFilter, ...extra[0] }
+          : { ...postFilter, $and: extra };
 
-    const total = await Post.countDocuments({ forumId: forum._id });
+    const posts =
+      sort === 'hot'
+        ? await findPostsHot(filter, skip, limitNum)
+        : await Post.find(filter)
+            .sort(sortOpt)
+            .skip(skip)
+            .limit(limitNum)
+            .lean();
+
+    const total = await Post.countDocuments(filter);
     res.json({ success: true, data: posts, total, page: parseInt(page, 10), limit: limitNum });
   } catch (err) {
     console.error('List posts error:', err);

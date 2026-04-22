@@ -19,6 +19,14 @@ export interface PlanetData {
   ringOuter?: number
   /** Màu đường quỹ đạo (hex) để phân biệt hành tinh */
   orbitColor: string
+  /** Eccentricity for elliptical orbit visualization */
+  orbitEccentricity?: number
+  /** Inclination in degrees (against base ecliptic plane) */
+  orbitInclinationDeg?: number
+  /** Longitude of ascending node in degrees */
+  orbitAscendingNodeDeg?: number
+  /** Initial phase offset in degrees for per-planet placement */
+  orbitPhaseDeg?: number
 }
 
 const T = '/textures'
@@ -40,10 +48,14 @@ export const planetsData: PlanetData[] = [
     explorerBlurb: 'Sun-blasted, cratered world — the smallest planet and a stark first stop.',
     texture: `${T}/8k_mercury.jpg`,
     radius: 0.22 * PLANET_SIZE_SCALE,
-    distance: 8,
+    distance: 10,
     period: 12,
     spinPeriod: 20,
     orbitColor: '#9e9e9e',
+    orbitEccentricity: 0.206,
+    orbitInclinationDeg: 7.0,
+    orbitAscendingNodeDeg: 48.3,
+    orbitPhaseDeg: 32,
   },
   {
     name: 'Venus',
@@ -51,10 +63,14 @@ export const planetsData: PlanetData[] = [
     explorerBlurb: 'Thick clouds, crushing pressure, and furnace-like heat — Earth’s “evil twin”.',
     texture: `${T}/8k_venus_surface.jpg`,
     radius: 0.32 * PLANET_SIZE_SCALE,
-    distance: 12,
+    distance: 15,
     period: 18,
     spinPeriod: 28,
     orbitColor: '#ffcc80',
+    orbitEccentricity: 0.007,
+    orbitInclinationDeg: 3.4,
+    orbitAscendingNodeDeg: 76.7,
+    orbitPhaseDeg: 140,
   },
   {
     name: 'Earth',
@@ -62,10 +78,14 @@ export const planetsData: PlanetData[] = [
     explorerBlurb: 'Our blue world — oceans, atmosphere, and the only known life in the solar system.',
     texture: `${T}/8k_earth_daymap.jpg`,
     radius: 0.34 * PLANET_SIZE_SCALE,
-    distance: 16,
+    distance: 21,
     period: 24,
     spinPeriod: 18,
     orbitColor: '#4db6ac',
+    orbitEccentricity: 0.017,
+    orbitInclinationDeg: 0.0,
+    orbitAscendingNodeDeg: -11.2,
+    orbitPhaseDeg: 215,
   },
   {
     name: 'Mars',
@@ -73,10 +93,14 @@ export const planetsData: PlanetData[] = [
     explorerBlurb: 'Rusty deserts, giant volcanoes, and polar ice — humanity’s next frontier.',
     texture: `${T}/8k_mars.jpg`,
     radius: 0.18 * PLANET_SIZE_SCALE,
-    distance: 20,
+    distance: 30,
     period: 30,
     spinPeriod: 20,
     orbitColor: '#e57373',
+    orbitEccentricity: 0.093,
+    orbitInclinationDeg: 1.85,
+    orbitAscendingNodeDeg: 49.6,
+    orbitPhaseDeg: 70,
   },
   {
     name: 'Jupiter',
@@ -84,10 +108,14 @@ export const planetsData: PlanetData[] = [
     explorerBlurb: 'The largest planet — a stormy gas giant with the Great Red Spot.',
     texture: `${T}/8k_jupiter.jpg`,
     radius: 1.0 * PLANET_SIZE_SCALE,
-    distance: 28,
+    distance: 44,
     period: 40,
     spinPeriod: 10,
     orbitColor: '#d4532a',
+    orbitEccentricity: 0.049,
+    orbitInclinationDeg: 1.3,
+    orbitAscendingNodeDeg: 100.5,
+    orbitPhaseDeg: 8,
   },
   {
     name: 'Saturn',
@@ -95,13 +123,17 @@ export const planetsData: PlanetData[] = [
     explorerBlurb: 'Iconic rings of ice and rock orbiting a pale gas giant.',
     texture: `${T}/8k_saturn.jpg`,
     radius: 0.85 * PLANET_SIZE_SCALE,
-    distance: 36,
+    distance: 60,
     period: 55,
     spinPeriod: 12,
     ringTexture: `${T}/8k_saturn_ring_alpha.png`,
     ringInner: 0.5,
     ringOuter: 0.75,
     orbitColor: '#e8a030',
+    orbitEccentricity: 0.056,
+    orbitInclinationDeg: 2.5,
+    orbitAscendingNodeDeg: 113.7,
+    orbitPhaseDeg: 312,
   },
   {
     name: 'Uranus',
@@ -109,10 +141,14 @@ export const planetsData: PlanetData[] = [
     explorerBlurb: 'An ice giant tilted on its side, with a smooth blue-green haze.',
     texture: `${T}/2k_uranus.jpg`,
     radius: 0.5 * PLANET_SIZE_SCALE,
-    distance: 44,
+    distance: 78,
     period: 70,
     spinPeriod: 16,
     orbitColor: '#4dd0e1',
+    orbitEccentricity: 0.047,
+    orbitInclinationDeg: 0.77,
+    orbitAscendingNodeDeg: 74.0,
+    orbitPhaseDeg: 190,
   },
   {
     name: 'Neptune',
@@ -120,9 +156,13 @@ export const planetsData: PlanetData[] = [
     explorerBlurb: 'Deep blue, wind-whipped ice giant — the farthest major planet from the Sun.',
     texture: `${T}/2k_neptune.jpg`,
     radius: 0.48 * PLANET_SIZE_SCALE,
-    distance: 52,
+    distance: 96,
     period: 85,
     spinPeriod: 15,
     orbitColor: '#5c6bc0',
+    orbitEccentricity: 0.009,
+    orbitInclinationDeg: 1.77,
+    orbitAscendingNodeDeg: 131.8,
+    orbitPhaseDeg: 265,
   },
 ]

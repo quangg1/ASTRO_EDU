@@ -15,6 +15,7 @@ export type AnalyticsEventName =
   | 'payment_return_viewed'
   | 'admin_dashboard_viewed'
   | 'admin_user_role_changed'
+  | 'admin_teacher_application_reviewed'
   | 'admin_range_changed'
 
 export function trackEvent(name: AnalyticsEventName, params: Record<string, string | number | boolean | null> = {}) {

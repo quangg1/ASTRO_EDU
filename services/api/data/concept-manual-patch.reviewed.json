@@ -1,0 +1,13 @@
+{
+  "patches": [
+    {
+      "id": "astronomy",
+      "removePrerequisites": ["absolute_magnitude"],
+      "set": {
+        "domain": "astronomy",
+        "subdomain": "fundamentals"
+      }
+    }
+  ]
+}
+

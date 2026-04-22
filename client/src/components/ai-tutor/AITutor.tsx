@@ -1,7 +1,10 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
+import clsx from 'clsx'
 import Link from 'next/link'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useTutorContextStore } from '@/store/useTutorContextStore'
 import { useAuthStore } from '@/store/useAuthStore'
@@ -26,6 +29,8 @@ interface Message {
   actions?: TutorAction[]
   /** Nội dung đã bỏ dòng [ACTION:...] để hiển thị */
   displayContent?: string
+  /** Tin user gửi kèm ảnh — hiển thị trong bubble (giống ChatGPT) */
+  imageAttachment?: { mediaType: string; base64: string }
 }
 
 function storageKey(userId: string, mode: string, courseSlug?: string | null): string {
@@ -37,11 +42,20 @@ function loadMessagesFromStorage(key: string): Message[] {
   try {
     const raw = localStorage.getItem(key)
     if (!raw) return []
-    const parsed = JSON.parse(raw) as Array<{ id: string; role: string; content: string; createdAt: string; actions?: TutorAction[]; displayContent?: string }>
+    const parsed = JSON.parse(raw) as Array<{
+      id: string
+      role: string
+      content: string
+      createdAt: string
+      actions?: TutorAction[]
+      displayContent?: string
+      imageAttachment?: { mediaType: string; base64: string }
+    }>
     return parsed.map((m) => ({
       ...m,
       role: m.role as 'user' | 'assistant',
       createdAt: new Date(m.createdAt),
+      imageAttachment: m.imageAttachment,
     }))
   } catch {
     return []
@@ -59,6 +73,60 @@ function routeLabel(pathname: string): string | undefined {
   return undefined
 }
 
+/** Rút gọn lỗi dạng JSON từ OpenRouter / upstream (tránh dán cả object vào UI). */
+function summarizeProviderError(message: string): string {
+  const trimmed = message.trim()
+  if (!trimmed.startsWith('{')) return message
+  try {
+    const j = JSON.parse(trimmed) as { error?: { message?: string }; message?: string }
+    const inner = j.error?.message ?? j.message
+    if (typeof inner === 'string') {
+      return inner.length > 400 ? `${inner.slice(0, 400)}…` : inner
+    }
+  } catch {
+    /* ignore */
+  }
+  return trimmed.length > 280 ? `${trimmed.slice(0, 280)}…` : trimmed
+}
+
+function AssistantMarkdown({ source, isAgent }: { source: string; isAgent: boolean }) {
+  const linkCls = isAgent
+    ? 'text-violet-300 underline decoration-violet-400/40 underline-offset-2 hover:text-violet-200'
+    : 'text-cyan-400 underline decoration-cyan-400/35 underline-offset-2 hover:text-cyan-300'
+  const quoteBorder = isAgent ? 'border-l-violet-400/35' : 'border-l-cyan-500/40'
+  return (
+    <div
+      className={clsx(
+        'tutor-md text-[13.5px] leading-relaxed text-gray-200/95',
+        'space-y-2.5 [&>*:first-child]:mt-0',
+        '[&_p]:mb-2 [&_p:last-child]:mb-0 [&_li]:my-0.5',
+        '[&_strong]:text-white [&_strong]:font-semibold [&_b]:text-white',
+        '[&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5',
+        '[&_h1]:text-base [&_h1]:font-bold [&_h1]:text-white [&_h1]:mt-3 [&_h1]:mb-2',
+        '[&_h2]:text-sm [&_h2]:font-semibold [&_h2]:text-white [&_h2]:mt-3 [&_h2]:mb-1.5',
+        '[&_h3]:text-sm [&_h3]:font-semibold [&_h3]:text-gray-100 [&_h3]:mt-2',
+        '[&_code]:rounded-md [&_code]:bg-black/35 [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:text-[12.5px] [&_code]:text-cyan-100/90',
+        '[&_pre]:my-2 [&_pre]:overflow-x-auto [&_pre]:rounded-lg [&_pre]:border [&_pre]:border-white/10 [&_pre]:bg-black/40 [&_pre]:p-3 [&_pre]:text-[12px] [&_pre]:leading-relaxed',
+        '[&_blockquote]:my-2 [&_blockquote]:border-l-2 [&_blockquote]:pl-3 [&_blockquote]:text-gray-400',
+        quoteBorder,
+        '[&_hr]:my-4 [&_hr]:border-white/10',
+        '[&_table]:my-2 [&_table]:w-full [&_table]:text-left [&_table]:text-[12px] [&_th]:border [&_th]:border-white/15 [&_th]:bg-white/5 [&_th]:px-2 [&_th]:py-1.5 [&_td]:border [&_td]:border-white/10 [&_td]:px-2 [&_td]:py-1',
+      )}
+    >
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        components={{
+          a: ({ className, ...props }) => (
+            <a {...props} className={clsx(linkCls, className)} target="_blank" rel="noopener noreferrer" />
+          ),
+        }}
+      >
+        {source}
+      </ReactMarkdown>
+    </div>
+  )
+}
+
 function saveMessagesToStorage(key: string, messages: Message[]) {
   if (typeof window === 'undefined') return
   try {
@@ -69,6 +137,7 @@ function saveMessagesToStorage(key: string, messages: Message[]) {
       createdAt: m.createdAt.toISOString(),
       actions: m.actions,
       displayContent: m.displayContent,
+      imageAttachment: m.imageAttachment,
     }))
     localStorage.setItem(key, JSON.stringify(toSave))
   } catch {
@@ -98,7 +167,7 @@ export function AITutor() {
 
   const isCourseMode = mode === 'course' && course
   /** Trong course = Agent đầy đủ (bài + Khám phá); ngoài vẫn có thể điều hướng qua tool. */
-  const isAgent = isCourseMode
+  const isAgent = Boolean(isCourseMode)
   const searchQs = searchParams.toString()
   const canUseAI = !!user
   const historyKey = user ? storageKey(user.id, mode, course?.courseSlug) : null
@@ -172,9 +241,8 @@ export function AITutor() {
     if (msg.actions?.length) executeAction(msg.actions[0])
   }
 
-  const onAttachImage = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file || !file.type.startsWith('image/')) return
+  const applyImageFromFile = (file: File) => {
+    if (!file.type.startsWith('image/')) return
     const reader = new FileReader()
     reader.onload = () => {
       const dataUrl = reader.result as string
@@ -184,7 +252,41 @@ export function AITutor() {
       setAttachmentImage({ base64, type })
     }
     reader.readAsDataURL(file)
+  }
+
+  const onAttachImage = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    applyImageFromFile(file)
     e.target.value = ''
+  }
+
+  /** Dán ảnh từ clipboard (chụp màn hình, copy ảnh trong trình duyệt, v.v.) — giống luồng upload file. */
+  const handlePasteImage = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const cd = e.clipboardData
+    if (!cd) return
+    for (let i = 0; i < cd.items.length; i++) {
+      const item = cd.items[i]
+      if (item.kind === 'file' && item.type.startsWith('image/')) {
+        const file = item.getAsFile()
+        if (file) {
+          e.preventDefault()
+          applyImageFromFile(file)
+          return
+        }
+      }
+    }
+    const { files } = cd
+    if (files?.length) {
+      for (let i = 0; i < files.length; i++) {
+        const f = files[i]
+        if (f.type.startsWith('image/')) {
+          e.preventDefault()
+          applyImageFromFile(f)
+          return
+        }
+      }
+    }
   }
 
   const sendMessage = async () => {
@@ -194,11 +296,15 @@ export function AITutor() {
 
     setInput('')
     setError(null)
+    const snapImage = attachmentImage
+      ? { base64: attachmentImage.base64, mediaType: attachmentImage.type }
+      : undefined
     const userMsg: Message = {
       id: `u-${Date.now()}`,
       role: 'user',
       content: text || 'Giải thích hình ảnh này.',
       createdAt: new Date(),
+      ...(snapImage ? { imageAttachment: snapImage } : {}),
     }
     const newMessages = [...messages, userMsg]
     setMessages(newMessages)
@@ -232,7 +338,8 @@ export function AITutor() {
       const data = await res.json()
 
       if (!res.ok) {
-        setError(data.error || 'Lỗi kết nối')
+        const raw = typeof data.error === 'string' ? data.error : 'Lỗi kết nối'
+        setError(summarizeProviderError(raw))
         setLoading(false)
         return
       }
@@ -256,7 +363,7 @@ export function AITutor() {
       }
       setMessages((m) => [...m, assistantMsg])
     } catch {
-      setError('Không kết nối được AI. Kiểm tra LM Studio đã chạy chưa.')
+      setError('Không kết nối được AI. Kiểm tra AI service (5005), OpenRouter API key hoặc LM Studio local.')
     } finally {
       setLoading(false)
     }
@@ -330,13 +437,11 @@ export function AITutor() {
               <span className={`font-semibold ${isAgent ? 'text-violet-300' : 'text-cyan-300'}`}>
                 {isAgent ? 'AI Agent' : 'AI Tutor'}
               </span>
-              <span
-                className={`text-xs px-2 py-0.5 rounded-full ${
-                  isAgent ? 'text-violet-300/90 bg-violet-500/20' : 'text-cyan-400/80 bg-cyan-500/10'
-                }`}
-              >
-                {isAgent ? 'Có thể thao tác trang' : 'Generative AI'}
-              </span>
+              {isAgent && (
+                <span className="text-xs px-2 py-0.5 rounded-full text-violet-300/90 bg-violet-500/20">
+                  Có thể thao tác trang
+                </span>
+              )}
             </div>
             <button
               type="button"
@@ -370,8 +475,8 @@ export function AITutor() {
                 </p>
                 <p className="text-gray-500 text-xs mb-4">
                   {isAgent
-                    ? 'Hỏi "mở bài X" hoặc "xem Khám phá kỷ Cambrian" – mình sẽ thực hiện thao tác trên trang.'
-                    : 'Hỏi kiến thức bất kỳ; hoặc nói rõ "mở Khám phá 540 Ma", "đưa tôi tới khóa học" để mình điều hướng.'}
+                    ? 'Ví dụ: mở một bài học, hoặc chuyển tới mốc thời gian trên Khám phá.'
+                    : 'Bạn có thể hỏi kiến thức hoặc nhờ mình mở Khám phá, trang khóa học.'}
                 </p>
                 <div className="flex flex-wrap gap-2 justify-center">
                   {(isAgent ? suggestionCourse : suggestionGeneral).map((s) => (
@@ -394,17 +499,31 @@ export function AITutor() {
             {canUseAI && messages.map((m) => (
               <div key={m.id} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 <div
-                  className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm ${
+                  className={`max-w-[90%] rounded-2xl ${
                     m.role === 'user'
                       ? isAgent
                         ? 'bg-violet-500/25 text-violet-50 border border-violet-400/30'
                         : 'bg-cyan-500/25 text-cyan-50 border border-cyan-400/30'
                       : 'bg-white/5 text-gray-200 border border-white/10'
-                  }`}
+                  } ${m.role === 'user' ? 'px-3 py-2.5' : 'px-4 py-3'}`}
                 >
-                  <div className="whitespace-pre-wrap break-words">
-                    {m.role === 'assistant' && m.displayContent != null ? m.displayContent : m.content}
-                  </div>
+                  {m.role === 'user' && m.imageAttachment && (
+                    <div className="mb-2.5 overflow-hidden rounded-xl border border-white/15 bg-black/25">
+                      <img
+                        src={`data:${m.imageAttachment.mediaType};base64,${m.imageAttachment.base64}`}
+                        alt=""
+                        className="max-h-56 w-full object-contain"
+                      />
+                    </div>
+                  )}
+                  {m.role === 'assistant' ? (
+                    <AssistantMarkdown
+                      source={m.displayContent != null ? m.displayContent : m.content}
+                      isAgent={isAgent}
+                    />
+                  ) : (
+                    <div className="whitespace-pre-wrap break-words text-sm leading-relaxed">{m.content}</div>
+                  )}
                   {m.role === 'assistant' && m.actions && m.actions.length > 0 && (
                     <div className="mt-3 pt-3 border-t border-white/10 space-y-2">
                       <button
@@ -538,17 +657,17 @@ export function AITutor() {
                 aria-label="Đính kèm ảnh"
               />
               {attachmentImage && (
-                <div className="mb-2 flex items-center gap-2 rounded-lg bg-white/5 p-2">
+                <div className="mb-2 flex items-center gap-2 rounded-xl border border-white/10 bg-black/20 p-1.5 pr-2">
                   <img
                     src={`data:${attachmentImage.type};base64,${attachmentImage.base64}`}
-                    alt="Đính kèm"
-                    className="h-12 w-12 rounded object-cover"
+                    alt=""
+                    className="h-11 w-11 shrink-0 rounded-lg object-cover"
                   />
-                  <span className="text-xs text-gray-400 flex-1">Ảnh sẽ gửi kèm tin tiếp theo</span>
+                  <span className="text-xs text-gray-400 flex-1 truncate">Ảnh đính kèm</span>
                   <button
                     type="button"
                     onClick={() => setAttachmentImage(null)}
-                    className="text-gray-400 hover:text-white text-sm"
+                    className="shrink-0 text-gray-400 hover:text-white text-lg leading-none px-1"
                     aria-label="Bỏ ảnh"
                   >
                     ×
@@ -566,7 +685,7 @@ export function AITutor() {
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
                   className="shrink-0 m-2 w-9 h-9 rounded-lg flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
-                  title="Đính kèm ảnh (hội thoại đa phương thức)"
+                  title="Đính kèm ảnh"
                   aria-label="Đính kèm ảnh"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -578,7 +697,14 @@ export function AITutor() {
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  placeholder={isAgent ? 'Hỏi "mở bài X", "xem Khám phá 540 Ma"...' : 'Hỏi về Trái Đất, hóa thạch, thiên văn...'}
+                  onPaste={handlePasteImage}
+                  placeholder={
+                    attachmentImage
+                      ? 'Hỏi về ảnh này…'
+                      : isAgent
+                        ? 'Hỏi hoặc yêu cầu mở bài, Khám phá…'
+                        : 'Hỏi về Trái Đất, hóa thạch, thiên văn…'
+                  }
                   rows={1}
                   className="flex-1 min-h-[44px] max-h-28 resize-none bg-transparent px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none"
                   disabled={loading}
@@ -600,12 +726,6 @@ export function AITutor() {
                   </svg>
                 </button>
               </div>
-              {messages.length > MAX_MESSAGES_FOR_API && (
-                <p className="text-[10px] text-amber-500/90 mt-1 text-center">
-                  Chỉ gửi {MAX_MESSAGES_FOR_API} tin gần nhất để tiết kiệm bộ nhớ (máy local).
-                </p>
-              )}
-              <p className="text-[10px] text-gray-500 mt-1.5 text-center">Shift+Enter xuống dòng · Enter gửi</p>
             </div>
           )}
         </div>

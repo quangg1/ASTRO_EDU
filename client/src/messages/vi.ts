@@ -18,6 +18,7 @@ export const viText = {
     search: 'Tìm kiếm',
     teacher: 'Giảng viên',
     admin: 'Quản trị',
+    moderate: 'Kiểm duyệt',
     signOut: 'Đăng xuất',
     signIn: 'Đăng nhập',
     signUp: 'Đăng ký',

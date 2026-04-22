@@ -38,5 +38,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       })
   }, [setUser, setLoading, setChecked])
 
+  useEffect(() => {
+    function onVisible() {
+      if (document.visibilityState !== 'visible') return
+      const token = getToken()
+      if (!token) return
+      fetchMe().then((res) => {
+        if (res.success && res.user) setUser(res.user)
+      })
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => document.removeEventListener('visibilitychange', onVisible)
+  }, [setUser])
+
   return <>{children}</>
 }

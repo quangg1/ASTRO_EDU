@@ -1,14 +1,14 @@
 # AI Service (Python) – RAG, Security, Multimodal (text + ảnh)
 
-Service AI tập trung: bảo mật đầu vào, RAG (embedding + retrieval), hội thoại đa phương thức (text + hình ảnh). Gọi LM Studio để sinh câu trả lời.
+Service AI tập trung: bảo mật đầu vào, RAG (embedding + retrieval), hội thoại đa phương thức (text + hình ảnh). Sinh câu trả lời qua **OpenRouter** (khi có `OPENROUTER_API_KEY`) hoặc **LM Studio** (OpenAI-compatible local) nếu không cấu hình OpenRouter.
 
 ## Tính năng
 
 - **Security**: Chặn câu hỏi vi phạm (blocklist), trả lời từ chối thống nhất tiếng Việt trước khi gửi tới model.
 - **RAG**: Embed câu hỏi qua embedding service (BGE-M3), tìm top-k đoạn trong index, đưa vào system prompt.
 - **Knowledge corpus**: Thư mục `knowledge/corpus/*.md` — nội dung mới (bài báo tóm tắt, cập nhật khoa học) được chunk + embed vào `data/rag_index.json`; có API rebuild/append và reload RAM.
-- **AI Agent (function calling)**: Với LM Studio / model hỗ trợ OpenAI-style `tools`, service gửi tool `open_lesson`, `go_to_explore` (khóa học) hoặc điều hướng app (ngoài khóa). Client gửi `agent_state` (pathname, query, nhãn màn hình) để model hiểu ngữ cảnh. Tắt bằng `USE_AGENT_TOOLS=0`. Khi có ảnh đính kèm, tool tạm tắt (tránh lỗi vision).
-- **Multimodal**: Nhận `image_base64` kèm tin nhắn; gửi sang LM Studio dạng `image_url` (OpenAI format) để model vision trả lời theo ảnh.
+- **AI Agent (function calling)**: Với backend hỗ trợ OpenAI-style `tools` (OpenRouter hoặc LM Studio), service gửi tool `open_lesson`, `go_to_explore` (khóa học) hoặc điều hướng app (ngoài khóa). Client gửi `agent_state` (pathname, query, nhãn màn hình) để model hiểu ngữ cảnh. Tắt bằng `USE_AGENT_TOOLS=0`. Khi có ảnh đính kèm, tool tạm tắt (tránh lỗi vision / model free không hỗ trợ tool).
+- **Multimodal**: Nhận `image_base64` kèm tin nhắn; gửi tới LLM dạng `image_url` (OpenAI format, data URL base64). Cần model **VLM** (OpenRouter: `openrouter/free`, hoặc slug có vision như `…:free` / model trả phí; LM Studio: model vision local).
 
 ## Cài đặt
 
@@ -23,8 +23,15 @@ pip install -r requirements.txt
 
 | Biến | Mặc định | Mô tả |
 |------|----------|--------|
-| `LM_STUDIO_URL` | http://localhost:1234 | LM Studio API |
-| `LM_STUDIO_MODEL` | local | Tên model (vision model nếu dùng ảnh) |
+| `OPENROUTER_API_KEY` | *(trống)* | Nếu set → dùng [OpenRouter](https://openrouter.ai/) (`POST …/chat/completions`). Free tier: đặt `OPENROUTER_MODEL=openrouter/free` (router chọn model miễn phí, hỗ trợ cả ảnh khi phù hợp). |
+| `OPENROUTER_BASE_URL` | https://openrouter.ai/api/v1 | Base URL API OpenRouter |
+| `OPENROUTER_MODEL` | openrouter/free | Model chat (text); tier miễn phí nên dùng router hoặc slug model có hậu tố `:free` trên trang Models |
+| `OPENROUTER_VLM_MODEL` | *(trống)* | Nếu set: khi có ảnh (`image_base64`) dùng model này thay cho `OPENROUTER_MODEL` (vd. một VLM `:free` cố định). Trống = dùng chung `OPENROUTER_MODEL` |
+| `OPENROUTER_HTTP_REFERER` | *(trống)* | Tùy chọn — OpenRouter khuyến nghị URL site (xếp hạng / attribution) |
+| `OPENROUTER_APP_TITLE` | Galaxies Edu AI | Header `X-Title` gửi kèm request |
+| `OPENROUTER_MERGE_SYSTEM` | 1 | `1` = không gửi role `system` tới OpenRouter; gộp system+RAG vào tin **user đầu** (tránh lỗi Google/Gemma *Developer instruction is not enabled*). `0` = gửi `system` như cũ (model phải hỗ trợ). |
+| `LM_STUDIO_URL` | http://localhost:1234 | Chỉ khi **không** có `OPENROUTER_API_KEY`: LM Studio API local |
+| `LM_STUDIO_MODEL` | local | Model local khi dùng LM Studio |
 | `EMBEDDING_URL` | http://localhost:5004 | Embedding service (Flag BGE-M3) |
 | `USE_RAG` | 1 | Bật/tắt RAG (1 hoặc 0) |
 | `RAG_INDEX_PATH` | data/rag_index.json | Đường dẫn file index RAG |
@@ -34,7 +41,21 @@ pip install -r requirements.txt
 | `RAG_CHUNK_MAX_CHARS` | 720 | Độ dài tối đa mỗi chunk khi cắt Markdown |
 | `EMBED_CONCURRENCY` | 4 | Số request embed song song khi rebuild |
 | `KNOWLEDGE_ADMIN_TOKEN` | *(trống)* | Nếu set, các `POST /knowledge/*` (trừ khi chỉ đọc) cần `Authorization: Bearer …` hoặc header `X-Knowledge-Token` |
-| `USE_AGENT_TOOLS` | 1 | Bật gửi `tools` tới LM Studio (0 = tắt, chỉ còn fallback `[ACTION:…]` phía course) |
+| `USE_AGENT_TOOLS` | 1 | Bật gửi `tools` tới LLM (0 = tắt, chỉ còn fallback `[ACTION:…]` phía course) |
+
+### Đặt OpenRouter API key (local)
+
+1. Lấy key tại [openrouter.ai/keys](https://openrouter.ai/keys) (dạng `sk-or-v1-…`).
+2. Trong thư mục `services/ai`, tạo file **`.env`** (đã bị git ignore). Có thể copy mẫu: `copy example.env .env` (Windows) rồi sửa giá trị.
+3. Trong `.env` ghi một dòng: `OPENROUTER_API_KEY=sk-or-v1-...` (không có dấu ngoặc kép).
+4. Cài lại phụ thuộc nếu chưa có: `pip install -r requirements.txt` (có `python-dotenv` để tự đọc `.env` khi chạy `server.py`).
+5. Chạy lại từ `services/ai`: `uvicorn server:app --host 0.0.0.0 --port 5005`.
+
+**Cách khác (PowerShell, chỉ phiên hiện tại):** trước khi chạy uvicorn:
+
+`$env:OPENROUTER_API_KEY = "sk-or-v1-..."`
+
+**Biến hệ thống Windows (bền):** Cài đặt → Hệ thống → Giới thiệu → Cài đặt hệ thống nâng cao → Biến môi trường → Thêm biến người dùng `OPENROUTER_API_KEY`, rồi mở terminal mới.
 
 ## Chạy
 
@@ -43,7 +64,7 @@ uvicorn server:app --host 0.0.0.0 --port 5005
 ```
 
 - Cần **embedding service** chạy (5004) nếu bật RAG.
-- Cần **LM Studio** chạy, load model (text hoặc vision nếu gửi ảnh).
+- Cần **OpenRouter** (`OPENROUTER_API_KEY`) hoặc **LM Studio** local với model phù hợp (vision nếu gửi ảnh).
 
 ## Feed kiến thức liên tục (corpus)
 
@@ -103,7 +124,7 @@ Body (JSON):
 - `image_base64`: chuỗi base64 ảnh (tùy chọn)
 - `image_media_type`: `"image/jpeg"` | `"image/png"` (mặc định `image/jpeg`)
 
-Khi có `image_base64`, tin user cuối được gửi tới LM Studio dạng multimodal (text + image). Cần model hỗ trợ vision (vd. LLaVA trong LM Studio).
+Khi có `image_base64`, tin user cuối được gửi dạng multimodal (text + image). Cần model VLM (OpenRouter free: `openrouter/free` hoặc `OPENROUTER_VLM_MODEL`; LM Studio: LLaVA / tương đương).
 
 Response: `{ "message": { "role": "assistant", "content": "..." }, "tool_calls"?: [ { "name": "open_lesson", "arguments": { "lesson_slug": "..." } }, ... ] }` — `tool_calls` chỉ có khi model gọi tool và server đã validate (slug trong khóa, Ma trong khoảng cho phép).
 

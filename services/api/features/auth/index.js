@@ -6,6 +6,10 @@ const { findOrLinkFirebaseUser } = require('./lib/oauthUser');
 const { getFirebaseAdmin } = require('./lib/firebaseAdmin');
 const { authMiddleware, requireRole } = require('../../shared/jwtAuth');
 const { listAdminUsers, updateAdminUserRole } = require('../../services/adminUserService');
+const {
+  submitTeacherApplication,
+  getMyApplicationStatus,
+} = require('../../services/teacherApplicationService');
 const { requireString } = require('../../shared/validation');
 const { AppError } = require('../../shared/errors');
 
@@ -177,9 +181,14 @@ router.get('/me', (req, res) => {
       if (user.accountStatus === 'deactivated') {
         return res.status(403).json({ success: false, code: 'ACCOUNT_DEACTIVATED', error: 'Tài khoản đã ngừng hoạt động' });
       }
+      const dbRole = user.role || 'student';
+      const tokenRole = payload.role || 'student';
+      const roleMismatch = dbRole !== tokenRole;
+      const newToken = roleMismatch ? issueToken(user) : null;
       res.json({
         success: true,
         user: normalizeAuthUser(user),
+        ...(newToken ? { token: newToken } : {}),
       });
     })
     .catch((err) => {
@@ -317,6 +326,34 @@ router.post('/reset-password', async (req, res) => {
       return res.status(err.status).json({ success: false, code: err.code, error: err.message, details: err.details });
     }
     res.status(500).json({ success: false, error: 'Lỗi đặt lại mật khẩu' });
+  }
+});
+
+router.post('/teacher-application', authMiddleware, async (req, res) => {
+  try {
+    const { bio, organization } = req.body || {};
+    const application = await submitTeacherApplication({
+      userId: req.userId,
+      bio,
+      organization,
+    });
+    res.status(201).json({ success: true, application });
+  } catch (err) {
+    console.error('Teacher application submit error:', err);
+    if (err instanceof AppError) {
+      return res.status(err.status).json({ success: false, code: err.code, error: err.message });
+    }
+    res.status(500).json({ success: false, error: 'Lỗi gửi đơn' });
+  }
+});
+
+router.get('/teacher-application/me', authMiddleware, async (req, res) => {
+  try {
+    const data = await getMyApplicationStatus(req.userId);
+    res.json({ success: true, ...data });
+  } catch (err) {
+    console.error('Teacher application me error:', err);
+    res.status(500).json({ success: false, error: 'Lỗi tải trạng thái đơn' });
   }
 });
 

@@ -8,7 +8,7 @@ export function canEditContent(user: AuthUser | null): boolean {
   return user?.role === 'teacher' || user?.role === 'admin'
 }
 
-/** Có quyền quản lý user, đổi role, moderation (admin) */
+/** Có quyền quản lý người dùng và đổi vai trò (chỉ admin) */
 export function canManageUsers(user: AuthUser | null): boolean {
   return user?.role === 'admin'
 }

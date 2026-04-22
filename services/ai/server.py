@@ -1,11 +1,13 @@
 """
 AI Service – Python: RAG, security, hội thoại đa phương thức (text + hình ảnh).
-Chạy: uvicorn server:app --host 0.0.0.0 --port 5005
+LLM: OpenRouter (OPENROUTER_API_KEY) hoặc LM Studio local. Chạy: uvicorn server:app --host 0.0.0.0 --port 5005
 """
 import asyncio
 import os
 from pathlib import Path
 from typing import Annotated, Any
+
+from dotenv import load_dotenv
 
 import httpx
 import knowledge_pipeline as kp
@@ -21,8 +23,20 @@ from agent_tools import (
 from rag import reload_index, retrieve
 from security import REFUSAL_MESSAGE_VI, is_request_blocked
 
+# Đọc services/ai/.env (file này nằm trong .gitignore; không commit secret).
+load_dotenv(Path(__file__).resolve().parent / ".env")
+
 LM_STUDIO_URL = os.environ.get("LM_STUDIO_URL", "http://localhost:1234")
 LM_MODEL = os.environ.get("LM_STUDIO_MODEL", "local")
+
+OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY", "").strip()
+OPENROUTER_BASE_URL = os.environ.get("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1").rstrip("/")
+# Free tier: `openrouter/free` chọn model miễn phí phù hợp (kể cả khi có ảnh — vision).
+OPENROUTER_MODEL = os.environ.get("OPENROUTER_MODEL", "openrouter/free").strip() or "openrouter/free"
+OPENROUTER_VLM_MODEL = os.environ.get("OPENROUTER_VLM_MODEL", "").strip()
+OPENROUTER_HTTP_REFERER = os.environ.get("OPENROUTER_HTTP_REFERER", "").strip()
+OPENROUTER_APP_TITLE = os.environ.get("OPENROUTER_APP_TITLE", "Galaxies Edu AI").strip() or "Galaxies Edu AI"
+
 USE_RAG = os.environ.get("USE_RAG", "1") == "1"
 
 SYSTEM_GENERAL = """Bạn là AI Tutor của Galaxies Edu – nền tảng học thiên văn và lịch sử Trái Đất.
@@ -175,9 +189,79 @@ def _build_messages_for_llm(
     return out
 
 
+def _prepend_text_to_user_content(content: Any, prefix: str) -> Any:
+    """Chèn prefix (system/RAG đã gộp) vào tin user: chuỗi hoặc block multimodal đầu tiên."""
+    if isinstance(content, str):
+        return f"{prefix}{content}"
+    if isinstance(content, list):
+        blocks: list[Any] = list(content)
+        for i, block in enumerate(blocks):
+            if isinstance(block, dict) and block.get("type") == "text":
+                prev = block.get("text") or ""
+                blocks[i] = {**block, "text": f"{prefix}{prev}"}
+                return blocks
+        blocks.insert(0, {"type": "text", "text": prefix.rstrip()})
+        return blocks
+    return prefix
+
+
+def _merge_system_for_openrouter(api_messages: list[dict]) -> list[dict]:
+    """
+    Một số model OpenRouter (vd. Gemma qua Google AI Studio) không hỗ trợ role `system`
+    (lỗi: Developer instruction is not enabled). Gộp system vào tin user đầu tiên.
+    """
+    if not api_messages or api_messages[0].get("role") != "system":
+        return api_messages
+    system_text = api_messages[0].get("content")
+    if not isinstance(system_text, str):
+        system_text = str(system_text)
+    prefix = system_text.rstrip() + "\n\n---\n\n"
+    rest = api_messages[1:]
+    merged_first = False
+    out: list[dict] = []
+    for m in rest:
+        if not merged_first and m.get("role") == "user":
+            merged_first = True
+            out.append(
+                {
+                    "role": "user",
+                    "content": _prepend_text_to_user_content(m.get("content", ""), prefix),
+                }
+            )
+        else:
+            out.append(m)
+    if not merged_first:
+        out.insert(0, {"role": "user", "content": system_text})
+    return out
+
+
+def _chat_completion_target(has_image: bool) -> tuple[str, str, dict[str, str], str]:
+    """
+    (url, model, headers, provider_label)
+    provider_label dùng cho thông báo lỗi tiếng Việt.
+    """
+    if OPENROUTER_API_KEY:
+        model = (OPENROUTER_VLM_MODEL or OPENROUTER_MODEL) if has_image else OPENROUTER_MODEL
+        url = f"{OPENROUTER_BASE_URL}/chat/completions"
+        headers: dict[str, str] = {
+            "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+            "X-Title": OPENROUTER_APP_TITLE,
+        }
+        if OPENROUTER_HTTP_REFERER:
+            headers["HTTP-Referer"] = OPENROUTER_HTTP_REFERER
+        return url, model, headers, "OpenRouter"
+    url = f"{LM_STUDIO_URL.rstrip('/')}/v1/chat/completions"
+    return url, LM_MODEL, {}, "LM Studio"
+
+
 @app.get("/health")
 def health():
-    return {"status": "ok", "service": "ai", "rag": USE_RAG}
+    return {
+        "status": "ok",
+        "service": "ai",
+        "rag": USE_RAG,
+        "llm": "openrouter" if OPENROUTER_API_KEY else "lm_studio",
+    }
 
 
 @app.get("/knowledge/status")
@@ -261,16 +345,19 @@ async def chat(body: ChatRequestBody):
         body.image_base64,
         body.image_media_type,
     )
+    # OpenRouter + một số provider (Google) từ chối role system trên model nhẹ / free router
+    if OPENROUTER_API_KEY and os.environ.get("OPENROUTER_MERGE_SYSTEM", "1") == "1":
+        api_messages = _merge_system_for_openrouter(api_messages)
 
     use_tools = USE_AGENT_TOOLS and not body.image_base64
     tools = tools_for_context(body.context) if use_tools else None
     temp = 0.7 if body.context == "general" else 0.6
-    url = f"{LM_STUDIO_URL.rstrip('/')}/v1/chat/completions"
+    url, llm_model, llm_headers, llm_label = _chat_completion_target(bool(body.image_base64))
 
     try:
         async with httpx.AsyncClient(timeout=90.0) as client:
             payload: dict[str, Any] = {
-                "model": LM_MODEL,
+                "model": llm_model,
                 "messages": api_messages,
                 "stream": False,
                 "max_tokens": 1024,
@@ -279,16 +366,18 @@ async def chat(body: ChatRequestBody):
             if tools:
                 payload["tools"] = tools
                 payload["tool_choice"] = "auto"
-            r = await client.post(url, json=payload)
+            r = await client.post(url, json=payload, headers=llm_headers)
             if r.status_code >= 400 and tools:
                 payload.pop("tools", None)
                 payload.pop("tool_choice", None)
-                r = await client.post(url, json=payload)
+                r = await client.post(url, json=payload, headers=llm_headers)
     except Exception as e:
-        raise HTTPException(status_code=503, detail=f"Không kết nối được LM Studio: {e}")
+        raise HTTPException(
+            status_code=503, detail=f"Không kết nối được {llm_label}: {e}"
+        ) from e
 
     if r.status_code != 200:
-        raise HTTPException(status_code=502, detail=r.text or "LM Studio lỗi")
+        raise HTTPException(status_code=502, detail=r.text or f"{llm_label} lỗi")
 
     data = r.json()
     msg = (data.get("choices") or [{}])[0].get("message") or {}

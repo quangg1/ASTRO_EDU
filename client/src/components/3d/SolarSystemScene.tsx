@@ -106,24 +106,188 @@ function useMeshRaycastEnabled(meshRef: React.RefObject<THREE.Mesh | null>, enab
 /** Số đoạn tạo vòng tròn quỹ đạo */
 const ORBIT_SEGMENTS = 128
 
+function computeOrbitalPosition(data: PlanetData, angle: number, orbitScale = 1): THREE.Vector3 {
+  const e = data.orbitEccentricity ?? 0
+  const incl = THREE.MathUtils.degToRad(data.orbitInclinationDeg ?? 0)
+  const node = THREE.MathUtils.degToRad(data.orbitAscendingNodeDeg ?? 0)
+  const a = orbitScale * data.distance
+  const r = (a * (1 - e * e)) / (1 + e * Math.cos(angle))
+  const x = r * Math.cos(angle)
+  const z = r * Math.sin(angle)
+  const v = new THREE.Vector3(x, 0, z)
+  v.applyAxisAngle(new THREE.Vector3(1, 0, 0), incl)
+  v.applyAxisAngle(new THREE.Vector3(0, 1, 0), node)
+  return v
+}
+
+type PlanetRenderProfile = {
+  roughness: number
+  metalness: number
+  bumpScale: number
+  atmosphereColor: string | null
+  atmosphereScale: number
+  atmosphereOpacity: number
+}
+
+function getPlanetRenderProfile(name: string): PlanetRenderProfile {
+  switch (name) {
+    case 'Mercury':
+      return {
+        roughness: 0.9,
+        metalness: 0.03,
+        bumpScale: 0.2,
+        atmosphereColor: null,
+        atmosphereScale: 1.02,
+        atmosphereOpacity: 0,
+      }
+    case 'Venus':
+      return {
+        roughness: 0.78,
+        metalness: 0.03,
+        bumpScale: 0.12,
+        atmosphereColor: '#ffcc88',
+        atmosphereScale: 1.045,
+        atmosphereOpacity: 0.17,
+      }
+    case 'Earth':
+      return {
+        roughness: 0.7,
+        metalness: 0.05,
+        bumpScale: 0.1,
+        atmosphereColor: '#66ccff',
+        atmosphereScale: 1.05,
+        atmosphereOpacity: 0.2,
+      }
+    case 'Mars':
+      return {
+        roughness: 0.82,
+        metalness: 0.03,
+        bumpScale: 0.16,
+        atmosphereColor: '#f7a07b',
+        atmosphereScale: 1.035,
+        atmosphereOpacity: 0.08,
+      }
+    default:
+      return {
+        roughness: 0.76,
+        metalness: 0.04,
+        bumpScale: 0.11,
+        atmosphereColor: '#9cc9ff',
+        atmosphereScale: 1.03,
+        atmosphereOpacity: 0.06,
+      }
+  }
+}
+
 /** Vẽ đường quỹ đạo (vòng tròn nằm ngang XZ) với màu riêng cho từng hành tinh */
-function OrbitPath({ distance, color, visible = true }: { distance: number; color: string; visible?: boolean }) {
+function OrbitPath({
+  data,
+  highlighted = false,
+  visible = true,
+  onHoverChange,
+}: {
+  data: PlanetData
+  highlighted?: boolean
+  visible?: boolean
+  onHoverChange?: (hovered: boolean) => void
+}) {
   const points = useMemo(() => {
     const pts: THREE.Vector3[] = []
     for (let i = 0; i <= ORBIT_SEGMENTS; i++) {
       const t = (i / ORBIT_SEGMENTS) * Math.PI * 2
-      pts.push(new THREE.Vector3(distance * Math.cos(t), 0, distance * Math.sin(t)))
+      pts.push(computeOrbitalPosition(data, t))
     }
     return pts
-  }, [distance])
+  }, [data])
   const geometry = useMemo(() => {
     const g = new THREE.BufferGeometry().setFromPoints(points)
     return g
   }, [points])
   return (
-    <lineLoop geometry={geometry} visible={visible}>
-      <lineBasicMaterial color={color} transparent opacity={0.85} depthWrite={false} />
+    <lineLoop
+      geometry={geometry}
+      visible={visible}
+      onPointerOver={(e) => {
+        e.stopPropagation()
+        onHoverChange?.(true)
+      }}
+      onPointerOut={(e) => {
+        e.stopPropagation()
+        onHoverChange?.(false)
+      }}
+    >
+      <lineBasicMaterial
+        color={data.orbitColor}
+        transparent
+        opacity={highlighted ? 0.92 : 0.42}
+        depthWrite={false}
+      />
     </lineLoop>
+  )
+}
+
+function PlanetLabel({
+  name,
+  radius,
+  visible = true,
+  interactive = true,
+  onSelect,
+}: {
+  name: string
+  radius: number
+  visible?: boolean
+  interactive?: boolean
+  onSelect?: () => void
+}) {
+  if (!visible) return null
+  return (
+    <Html distanceFactor={20} position={[radius * 1.55, radius * 0.14, 0]}>
+      <div
+        className="select-none whitespace-nowrap rounded-md px-2 py-1 text-[34px] font-extrabold uppercase tracking-[0.14em] text-white"
+        style={{
+          textShadow: '0 0 14px rgba(255,255,255,0.55), 0 0 28px rgba(255,255,255,0.25)',
+          WebkitTextStroke: '0.8px rgba(0,0,0,0.45)',
+          background: 'rgba(0,0,0,0.12)',
+        }}
+        role={interactive ? 'button' : undefined}
+        tabIndex={interactive ? 0 : undefined}
+        onClick={
+          interactive
+            ? (e) => {
+                e.stopPropagation()
+                onSelect?.()
+              }
+            : undefined
+        }
+        onKeyDown={
+          interactive
+            ? (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  onSelect?.()
+                }
+              }
+            : undefined
+        }
+        onPointerEnter={
+          interactive
+            ? () => {
+                document.body.style.cursor = 'pointer'
+              }
+            : undefined
+        }
+        onPointerLeave={
+          interactive
+            ? () => {
+                document.body.style.cursor = 'auto'
+              }
+            : undefined
+        }
+      >
+        {name}
+      </div>
+    </Html>
   )
 }
 
@@ -197,6 +361,8 @@ function Planet({
   unlitTexture = false,
   orbitScale = 1,
   bodyScale = 1,
+  showLabel = false,
+  onHoverChange,
 }: {
   data: PlanetData
   index: number
@@ -214,14 +380,21 @@ function Planet({
   orbitScale?: number
   /** Bán kính mesh (cockpit: orbit × boost) */
   bodyScale?: number
+  showLabel?: boolean
+  onHoverChange?: (hovered: boolean) => void
 }) {
   const groupRef = useRef<THREE.Group>(null)
   const spinRef = useRef<THREE.Group>(null)
   const bodyMeshRef = useRef<THREE.Mesh>(null)
   useMeshRaycastEnabled(bodyMeshRef, interactive)
   const { gl } = useThree()
-  const angleRef = useRef(Math.random() * Math.PI * 2)
+  const phaseOffset = useMemo(
+    () => THREE.MathUtils.degToRad(data.orbitPhaseDeg ?? 0),
+    [data.orbitPhaseDeg]
+  )
+  const angleRef = useRef(Math.random() * Math.PI * 2 + phaseOffset)
   const map = useLoader(THREE.TextureLoader, getStaticAssetUrl(data.texture)) as THREE.Texture
+  const profile = useMemo(() => getPlanetRenderProfile(data.name), [data.name])
   useLayoutEffect(() => {
     applyGlobeTextureQuality(map, gl)
   }, [map, gl])
@@ -231,9 +404,8 @@ function Planet({
     const orbitSpeed = (orbitTimeScale * (2 * Math.PI)) / data.period
     angleRef.current += delta * orbitSpeed
     const a = angleRef.current
-    const ox = orbitScale * data.distance * Math.cos(a)
-    const oz = orbitScale * data.distance * Math.sin(a)
-    groupRef.current.position.set(ox, 0, oz)
+    const pos = computeOrbitalPosition(data, a, orbitScale)
+    groupRef.current.position.copy(pos)
     if (positionRef.current[index]) positionRef.current[index].copy(groupRef.current.position)
     if (spinRef.current) {
       const spinSpeed = (spinTimeScale * (2 * Math.PI)) / data.spinPeriod
@@ -257,14 +429,36 @@ function Planet({
           }
           onPointerOver={interactive ? () => { document.body.style.cursor = 'pointer' } : undefined}
           onPointerOut={interactive ? () => { document.body.style.cursor = 'auto' } : undefined}
+          onPointerEnter={interactive ? () => onHoverChange?.(true) : undefined}
+          onPointerLeave={interactive ? () => onHoverChange?.(false) : undefined}
         >
           <sphereGeometry args={[data.radius * bodyScale, 96, 96]} />
           {unlitTexture ? (
             <meshBasicMaterial map={map} toneMapped={false} />
           ) : (
-            <meshStandardMaterial map={map} roughness={0.75} metalness={0.08} />
+            <meshStandardMaterial
+              map={map}
+              bumpMap={map}
+              bumpScale={profile.bumpScale}
+              roughness={profile.roughness}
+              metalness={profile.metalness}
+              envMapIntensity={0.55}
+            />
           )}
         </mesh>
+        {!unlitTexture && profile.atmosphereColor && profile.atmosphereOpacity > 0 && (
+          <mesh scale={[profile.atmosphereScale, profile.atmosphereScale, profile.atmosphereScale]}>
+            <sphereGeometry args={[data.radius * bodyScale, 64, 64]} />
+            <meshBasicMaterial
+              color={profile.atmosphereColor}
+              transparent
+              opacity={profile.atmosphereOpacity}
+              side={THREE.BackSide}
+              blending={THREE.AdditiveBlending}
+              depthWrite={false}
+            />
+          </mesh>
+        )}
         {data.ringTexture && (
           <PlanetRing
             inner={data.ringInner! * data.radius * bodyScale}
@@ -273,6 +467,16 @@ function Planet({
             interactive={interactive}
           />
         )}
+        <PlanetLabel
+          name={data.name}
+          radius={data.radius * bodyScale}
+          visible={showLabel}
+          interactive={interactive}
+          onSelect={() => {
+            onSelect()
+            onPlanetSelect?.(index)
+          }}
+        />
       </group>
     </group>
   )
@@ -308,6 +512,198 @@ function PlanetRing({
         toneMapped={false}
       />
     </mesh>
+  )
+}
+
+function ExploreEntityFx({
+  entityId,
+  planetPositionsRef,
+  selectedIndex,
+  selectedRadius,
+  visible,
+}: {
+  entityId?: string | null
+  planetPositionsRef: React.MutableRefObject<THREE.Vector3[]>
+  selectedIndex: number | null
+  selectedRadius: number
+  visible: boolean
+}) {
+  const groupRef = useRef<THREE.Group>(null)
+  const spinARef = useRef<THREE.Group>(null)
+  const spinBRef = useRef<THREE.Group>(null)
+  const greenhouseHeatPoints = useMemo(() => {
+    const pts: number[] = []
+    for (let i = 0; i < 260; i++) {
+      const u = Math.random()
+      const v = Math.random()
+      const theta = u * Math.PI * 2
+      const phi = Math.acos(2 * v - 1)
+      const r = selectedRadius * (1.16 + Math.random() * 0.08)
+      pts.push(r * Math.sin(phi) * Math.cos(theta), r * Math.sin(phi) * Math.sin(theta), r * Math.cos(phi))
+    }
+    return new Float32Array(pts)
+  }, [selectedRadius])
+
+  useFrame((_, dt) => {
+    if (!groupRef.current || selectedIndex === null) return
+    const p = planetPositionsRef.current[selectedIndex]
+    if (!p || p.lengthSq() < 1e-6) return
+    groupRef.current.position.copy(p)
+    if (spinARef.current) spinARef.current.rotation.y += dt * 0.25
+    if (spinBRef.current) spinBRef.current.rotation.y -= dt * 0.16
+  })
+
+  if (!visible || !entityId || selectedIndex === null) return null
+
+  if (entityId === 'venus-atmosphere') {
+    return (
+      <group ref={groupRef}>
+        <mesh>
+          <sphereGeometry args={[selectedRadius * 1.08, 64, 64]} />
+          <shaderMaterial
+            transparent
+            depthWrite={false}
+            side={THREE.BackSide}
+            uniforms={{
+              uColor: { value: new THREE.Color('#ffd9a6') },
+              uPower: { value: 2.2 },
+              uIntensity: { value: 0.92 },
+              uOpacity: { value: 0.38 },
+            }}
+            vertexShader={`
+              varying vec3 vWorldNormal;
+              varying vec3 vViewDir;
+              void main() {
+                vec4 worldPos = modelMatrix * vec4(position, 1.0);
+                vWorldNormal = normalize(mat3(modelMatrix) * normal);
+                vViewDir = normalize(cameraPosition - worldPos.xyz);
+                gl_Position = projectionMatrix * viewMatrix * worldPos;
+              }
+            `}
+            fragmentShader={`
+              uniform vec3 uColor;
+              uniform float uPower;
+              uniform float uIntensity;
+              uniform float uOpacity;
+              varying vec3 vWorldNormal;
+              varying vec3 vViewDir;
+              void main() {
+                float fresnel = pow(1.0 - max(dot(vWorldNormal, vViewDir), 0.0), uPower);
+                float alpha = clamp(fresnel * uIntensity, 0.0, 1.0) * uOpacity;
+                gl_FragColor = vec4(uColor, alpha);
+              }
+            `}
+          />
+        </mesh>
+        <mesh>
+          <sphereGeometry args={[selectedRadius * 1.14, 56, 56]} />
+          <meshBasicMaterial
+            color="#ffbf80"
+            transparent
+            opacity={0.16}
+            side={THREE.BackSide}
+            blending={THREE.AdditiveBlending}
+            depthWrite={false}
+          />
+        </mesh>
+      </group>
+    )
+  }
+
+  if (entityId === 'venus-greenhouse') {
+    return (
+      <group ref={groupRef}>
+        <mesh>
+          <sphereGeometry args={[selectedRadius * 1.15, 56, 56]} />
+          <meshBasicMaterial
+            color="#ff9c52"
+            transparent
+            opacity={0.14}
+            side={THREE.BackSide}
+            blending={THREE.AdditiveBlending}
+            depthWrite={false}
+          />
+        </mesh>
+        <mesh>
+          <sphereGeometry args={[selectedRadius * 1.22, 56, 56]} />
+          <meshBasicMaterial
+            color="#ff6a00"
+            transparent
+            opacity={0.07}
+            side={THREE.BackSide}
+            blending={THREE.AdditiveBlending}
+            depthWrite={false}
+          />
+        </mesh>
+        <points>
+          <bufferGeometry>
+            <bufferAttribute
+              attach="attributes-position"
+              array={greenhouseHeatPoints}
+              count={greenhouseHeatPoints.length / 3}
+              itemSize={3}
+            />
+          </bufferGeometry>
+          <pointsMaterial
+            color="#ff7a33"
+            size={selectedRadius * 0.01}
+            sizeAttenuation
+            transparent
+            opacity={0.45}
+            depthWrite={false}
+          />
+        </points>
+      </group>
+    )
+  }
+
+  if (entityId === 'venus-clouds') {
+    return (
+      <group ref={groupRef}>
+        <group ref={spinARef}>
+          <mesh rotation={[Math.PI / 2 + 0.1, 0, 0]}>
+            <torusGeometry args={[selectedRadius * 1.05, selectedRadius * 0.012, 14, 120]} />
+            <meshBasicMaterial color="#fff3d6" transparent opacity={0.38} />
+          </mesh>
+        </group>
+        <group ref={spinBRef}>
+          <mesh rotation={[Math.PI / 2 - 0.08, 0.4, 0]}>
+            <torusGeometry args={[selectedRadius * 1.11, selectedRadius * 0.01, 14, 120]} />
+            <meshBasicMaterial color="#ffe8bf" transparent opacity={0.28} />
+          </mesh>
+        </group>
+      </group>
+    )
+  }
+
+  if (entityId === 'venus-pressure') {
+    return (
+      <group ref={groupRef}>
+        {[1.06, 1.13, 1.2, 1.27].map((s, idx) => (
+          <mesh key={s}>
+            <sphereGeometry args={[selectedRadius * s, 36, 36]} />
+            <meshBasicMaterial color="#ff9e80" transparent opacity={0.18 - idx * 0.03} wireframe />
+          </mesh>
+        ))}
+      </group>
+    )
+  }
+
+  return (
+    <group ref={groupRef}>
+      <group ref={spinARef}>
+        <mesh rotation={[Math.PI / 2 + 0.35, 0, 0]}>
+          <torusGeometry args={[selectedRadius * 1.26, selectedRadius * 0.015, 16, 140]} />
+          <meshBasicMaterial color="#c4b5fd" transparent opacity={0.48} />
+        </mesh>
+      </group>
+      <group ref={spinBRef}>
+        <mesh position={[selectedRadius * 1.26, 0, 0]}>
+          <sphereGeometry args={[selectedRadius * 0.05, 16, 16]} />
+          <meshBasicMaterial color="#e9d5ff" />
+        </mesh>
+      </group>
+    </group>
   )
 }
 
@@ -534,6 +930,8 @@ function SceneObserverContent({
   observerLockPending,
   observerTargetLock,
   onObserverLockArrived,
+  disableAutoTarget = false,
+  exploreEntityId,
 }: {
   onPlanetSelect?: (index: number | null) => void
   flightTargetIndex?: number | null
@@ -542,12 +940,16 @@ function SceneObserverContent({
   /** Sau khi camera tới nơi — solo + unlit + đóng băng quỹ đạo */
   observerTargetLock?: boolean
   onObserverLockArrived?: () => void
+  /** true: không tự kéo camera/target; cho phép user xoay mô hình tự do khi overlay đang mở. */
+  disableAutoTarget?: boolean
+  exploreEntityId?: string | null
 }) {
   const controlsRef = useRef<OrbitControlsImpl | null>(null)
   const planetPositionsRef = useRef<THREE.Vector3[]>(
     Array.from({ length: planetsData.length }, () => new THREE.Vector3())
   )
   const [internalIndex, setInternalIndex] = useState<number | null>(null)
+  const [hoveredOrbitIndex, setHoveredOrbitIndex] = useState<number | null>(null)
   const selectedIndex = flightTargetIndex !== undefined ? flightTargetIndex : internalIndex
 
   const setSelection = (idx: number | null) => {
@@ -556,21 +958,48 @@ function SceneObserverContent({
   }
 
   const locked = observerTargetLock === true
-  const solo = locked && selectedIndex !== null
+  const exploreSolo = disableAutoTarget === true && locked && selectedIndex !== null
+  const lockMotionScale = locked && !exploreSolo ? 0.08 : 1
   const approachActive =
     observerLockPending === true && !locked && selectedIndex !== null
 
+  useFrame((_, dt) => {
+    const c = controlsRef.current
+    if (!c || !exploreSolo || selectedIndex === null) return
+    const p = planetPositionsRef.current[selectedIndex]
+    if (!p || p.lengthSq() < 1e-6) return
+    const desiredDistance =
+      exploreEntityId === 'venus-greenhouse' ? 4.25 :
+      exploreEntityId === 'venus-atmosphere' ? 4.8 :
+      5.2
+    c.target.lerp(p, 0.18)
+    const dir = c.object.position.clone().sub(c.target).normalize()
+    const desiredPos = c.target.clone().add(dir.multiplyScalar(desiredDistance))
+    c.object.position.lerp(desiredPos, Math.min(1, dt * 2.2))
+    c.update()
+  })
+
   return (
     <>
-      <ambientLight intensity={solo ? 1.05 : 0.28} />
-      <SunLight enabled={!solo} />
+      <ambientLight intensity={exploreSolo ? 1.16 : 0.28} />
+      <SunLight enabled={!exploreSolo} />
 
-      {planetsData.map((data) => (
-        <OrbitPath key={data.name} distance={data.distance} color={data.orbitColor} visible={!solo} />
-      ))}
+      {planetsData.map((data, i) => {
+        const isSelected = i === selectedIndex
+        const isHovered = i === hoveredOrbitIndex
+        return (
+          <OrbitPath
+            key={data.name}
+            data={data}
+            highlighted={isSelected || isHovered}
+            visible={!exploreSolo}
+            onHoverChange={(hovered) => setHoveredOrbitIndex(hovered ? i : (prev) => (prev === i ? null : prev))}
+          />
+        )
+      })}
 
       <Sun
-        visible={!solo}
+        visible={!exploreSolo}
         onSelect={() => {
           setSelection(null)
         }}
@@ -581,44 +1010,59 @@ function SceneObserverContent({
           data={data}
           index={i}
           positionRef={planetPositionsRef}
-          visible={!solo || i === selectedIndex}
-          unlitTexture={solo && i === selectedIndex}
-          orbitTimeScale={solo && i === selectedIndex ? 0 : 1}
+          visible={!exploreSolo || i === selectedIndex}
+          unlitTexture={exploreSolo && i === selectedIndex}
+          orbitTimeScale={exploreSolo && i === selectedIndex ? 0 : lockMotionScale}
+          spinTimeScale={exploreSolo && i === selectedIndex ? 0 : lockMotionScale}
+          showLabel={!exploreSolo}
+          onHoverChange={(hovered) => setHoveredOrbitIndex(hovered ? i : (prev) => (prev === i ? null : prev))}
           onSelect={() => setSelection(i)}
           onPlanetSelect={onPlanetSelect}
         />
       ))}
+      <ExploreEntityFx
+        entityId={exploreEntityId}
+        planetPositionsRef={planetPositionsRef}
+        selectedIndex={selectedIndex}
+        selectedRadius={selectedIndex !== null ? planetsData[selectedIndex]?.radius ?? 1 : 1}
+        visible={exploreSolo}
+      />
 
-      <group visible={!solo}>
-        <Stars radius={200} depth={80} count={3000} factor={4} saturation={0} fade speed={1} />
+      <group visible>
+        <Stars radius={260} depth={120} count={9000} factor={3.6} saturation={0.85} fade speed={0.45} />
+      </group>
+      <group visible>
+        <Stars radius={180} depth={70} count={4500} factor={5.2} saturation={1} fade speed={0.65} />
+      </group>
+      <group visible>
+        <Stars radius={360} depth={180} count={12000} factor={2.3} saturation={0.9} fade speed={0.28} />
       </group>
 
-      <TargetController
-        controlsRef={controlsRef}
-        planetPositionsRef={planetPositionsRef}
-        selectedIndex={selectedIndex}
-      />
+      {!disableAutoTarget && (
+        <>
+          <TargetController
+            controlsRef={controlsRef}
+            planetPositionsRef={planetPositionsRef}
+            selectedIndex={selectedIndex}
+          />
 
-      <ObserverLockApproach
-        active={approachActive}
-        selectedIndex={selectedIndex}
-        planetPositionsRef={planetPositionsRef}
-        controlsRef={controlsRef}
-        onArrived={onObserverLockArrived}
-      />
-
-      <EarthMarsLearningPath
-        planetPositionsRef={planetPositionsRef}
-        selectedIndex={selectedIndex}
-      />
+          <ObserverLockApproach
+            active={approachActive}
+            selectedIndex={selectedIndex}
+            planetPositionsRef={planetPositionsRef}
+            controlsRef={controlsRef}
+            onArrived={onObserverLockArrived}
+          />
+        </>
+      )}
 
       <OrbitControls
         ref={controlsRef}
         enablePan
         enableZoom
         enableRotate
-        minDistance={solo ? 0.55 : 2}
-        maxDistance={solo ? 45 : 120}
+        minDistance={locked ? 0.55 : 2}
+        maxDistance={120}
         target={[0, 0, 0]}
         panSpeed={0.8}
         zoomSpeed={1.2}
@@ -956,6 +1400,8 @@ function SceneContent({
   observerTargetLock,
   onObserverLockArrived,
   cockpitCanvasInTargetFrame,
+  observerDisableAutoTarget,
+  observerExploreEntityId,
 }: {
   onPlanetSelect?: (index: number | null) => void
   mode: 'observer' | 'cockpit'
@@ -972,6 +1418,8 @@ function SceneContent({
   observerTargetLock?: boolean
   onObserverLockArrived?: () => void
   cockpitCanvasInTargetFrame?: boolean
+  observerDisableAutoTarget?: boolean
+  observerExploreEntityId?: string | null
 }) {
   if (mode === 'cockpit') {
     return (
@@ -991,6 +1439,8 @@ function SceneContent({
       observerLockPending={observerLockPending}
       observerTargetLock={observerTargetLock}
       onObserverLockArrived={onObserverLockArrived}
+      disableAutoTarget={observerDisableAutoTarget}
+      exploreEntityId={observerExploreEntityId}
     />
   )
 }
@@ -1005,6 +1455,8 @@ export default function SolarSystemScene({
   observerTargetLock = false,
   onObserverLockArrived,
   cockpitCanvasInTargetFrame = false,
+  observerDisableAutoTarget = false,
+  observerExploreEntityId,
 }: {
   onPlanetSelect?: (index: number | null) => void
   mode?: 'observer' | 'cockpit'
@@ -1021,12 +1473,25 @@ export default function SolarSystemScene({
   observerTargetLock?: boolean
   onObserverLockArrived?: () => void
   cockpitCanvasInTargetFrame?: boolean
+  observerDisableAutoTarget?: boolean
+  observerExploreEntityId?: string | null
 }) {
   return (
     <Canvas
-      camera={{ position: [0, 25, 45], fov: 50 }}
-      gl={{ antialias: true, alpha: false }}
+      camera={{ position: [0, 19, 58], fov: 45 }}
+      dpr={[1, 2]}
+      gl={{
+        antialias: true,
+        alpha: false,
+        powerPreference: 'high-performance',
+        stencil: false,
+      }}
       style={{ background: '#000' }}
+      onCreated={({ gl }) => {
+        gl.outputColorSpace = THREE.SRGBColorSpace
+        gl.toneMapping = THREE.ACESFilmicToneMapping
+        gl.toneMappingExposure = 1.08
+      }}
     >
       <Suspense fallback={null}>
         <SceneContent
@@ -1039,6 +1504,8 @@ export default function SolarSystemScene({
           observerTargetLock={observerTargetLock}
           onObserverLockArrived={onObserverLockArrived}
           cockpitCanvasInTargetFrame={cockpitCanvasInTargetFrame}
+          observerDisableAutoTarget={observerDisableAutoTarget}
+          observerExploreEntityId={observerExploreEntityId}
         />
         <Preload all />
       </Suspense>

@@ -16,7 +16,16 @@ import {
   YAxis,
 } from 'recharts'
 import { useAuthStore } from '@/store/useAuthStore'
-import { fetchAdminUsers, updateUserRole, updateUserStatus, type AdminUser, type UserRole } from '@/lib/authApi'
+import {
+  fetchAdminUsers,
+  updateUserRole,
+  updateUserStatus,
+  fetchAdminTeacherApplications,
+  reviewTeacherApplication,
+  type AdminUser,
+  type UserRole,
+  type TeacherApplicationWithUser,
+} from '@/lib/authApi'
 import { fetchCourses } from '@/lib/coursesApi'
 import { fetchAdminOrderStats, type AdminOrderStats, type Order } from '@/lib/paymentsApi'
 import {
@@ -64,6 +73,10 @@ export default function AdminPage() {
   const [updatingId, setUpdatingId] = useState<string | null>(null)
   const [message, setMessage] = useState<'success' | 'error' | null>(null)
   const [userStatusFilter, setUserStatusFilter] = useState<'all' | 'active' | 'deactivated'>('all')
+  const [teacherAppFilter, setTeacherAppFilter] = useState<'pending' | 'approved' | 'rejected' | 'all'>('pending')
+  const [teacherApps, setTeacherApps] = useState<TeacherApplicationWithUser[]>([])
+  const [teacherAppLoading, setTeacherAppLoading] = useState(true)
+  const [reviewingAppId, setReviewingAppId] = useState<string | null>(null)
   const analyticsTabLabel: Record<typeof analyticsTab, string> = {
     overview: 'Tổng quan',
     funnel: 'Phễu',
@@ -131,6 +144,17 @@ export default function AdminPage() {
 
   useEffect(() => {
     if (!user || user.role !== 'admin') return
+    setTeacherAppLoading(true)
+    fetchAdminTeacherApplications(teacherAppFilter)
+      .then((res) => {
+        if (res.success && res.data) setTeacherApps(res.data)
+        else setTeacherApps([])
+      })
+      .finally(() => setTeacherAppLoading(false))
+  }, [user, teacherAppFilter])
+
+  useEffect(() => {
+    if (!user || user.role !== 'admin') return
     trackEvent('admin_dashboard_viewed', { range: analyticsRange })
   }, [user, analyticsRange])
 
@@ -155,6 +179,26 @@ export default function AdminPage() {
         target_role: newRole,
       })
       setMessage('success')
+    } else {
+      setError(res.error || '')
+      setMessage('error')
+    }
+  }
+
+  const handleReviewTeacherApp = async (app: TeacherApplicationWithUser, action: 'approve' | 'reject') => {
+    const note =
+      action === 'reject' ? window.prompt('Ghi chú từ chối (tuỳ chọn, hiển thị cho người nộp đơn):', '') ?? '' : ''
+    setReviewingAppId(app.id)
+    setMessage(null)
+    setError('')
+    const res = await reviewTeacherApplication(app.id, action, note)
+    setReviewingAppId(null)
+    if (res.success) {
+      setMessage('success')
+      trackEvent('admin_teacher_application_reviewed', { action })
+      const [uRes, appsRes] = await Promise.all([fetchAdminUsers(), fetchAdminTeacherApplications(teacherAppFilter)])
+      if (uRes.success && uRes.data) setUsers(uRes.data)
+      if (appsRes.success && appsRes.data) setTeacherApps(appsRes.data)
     } else {
       setError(res.error || '')
       setMessage('error')
@@ -558,6 +602,101 @@ export default function AdminPage() {
 
         <section className="rounded-2xl border border-white/10 bg-[#0a0f17] overflow-hidden mb-8">
           <div className="px-4 py-3 border-b border-white/10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <h2 className="font-semibold text-white">Đơn xin quyền giảng viên</h2>
+            <select
+              value={teacherAppFilter}
+              onChange={(e) => setTeacherAppFilter(e.target.value as typeof teacherAppFilter)}
+              className="text-xs rounded-lg bg-black/50 border border-white/15 text-white px-2 py-1.5 focus:border-cyan-500/50 focus:outline-none"
+            >
+              <option value="pending">Chờ duyệt</option>
+              <option value="approved">Đã duyệt</option>
+              <option value="rejected">Đã từ chối</option>
+              <option value="all">Tất cả</option>
+            </select>
+          </div>
+          {teacherAppLoading ? (
+            <div className="p-8 text-center text-gray-500">
+              <Spinner />
+            </div>
+          ) : teacherApps.length === 0 ? (
+            <div className="p-8">
+              <EmptyState title="Không có đơn" description="Thay đổi bộ lọc hoặc quay lại sau." />
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="border-b border-white/10">
+                    <th className="px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Người nộp</th>
+                    <th className="px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Email</th>
+                    <th className="px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Trạng thái</th>
+                    <th className="px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Giới thiệu</th>
+                    <th className="px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Ngày gửi</th>
+                    <th className="px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Thao tác</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {teacherApps.map((app) => (
+                    <tr key={app.id} className="border-b border-white/5 hover:bg-white/5 align-top">
+                      <td className="px-4 py-3 text-sm text-white">{app.user?.displayName || '—'}</td>
+                      <td className="px-4 py-3 text-sm text-gray-300">{app.user?.email || '—'}</td>
+                      <td className="px-4 py-3">
+                        <span
+                          className={`text-xs px-2 py-0.5 rounded-full ${
+                            app.status === 'pending'
+                              ? 'bg-amber-500/20 text-amber-300'
+                              : app.status === 'approved'
+                                ? 'bg-emerald-500/20 text-emerald-300'
+                                : 'bg-red-500/20 text-red-300'
+                          }`}
+                        >
+                          {app.status}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-xs text-gray-400 max-w-[280px]">
+                        <p className="line-clamp-4 whitespace-pre-wrap">{app.bio}</p>
+                        {app.organization ? <p className="text-gray-500 mt-1">Đơn vị: {app.organization}</p> : null}
+                        {app.status === 'rejected' && app.reviewNote ? (
+                          <p className="text-red-300/90 mt-1">Ghi chú: {app.reviewNote}</p>
+                        ) : null}
+                      </td>
+                      <td className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">
+                        {app.createdAt ? new Date(app.createdAt).toLocaleString('vi-VN') : '—'}
+                      </td>
+                      <td className="px-4 py-3">
+                        {app.status === 'pending' ? (
+                          <div className="flex flex-wrap gap-2">
+                            <button
+                              type="button"
+                              disabled={reviewingAppId === app.id}
+                              onClick={() => handleReviewTeacherApp(app, 'approve')}
+                              className="text-xs rounded-lg px-2 py-1.5 border border-emerald-500/40 bg-emerald-500/15 text-emerald-200 hover:bg-emerald-500/25 disabled:opacity-50"
+                            >
+                              Duyệt
+                            </button>
+                            <button
+                              type="button"
+                              disabled={reviewingAppId === app.id}
+                              onClick={() => handleReviewTeacherApp(app, 'reject')}
+                              className="text-xs rounded-lg px-2 py-1.5 border border-red-500/40 bg-red-500/15 text-red-200 hover:bg-red-500/25 disabled:opacity-50"
+                            >
+                              Từ chối
+                            </button>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-gray-500">—</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+
+        <section className="rounded-2xl border border-white/10 bg-[#0a0f17] overflow-hidden mb-8">
+          <div className="px-4 py-3 border-b border-white/10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
             <h2 className="font-semibold text-white">{viText.admin.users}</h2>
             <div className="flex flex-wrap items-center gap-2">
               <select
@@ -600,7 +739,17 @@ export default function AdminPage() {
                         </span>
                       </td>
                       <td className="px-4 py-3">
-                        <span className={`text-xs px-2 py-0.5 rounded-full ${u.role === 'admin' ? 'bg-amber-500/20 text-amber-300' : u.role === 'teacher' ? 'bg-cyan-500/20 text-cyan-300' : 'bg-white/10 text-gray-400'}`}>
+                        <span
+                          className={`text-xs px-2 py-0.5 rounded-full ${
+                            u.role === 'admin'
+                              ? 'bg-amber-500/20 text-amber-300'
+                              : u.role === 'teacher'
+                                ? 'bg-cyan-500/20 text-cyan-300'
+                                : u.role === 'moderator'
+                                  ? 'bg-violet-500/20 text-violet-300'
+                                  : 'bg-white/10 text-gray-400'
+                          }`}
+                        >
                           {u.role}
                         </span>
                       </td>

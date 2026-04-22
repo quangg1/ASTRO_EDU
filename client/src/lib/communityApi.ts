@@ -36,6 +36,10 @@ export interface Post {
   publishedAt?: string | null
   imageUrl?: string | null
   isCrawled?: boolean
+  /** true: card tin mở sourceUrl (đọc bài gốc), không nhúng full HTML crawl */
+  isExternalArticle?: boolean
+  /** Từ RSS &lt;category&gt; — filter theo metadata */
+  rssCategories?: string[]
   voteCount: number
   commentCount: number
   viewCount: number
@@ -70,12 +74,22 @@ export async function fetchForum(slug: string): Promise<Forum | null> {
 
 export async function fetchForumPosts(
   slug: string,
-  opts?: { page?: number; limit?: number; sort?: 'newest' | 'top' | 'hot' }
+  opts?: {
+    page?: number
+    limit?: number
+    sort?: 'newest' | 'top' | 'hot'
+    /** Khớp một giá trị trong rssCategories (tin crawl) */
+    category?: string
+    /** Tìm trong tiêu đề, tối thiểu 2 ký tự */
+    q?: string
+  }
 ): Promise<{ data: Post[]; total: number; page: number; limit: number }> {
   const params = new URLSearchParams()
   if (opts?.page) params.set('page', String(opts.page))
   if (opts?.limit) params.set('limit', String(opts.limit))
   if (opts?.sort) params.set('sort', opts.sort)
+  if (opts?.category) params.set('category', opts.category)
+  if (opts?.q) params.set('q', opts.q)
   const q = params.toString()
   const res = await fetch(`${COMMUNITY_BASE}/forums/${slug}/posts${q ? `?${q}` : ''}`, { headers: authHeaders() })
   const json = await res.json()
@@ -83,15 +97,33 @@ export async function fetchForumPosts(
   return { data: [], total: 0, page: 1, limit: 20 }
 }
 
-export async function fetchNews(opts?: { page?: number; limit?: number }): Promise<{ data: Post[]; total: number }> {
+export async function fetchNews(opts?: {
+  page?: number
+  limit?: number
+  category?: string
+  q?: string
+  /** newest | hot (lượt xem) | top (vote) */
+  sort?: 'newest' | 'hot' | 'top'
+}): Promise<{ data: Post[]; total: number }> {
   const params = new URLSearchParams()
   if (opts?.page) params.set('page', String(opts.page))
   if (opts?.limit) params.set('limit', String(opts.limit))
+  if (opts?.category) params.set('category', opts.category)
+  if (opts?.q) params.set('q', opts.q)
+  if (opts?.sort && opts.sort !== 'newest') params.set('sort', opts.sort)
   const q = params.toString()
   const res = await fetch(`${COMMUNITY_BASE}/news${q ? `?${q}` : ''}`, { headers: authHeaders() })
   const json = await res.json()
   if (json.success) return { data: json.data || [], total: json.total || 0 }
   return { data: [], total: 0 }
+}
+
+/** Danh sách category từ tin đã crawl (để filter). */
+export async function fetchNewsCategories(): Promise<string[]> {
+  const res = await fetch(`${COMMUNITY_BASE}/news/categories`, { headers: authHeaders() })
+  const json = await res.json()
+  if (json.success && Array.isArray(json.data)) return json.data
+  return []
 }
 
 export async function fetchPost(id: string): Promise<{ post: Post & { comments: Comment[]; myVote?: number | null } } | null> {

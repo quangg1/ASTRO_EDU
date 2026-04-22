@@ -273,6 +273,55 @@ function LearningPathLessonEditor({
     () => filteredConceptCandidates.filter((c) => !selectedConceptIds.includes(c.id)),
     [filteredConceptCandidates, selectedConceptIds],
   )
+  const conceptById = useMemo(() => new Map(concepts.map((c) => [c.id, c])), [concepts])
+  const anchoredConceptIds = useMemo(
+    () =>
+      new Set(
+        (activeLesson.conceptAnchors ?? [])
+          .map((a) => String(a.conceptId || '').trim())
+          .filter(Boolean),
+      ),
+    [activeLesson.conceptAnchors],
+  )
+  const depthBudget = useMemo(() => {
+    if (depth === 'beginner') return 3
+    if (depth === 'explorer') return 5
+    return 7
+  }, [depth])
+  const conceptChecklist = useMemo(() => {
+    const selectedSet = new Set(selectedConceptIds)
+    const missingConceptIds = selectedConceptIds.filter((id) => !conceptById.has(id))
+    const missingAnchorIds = selectedConceptIds.filter((id) => !anchoredConceptIds.has(id))
+    const missingPrerequisites: Array<{ conceptId: string; prereqId: string }> = []
+    for (const concept of selectedConcepts) {
+      for (const prereqId of concept.prerequisites ?? []) {
+        if (!selectedSet.has(prereqId)) {
+          missingPrerequisites.push({ conceptId: concept.id, prereqId })
+        }
+      }
+    }
+    const removalCandidates = selectedConcepts
+      .map((concept) => {
+        const anchored = anchoredConceptIds.has(concept.id)
+        const usedAsPrereq = selectedConcepts.some((other) =>
+          (other.prerequisites ?? []).includes(concept.id),
+        )
+        const score = (anchored ? 2 : 0) + (usedAsPrereq ? 2 : 0)
+        return { conceptId: concept.id, score }
+      })
+      .sort((a, b) => a.score - b.score)
+      .map((row) => row.conceptId)
+      .slice(0, 3)
+
+    return {
+      selectedCount: selectedConceptIds.length,
+      overBudget: Math.max(0, selectedConceptIds.length - depthBudget),
+      missingConceptIds,
+      missingAnchorIds,
+      missingPrerequisites,
+      removalCandidates,
+    }
+  }, [anchoredConceptIds, conceptById, depthBudget, selectedConceptIds, selectedConcepts])
 
   useEffect(() => {
     if (!previewConceptId) return
@@ -470,6 +519,67 @@ function LearningPathLessonEditor({
             </div>
           </>
         )}
+      </div>
+
+      <div className="rounded-xl border border-emerald-500/25 bg-emerald-500/5 p-3">
+        <p className="text-xs font-medium text-emerald-200 mb-2">Checklist map concept (không cần AI)</p>
+        <div className="space-y-2 text-[11px] text-slate-300">
+          <p>
+            Budget tầng <span className="text-emerald-200 font-semibold">{DEPTH_META[depth].labelVi}</span>:{' '}
+            <span className="font-semibold">{conceptChecklist.selectedCount}</span>/{depthBudget} concept
+            {conceptChecklist.overBudget > 0 ? (
+              <span className="ml-2 text-amber-300">(+{conceptChecklist.overBudget} quá tải)</span>
+            ) : (
+              <span className="ml-2 text-emerald-300">OK</span>
+            )}
+          </p>
+          {conceptChecklist.missingConceptIds.length > 0 && (
+            <p className="text-amber-300">
+              Concept id không còn trong library: {conceptChecklist.missingConceptIds.join(', ')}
+            </p>
+          )}
+          {conceptChecklist.missingAnchorIds.length > 0 ? (
+            <p className="text-amber-200">
+              Chưa có anchor phrase cho: {conceptChecklist.missingAnchorIds.slice(0, 6).join(', ')}
+              {conceptChecklist.missingAnchorIds.length > 6 ? '…' : ''}
+            </p>
+          ) : (
+            <p className="text-emerald-300">Tất cả concept đã có anchor phrase.</p>
+          )}
+          {conceptChecklist.missingPrerequisites.length > 0 ? (
+            <div className="rounded border border-amber-400/30 bg-amber-500/10 px-2 py-1.5">
+              <p className="text-amber-200 mb-1">Thiếu prerequisite:</p>
+              <div className="space-y-1">
+                {conceptChecklist.missingPrerequisites.slice(0, 4).map((row) => (
+                  <p key={`${row.conceptId}-${row.prereqId}`} className="text-amber-100/90">
+                    {row.conceptId} cần {row.prereqId}
+                  </p>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <p className="text-emerald-300">Prerequisite nhất quán.</p>
+          )}
+          {conceptChecklist.overBudget > 0 && conceptChecklist.removalCandidates.length > 0 && (
+            <div className="rounded border border-white/15 bg-black/25 px-2 py-1.5">
+              <p className="text-slate-300 mb-1">Gợi ý bỏ trước (ít liên kết/anchor):</p>
+              <div className="flex flex-wrap gap-1.5">
+                {conceptChecklist.removalCandidates.map((id) => (
+                  <button
+                    key={`drop-${id}`}
+                    type="button"
+                    onClick={() =>
+                      patchLesson({ conceptIds: selectedConceptIds.filter((x) => x !== id) })
+                    }
+                    className="rounded-full border border-red-400/35 px-2 py-0.5 text-[10px] text-red-200 hover:bg-red-500/20"
+                  >
+                    Bỏ {id}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="rounded-xl border border-violet-500/25 bg-violet-500/5 p-3">
@@ -752,19 +862,34 @@ export default function StudioLearningPathPage() {
         setConcepts(cs || [])
         if (tx) setTaxonomyRegistry(tx)
         setPublished(d.published)
+
+        // Preserve current editing selection when data refreshes (e.g. tab blur/focus auth refresh).
         if (!d.modules?.length) return
         const sorted = [...d.modules].sort((a, b) => a.order - b.order)
-        const first = sorted[0]
-        const firstNode = first?.nodes[0]
-        setModuleId(first?.id ?? null)
-        setNodeId(firstNode?.id ?? null)
-        const firstDepth =
-          DEPTH_ORDER.find((dep) => (firstNode?.depths[dep]?.length ?? 0) > 0) ?? 'beginner'
-        setDepth(firstDepth)
-        setActiveLessonId(firstNode?.depths[firstDepth]?.[0]?.id ?? null)
+        const hasModule = moduleId && sorted.some((m) => m.id === moduleId)
+        const selectedModule = hasModule
+          ? sorted.find((m) => m.id === moduleId) || sorted[0]
+          : sorted[0]
+        const hasNode = nodeId && selectedModule.nodes.some((n) => n.id === nodeId)
+        const selectedNode = hasNode
+          ? selectedModule.nodes.find((n) => n.id === nodeId) || selectedModule.nodes[0]
+          : selectedModule.nodes[0]
+        const selectedDepth =
+          depth && selectedNode?.depths?.[depth] ? depth : DEPTH_ORDER.find((dep) => (selectedNode?.depths[dep]?.length ?? 0) > 0) ?? 'beginner'
+        const hasLesson =
+          activeLessonId &&
+          (selectedNode?.depths?.[selectedDepth] || []).some((l) => l.id === activeLessonId)
+        const selectedLessonId = hasLesson
+          ? activeLessonId
+          : selectedNode?.depths?.[selectedDepth]?.[0]?.id ?? null
+
+        setModuleId(selectedModule?.id ?? null)
+        setNodeId(selectedNode?.id ?? null)
+        setDepth(selectedDepth)
+        setActiveLessonId(selectedLessonId)
       })
       .finally(() => setLoading(false))
-  }, [user])
+  }, [user?.id])
 
   const sortedModules = useMemo(
     () => [...modules].sort((a, b) => a.order - b.order),

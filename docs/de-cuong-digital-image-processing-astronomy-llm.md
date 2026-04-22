@@ -142,6 +142,7 @@ Tài liệu đề cương môn học / dự án: Xử lý ảnh số cho ảnh t
 - OpenAI GPT-4V, Gemini, Claude Vision
 - Open-source: LLaVA, Qwen-VL, InternVL
 - Local: Ollama + LLaVA, LM Studio
+- Cloud free tier: OpenRouter (`openrouter/free` hoặc model VLM `:free`)
 
 ### 5.6. Hạn chế & Giải pháp
 - **Độ phân giải**: VLM thường resize ảnh → mất chi tiết

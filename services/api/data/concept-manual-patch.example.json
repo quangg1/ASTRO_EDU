@@ -1,0 +1,38 @@
+{
+  "patches": [
+    {
+      "id": "astronomy",
+      "set": {
+        "title": "Astronomy",
+        "short_description": "Nganh khoa hoc nghien cuu cac thien the va cau truc vu tru.",
+        "explanation": "Concept nen tang cho nhieu bai hoc ve hanh tinh, sao, thien ha va quan sat bau troi.",
+        "domain": "astronomy",
+        "subdomain": "fundamentals",
+        "published": true
+      },
+      "addAliases": ["thien-van-hoc"],
+      "addRelated": ["solar-system", "stars"],
+      "addPrerequisites": [],
+      "removeAliases": [],
+      "removeRelated": [],
+      "removePrerequisites": []
+    },
+    {
+      "id": "stone_meteorite",
+      "set": {
+        "title": "Stone Meteorite",
+        "short_description": "Nhom thien thach da pho bien nhat trong cac mau thien thach roi xuong Trai Dat.",
+        "explanation": "Thuong duoc dung de hoc ve thanh phan vat chat ban dau cua He Mat Troi.",
+        "domain": "geology",
+        "subdomain": "planetary-geology"
+      },
+      "addAliases": ["thien-thach-da"],
+      "addRelated": [],
+      "addPrerequisites": [],
+      "removeAliases": [],
+      "removeRelated": [],
+      "removePrerequisites": []
+    }
+  ]
+}
+

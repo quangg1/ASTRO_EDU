@@ -1,12 +1,20 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import { useAuthStore } from '@/store/useAuthStore'
 import { useRouter } from 'next/navigation'
 import { fetchPost, addComment, votePost, pinPost, deletePost, type Post, type Comment } from '@/lib/communityApi'
 import { canModerate } from '@/lib/roles'
+import { firstImageSrcFromHtml, looksLikeHtml, stripFirstImgTag } from '@/lib/postContent'
+import { recordPostDetailView, recordPostSourceOpen } from '@/lib/postEngagement'
+import { PostMarkdown } from '@/components/community/PostMarkdown'
+
+function formatDate(date?: string): string {
+  if (!date) return ''
+  return new Date(date).toLocaleDateString('vi-VN')
+}
 
 export default function PostPage() {
   const params = useParams()
@@ -18,11 +26,26 @@ export default function PostPage() {
   const [commentText, setCommentText] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [modAction, setModAction] = useState<'pin' | 'delete' | null>(null)
+  const detailViewRecorded = useRef(false)
 
   useEffect(() => {
     if (!id) return
+    detailViewRecorded.current = false
     fetchPost(id).then(setData).finally(() => setLoading(false))
   }, [id])
+
+  useEffect(() => {
+    if (!id || loading || !data?.post?._id) return
+    if (String(data.post._id) !== id) return
+    if (detailViewRecorded.current) return
+    detailViewRecorded.current = true
+    void recordPostDetailView(id).then((viewCount) => {
+      if (viewCount == null) return
+      setData((d) =>
+        d ? { ...d, post: { ...d.post, viewCount } } : null
+      )
+    })
+  }, [id, data?.post?._id, loading])
 
   const handleAddComment = async () => {
     if (!data || !user || !commentText.trim()) return
@@ -86,119 +109,236 @@ export default function PostPage() {
   if (loading || !data) {
     return (
       <div className="min-h-screen bg-black pt-20 flex items-center justify-center">
-        <p className="text-gray-500">{loading ? 'Loading...' : 'Post not found'}</p>
+        <p className="text-gray-500">{loading ? 'Đang tải...' : 'Không tìm thấy bài viết'}</p>
       </div>
     )
   }
 
   const { post } = data
+  const isNewsArticle = Boolean(post.isCrawled || (post.sourceUrl && post.sourceName))
+  /** Tin chỉ tóm tắt trong app; nội dung đầy đủ ở sourceUrl */
+  const isLinkOutNews = Boolean(post.isExternalArticle && post.sourceUrl)
+  const newsDate = post.publishedAt || post.createdAt
+
+  const coverFromContent = firstImageSrcFromHtml(post.content)
+  const coverUrl = post.imageUrl || coverFromContent
+  const contentIsHtml = looksLikeHtml(post.content)
+  /** Tránh trùng ảnh: đã dùng ảnh đầu làm bìa thì bỏ <img> đầu trong body HTML. */
+  const bodyHtml =
+    contentIsHtml && post.content
+      ? !post.imageUrl && coverFromContent
+        ? stripFirstImgTag(post.content)
+        : post.content
+      : null
+
+  const htmlBodyClassName =
+    'mt-6 text-slate-200/95 leading-[1.75] [&_p]:mb-4 [&_p:last-child]:mb-0 [&_img]:max-w-full [&_img]:rounded-lg [&_img]:my-4 [&_a]:text-cyan-400 [&_a]:underline [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:list-decimal [&_ol]:pl-6 [&_h2]:text-xl [&_h2]:font-semibold [&_h2]:mt-6 [&_h2]:mb-2 [&_h3]:text-lg [&_h3]:font-semibold [&_blockquote]:border-l-2 [&_blockquote]:border-cyan-500/40 [&_blockquote]:pl-4 [&_blockquote]:italic'
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#05070c] via-black to-[#04090f]">
-      <div className="pt-20 px-4 pb-12 max-w-4xl mx-auto">
-        <Link href="/community" className="text-sm text-cyan-400 hover:text-cyan-300 mb-4 inline-block">
-          ← Community
-        </Link>
+      <div
+        className="pt-20 px-4 pb-12 mx-auto max-w-4xl"
+      >
+        <nav className="mb-4 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-slate-400" aria-label="Breadcrumb">
+          <Link
+            href="/community"
+            className="text-cyan-400 hover:text-cyan-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50 rounded px-0.5"
+          >
+            Cộng đồng
+          </Link>
+          {isNewsArticle && (
+            <>
+              <span aria-hidden className="text-slate-600">
+                /
+              </span>
+              <Link
+                href="/community/tin-thien-van"
+                className="text-cyan-400/90 hover:text-cyan-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50 rounded px-0.5"
+              >
+                Tin thiên văn
+              </Link>
+            </>
+          )}
+        </nav>
 
-        <article className="rounded-2xl border border-white/10 bg-[#08111f]/80 overflow-hidden">
-          {post.imageUrl && (
-            <div className="aspect-video w-full overflow-hidden">
-              <img src={post.imageUrl} alt="" className="w-full h-full object-cover" />
+        <article
+          className={`rounded-2xl overflow-hidden shadow-[0_16px_50px_-24px_rgba(0,0,0,0.8)] ${
+            isNewsArticle
+              ? 'border border-cyan-400/20 bg-gradient-to-b from-[#0a1628]/95 to-[#060d16]'
+              : 'border border-white/10 bg-[#08111f]/80'
+          }`}
+        >
+          {coverUrl && (
+            <div className={`w-full overflow-hidden ${isNewsArticle ? 'aspect-[21/9] max-h-[360px]' : 'aspect-video'}`}>
+              <img
+                src={coverUrl}
+                alt={post.title}
+                className="w-full h-full object-cover"
+                referrerPolicy="no-referrer"
+              />
             </div>
           )}
-          <div className="p-6">
+          <div className={`p-6 md:p-8 ${isNewsArticle ? 'px-5 sm:px-10' : ''}`}>
+            {isNewsArticle && (
+              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-cyan-300/85 mb-3">
+                Tin thiên văn
+              </p>
+            )}
             <div className="flex items-start justify-between gap-4">
-              <h1 className="text-2xl font-bold text-white">{post.title}</h1>
+              <h1
+                className={`font-bold text-white leading-tight ${
+                  isNewsArticle ? 'text-2xl md:text-[1.75rem] font-semibold tracking-tight' : 'text-2xl md:text-3xl'
+                }`}
+              >
+                {post.title}
+              </h1>
               {post.isPinned && (
-                <span className="shrink-0 text-xs px-2 py-0.5 rounded bg-amber-500/20 text-amber-300">Pinned</span>
+                <span className="shrink-0 text-xs px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-300/35">
+                  Ghim
+                </span>
               )}
             </div>
-            <div className="flex items-center gap-4 mt-2 text-sm text-gray-500 flex-wrap">
-              <span>{post.authorName}</span>
-              {post.sourceName && <span>{post.sourceName}</span>}
-              <span>{new Date(post.createdAt).toLocaleDateString('en-US')}</span>
-              <span>{post.viewCount} views</span>
+            <div className="flex items-center gap-4 mt-4 text-sm text-gray-400 flex-wrap">
+              {isNewsArticle ? (
+                <>
+                  {post.sourceName && <span className="text-cyan-200/90">{post.sourceName}</span>}
+                  <span className="text-slate-500">·</span>
+                  <time dateTime={newsDate}>{formatDate(newsDate)}</time>
+                  <span className="text-slate-500">·</span>
+                  <span>{post.viewCount} lượt xem</span>
+                  {isLinkOutNews && (
+                    <span className="text-slate-500 w-full sm:w-auto text-xs mt-1 sm:mt-0">
+                      Bản đầy đủ nằm trên trang của nguồn tin.
+                    </span>
+                  )}
+                </>
+              ) : (
+                <>
+                  <span>{post.authorName}</span>
+                  {post.sourceName && <span>{post.sourceName}</span>}
+                  <span>{formatDate(post.createdAt)}</span>
+                  <span>{post.viewCount} lượt xem</span>
+                </>
+              )}
             </div>
 
-            <div className="mt-4 flex items-center gap-4">
+            {isLinkOutNews && post.sourceUrl && (
+              <a
+                href={post.sourceUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => {
+                  void recordPostSourceOpen(post._id).then((viewCount) => {
+                    if (viewCount != null) {
+                      setData((d) => (d ? { ...d, post: { ...d.post, viewCount } } : null))
+                    }
+                  })
+                }}
+                className="mt-6 inline-flex w-full sm:w-auto items-center justify-center gap-2 rounded-xl bg-cyan-500/25 px-6 py-3.5 text-base font-semibold text-cyan-100 border border-cyan-400/35 hover:bg-cyan-500/35 transition-colors"
+              >
+                Đọc bài gốc <span aria-hidden>↗</span>
+              </a>
+            )}
+
+            <div className="mt-5 flex flex-wrap items-center gap-3 rounded-xl border border-white/10 bg-black/20 p-3">
               {user && (
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
                     onClick={() => handleVote(1)}
-                    className={`px-2 py-1 rounded ${post.myVote === 1 ? 'bg-cyan-500/30 text-cyan-400' : 'bg-white/10 text-gray-400 hover:text-white'}`}
+                    className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${post.myVote === 1 ? 'bg-cyan-500/30 text-cyan-300 border border-cyan-300/40' : 'bg-white/10 text-gray-300 hover:text-white border border-white/10'}`}
                   >
                     ▲ {post.voteCount}
                   </button>
                   <button
                     type="button"
                     onClick={() => handleVote(-1)}
-                    className={`px-2 py-1 rounded ${post.myVote === -1 ? 'bg-red-500/30 text-red-400' : 'bg-white/10 text-gray-400 hover:text-white'}`}
+                    className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${post.myVote === -1 ? 'bg-red-500/30 text-red-300 border border-red-300/40' : 'bg-white/10 text-gray-300 hover:text-white border border-white/10'}`}
                   >
                     ▼
                   </button>
                 </div>
               )}
-              {!user && <span className="text-gray-500">{post.voteCount} vote</span>}
-              <span className="text-gray-500">{post.commentCount} comments</span>
+              {!user && <span className="text-gray-400">{post.voteCount} vote</span>}
+              <span className="text-gray-400">{post.commentCount} bình luận</span>
               {canModerate(user || null) && (
                 <div className="ml-auto flex items-center gap-2">
                   <button
                     type="button"
                     onClick={handlePin}
                     disabled={modAction !== null}
-                    className="text-xs px-2 py-1 rounded bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 disabled:opacity-50"
+                    className="text-xs px-2.5 py-1 rounded bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 disabled:opacity-50 border border-amber-300/30"
                   >
-                    {modAction === 'pin' ? '...' : post.isPinned ? 'Unpin' : 'Pin'}
+                    {modAction === 'pin' ? '...' : post.isPinned ? 'Bỏ ghim' : 'Ghim'}
                   </button>
                   <button
                     type="button"
                     onClick={handleDelete}
                     disabled={modAction !== null}
-                    className="text-xs px-2 py-1 rounded bg-red-500/20 text-red-400 hover:bg-red-500/30 disabled:opacity-50"
+                    className="text-xs px-2.5 py-1 rounded bg-red-500/20 text-red-400 hover:bg-red-500/30 disabled:opacity-50 border border-red-300/30"
                   >
-                    {modAction === 'delete' ? '...' : 'Delete'}
+                    {modAction === 'delete' ? '...' : 'Xóa'}
                   </button>
                 </div>
               )}
             </div>
 
-            <div className="mt-5 text-gray-200 whitespace-pre-wrap leading-relaxed">{post.content}</div>
+            {contentIsHtml && bodyHtml ? (
+              <div
+                className={`${htmlBodyClassName} ${isNewsArticle ? 'text-[1.05rem]' : ''}`}
+                dangerouslySetInnerHTML={{ __html: bodyHtml }}
+              />
+            ) : post.content ? (
+              <div className={isNewsArticle ? 'mt-6 text-[1.05rem]' : 'mt-6'}>
+                <PostMarkdown
+                  source={post.content}
+                  className={isNewsArticle ? 'text-slate-200/95 leading-[1.75]' : undefined}
+                />
+              </div>
+            ) : null}
 
-            {post.sourceUrl && (
+            {post.sourceUrl && !isLinkOutNews && (
               <a
                 href={post.sourceUrl}
                 target="_blank"
-                rel="noreferrer"
-                className="inline-block mt-4 px-4 py-2 rounded-lg bg-cyan-600/30 text-cyan-400 hover:bg-cyan-600/50"
+                rel="noopener noreferrer"
+                onClick={() => {
+                  void recordPostSourceOpen(post._id).then((viewCount) => {
+                    if (viewCount != null) {
+                      setData((d) => (d ? { ...d, post: { ...d.post, viewCount } } : null))
+                    }
+                  })
+                }}
+                className="inline-block mt-5 px-4 py-2 rounded-lg bg-cyan-600/25 text-cyan-300 hover:bg-cyan-600/40 border border-cyan-300/25"
               >
-                View source →
+                Xem nguồn →
               </a>
             )}
           </div>
         </article>
 
-        {/* Comments */}
         <section className="mt-8">
-          <h2 className="text-lg font-semibold text-white mb-4">Comments</h2>
+          <h2 className="text-lg font-semibold text-white mb-4">Bình luận</h2>
 
           {user && (
-            <div className="mb-6 flex gap-2">
+            <div className="mb-6 rounded-xl border border-white/10 bg-white/[0.03] p-4">
               <textarea
-                placeholder="Write a comment..."
+                placeholder="Bình luận (Markdown được hỗ trợ)..."
                 value={commentText}
                 onChange={(e) => setCommentText(e.target.value)}
-                rows={2}
-                className="flex-1 px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-gray-500 resize-none"
+                rows={3}
+                className="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-gray-500 resize-y min-h-[80px] text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50"
               />
-              <button
-                type="button"
-                onClick={handleAddComment}
-                disabled={submitting || !commentText.trim()}
-                className="px-4 py-2 rounded-lg bg-cyan-600 text-white font-medium self-end disabled:opacity-50"
-              >
-                Send
-              </button>
+              <div className="mt-3 flex justify-end">
+                <button
+                  type="button"
+                  onClick={handleAddComment}
+                  disabled={submitting || !commentText.trim()}
+                  className="px-4 py-2 rounded-lg bg-cyan-600 text-white font-medium disabled:opacity-50"
+                >
+                  {submitting ? 'Đang gửi...' : 'Gửi bình luận'}
+                </button>
+              </div>
             </div>
           )}
 
@@ -210,13 +350,18 @@ export default function PostPage() {
               >
                 <div className="flex items-center gap-2 text-sm">
                   <span className="font-medium text-white">{c.authorName}</span>
-                  <span className="text-gray-500">
-                    {new Date(c.createdAt).toLocaleDateString('en-US')}
-                  </span>
+                  <span className="text-gray-500">{formatDate(c.createdAt)}</span>
                 </div>
-                <p className="mt-2 text-gray-200">{c.content}</p>
+                <div className="mt-2 text-gray-200 text-sm">
+                  <PostMarkdown source={c.content} />
+                </div>
               </div>
             ))}
+            {!post.comments.length && (
+              <div className="rounded-xl border border-dashed border-white/20 bg-white/[0.03] p-6 text-center text-gray-400">
+                Chưa có bình luận nào. Hãy là người mở đầu cuộc thảo luận.
+              </div>
+            )}
           </div>
         </section>
       </div>

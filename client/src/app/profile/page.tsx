@@ -5,6 +5,11 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useAuthStore } from '@/store/useAuthStore'
 import { updateProfile, changePassword, deactivateMyAccount } from '@/lib/authApi'
+import { canModerate } from '@/lib/roles'
+
+function isStudentRole(role: string | undefined) {
+  return role === 'student'
+}
 
 export default function ProfilePage() {
   const router = useRouter()
@@ -116,9 +121,25 @@ export default function ProfilePage() {
           >
             My Learning
           </Link>
+          {isStudentRole(user.role) && (
+            <Link
+              href="/apply-teacher"
+              className="px-4 py-2 rounded-lg bg-violet-500/15 border border-violet-500/35 text-violet-200 text-sm hover:bg-violet-500/25"
+            >
+              Xin quyền giảng viên
+            </Link>
+          )}
           {(user.role === 'teacher' || user.role === 'admin') && (
             <Link href="/studio" className="px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-gray-300 text-sm hover:bg-white/15">
               Studio
+            </Link>
+          )}
+          {canModerate(user) && (
+            <Link
+              href="/dashboard/moderate"
+              className="px-4 py-2 rounded-lg bg-violet-500/15 border border-violet-500/35 text-violet-200 text-sm hover:bg-violet-500/25"
+            >
+              Kiểm duyệt
             </Link>
           )}
           {user.role === 'admin' && (
