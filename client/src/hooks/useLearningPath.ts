@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react'
 import {
   LEARNING_CONCEPTS,
   LEARNING_MODULES,
-  mergeLearningModules,
   type LearningConcept,
   type LearningModule,
 } from '@/data/learningPathCurriculum'
@@ -21,7 +20,8 @@ export function useLearningPath() {
     Promise.all([fetchPublicLearningPath(), fetchPublicConcepts()]).then(([incomingModules, incomingConcepts]) => {
       if (cancelled) return
       if (incomingModules?.length) {
-        setModules(mergeLearningModules(LEARNING_MODULES, incomingModules))
+        // Source of truth: DB learning path structure (module/node/lesson ids and ordering)
+        setModules(incomingModules)
       }
       if (incomingConcepts?.length) {
         setConcepts(incomingConcepts)

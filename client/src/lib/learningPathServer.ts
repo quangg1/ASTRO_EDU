@@ -1,7 +1,6 @@
 import {
   LEARNING_CONCEPTS,
   LEARNING_MODULES,
-  mergeLearningModules,
   type LearningConcept,
   type LearningModule,
 } from '@/data/learningPathCurriculum'
@@ -14,7 +13,7 @@ export async function getMergedLearningModules(): Promise<LearningModule[]> {
     const res = await fetch(`${base}/learning-path`, { cache: 'no-store' })
     const data = await res.json()
     if (data.success && Array.isArray(data.data?.modules) && data.data.modules.length > 0) {
-      return mergeLearningModules(LEARNING_MODULES, data.data.modules)
+      return data.data.modules as LearningModule[]
     }
   } catch {
     /* API down — static only */
@@ -35,7 +34,7 @@ export async function getMergedLearningPathData(): Promise<{
     const [lpData, conceptData] = await Promise.all([lpRes.json(), conceptRes.json()])
     const modules =
       lpData.success && Array.isArray(lpData.data?.modules) && lpData.data.modules.length > 0
-        ? mergeLearningModules(LEARNING_MODULES, lpData.data.modules)
+        ? (lpData.data.modules as LearningModule[])
         : LEARNING_MODULES
     const concepts =
       conceptData.success && Array.isArray(conceptData.data?.concepts) && conceptData.data.concepts.length > 0
