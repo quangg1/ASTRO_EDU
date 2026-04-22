@@ -17,7 +17,31 @@ interface Props {
   url: string
 }
 
+function isDirectModelUrl(rawUrl: string): boolean {
+  try {
+    const u = new URL(rawUrl)
+    const path = u.pathname.toLowerCase()
+    return path.endsWith('.glb') || path.endsWith('.gltf')
+  } catch {
+    const lower = String(rawUrl || '').toLowerCase().split('?')[0]
+    return lower.endsWith('.glb') || lower.endsWith('.gltf')
+  }
+}
+
 export default function ModelViewer({ url }: Props) {
+  if (!isDirectModelUrl(url)) {
+    return (
+      <div className="w-full h-full bg-black/40">
+        <iframe
+          src={url}
+          className="w-full h-full"
+          allowFullScreen
+          sandbox="allow-scripts allow-same-origin allow-popups allow-presentation"
+        />
+      </div>
+    )
+  }
+
   return (
     <Canvas camera={{ position: [0, 1.5, 3], fov: 45 }} style={{ width: '100%', height: '100%' }}>
       <ambientLight intensity={0.5} />

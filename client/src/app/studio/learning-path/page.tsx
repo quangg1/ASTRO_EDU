@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState, type Dispatch, type SetStateAction } from 'react'
+import { useCallback, useEffect, useMemo, useState, type Dispatch, type SetStateAction } from 'react'
 import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -1127,7 +1127,7 @@ export default function StudioLearningPathPage() {
     queueMicrotask(() => onSelectModule(copy.id))
   }
 
-  const save = async () => {
+  const save = useCallback(async () => {
     const token = localStorage.getItem('galaxies_token')
     if (!token) return
     setSaving(true)
@@ -1140,7 +1140,19 @@ export default function StudioLearningPathPage() {
       setInvalidConceptIds(rPath.invalidConceptIds || [])
     }
     setMessage(rPath.ok ? 'Đã lưu Learning Path.' : rPath.error || 'Lỗi lưu')
-  }
+  }, [modules, published])
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      const isSaveShortcut = (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's'
+      if (!isSaveShortcut) return
+      e.preventDefault()
+      if (loading || saving) return
+      void save()
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [loading, save, saving])
 
   if (!checked || !user) {
     return <div className="min-h-screen bg-black pt-20 px-4 text-gray-400">Đang kiểm tra đăng nhập...</div>
@@ -1187,6 +1199,7 @@ export default function StudioLearningPathPage() {
               <Save className="w-4 h-4" />
               {saving ? 'Đang lưu...' : 'Lưu toàn bộ'}
             </button>
+            <span className="text-[11px] text-slate-400">Ctrl+S / Cmd+S</span>
             <Link
               href="/tutorial"
               target="_blank"
