@@ -47,6 +47,7 @@ function ImageBlockEditor({ section, update }: { section: LessonSection; update:
   const [mode, setMode] = useState<'url' | 'upload'>('url')
   const [urlInput, setUrlInput] = useState(section.imageUrl ?? '')
   const [imgError, setImgError] = useState(false)
+  const widthPct = Number.isFinite(section.imageWidthPct) ? Math.min(100, Math.max(20, Number(section.imageWidthPct))) : 100
 
   const applyUrl = () => {
     const trimmed = urlInput.trim()
@@ -84,6 +85,7 @@ function ImageBlockEditor({ section, update }: { section: LessonSection; update:
               src={section.imageUrl}
               alt=""
               className="max-h-48 w-auto mx-auto object-contain"
+              style={{ maxWidth: `${widthPct}%` }}
               onError={() => setImgError(true)}
             />
           ) : (
@@ -94,6 +96,47 @@ function ImageBlockEditor({ section, update }: { section: LessonSection; update:
           )}
         </div>
       )}
+      <div className="rounded-lg border border-white/10 bg-white/[0.02] px-3 py-2">
+        <div className="flex items-center justify-between gap-2">
+          <label className="text-xs text-slate-300">Kích thước ảnh trong block</label>
+          <select
+            value={String(widthPct)}
+            onChange={(e) => update({ imageWidthPct: Number(e.target.value) })}
+            className="min-w-[110px] rounded-md border border-white/15 bg-black/40 px-2 py-1 text-xs text-white focus:border-cyan-500/50 focus:outline-none"
+          >
+            <option value="25">XS (25%)</option>
+            <option value="40">S (40%)</option>
+            <option value="60">M (60%)</option>
+            <option value="80">L (80%)</option>
+            <option value="100">Full (100%)</option>
+          </select>
+        </div>
+        <div className="mt-2 flex items-center gap-2">
+          <input
+            type="range"
+            min={20}
+            max={100}
+            step={5}
+            value={widthPct}
+            onChange={(e) => update({ imageWidthPct: Number(e.target.value) })}
+            className="w-full accent-cyan-400"
+          />
+          <input
+            type="number"
+            min={20}
+            max={100}
+            step={5}
+            value={widthPct}
+            onChange={(e) => {
+              const next = Number(e.target.value)
+              if (!Number.isFinite(next)) return
+              update({ imageWidthPct: Math.min(100, Math.max(20, next)) })
+            }}
+            className="w-16 rounded-md border border-white/15 bg-black/40 px-2 py-1 text-xs text-white focus:border-cyan-500/50 focus:outline-none"
+          />
+          <span className="text-xs text-slate-400">%</span>
+        </div>
+      </div>
       <input value={section.caption ?? ''} onChange={(e) => update({ caption: e.target.value })} placeholder="Caption (optional)" className={inputCls} />
     </div>
   )

@@ -34,18 +34,23 @@ export function applyConceptAnchorsToHtml(
 
   const sorted = [...valid].sort((a, b) => b.phrase.length - a.phrase.length)
 
+  const usedAnchorKeys = new Set<string>()
+
   const injectIntoText = (text: string) => {
     const placeholders: { conceptId: string; display: string }[] = []
     let phIdx = 0
     let T = normalizeChunk(text)
     for (const a of sorted) {
+      const anchorKey = `${a.conceptId}::${normalizeChunk(a.phrase).toLowerCase()}`
+      if (usedAnchorKeys.has(anchorKey)) continue
       const phraseNorm = normalizeChunk(a.phrase)
       if (!phraseNorm) continue
-      const re = new RegExp(escapeRegex(phraseNorm), 'gi')
+      const re = new RegExp(escapeRegex(phraseNorm), 'i')
       T = T.replace(re, (match) => {
         const token = `__LPANCH_${phIdx}__`
         placeholders[phIdx] = { conceptId: a.conceptId, display: match }
         phIdx++
+        usedAnchorKeys.add(anchorKey)
         return token
       })
     }

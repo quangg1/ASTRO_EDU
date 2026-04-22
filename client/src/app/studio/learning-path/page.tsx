@@ -1178,6 +1178,23 @@ export default function StudioLearningPathPage() {
     )
   }
 
+  const moveLessonBy = (lessonId: string, delta: number) => {
+    if (!currentModule || !currentNode || !depth || !delta) return
+    setModules((prev) =>
+      updateLessonList(prev, currentModule.id, currentNode.id, depth, (list) => {
+        const from = list.findIndex((l) => l.id === lessonId)
+        if (from < 0) return list
+        const to = from + delta
+        if (to < 0 || to >= list.length) return list
+        const next = [...list]
+        const [picked] = next.splice(from, 1)
+        next.splice(to, 0, picked)
+        return next
+      }),
+    )
+    setActiveLessonId(lessonId)
+  }
+
   const moveModuleUp = (mid: string) => {
     setModules((prev) => moveModuleStep(prev, mid, -1))
   }
@@ -1686,11 +1703,11 @@ export default function StudioLearningPathPage() {
                     <>
                       <ul className="space-y-1">
                         {lessonsAtDepth.map((le, idx) => (
-                          <li key={le.id}>
+                          <li key={le.id} className="flex items-stretch gap-1">
                             <button
                               type="button"
                               onClick={() => setActiveLessonId(le.id)}
-                              className={`w-full text-left rounded-lg px-3 py-2 text-sm transition-colors ${
+                              className={`min-w-0 flex-1 text-left rounded-lg px-3 py-2 text-sm transition-colors ${
                                 activeLessonId === le.id
                                   ? 'bg-white/10 text-white border border-cyan-500/30'
                                   : 'text-slate-400 hover:bg-white/5 border border-transparent'
@@ -1699,6 +1716,28 @@ export default function StudioLearningPathPage() {
                               <span className="text-slate-600 text-xs mr-1">{idx + 1}.</span>
                               <span className="line-clamp-2">{le.titleVi}</span>
                             </button>
+                            <div className="flex flex-col gap-1">
+                              <button
+                                type="button"
+                                onClick={() => moveLessonBy(le.id, -1)}
+                                disabled={idx === 0}
+                                className="h-6 w-6 inline-flex items-center justify-center rounded border border-white/10 text-slate-400 hover:text-white hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed"
+                                title="Đưa lên"
+                                aria-label="Đưa bài lên"
+                              >
+                                <ChevronUp className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => moveLessonBy(le.id, 1)}
+                                disabled={idx === lessonsAtDepth.length - 1}
+                                className="h-6 w-6 inline-flex items-center justify-center rounded border border-white/10 text-slate-400 hover:text-white hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed"
+                                title="Đưa xuống"
+                                aria-label="Đưa bài xuống"
+                              >
+                                <ChevronDown className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
                           </li>
                         ))}
                       </ul>

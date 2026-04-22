@@ -10,7 +10,7 @@ import { Highlight } from '@tiptap/extension-highlight'
 import LinkExt from '@tiptap/extension-link'
 import ImageExt from '@tiptap/extension-image'
 import { Placeholder } from '@tiptap/extension-placeholder'
-import { useCallback, useEffect } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 
 const COLORS = ['#ffffff', '#94a3b8', '#22d3ee', '#34d399', '#facc15', '#f87171', '#c084fc', '#fb923c']
 
@@ -19,6 +19,33 @@ interface Props {
   onChange: (html: string) => void
   placeholder?: string
 }
+
+const ResizableImageExt = ImageExt.extend({
+  addAttributes() {
+    return {
+      ...this.parent?.(),
+      width: {
+        default: null,
+        parseHTML: (element) => {
+          const inlineWidth = element.style.width || ''
+          const attrWidth = element.getAttribute('width') || ''
+          const fromStyle = Number.parseInt(inlineWidth.replace('px', '').trim(), 10)
+          const fromAttr = Number.parseInt(attrWidth, 10)
+          if (Number.isFinite(fromStyle) && fromStyle > 0) return fromStyle
+          if (Number.isFinite(fromAttr) && fromAttr > 0) return fromAttr
+          return null
+        },
+        renderHTML: (attributes) => {
+          if (!attributes.width || Number(attributes.width) <= 0) return {}
+          return {
+            style: `width:${Number(attributes.width)}px;max-width:100%;height:auto;`,
+            width: String(Number(attributes.width)),
+          }
+        },
+      },
+    }
+  },
+})
 
 function ToolBtn({ active, onClick, children, title }: { active?: boolean; onClick: () => void; children: React.ReactNode; title?: string }) {
   return (
@@ -34,6 +61,13 @@ function ToolBtn({ active, onClick, children, title }: { active?: boolean; onCli
 }
 
 export default function RichTextEditor({ value, onChange, placeholder }: Props) {
+  const resizeStateRef = useRef<{
+    img: HTMLImageElement
+    pos: number
+    startX: number
+    startWidth: number
+  } | null>(null)
+
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [
@@ -44,7 +78,7 @@ export default function RichTextEditor({ value, onChange, placeholder }: Props) 
       Highlight.configure({ multicolor: true }),
       TextAlign.configure({ types: ['heading', 'paragraph'] }),
       LinkExt.configure({ openOnClick: false }),
-      ImageExt,
+      ResizableImageExt,
       Placeholder.configure({ placeholder: placeholder || 'Start typing...' }),
     ],
     content: value || '',
@@ -63,6 +97,70 @@ export default function RichTextEditor({ value, onChange, placeholder }: Props) 
       editor.commands.setContent(value || '', { emitUpdate: false })
     }
   }, [value]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!editor) return
+    const root = editor.view.dom as HTMLElement
+
+    const onMouseDown = (event: MouseEvent) => {
+      const target = event.target as HTMLElement | null
+      if (!target || target.tagName !== 'IMG') return
+      const img = target as HTMLImageElement
+      const rect = img.getBoundingClientRect()
+      const nearRight = rect.right - event.clientX <= 16
+      const nearBottom = rect.bottom - event.clientY <= 16
+      if (!nearRight || !nearBottom) return
+
+      const pos = editor.view.posAtDOM(img, 0)
+      const node = editor.state.doc.nodeAt(pos)
+      if (!node || node.type.name !== 'image') return
+
+      event.preventDefault()
+      resizeStateRef.current = {
+        img,
+        pos,
+        startX: event.clientX,
+        startWidth: img.getBoundingClientRect().width,
+      }
+      img.classList.add('lp-image-resizing')
+    }
+
+    const onMouseMove = (event: MouseEvent) => {
+      const st = resizeStateRef.current
+      if (!st) return
+      event.preventDefault()
+      const deltaX = event.clientX - st.startX
+      const nextWidth = Math.max(120, Math.round(st.startWidth + deltaX))
+      st.img.style.width = `${nextWidth}px`
+      st.img.style.maxWidth = '100%'
+      st.img.style.height = 'auto'
+    }
+
+    const onMouseUp = () => {
+      const st = resizeStateRef.current
+      if (!st) return
+      const appliedWidth = Math.max(120, Math.round(st.img.getBoundingClientRect().width))
+      st.img.classList.remove('lp-image-resizing')
+      const node = editor.state.doc.nodeAt(st.pos)
+      if (node && node.type.name === 'image') {
+        const tr = editor.state.tr.setNodeMarkup(st.pos, undefined, {
+          ...node.attrs,
+          width: appliedWidth,
+        })
+        editor.view.dispatch(tr)
+      }
+      resizeStateRef.current = null
+    }
+
+    root.addEventListener('mousedown', onMouseDown)
+    window.addEventListener('mousemove', onMouseMove)
+    window.addEventListener('mouseup', onMouseUp)
+    return () => {
+      root.removeEventListener('mousedown', onMouseDown)
+      window.removeEventListener('mousemove', onMouseMove)
+      window.removeEventListener('mouseup', onMouseUp)
+    }
+  }, [editor])
 
   const setLink = useCallback(() => {
     if (!editor) return
@@ -150,6 +248,22 @@ export default function RichTextEditor({ value, onChange, placeholder }: Props) 
       </div>
 
       <EditorContent editor={editor} />
+      <style jsx>{`
+        :global(.ProseMirror img) {
+          max-width: 100%;
+          height: auto;
+          cursor: default;
+          position: relative;
+        }
+        :global(.ProseMirror img:hover) {
+          outline: 1px dashed rgba(34, 211, 238, 0.45);
+          outline-offset: 2px;
+        }
+        :global(.ProseMirror img.lp-image-resizing) {
+          user-select: none;
+          pointer-events: none;
+        }
+      `}</style>
     </div>
   )
 }

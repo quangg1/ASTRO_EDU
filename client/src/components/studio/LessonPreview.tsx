@@ -35,6 +35,7 @@ export function SectionPreview({ sec, index, conceptAnchors, concepts }: Section
     if (!concepts?.length) return null
     return new Map(concepts.map((c) => [c.id, c] as const))
   }, [concepts])
+  const imageWidthPct = Number.isFinite(sec.imageWidthPct) ? Math.min(100, Math.max(20, Number(sec.imageWidthPct))) : 100
 
   switch (sec.type) {
     case 'richtext': {
@@ -78,6 +79,7 @@ export function SectionPreview({ sec, index, conceptAnchors, concepts }: Section
               src={sec.imageUrl}
               alt={sec.title || ''}
               className="block mx-auto w-auto max-w-full max-h-[400px] object-contain rounded-xl border border-white/10"
+              style={{ maxWidth: `${imageWidthPct}%` }}
             />
           ) : (
             <div className="w-full h-40 rounded-xl border border-dashed border-white/20 flex items-center justify-center text-gray-600 text-sm">No image set</div>

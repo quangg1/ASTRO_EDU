@@ -220,6 +220,9 @@ export function LessonContentBody({ lesson }: { lesson: Lesson }) {
                         src={resolveMediaUrl(sec.imageUrl)}
                         alt={sec.title || 'Hình minh họa'}
                         className="block mx-auto rounded-xl w-auto max-w-full max-h-[460px] object-contain border border-white/10"
+                        style={{
+                          maxWidth: `${Math.min(100, Math.max(20, Number.isFinite(sec.imageWidthPct) ? Number(sec.imageWidthPct) : 100))}%`,
+                        }}
                       />
                       {sec.content && <figcaption className="text-xs text-gray-500 mt-2">{sec.content}</figcaption>}
                     </figure>

@@ -22,6 +22,7 @@ export interface LessonSection {
   content?: string
   html?: string
   imageUrl?: string | null
+  imageWidthPct?: number
   videoUrl?: string | null
   code?: string
   language?: string
