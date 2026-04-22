@@ -118,7 +118,11 @@ export default function LearningLessonView({
   const [tooltip, setTooltip] = useState<{ id: string; x: number; y: number } | null>(null)
   const [panelWidth, setPanelWidth] = useState(400)
   const [resizingPanel, setResizingPanel] = useState(false)
+  const [activeSectionId, setActiveSectionId] = useState<string | null>(null)
+  const [readingProgress, setReadingProgress] = useState(0)
+  const [activeSectionIndex, setActiveSectionIndex] = useState(0)
   const resizeStartRef = useRef<{ x: number; width: number } | null>(null)
+  const tocListRef = useRef<HTMLDivElement | null>(null)
   const lessonEnterAtRef = useRef<number>(Date.now())
   const anchors = lesson.conceptAnchors ?? []
   const highlightedLegacyHtml = useMemo(
@@ -139,6 +143,30 @@ export default function LearningLessonView({
   )
   const activeConcept = activeConceptId ? conceptMap.get(activeConceptId) ?? null : null
   const isConceptPanelOpen = !!activeConcept
+  const sectionNavItems = useMemo(
+    () =>
+      highlightedSections.map((sec, i) => ({
+        id: `lesson-section-${i}`,
+        title: sec.title?.trim() || `Phần ${i + 1}`,
+        type: (sec as { type?: string }).type || 'text',
+        sectionLevel: (sec as { sectionLevel?: 'main' | 'sub' }).sectionLevel ?? 'main',
+      })),
+    [highlightedSections],
+  )
+  const tocGroups = useMemo(() => {
+    type TocItem = (typeof sectionNavItems)[number]
+    const groups: Array<{ parent: TocItem; children: TocItem[] }> = []
+    let lastParentIndex = -1
+    for (const item of sectionNavItems) {
+      if (item.sectionLevel === 'sub' && lastParentIndex >= 0) {
+        groups[lastParentIndex].children.push(item)
+        continue
+      }
+      groups.push({ parent: item, children: [] })
+      lastParentIndex = groups.length - 1
+    }
+    return groups
+  }, [sectionNavItems])
   const relatedLessonsForActiveConcept = useMemo(() => {
     if (!activeConceptId) return []
     const rows: Array<{
@@ -294,8 +322,87 @@ export default function LearningLessonView({
     }
   }, [resizingPanel])
 
+  useEffect(() => {
+    if (sectionNavItems.length === 0) {
+      setReadingProgress(0)
+      setActiveSectionId(null)
+      setActiveSectionIndex(0)
+      return
+    }
+
+    let ticking = false
+    const SCROLL_OFFSET = 140
+    const sectionEls = () =>
+      sectionNavItems
+        .map((item) => document.getElementById(item.id))
+        .filter((el): el is HTMLElement => !!el)
+
+    const updateFromScroll = () => {
+      const els = sectionEls()
+      if (els.length === 0) {
+        ticking = false
+        return
+      }
+      const probeY = window.scrollY + SCROLL_OFFSET
+      let currentIdx = 0
+      for (let i = 0; i < els.length; i += 1) {
+        const curTop = els[i].offsetTop
+        const nextTop = i < els.length - 1 ? els[i + 1].offsetTop : Number.POSITIVE_INFINITY
+        if (probeY >= curTop && probeY < nextTop) {
+          currentIdx = i
+          break
+        }
+        if (probeY >= curTop) currentIdx = i
+      }
+
+      const current = els[currentIdx]
+      const currentTop = current.offsetTop
+      const nextTop = currentIdx < els.length - 1 ? els[currentIdx + 1].offsetTop : currentTop + current.offsetHeight
+      const span = Math.max(1, nextTop - currentTop)
+      const inside = Math.max(0, Math.min(1, (probeY - currentTop) / span))
+      const pct = Math.round(((currentIdx + inside) / els.length) * 100)
+
+      setActiveSectionIndex(currentIdx)
+      setActiveSectionId(sectionNavItems[currentIdx]?.id ?? null)
+      setReadingProgress(Math.max(0, Math.min(100, pct)))
+      ticking = false
+    }
+
+    const onScroll = () => {
+      if (ticking) return
+      ticking = true
+      window.requestAnimationFrame(updateFromScroll)
+    }
+
+    onScroll()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    window.addEventListener('resize', onScroll)
+    return () => {
+      window.removeEventListener('scroll', onScroll)
+      window.removeEventListener('resize', onScroll)
+    }
+  }, [sectionNavItems])
+
+  useEffect(() => {
+    if (!activeSectionId) return
+    const container = tocListRef.current
+    if (!container) return
+    const activeBtn = container.querySelector(`[data-toc-id="${activeSectionId}"]`) as HTMLElement | null
+    if (!activeBtn) return
+
+    const cTop = container.scrollTop
+    const cBottom = cTop + container.clientHeight
+    const elTop = activeBtn.offsetTop
+    const elBottom = elTop + activeBtn.offsetHeight
+    const padding = 20
+
+    if (elTop < cTop + padding || elBottom > cBottom - padding) {
+      activeBtn.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+    }
+  }, [activeSectionId])
+
   return (
-    <div className="min-h-screen bg-[#02040a] relative overflow-hidden">
+    <div className="min-h-screen bg-[#02040a] relative overflow-x-hidden">
       <div
         className="pointer-events-none fixed inset-0 opacity-25"
         style={{
@@ -305,7 +412,7 @@ export default function LearningLessonView({
       />
 
       <main
-        className={`relative z-10 pt-20 pb-24 px-4 max-w-3xl mx-auto transition-[margin] duration-300 ${
+        className={`relative z-10 pt-20 pb-24 px-4 xl:px-6 max-w-6xl mx-auto lg:mx-0 lg:ml-[292px] lg:mr-6 lg:max-w-[calc(100%-316px)] lg:pl-0 transition-[margin] duration-300 ${
           isConceptPanelOpen ? 'md:mr-4' : ''
         }`}
         style={isConceptPanelOpen ? { marginRight: `${panelWidth + 40}px` } : undefined}
@@ -332,7 +439,7 @@ export default function LearningLessonView({
         <motion.header
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-6"
+          className="mb-7 rounded-2xl border border-white/10 bg-[#070b14]/80 p-5 md:p-6"
         >
           <div className="flex flex-wrap items-center gap-2 mb-2">
             <span className={`text-xs px-2 py-0.5 rounded-lg border border-white/10 bg-gradient-to-br ${meta.gradient}`}>
@@ -343,24 +450,109 @@ export default function LearningLessonView({
             </span>
           </div>
           <h1
-            className="text-2xl md:text-3xl font-bold text-white mb-1"
+            className="text-3xl md:text-4xl font-bold text-white mb-1.5 leading-tight"
             style={{ fontFamily: 'var(--font-heading), Space Grotesk, sans-serif' }}
           >
             {lesson.titleVi}
           </h1>
-          {lesson.title ? <p className="text-slate-500 text-sm">{lesson.title}</p> : null}
+          {lesson.title ? <p className="text-slate-400 text-sm md:text-base">{lesson.title}</p> : null}
+          <div className="mt-4">
+            <div className="flex items-center justify-between text-[11px] text-slate-500 mb-1">
+              <span>Tiến độ đọc</span>
+              <span className="text-cyan-300 tabular-nums">{readingProgress}%</span>
+            </div>
+            <div className="h-1.5 rounded-full bg-white/10 overflow-hidden">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-violet-500 transition-[width] duration-200"
+                style={{ width: `${readingProgress}%` }}
+              />
+            </div>
+          </div>
         </motion.header>
 
         {sections.length > 0 ? (
-          <div className="space-y-4 mb-8" onMouseMove={onConceptMouseMove} onMouseLeave={() => setTooltip(null)} onClick={onConceptClick}>
-            {highlightedSections.map((sec, i) => (
-              <div
-                key={i}
-                className="rounded-2xl border border-white/10 bg-[#070b14]/90 p-5 md:p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]"
-              >
-                <SectionPreview sec={sec} index={i} />
+          <div className="relative mb-8">
+            <aside className="hidden lg:block fixed top-20 left-4 w-[260px] z-20">
+              <div className="max-h-[calc(100vh-6rem)] overflow-y-auto rounded-2xl border border-white/10 bg-[#070b14]/92 p-3.5 shadow-xl">
+                <p className="text-[11px] uppercase tracking-wider text-slate-500 mb-2">Mục lục bài học</p>
+                <div className="mb-3">
+                  <div className="flex items-center justify-between text-[11px] text-slate-500 mb-1">
+                    <span>
+                      {Math.min(activeSectionIndex + 1, Math.max(sectionNavItems.length, 1))}/{sectionNavItems.length}
+                    </span>
+                    <span className="text-cyan-300 tabular-nums">{readingProgress}%</span>
+                  </div>
+                  <div className="h-1.5 rounded-full bg-white/10 overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-violet-500 transition-[width] duration-200"
+                      style={{ width: `${readingProgress}%` }}
+                    />
+                  </div>
+                </div>
+                <div ref={tocListRef} className="space-y-2 max-h-[calc(100vh-13rem)] overflow-y-auto pr-1">
+                  {tocGroups.map((group) => {
+                    const parentActive =
+                      activeSectionId === group.parent.id ||
+                      group.children.some((child) => child.id === activeSectionId)
+                    return (
+                      <div key={`group-${group.parent.id}`} className="space-y-1.5">
+                        <button
+                          data-toc-id={group.parent.id}
+                          type="button"
+                          onClick={() => {
+                            document.getElementById(group.parent.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                          }}
+                          className={`w-full text-left rounded-lg px-3 py-2.5 text-sm transition-colors ${
+                            parentActive
+                              ? 'border border-cyan-500/40 bg-cyan-500/15 text-cyan-100 shadow-[inset_2px_0_0_0_rgba(34,211,238,0.9)]'
+                              : 'border border-transparent text-slate-300 hover:text-slate-100 hover:bg-white/5'
+                          }`}
+                        >
+                          {group.parent.title}
+                        </button>
+                        {group.children.length > 0 ? (
+                          <div className="ml-2 pl-2 border-l border-white/10 space-y-1">
+                            {group.children.map((child) => (
+                              <button
+                                key={child.id}
+                                data-toc-id={child.id}
+                                type="button"
+                                onClick={() => {
+                                  document.getElementById(child.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                                }}
+                                className={`w-full text-left rounded-md px-2.5 py-1.5 text-xs transition-colors ${
+                                  activeSectionId === child.id
+                                    ? 'text-cyan-200 bg-cyan-500/10 border border-cyan-500/25'
+                                    : 'text-slate-500 hover:text-slate-300 hover:bg-white/5 border border-transparent'
+                                }`}
+                              >
+                                {child.title}
+                              </button>
+                            ))}
+                          </div>
+                        ) : null}
+                      </div>
+                    )
+                  })}
+                </div>
               </div>
-            ))}
+            </aside>
+            <div
+              className="space-y-5"
+              onMouseMove={onConceptMouseMove}
+              onMouseLeave={() => setTooltip(null)}
+              onClick={onConceptClick}
+            >
+              {highlightedSections.map((sec, i) => (
+                <div
+                  key={i}
+                  id={`lesson-section-${i}`}
+                  className="scroll-mt-24 rounded-2xl border border-white/10 bg-[#070b14]/95 p-6 md:p-7 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]"
+                >
+                  <SectionPreview sec={sec} index={i} />
+                </div>
+              ))}
+            </div>
           </div>
         ) : (
           <article

@@ -189,7 +189,7 @@ export function LessonContentBody({ lesson }: { lesson: Lesson }) {
                 <section key={`${sec.title ?? 'sec'}-${i}`} className="space-y-3 rounded-xl border border-white/10 bg-[#0a0f17] p-5">
                   {sec.title && (
                     <h3 className="text-base md:text-lg font-semibold text-white border-b border-white/10 pb-2">
-                      {i + 1}. {sec.title}
+                      {sec.title}
                     </h3>
                   )}
                   {sec.type === 'text' && sec.content && (
@@ -219,7 +219,7 @@ export function LessonContentBody({ lesson }: { lesson: Lesson }) {
                       <img
                         src={resolveMediaUrl(sec.imageUrl)}
                         alt={sec.title || 'Hình minh họa'}
-                        className="rounded-xl w-full max-h-[460px] object-cover border border-white/10"
+                        className="block mx-auto rounded-xl w-auto max-w-full max-h-[460px] object-contain border border-white/10"
                       />
                       {sec.content && <figcaption className="text-xs text-gray-500 mt-2">{sec.content}</figcaption>}
                     </figure>
@@ -231,7 +231,7 @@ export function LessonContentBody({ lesson }: { lesson: Lesson }) {
                   )}
                   {sec.type === 'richtext' && (sec.html || sec.content) && (
                     <div
-                      className="prose prose-invert prose-sm max-w-none text-gray-200 leading-relaxed [&_p]:my-4 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0 [&_h1]:text-xl [&_h1]:font-bold [&_h2]:text-lg [&_h2]:font-semibold [&_a]:text-cyan-400 [&_blockquote]:border-l-cyan-500/40 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_code]:bg-white/10 [&_code]:px-1 [&_code]:rounded [&_img]:rounded-xl"
+                      className="prose prose-invert prose-sm max-w-none text-gray-200 leading-relaxed [&_p]:my-4 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0 [&_h1]:text-xl [&_h1]:font-bold [&_h2]:text-lg [&_h2]:font-semibold [&_a]:text-cyan-400 [&_blockquote]:border-l-cyan-500/40 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_code]:bg-white/10 [&_code]:px-1 [&_code]:rounded [&_img]:rounded-xl [&_img]:mx-auto [&_img]:block [&_img]:w-auto [&_img]:max-w-full"
                       dangerouslySetInnerHTML={{ __html: sec.html || sec.content || '' }}
                     />
                   )}

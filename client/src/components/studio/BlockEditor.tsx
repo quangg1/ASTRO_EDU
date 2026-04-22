@@ -198,12 +198,26 @@ export default function BlockEditor({ section, onChange }: Props) {
 
       {/* Title (for most types) */}
       {section.type !== 'divider' && (
-        <input
-          value={section.title ?? ''}
-          onChange={(e) => update({ title: e.target.value })}
-          placeholder="Block title (optional)"
-          className={inputCls}
-        />
+        <div className="space-y-2">
+          <input
+            value={section.title ?? ''}
+            onChange={(e) => update({ title: e.target.value })}
+            placeholder="Block title (optional)"
+            className={inputCls}
+          />
+          <label className="flex items-center gap-2 rounded-lg border border-cyan-500/25 bg-cyan-500/5 px-3 py-2 text-xs text-cyan-100">
+            <span className="shrink-0 text-[11px] text-cyan-200/90">Mục lục:</span>
+            <select
+              value={section.sectionLevel ?? 'main'}
+              onChange={(e) => update({ sectionLevel: e.target.value as LessonSection['sectionLevel'] })}
+              className="min-w-[140px] rounded-md border border-white/15 bg-black/40 px-2 py-1 text-xs text-white focus:border-cyan-500/50 focus:outline-none"
+              title="TOC level"
+            >
+              <option value="main">Mục chính</option>
+              <option value="sub">Mục con</option>
+            </select>
+          </label>
+        </div>
       )}
 
       {/* RICHTEXT */}

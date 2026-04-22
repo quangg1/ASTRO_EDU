@@ -36,7 +36,13 @@ const CATEGORIES = [
 ] as const
 
 function makeDefaultSection(type: SectionType): LessonSection {
-  const base: LessonSection = { type, title: '', content: '' }
+  const mediaTypes: SectionType[] = ['image', 'gif', 'video', '3d', 'embed', 'observable']
+  const base: LessonSection = {
+    type,
+    title: '',
+    content: '',
+    sectionLevel: mediaTypes.includes(type) ? 'sub' : 'main',
+  }
   switch (type) {
     case 'richtext': return { ...base, html: '<p></p>' }
     case 'callout': return { ...base, calloutVariant: 'info', content: '' }

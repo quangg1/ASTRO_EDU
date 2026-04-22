@@ -386,7 +386,7 @@ function LearningPathLessonEditor({
       </label>
 
       <div className="rounded-xl border border-cyan-500/25 bg-cyan-500/5 p-3">
-        <p className="text-xs font-medium text-cyan-200 mb-2">Concept mapping</p>
+        <p className="text-xs font-medium text-cyan-200 mb-2">Concept mapping + highlight</p>
         {concepts.length === 0 ? (
           <p className="text-xs text-slate-500">
             Chưa có concept. Tạo concept ở panel bên trái rồi quay lại map cho bài này.
@@ -517,6 +517,82 @@ function LearningPathLessonEditor({
                 </button>
               ))}
             </div>
+            <div className="mt-3 pt-3 border-t border-cyan-500/20">
+              <p className="text-xs font-medium text-violet-200 mb-1">Highlight trong nội dung (cụm văn bản → concept)</p>
+              <p className="text-[11px] text-slate-500 mb-3">
+                Gõ đúng cụm xuất hiện trong nội dung bài (khớp ngữ nghĩa do bạn chọn, không auto theo title concept). Cụm dài được ưu tiên nếu trùng phần.
+              </p>
+              <div className="space-y-2">
+                {(activeLesson.conceptAnchors ?? []).map((row, idx) => (
+                  <div key={idx} className="flex flex-wrap gap-2 items-end">
+                    <label className="flex-1 min-w-[140px] text-[10px] text-slate-400">
+                      Cụm trong bài
+                      <input
+                        value={row.phrase}
+                        onChange={(e) => {
+                          const next = [...(activeLesson.conceptAnchors ?? [])] as LessonConceptAnchor[]
+                          next[idx] = { ...next[idx], phrase: e.target.value }
+                          patchLesson({ conceptAnchors: next })
+                        }}
+                        className={`mt-1 ${inputCls}`}
+                        placeholder="Đúng đoạn văn cần gắn (vd: quỹ đạo elip)"
+                      />
+                    </label>
+                    <label className="flex-1 min-w-[120px] text-[10px] text-slate-400">
+                      Concept
+                      <select
+                        value={row.conceptId}
+                        onChange={(e) => {
+                          const next = [...(activeLesson.conceptAnchors ?? [])] as LessonConceptAnchor[]
+                          next[idx] = { ...next[idx], conceptId: e.target.value }
+                          patchLesson({ conceptAnchors: next })
+                        }}
+                        className={`mt-1 ${inputCls}`}
+                      >
+                        <option value="">— Chọn —</option>
+                        {selectedConcepts.map((c) => (
+                          <option key={c.id} value={c.id}>
+                            {c.id} — {c.title || c.id}
+                          </option>
+                        ))}
+                        {!selectedConcepts.some((c) => c.id === row.conceptId) && row.conceptId ? (
+                          <option value={row.conceptId}>{row.conceptId} — (chưa add vào bài)</option>
+                        ) : null}
+                      </select>
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const next = (activeLesson.conceptAnchors ?? []).filter((_, i) => i !== idx)
+                        patchLesson({ conceptAnchors: next })
+                      }}
+                      className="rounded-lg border border-red-500/30 px-2 py-1.5 text-[10px] text-red-300 hover:bg-red-500/10"
+                    >
+                      Xóa
+                    </button>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => {
+                    const first = selectedConcepts[0]?.id ?? ''
+                    patchLesson({
+                      conceptAnchors: [
+                        ...(activeLesson.conceptAnchors ?? []),
+                        { conceptId: first, phrase: '' },
+                      ],
+                    })
+                  }}
+                  disabled={selectedConcepts.length === 0}
+                  className="text-xs text-violet-300 hover:text-violet-100 border border-violet-500/30 rounded-lg px-3 py-1.5"
+                >
+                  + Thêm cụm gắn concept
+                </button>
+                {selectedConcepts.length === 0 ? (
+                  <p className="text-[11px] text-amber-300">Hãy add concept vào bài trước khi gắn highlight.</p>
+                ) : null}
+              </div>
+            </div>
           </>
         )}
       </div>
@@ -580,80 +656,6 @@ function LearningPathLessonEditor({
             </div>
           )}
         </div>
-      </div>
-
-      <div className="rounded-xl border border-violet-500/25 bg-violet-500/5 p-3">
-        <p className="text-xs font-medium text-violet-200 mb-1">Highlight trong nội dung (cụm văn bản → concept)</p>
-        <p className="text-[11px] text-slate-500 mb-3">
-          Gõ đúng cụm xuất hiện trong nội dung bài (khớp ngữ nghĩa do bạn chọn, không auto theo title concept). Cụm dài được ưu tiên nếu trùng phần.
-        </p>
-        {concepts.length === 0 ? (
-          <p className="text-xs text-slate-500">Cần có concept trong thư viện.</p>
-        ) : (
-          <div className="space-y-2">
-            {(activeLesson.conceptAnchors ?? []).map((row, idx) => (
-              <div key={idx} className="flex flex-wrap gap-2 items-end">
-                <label className="flex-1 min-w-[140px] text-[10px] text-slate-400">
-                  Cụm trong bài
-                  <input
-                    value={row.phrase}
-                    onChange={(e) => {
-                      const next = [...(activeLesson.conceptAnchors ?? [])] as LessonConceptAnchor[]
-                      next[idx] = { ...next[idx], phrase: e.target.value }
-                      patchLesson({ conceptAnchors: next })
-                    }}
-                    className={`mt-1 ${inputCls}`}
-                    placeholder="Đúng đoạn văn cần gắn (vd: quỹ đạo elip)"
-                  />
-                </label>
-                <label className="flex-1 min-w-[120px] text-[10px] text-slate-400">
-                  Concept
-                  <select
-                    value={row.conceptId}
-                    onChange={(e) => {
-                      const next = [...(activeLesson.conceptAnchors ?? [])] as LessonConceptAnchor[]
-                      next[idx] = { ...next[idx], conceptId: e.target.value }
-                      patchLesson({ conceptAnchors: next })
-                    }}
-                    className={`mt-1 ${inputCls}`}
-                  >
-                    <option value="">— Chọn —</option>
-                    {concepts.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.id} — {c.title || c.id}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const next = (activeLesson.conceptAnchors ?? []).filter((_, i) => i !== idx)
-                    patchLesson({ conceptAnchors: next })
-                  }}
-                  className="rounded-lg border border-red-500/30 px-2 py-1.5 text-[10px] text-red-300 hover:bg-red-500/10"
-                >
-                  Xóa
-                </button>
-              </div>
-            ))}
-            <button
-              type="button"
-              onClick={() => {
-                const first = concepts[0]?.id ?? ''
-                patchLesson({
-                  conceptAnchors: [
-                    ...(activeLesson.conceptAnchors ?? []),
-                    { conceptId: first, phrase: '' },
-                  ],
-                })
-              }}
-              className="text-xs text-violet-300 hover:text-violet-100 border border-violet-500/30 rounded-lg px-3 py-1.5"
-            >
-              + Thêm cụm gắn concept
-            </button>
-          </div>
-        )}
       </div>
 
       <div className="rounded-xl border border-white/10 bg-black/20 overflow-hidden">

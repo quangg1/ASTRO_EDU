@@ -45,9 +45,9 @@ export function SectionPreview({ sec, index, conceptAnchors, concepts }: Section
           : raw
       return (
         <div className="space-y-2">
-          {sec.title && <h3 className="text-base font-semibold text-white">{index + 1}. {sec.title}</h3>}
+          {sec.title && <h3 className="text-xl font-semibold tracking-tight text-white mb-2">{sec.title}</h3>}
           <div
-            className="prose prose-invert prose-sm max-w-none text-gray-200 leading-relaxed [&_p]:my-4 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0 [&_h1]:text-xl [&_h1]:font-bold [&_h2]:text-lg [&_h2]:font-semibold [&_h3]:text-base [&_h3]:font-semibold [&_a]:text-cyan-400 [&_blockquote]:border-l-cyan-500/40 [&_blockquote]:text-gray-400 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_code]:bg-white/10 [&_code]:px-1 [&_code]:rounded [&_img]:rounded-xl [&_img]:max-h-80"
+            className="prose prose-invert prose-sm max-w-none text-gray-200 leading-relaxed [&_p]:my-4 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0 [&_h1]:text-xl [&_h1]:font-bold [&_h2]:text-lg [&_h2]:font-semibold [&_h3]:text-base [&_h3]:font-semibold [&_a]:text-cyan-400 [&_blockquote]:border-l-cyan-500/40 [&_blockquote]:text-gray-400 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_code]:bg-white/10 [&_code]:px-1 [&_code]:rounded [&_img]:rounded-xl [&_img]:max-h-80 [&_img]:mx-auto [&_img]:block [&_img]:w-auto [&_img]:max-w-full"
             dangerouslySetInnerHTML={{ __html: html }}
           />
         </div>
@@ -57,7 +57,7 @@ export function SectionPreview({ sec, index, conceptAnchors, concepts }: Section
     case 'text':
       return (
         <div className="space-y-2">
-          {sec.title && <h3 className="text-base font-semibold text-white">{index + 1}. {sec.title}</h3>}
+          {sec.title && <h3 className="text-xl font-semibold tracking-tight text-white mb-2">{sec.title}</h3>}
           {sec.summary && <p className="text-cyan-100/90 text-sm leading-7 font-medium">{sec.summary}</p>}
           {sec.bullets && sec.bullets.length > 0 && (
             <ul className="list-disc list-inside text-gray-200 text-sm space-y-1 leading-7">
@@ -72,9 +72,13 @@ export function SectionPreview({ sec, index, conceptAnchors, concepts }: Section
     case 'gif':
       return (
         <figure className="space-y-2">
-          {sec.title && <h3 className="text-base font-semibold text-white">{sec.title}</h3>}
+          {sec.title && <h3 className="text-xl font-semibold tracking-tight text-white mb-2">{sec.title}</h3>}
           {sec.imageUrl ? (
-            <img src={sec.imageUrl} alt={sec.title || ''} className="w-full max-h-[400px] object-contain rounded-xl border border-white/10" />
+            <img
+              src={sec.imageUrl}
+              alt={sec.title || ''}
+              className="block mx-auto w-auto max-w-full max-h-[400px] object-contain rounded-xl border border-white/10"
+            />
           ) : (
             <div className="w-full h-40 rounded-xl border border-dashed border-white/20 flex items-center justify-center text-gray-600 text-sm">No image set</div>
           )}
@@ -85,7 +89,7 @@ export function SectionPreview({ sec, index, conceptAnchors, concepts }: Section
     case 'video':
       return (
         <div className="space-y-2">
-          {sec.title && <h3 className="text-base font-semibold text-white">{sec.title}</h3>}
+          {sec.title && <h3 className="text-xl font-semibold tracking-tight text-white mb-2">{sec.title}</h3>}
           {sec.videoUrl ? (
             <div className="aspect-video rounded-xl overflow-hidden border border-white/10 bg-black/50">
               {(sec.videoUrl.includes('youtube.com') || sec.videoUrl.includes('youtu.be')) ? (
@@ -104,7 +108,7 @@ export function SectionPreview({ sec, index, conceptAnchors, concepts }: Section
     case 'code':
       return (
         <div className="space-y-2">
-          {sec.title && <h3 className="text-base font-semibold text-white">{sec.title}</h3>}
+          {sec.title && <h3 className="text-xl font-semibold tracking-tight text-white mb-2">{sec.title}</h3>}
           <div className="rounded-xl border border-white/10 bg-black/60 overflow-hidden">
             <div className="px-3 py-1.5 border-b border-white/10 flex items-center justify-between">
               <span className="text-[10px] uppercase tracking-wider text-gray-600">{sec.language || 'code'}</span>
@@ -117,7 +121,7 @@ export function SectionPreview({ sec, index, conceptAnchors, concepts }: Section
     case 'embed':
       return (
         <div className="space-y-2">
-          {sec.title && <h3 className="text-base font-semibold text-white">{sec.title}</h3>}
+          {sec.title && <h3 className="text-xl font-semibold tracking-tight text-white mb-2">{sec.title}</h3>}
           {sec.embedUrl ? (
             <div className="aspect-video rounded-xl overflow-hidden border border-white/10">
               <iframe src={sec.embedUrl} className="w-full h-full" allowFullScreen sandbox="allow-scripts allow-same-origin allow-popups" />
@@ -131,7 +135,7 @@ export function SectionPreview({ sec, index, conceptAnchors, concepts }: Section
     case '3d':
       return (
         <div className="space-y-2">
-          {sec.title && <h3 className="text-base font-semibold text-white">{sec.title}</h3>}
+          {sec.title && <h3 className="text-xl font-semibold tracking-tight text-white mb-2">{sec.title}</h3>}
           {sec.modelUrl ? (
             <div className="h-[350px] rounded-xl border border-cyan-500/20 overflow-hidden bg-black/50">
               <ModelViewer url={resolveMediaUrl(sec.modelUrl)} />
@@ -169,7 +173,7 @@ export function SectionPreview({ sec, index, conceptAnchors, concepts }: Section
     case 'math':
       return (
         <div className="space-y-2">
-          {sec.title && <h3 className="text-base font-semibold text-white">{sec.title}</h3>}
+          {sec.title && <h3 className="text-xl font-semibold tracking-tight text-white mb-2">{sec.title}</h3>}
           {sec.latex ? (
             <div className="rounded-xl border border-white/10 bg-black/30 p-6 flex justify-center">
               <MathBlock latex={sec.latex} displayMode />
@@ -183,7 +187,7 @@ export function SectionPreview({ sec, index, conceptAnchors, concepts }: Section
     case 'chart':
       return (
         <div className="space-y-2">
-          {sec.title && <h3 className="text-base font-semibold text-white">{sec.title}</h3>}
+          {sec.title && <h3 className="text-xl font-semibold tracking-tight text-white mb-2">{sec.title}</h3>}
           <div className="rounded-xl border border-cyan-500/20 overflow-hidden bg-black/30 p-4">
             <ChartBlock section={sec} update={() => {}} />
           </div>

@@ -15,6 +15,7 @@ export type SectionType = 'richtext' | 'text' | 'image' | 'video' | 'code' | 'em
 
 export interface LessonSection {
   type: SectionType
+  sectionLevel?: 'main' | 'sub'
   title?: string
   summary?: string
   bullets?: string[]
