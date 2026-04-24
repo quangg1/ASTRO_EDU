@@ -11,6 +11,7 @@
     "dev:media": "cd services/media && npm run dev",
     "dev:community": "cd services/community && npm run dev",
     "dev:payment": "cd services/payment && npm run dev",
+    "dev:ai": "cd services/ai && uvicorn server:app --host 0.0.0.0 --port 5005",
     "build": "cd client && npm run build",
     "start": "cd client && npm run start",
     "install:all": "npm install && cd packages/auth-shared && npm install && cd ../../services/api && npm install && cd ../earth-history && npm install && cd ../client && npm install && cd ../services/auth && npm install && cd ../services/courses && npm install && cd ../media && npm install && cd ../community && npm install && cd ../payment && npm install",

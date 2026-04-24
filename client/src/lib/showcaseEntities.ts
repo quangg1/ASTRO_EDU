@@ -1,0 +1,186 @@
+/**
+ * Single module for NASA Eyes–style showcase data.
+ * - Sidebar/catalog: NASA_SHOWCASE_ITEMS + NASA_SHOWCASE_STORIES
+ * - 3D orbit layer: SHOWCASE_ORBIT_ENTITIES
+ *
+ * Paths stay unchanged (getStaticAssetUrl / CDN). See scripts/import-nasa-textures.ps1.
+ */
+
+export type NasaCatalogItem = {
+  id: string
+  name: string
+  group: 'planets_moons' | 'dwarf_asteroids' | 'comets' | 'spacecraft'
+  linkedPlanetName?: string
+  texturePath?: string
+}
+
+export type NasaStory = {
+  id: string
+  title: string
+  subtitle: string
+  detail: string
+  targetPlanetName: string
+}
+
+export const NASA_SHOWCASE_STORIES: NasaStory[] = [
+  {
+    id: 'story-artemis',
+    title: 'Artemis Program',
+    subtitle: 'Mission Campaign',
+    detail: 'Moon exploration architecture',
+    targetPlanetName: 'Earth',
+  },
+  {
+    id: 'story-jupiter',
+    title: 'Jupiter Moons',
+    subtitle: 'Galilean Worlds',
+    detail: 'Io • Europa • Ganymede • Callisto',
+    targetPlanetName: 'Jupiter',
+  },
+  {
+    id: 'story-saturn',
+    title: 'Saturn Rings',
+    subtitle: 'Ring Dynamics',
+    detail: 'A-B-C rings and shepherd moons',
+    targetPlanetName: 'Saturn',
+  },
+  {
+    id: 'story-mars',
+    title: 'Mars Evolution',
+    subtitle: 'Atmosphere Loss',
+    detail: 'Surface geology and climate history',
+    targetPlanetName: 'Mars',
+  },
+]
+
+export const NASA_SHOWCASE_ITEMS: NasaCatalogItem[] = [
+  { id: 'planet-mercury', name: 'Mercury', group: 'planets_moons', linkedPlanetName: 'Mercury' },
+  { id: 'planet-venus', name: 'Venus', group: 'planets_moons', linkedPlanetName: 'Venus', texturePath: '/textures/nasa/venus_nasa.jpg' },
+  { id: 'planet-earth', name: 'Earth', group: 'planets_moons', linkedPlanetName: 'Earth', texturePath: '/textures/8k_earth_daymap.jpg' },
+  { id: 'planet-mars', name: 'Mars', group: 'planets_moons', linkedPlanetName: 'Mars', texturePath: '/textures/nasa/mars_nasa.jpg' },
+  { id: 'planet-jupiter', name: 'Jupiter', group: 'planets_moons', linkedPlanetName: 'Jupiter', texturePath: '/textures/nasa/jupiter_nasa.jpg' },
+  { id: 'planet-saturn', name: 'Saturn', group: 'planets_moons', linkedPlanetName: 'Saturn', texturePath: '/textures/nasa/saturn_nasa.jpg' },
+  { id: 'planet-uranus', name: 'Uranus', group: 'planets_moons', linkedPlanetName: 'Uranus' },
+  { id: 'planet-neptune', name: 'Neptune', group: 'planets_moons', linkedPlanetName: 'Neptune', texturePath: '/textures/nasa/neptune_nasa.jpg' },
+  { id: 'moon-luna', name: 'Moon', group: 'planets_moons', linkedPlanetName: 'Earth', texturePath: '/textures/nasa/moon_nasa.jpg' },
+  { id: 'moon-phobos', name: 'Phobos', group: 'planets_moons', linkedPlanetName: 'Mars', texturePath: '/textures/nasa/phobos_nasa.jpg' },
+  { id: 'moon-deimos', name: 'Deimos', group: 'planets_moons', linkedPlanetName: 'Mars', texturePath: '/textures/nasa/deimos_nasa.jpg' },
+  { id: 'moon-io', name: 'Io', group: 'planets_moons', linkedPlanetName: 'Jupiter', texturePath: '/textures/nasa/io_nasa.jpg' },
+  { id: 'moon-europa', name: 'Europa', group: 'planets_moons', linkedPlanetName: 'Jupiter', texturePath: '/textures/nasa/europa_nasa.jpg' },
+  { id: 'moon-ganymede', name: 'Ganymede', group: 'planets_moons', linkedPlanetName: 'Jupiter', texturePath: '/textures/nasa/ganymede_nasa.jpg' },
+  { id: 'moon-callisto', name: 'Callisto', group: 'planets_moons', linkedPlanetName: 'Jupiter', texturePath: '/textures/nasa/callisto_nasa.jpg' },
+  { id: 'moon-mimas', name: 'Mimas', group: 'planets_moons', linkedPlanetName: 'Saturn', texturePath: '/textures/nasa/mimas_nasa.jpg' },
+  { id: 'moon-enceladus', name: 'Enceladus', group: 'planets_moons', linkedPlanetName: 'Saturn', texturePath: '/textures/nasa/enceladus_nasa.jpg' },
+  { id: 'moon-tethys', name: 'Tethys', group: 'planets_moons', linkedPlanetName: 'Saturn', texturePath: '/textures/nasa/tethys_nasa.jpg' },
+  { id: 'moon-dione', name: 'Dione', group: 'planets_moons', linkedPlanetName: 'Saturn', texturePath: '/textures/nasa/dione_nasa.jpg' },
+  { id: 'moon-rhea', name: 'Rhea', group: 'planets_moons', linkedPlanetName: 'Saturn', texturePath: '/textures/nasa/rhea_nasa.jpg' },
+  { id: 'moon-titan', name: 'Titan', group: 'planets_moons', linkedPlanetName: 'Saturn', texturePath: '/textures/nasa/titan_nasa.jpg' },
+  { id: 'moon-iapetus', name: 'Iapetus', group: 'planets_moons', linkedPlanetName: 'Saturn', texturePath: '/textures/nasa/iapetus_nasa.jpg' },
+  { id: 'moon-miranda', name: 'Miranda', group: 'planets_moons', linkedPlanetName: 'Uranus', texturePath: '/textures/nasa/miranda_nasa.jpg' },
+  { id: 'moon-ariel', name: 'Ariel', group: 'planets_moons', linkedPlanetName: 'Uranus', texturePath: '/textures/nasa/ariel_nasa.jpg' },
+  { id: 'moon-umbriel', name: 'Umbriel', group: 'planets_moons', linkedPlanetName: 'Uranus', texturePath: '/textures/nasa/umbriel_nasa.jpg' },
+  { id: 'moon-titania', name: 'Titania', group: 'planets_moons', linkedPlanetName: 'Uranus', texturePath: '/textures/nasa/titania_nasa.jpg' },
+  { id: 'moon-oberon', name: 'Oberon', group: 'planets_moons', linkedPlanetName: 'Uranus', texturePath: '/textures/nasa/oberon_nasa.jpg' },
+  { id: 'moon-triton', name: 'Triton', group: 'planets_moons', linkedPlanetName: 'Neptune', texturePath: '/textures/nasa/triton_nasa.jpg' },
+  { id: 'dwarf-pluto', name: 'Pluto', group: 'dwarf_asteroids', texturePath: '/textures/nasa/pluto_nasa.jpg' },
+  { id: 'moon-charon', name: 'Charon', group: 'dwarf_asteroids', texturePath: '/textures/nasa/charon_nasa.jpg' },
+  { id: 'dwarf-ceres', name: 'Ceres', group: 'dwarf_asteroids' },
+  { id: 'dwarf-eris', name: 'Eris', group: 'dwarf_asteroids' },
+  { id: 'dwarf-haumea', name: 'Haumea', group: 'dwarf_asteroids' },
+  { id: 'dwarf-makemake', name: 'Makemake', group: 'dwarf_asteroids' },
+  { id: 'asteroid-bennu', name: 'Bennu', group: 'dwarf_asteroids' },
+  { id: 'asteroid-psyche', name: 'Psyche', group: 'dwarf_asteroids' },
+  { id: 'comet-halley', name: 'Halley', group: 'comets' },
+  { id: 'comet-tempel1', name: 'Tempel 1', group: 'comets' },
+  { id: 'comet-67p', name: '67P/C-G', group: 'comets' },
+  { id: 'comet-halebopp', name: 'Hale-Bopp', group: 'comets' },
+  { id: 'comet-encke', name: 'Encke', group: 'comets' },
+  { id: 'sc-voyager1', name: 'Voyager 1', group: 'spacecraft' },
+  { id: 'sc-voyager2', name: 'Voyager 2', group: 'spacecraft' },
+  { id: 'sc-juno', name: 'Juno', group: 'spacecraft', linkedPlanetName: 'Jupiter' },
+  { id: 'sc-cassini', name: 'Cassini', group: 'spacecraft', linkedPlanetName: 'Saturn' },
+  { id: 'sc-galileo', name: 'Galileo', group: 'spacecraft', linkedPlanetName: 'Jupiter' },
+  { id: 'sc-pioneer10', name: 'Pioneer 10', group: 'spacecraft' },
+  { id: 'sc-lucy', name: 'Lucy', group: 'spacecraft' },
+  { id: 'sc-psyche', name: 'Psyche Mission', group: 'spacecraft' },
+  { id: 'sc-artemis1', name: 'Artemis I', group: 'spacecraft', linkedPlanetName: 'Earth' },
+  { id: 'sc-artemis2', name: 'Artemis II', group: 'spacecraft', linkedPlanetName: 'Earth' },
+  { id: 'sc-iss', name: 'International Space Station', group: 'spacecraft', linkedPlanetName: 'Earth' },
+  { id: 'sc-jwst', name: 'James Webb Space Telescope', group: 'spacecraft', linkedPlanetName: 'Earth' },
+]
+
+/** 3D showcase layer: moons / dwarfs / comets / craft — positions updated in ShowcaseEntityLayer. */
+export type ShowcaseOrbitEntity = {
+  id: string
+  name: string
+  parentPlanetName?: string
+  parentShowcaseEntityId?: string
+  distance: number
+  period: number
+  size: number
+  color: string
+  orbitColor: string
+  phaseDeg?: number
+  inclinationDeg?: number
+  ascendingNodeDeg?: number
+  texturePath?: string
+  modelPath?: string
+  modelScale?: number
+  modelRotationDeg?: [number, number, number]
+}
+
+export const SHOWCASE_ORBIT_ENTITIES: ShowcaseOrbitEntity[] = [
+  { id: 'moon-io', name: 'Io', parentPlanetName: 'Jupiter', distance: 2.1, period: 5.5, size: 0.08, color: '#fbbf24', orbitColor: '#f59e0b', texturePath: '/textures/nasa/io_nasa.jpg' },
+  { id: 'moon-europa', name: 'Europa', parentPlanetName: 'Jupiter', distance: 2.8, period: 7.2, size: 0.08, color: '#cbd5e1', orbitColor: '#94a3b8', texturePath: '/textures/nasa/europa_nasa.jpg' },
+  { id: 'moon-ganymede', name: 'Ganymede', parentPlanetName: 'Jupiter', distance: 3.6, period: 9.3, size: 0.1, color: '#e2c38f', orbitColor: '#d6a874', texturePath: '/textures/nasa/ganymede_nasa.jpg' },
+  { id: 'moon-callisto', name: 'Callisto', parentPlanetName: 'Jupiter', distance: 4.5, period: 11.6, size: 0.09, color: '#a78b6d', orbitColor: '#9a7b5f', texturePath: '/textures/nasa/callisto_nasa.jpg' },
+  { id: 'moon-titan', name: 'Titan', parentPlanetName: 'Saturn', distance: 2.6, period: 8.5, size: 0.09, color: '#f5d08a', orbitColor: '#f1c05a', texturePath: '/textures/nasa/titan_nasa.jpg' },
+  { id: 'moon-enceladus', name: 'Enceladus', parentPlanetName: 'Saturn', distance: 1.8, period: 6.1, size: 0.06, color: '#e2e8f0', orbitColor: '#cbd5e1', texturePath: '/textures/nasa/enceladus_nasa.jpg' },
+  { id: 'moon-triton', name: 'Triton', parentPlanetName: 'Neptune', distance: 1.9, period: 6.8, size: 0.06, color: '#d1d5db', orbitColor: '#94a3b8', texturePath: '/textures/nasa/triton_nasa.jpg' },
+  { id: 'moon-phobos', name: 'Phobos', parentPlanetName: 'Mars', distance: 0.95, period: 2.8, size: 0.035, color: '#a8a29e', orbitColor: '#78716c', texturePath: '/textures/nasa/phobos_nasa.jpg' },
+  { id: 'moon-deimos', name: 'Deimos', parentPlanetName: 'Mars', distance: 1.2, period: 3.6, size: 0.03, color: '#d6d3d1', orbitColor: '#a8a29e', texturePath: '/textures/nasa/deimos_nasa.jpg' },
+  { id: 'moon-luna', name: 'Moon', parentPlanetName: 'Earth', distance: 1.12, period: 4.2, size: 0.055, color: '#e5e7eb', orbitColor: '#9ca3af', texturePath: '/textures/nasa/moon_nasa.jpg' },
+  { id: 'moon-mimas', name: 'Mimas', parentPlanetName: 'Saturn', distance: 1.45, period: 4.4, size: 0.045, color: '#cbd5e1', orbitColor: '#94a3b8', texturePath: '/textures/nasa/mimas_nasa.jpg' },
+  { id: 'moon-dione', name: 'Dione', parentPlanetName: 'Saturn', distance: 2.05, period: 6.2, size: 0.05, color: '#e2e8f0', orbitColor: '#cbd5e1', texturePath: '/textures/nasa/dione_nasa.jpg' },
+  { id: 'moon-rhea', name: 'Rhea', parentPlanetName: 'Saturn', distance: 2.35, period: 7.1, size: 0.052, color: '#f1f5f9', orbitColor: '#94a3b8', texturePath: '/textures/nasa/rhea_nasa.jpg' },
+  { id: 'moon-tethys', name: 'Tethys', parentPlanetName: 'Saturn', distance: 1.72, period: 5.5, size: 0.048, color: '#e2e8f0', orbitColor: '#cbd5e1', texturePath: '/textures/nasa/tethys_nasa.jpg' },
+  { id: 'moon-iapetus', name: 'Iapetus', parentPlanetName: 'Saturn', distance: 3.15, period: 10.2, size: 0.05, color: '#d4d4d8', orbitColor: '#a1a1aa', texturePath: '/textures/nasa/iapetus_nasa.jpg' },
+  { id: 'moon-miranda', name: 'Miranda', parentPlanetName: 'Uranus', distance: 1.25, period: 4.0, size: 0.04, color: '#dbeafe', orbitColor: '#93c5fd', texturePath: '/textures/nasa/miranda_nasa.jpg' },
+  { id: 'moon-ariel', name: 'Ariel', parentPlanetName: 'Uranus', distance: 1.52, period: 4.9, size: 0.045, color: '#bfdbfe', orbitColor: '#60a5fa', texturePath: '/textures/nasa/ariel_nasa.jpg' },
+  { id: 'moon-umbriel', name: 'Umbriel', parentPlanetName: 'Uranus', distance: 1.78, period: 5.7, size: 0.046, color: '#94a3b8', orbitColor: '#64748b', texturePath: '/textures/nasa/umbriel_nasa.jpg' },
+  { id: 'moon-titania', name: 'Titania', parentPlanetName: 'Uranus', distance: 2.05, period: 6.5, size: 0.052, color: '#cbd5e1', orbitColor: '#94a3b8', texturePath: '/textures/nasa/titania_nasa.jpg' },
+  { id: 'moon-oberon', name: 'Oberon', parentPlanetName: 'Uranus', distance: 2.38, period: 7.4, size: 0.051, color: '#d1d5db', orbitColor: '#94a3b8', texturePath: '/textures/nasa/oberon_nasa.jpg' },
+  { id: 'dwarf-pluto', name: 'Pluto', distance: 126, period: 128, size: 0.1, color: '#c4b5fd', orbitColor: '#8b5cf6', phaseDeg: 82, inclinationDeg: 17, ascendingNodeDeg: 110, texturePath: '/textures/nasa/pluto_nasa.jpg' },
+  { id: 'moon-charon', name: 'Charon', parentShowcaseEntityId: 'dwarf-pluto', distance: 0.22, period: 4.2, size: 0.048, color: '#a5b4fc', orbitColor: '#818cf8', phaseDeg: 120, texturePath: '/textures/nasa/charon_nasa.jpg' },
+  { id: 'dwarf-ceres', name: 'Ceres', distance: 36, period: 52, size: 0.08, color: '#9ca3af', orbitColor: '#6b7280', phaseDeg: 41, inclinationDeg: 10, ascendingNodeDeg: 80 },
+  { id: 'dwarf-eris', name: 'Eris', distance: 152, period: 146, size: 0.08, color: '#bfdbfe', orbitColor: '#60a5fa', phaseDeg: 140, inclinationDeg: 20, ascendingNodeDeg: 35 },
+  { id: 'dwarf-haumea', name: 'Haumea', distance: 142, period: 138, size: 0.07, color: '#fde68a', orbitColor: '#f59e0b', phaseDeg: 210, inclinationDeg: 28, ascendingNodeDeg: 102 },
+  { id: 'dwarf-makemake', name: 'Makemake', distance: 147, period: 142, size: 0.08, color: '#fca5a5', orbitColor: '#ef4444', phaseDeg: 266, inclinationDeg: 29, ascendingNodeDeg: 78 },
+  { id: 'asteroid-bennu', name: 'Bennu', distance: 27, period: 46, size: 0.05, color: '#d1d5db', orbitColor: '#9ca3af', phaseDeg: 312, inclinationDeg: 6, ascendingNodeDeg: 122 },
+  { id: 'asteroid-psyche', name: 'Psyche', distance: 40, period: 58, size: 0.06, color: '#f5d0fe', orbitColor: '#d946ef', phaseDeg: 250, inclinationDeg: 3, ascendingNodeDeg: 94 },
+  { id: 'comet-halley', name: 'Halley', distance: 132, period: 118, size: 0.06, color: '#93c5fd', orbitColor: '#38bdf8', phaseDeg: 328, inclinationDeg: 35, ascendingNodeDeg: 60 },
+  { id: 'comet-tempel1', name: 'Tempel 1', distance: 54, period: 66, size: 0.05, color: '#bae6fd', orbitColor: '#0ea5e9', phaseDeg: 15, inclinationDeg: 10, ascendingNodeDeg: 45 },
+  { id: 'comet-67p', name: '67P/C-G', distance: 58, period: 72, size: 0.05, color: '#e0f2fe', orbitColor: '#0284c7', phaseDeg: 97, inclinationDeg: 12, ascendingNodeDeg: 118 },
+  { id: 'comet-halebopp', name: 'Hale-Bopp', distance: 170, period: 170, size: 0.05, color: '#bfdbfe', orbitColor: '#3b82f6', phaseDeg: 175, inclinationDeg: 42, ascendingNodeDeg: 88 },
+  { id: 'comet-encke', name: 'Encke', distance: 22, period: 34, size: 0.045, color: '#7dd3fc', orbitColor: '#06b6d4', phaseDeg: 275, inclinationDeg: 7, ascendingNodeDeg: 28 },
+  { id: 'sc-voyager1', name: 'Voyager 1', distance: 175, period: 190, size: 0.04, color: '#86efac', orbitColor: '#22c55e', phaseDeg: 12, inclinationDeg: 15, ascendingNodeDeg: 40, modelPath: '/models/nasa/voyager_a_nasa.glb', modelScale: 0.13, modelRotationDeg: [0, 90, 0] },
+  { id: 'sc-voyager2', name: 'Voyager 2', distance: 168, period: 186, size: 0.04, color: '#4ade80', orbitColor: '#16a34a', phaseDeg: 146, inclinationDeg: 18, ascendingNodeDeg: 72, modelPath: '/models/nasa/voyager_b_nasa.glb', modelScale: 0.11, modelRotationDeg: [0, 90, 0] },
+  { id: 'sc-juno', name: 'Juno', parentPlanetName: 'Jupiter', distance: 5.4, period: 13.5, size: 0.04, color: '#22c55e', orbitColor: '#16a34a', modelPath: '/models/nasa/juno_nasa.glb', modelScale: 0.11, modelRotationDeg: [0, 180, 0] },
+  { id: 'sc-cassini', name: 'Cassini', parentPlanetName: 'Saturn', distance: 4.8, period: 12.9, size: 0.04, color: '#34d399', orbitColor: '#10b981', modelPath: '/models/nasa/cassini_nasa.glb', modelScale: 0.12, modelRotationDeg: [0, 120, 0] },
+  { id: 'sc-galileo', name: 'Galileo', parentPlanetName: 'Jupiter', distance: 6.1, period: 15.2, size: 0.04, color: '#6ee7b7', orbitColor: '#14b8a6', modelPath: '/models/nasa/galileo_nasa.glb', modelScale: 0.1, modelRotationDeg: [0, 40, 0] },
+  { id: 'sc-pioneer10', name: 'Pioneer 10', distance: 138, period: 152, size: 0.04, color: '#4ade80', orbitColor: '#16a34a', phaseDeg: 94, inclinationDeg: 12, ascendingNodeDeg: 28, modelPath: '/models/nasa/pioneer10_nasa.glb', modelScale: 0.1, modelRotationDeg: [0, 80, 0] },
+  { id: 'sc-lucy', name: 'Lucy', distance: 66, period: 80, size: 0.04, color: '#34d399', orbitColor: '#10b981', phaseDeg: 218, inclinationDeg: 8, ascendingNodeDeg: 132 },
+  { id: 'sc-psyche', name: 'Psyche Mission', distance: 48, period: 60, size: 0.04, color: '#6ee7b7', orbitColor: '#14b8a6', phaseDeg: 334, inclinationDeg: 5, ascendingNodeDeg: 62 },
+  { id: 'sc-artemis1', name: 'Artemis I', parentPlanetName: 'Earth', distance: 1.9, period: 5.4, size: 0.04, color: '#86efac', orbitColor: '#22c55e' },
+  { id: 'sc-artemis2', name: 'Artemis II', parentPlanetName: 'Earth', distance: 2.3, period: 6.1, size: 0.04, color: '#4ade80', orbitColor: '#16a34a' },
+  { id: 'sc-iss', name: 'ISS', parentPlanetName: 'Earth', distance: 1.35, period: 3.2, size: 0.035, color: '#67e8f9', orbitColor: '#06b6d4', modelPath: '/models/nasa/iss_nasa.glb', modelScale: 0.1, modelRotationDeg: [0, 90, 0] },
+  { id: 'sc-jwst', name: 'JWST', parentPlanetName: 'Earth', distance: 2.7, period: 6.8, size: 0.04, color: '#a7f3d0', orbitColor: '#14b8a6', modelPath: '/models/nasa/jwst_nasa.glb', modelScale: 0.1, modelRotationDeg: [0, 0, 0] },
+]
+
+export function getShowcaseOrbitEntityById(id: string): ShowcaseOrbitEntity | undefined {
+  return SHOWCASE_ORBIT_ENTITIES.find((e) => e.id === id)
+}
+
+export function getNasaCatalogItemById(id: string): NasaCatalogItem | undefined {
+  return NASA_SHOWCASE_ITEMS.find((i) => i.id === id)
+}

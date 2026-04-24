@@ -61,7 +61,8 @@ export const planetsData: PlanetData[] = [
     name: 'Venus',
     nameVi: 'Sao Kim',
     explorerBlurb: 'Thick clouds, crushing pressure, and furnace-like heat — Earth’s “evil twin”.',
-    texture: `${T}/8k_venus_surface.jpg`,
+    // NASA-3D-Resources texture (uploaded to CDN via /textures/nasa/*)
+    texture: `${T}/nasa/venus_nasa.jpg`,
     radius: 0.32 * PLANET_SIZE_SCALE,
     distance: 15,
     period: 18,
@@ -91,7 +92,8 @@ export const planetsData: PlanetData[] = [
     name: 'Mars',
     nameVi: 'Sao Hỏa',
     explorerBlurb: 'Rusty deserts, giant volcanoes, and polar ice — humanity’s next frontier.',
-    texture: `${T}/8k_mars.jpg`,
+    // NASA-3D-Resources texture (uploaded to CDN via /textures/nasa/*)
+    texture: `${T}/nasa/mars_nasa.jpg`,
     radius: 0.18 * PLANET_SIZE_SCALE,
     distance: 30,
     period: 30,
@@ -106,7 +108,8 @@ export const planetsData: PlanetData[] = [
     name: 'Jupiter',
     nameVi: 'Sao Mộc',
     explorerBlurb: 'The largest planet — a stormy gas giant with the Great Red Spot.',
-    texture: `${T}/8k_jupiter.jpg`,
+    // NASA-3D-Resources texture (uploaded to CDN via /textures/nasa/*)
+    texture: `${T}/nasa/jupiter_nasa.jpg`,
     radius: 1.0 * PLANET_SIZE_SCALE,
     distance: 44,
     period: 40,
@@ -121,7 +124,8 @@ export const planetsData: PlanetData[] = [
     name: 'Saturn',
     nameVi: 'Sao Thổ',
     explorerBlurb: 'Iconic rings of ice and rock orbiting a pale gas giant.',
-    texture: `${T}/8k_saturn.jpg`,
+    // NASA-3D-Resources texture (uploaded to CDN via /textures/nasa/*)
+    texture: `${T}/nasa/saturn_nasa.jpg`,
     radius: 0.85 * PLANET_SIZE_SCALE,
     distance: 60,
     period: 55,
@@ -154,7 +158,8 @@ export const planetsData: PlanetData[] = [
     name: 'Neptune',
     nameVi: 'Sao Hải Vương',
     explorerBlurb: 'Deep blue, wind-whipped ice giant — the farthest major planet from the Sun.',
-    texture: `${T}/2k_neptune.jpg`,
+    // NASA-3D-Resources texture (uploaded to CDN via /textures/nasa/*)
+    texture: `${T}/nasa/neptune_nasa.jpg`,
     radius: 0.48 * PLANET_SIZE_SCALE,
     distance: 96,
     period: 85,

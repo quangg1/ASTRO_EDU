@@ -1,8 +1,9 @@
 'use client'
 
 import dynamic from 'next/dynamic'
-import { Suspense, useState, useEffect, useRef, useCallback } from 'react'
+import { Suspense, useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useSearchParams } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { Timeline } from '@/components/ui/Timeline'
 import { InfoPanel } from '@/components/ui/InfoPanel'
 import { FossilPanel } from '@/components/ui/FossilPanel'
@@ -10,16 +11,25 @@ import { Controls } from '@/components/ui/Controls'
 import { Loading } from '@/components/ui/Loading'
 import { useSimulatorStore } from '@/store/useSimulatorStore'
 import { planetsData } from '@/lib/solarSystemData'
+import { getStaticAssetUrl } from '@/lib/apiConfig'
+import { NASA_SHOWCASE_ITEMS, NASA_SHOWCASE_STORIES } from '@/lib/nasaShowcaseCatalog'
 import CockpitInterior from '@/components/ui/CockpitInterior'
 import { CockpitHudTargetProvider, useCockpitHudTarget } from '@/contexts/CockpitHudTargetContext'
 import { CockpitEngineController, loadCockpitEngineVolume, saveCockpitEngineVolume } from '@/lib/cockpitEngineAudio'
 import { useLearningPath } from '@/hooks/useLearningPath'
+import { DEPTH_ORDER, type LearningConcept, type LearningModule } from '@/data/learningPathCurriculum'
+import type { ShowcaseCameraSpherical } from '@/components/3d/showcase/ShowcaseCameraManager'
+import { useShowcaseStore } from '@/store/showcaseStore'
 
 const EarthScene = dynamic(() => import('@/components/3d/EarthScene'), {
   ssr: false,
   loading: () => <Loading />
 })
 const SolarSystemScene = dynamic(() => import('@/components/3d/SolarSystemScene'), {
+  ssr: false,
+  loading: () => <Loading />
+})
+const ShowcaseScene = dynamic(() => import('@/components/3d/showcase/ShowcaseScene'), {
   ssr: false,
   loading: () => <Loading />
 })
@@ -61,7 +71,59 @@ type SceneAnchorConfig = {
 const EARTH_PLANET_INDEX = 2
 const VENUS_PLANET_INDEX = 1
 
+function conceptHaystack(c: LearningConcept): string {
+  return [c.id, c.title || '', c.short_description || '', ...(c.aliases || [])].join(' ').toLowerCase()
+}
+
+/** Map scene entity theme keywords → concept ids (API graph includes prerequisites). */
+function conceptIdsMatchingKeywords(concepts: LearningConcept[], keywords: string[]): Set<string> {
+  const kws = keywords.map((k) => String(k || '').trim().toLowerCase()).filter((k) => k.length >= 2)
+  const out = new Set<string>()
+  if (!kws.length) return out
+  for (const c of concepts) {
+    const hay = conceptHaystack(c)
+    for (const kw of kws) {
+      if (hay.includes(kw)) {
+        out.add(c.id)
+        break
+      }
+    }
+  }
+  return out
+}
+
+function findFirstLessonForConcept(
+  modules: LearningModule[],
+  conceptId: string,
+): { href: string; lessonTitle: string } | null {
+  for (const mod of modules) {
+    for (const node of mod.nodes) {
+      for (const depth of DEPTH_ORDER) {
+        for (const lesson of node.depths[depth] ?? []) {
+          if ((lesson.conceptIds ?? []).includes(conceptId)) {
+            return {
+              href: `/tutorial/${mod.id}/${node.id}/${encodeURIComponent(lesson.id)}`,
+              lessonTitle: lesson.titleVi || lesson.title || lesson.id,
+            }
+          }
+          for (const a of lesson.conceptAnchors ?? []) {
+            if (String(a.conceptId || '').trim() === conceptId) {
+              return {
+                href: `/tutorial/${mod.id}/${node.id}/${encodeURIComponent(lesson.id)}`,
+                lessonTitle: lesson.titleVi || lesson.title || lesson.id,
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  return null
+}
+
 function ExplorePageContent() {
+  const router = useRouter()
+  const pathname = usePathname()
   const searchParams = useSearchParams()
   const stageParam = searchParams.get('stage')
   const stageTime = stageParam != null ? parseFloat(stageParam) : null
@@ -85,7 +147,7 @@ function ExplorePageContent() {
   const stages = useSimulatorStore((s) => s.stages)
   const stagesLoading = useSimulatorStore((s) => s.stagesLoading)
   const setStage = useSimulatorStore((s) => s.setStage)
-  const { modules } = useLearningPath()
+  const { modules, concepts } = useLearningPath()
 
   const engineRef = useRef<CockpitEngineController | null>(null)
   const lastDestSyncedRef = useRef<number | null | undefined>(undefined)
@@ -97,6 +159,11 @@ function ExplorePageContent() {
   const [sceneExploreActive, setSceneExploreActive] = useState(false)
   const [deepDiveOpen, setDeepDiveOpen] = useState(false)
   const [quizAnswers, setQuizAnswers] = useState<Record<string, number>>({})
+  const [showcaseMode, setShowcaseMode] = useState(true)
+  const [showcaseMenuOpen, setShowcaseMenuOpen] = useState(false)
+  const [showcaseActiveStoryId, setShowcaseActiveStoryId] = useState('story-artemis')
+  const [showcaseActiveItemId, setShowcaseActiveItemId] = useState('planet-earth')
+  const isApplyingUrlStateRef = useRef(false)
 
   const showEarthHistory = earthHistoryOpen
   const isEarthSelected = viewMode === 'solar' && selectedSolarPlanetIndex === EARTH_PLANET_INDEX
@@ -265,6 +332,133 @@ function ExplorePageContent() {
   )
 
   const showExploreTopBar = !(solarControlMode === 'cockpit' && viewMode === 'solar' && !showEarthHistory)
+  const isSolarObserverShowcase =
+    !showEarthHistory && viewMode === 'solar' && solarControlMode === 'observer' && showcaseMode
+  const distQ = searchParams.get('dist')
+  const azQ = searchParams.get('az')
+  const elQ = searchParams.get('el')
+  const initialShowcaseSpherical = useMemo((): ShowcaseCameraSpherical | null => {
+    if (distQ == null || azQ == null || elQ == null) return null
+    const distance = parseFloat(distQ)
+    const az = parseFloat(azQ)
+    const el = parseFloat(elQ)
+    if (!Number.isFinite(distance) || !Number.isFinite(az) || !Number.isFinite(el)) return null
+    return { distance, az, el }
+  }, [distQ, azQ, elQ])
+  const showcaseCameraUrlTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const handleShowcaseCameraSettled = useCallback(
+    (sph: ShowcaseCameraSpherical) => {
+      if (showcaseCameraUrlTimerRef.current) clearTimeout(showcaseCameraUrlTimerRef.current)
+      showcaseCameraUrlTimerRef.current = setTimeout(() => {
+        showcaseCameraUrlTimerRef.current = null
+        const next = new URLSearchParams(searchParams.toString())
+        next.set('dist', sph.distance.toFixed(2))
+        next.set('az', sph.az.toFixed(1))
+        next.set('el', sph.el.toFixed(1))
+        const updated = next.toString()
+        if (updated === searchParams.toString()) return
+        router.replace(`${pathname}?${updated}`, { scroll: false })
+      }, 280)
+    },
+    [pathname, router, searchParams],
+  )
+  const showcasePlanetsMoons = NASA_SHOWCASE_ITEMS.filter((i) => i.group === 'planets_moons')
+  const showcaseDwarfPlanets = NASA_SHOWCASE_ITEMS.filter((i) => i.group === 'dwarf_asteroids')
+  const showcaseComets = NASA_SHOWCASE_ITEMS.filter((i) => i.group === 'comets')
+  const showcaseSpacecraft = NASA_SHOWCASE_ITEMS.filter((i) => i.group === 'spacecraft')
+  const activeShowcaseItem = NASA_SHOWCASE_ITEMS.find((i) => i.id === showcaseActiveItemId) ?? null
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return
+    if (isSolarObserverShowcase) {
+      document.body.classList.add('explore-showcase-focus')
+    } else {
+      document.body.classList.remove('explore-showcase-focus')
+    }
+    return () => document.body.classList.remove('explore-showcase-focus')
+  }, [isSolarObserverShowcase])
+
+  useEffect(() => {
+    const modeParam = (searchParams.get('mode') || '').toLowerCase()
+    const targetParam = (searchParams.get('target') || '').toLowerCase()
+    const entityParam = searchParams.get('entity') || ''
+    const hasRouteState = !!modeParam || !!targetParam || !!entityParam
+    if (!hasRouteState) return
+
+    isApplyingUrlStateRef.current = true
+    if (modeParam === 'showcase') {
+      setViewMode('solar')
+      setSolarControlMode('observer')
+      setShowcaseMode(true)
+      setEarthHistoryOpen(false)
+    }
+    if (targetParam) {
+      const idx = planetsData.findIndex((p) => p.name.toLowerCase() === targetParam)
+      if (idx >= 0) {
+        setSelectedSolarPlanetIndex(idx)
+        if (modeParam === 'showcase') {
+          setObserverLockPending(false)
+          setObserverTargetLock(true)
+        } else {
+          setObserverTargetLock(false)
+          setObserverLockPending(true)
+        }
+      }
+    }
+    if (entityParam) {
+      const exists = NASA_SHOWCASE_ITEMS.some((item) => item.id === entityParam)
+      if (exists) setShowcaseActiveItemId(entityParam)
+    }
+    queueMicrotask(() => {
+      isApplyingUrlStateRef.current = false
+    })
+  }, [searchParams])
+
+  useEffect(() => {
+    if (isApplyingUrlStateRef.current) return
+    const next = new URLSearchParams(searchParams.toString())
+    const shouldRouteShowcase = viewMode === 'solar' && solarControlMode === 'observer' && showcaseMode
+
+    if (shouldRouteShowcase) {
+      next.set('mode', 'showcase')
+      if (selectedSolarPlanetIndex !== null) {
+        const p = planetsData[selectedSolarPlanetIndex]
+        if (p) next.set('target', p.name.toLowerCase())
+      } else {
+        next.delete('target')
+      }
+      if (showcaseActiveItemId) {
+        next.set('entity', showcaseActiveItemId)
+        const item = NASA_SHOWCASE_ITEMS.find((x) => x.id === showcaseActiveItemId)
+        if (item?.group) next.set('group', item.group)
+      } else {
+        next.delete('entity')
+        next.delete('group')
+      }
+    } else {
+      next.delete('mode')
+      next.delete('target')
+      next.delete('entity')
+      next.delete('group')
+      next.delete('dist')
+      next.delete('az')
+      next.delete('el')
+    }
+
+    const current = searchParams.toString()
+    const updated = next.toString()
+    if (current === updated) return
+    router.replace(updated ? `${pathname}?${updated}` : pathname, { scroll: false })
+  }, [
+    pathname,
+    router,
+    searchParams,
+    viewMode,
+    solarControlMode,
+    showcaseMode,
+    selectedSolarPlanetIndex,
+    showcaseActiveItemId,
+  ])
   const sceneAnchor: SceneAnchorConfig | null =
     !showEarthHistory && viewMode === 'solar' && selectedSolarPlanetIndex === VENUS_PLANET_INDEX
       ? {
@@ -362,8 +556,18 @@ function ExplorePageContent() {
   const answeredCount = quickQuizQuestions.filter((q) => quizAnswers[q.id] !== undefined).length
   const correctCount = quickQuizQuestions.filter((q) => quizAnswers[q.id] === q.correctIndex).length
 
-  const recommendedLessons: RecommendedLessonCard[] = (() => {
+  const recommendedLessons = useMemo((): RecommendedLessonCard[] => {
     if (!sceneAnchor || !activeEntity) return []
+    const conceptById = new Map(concepts.map((c) => [c.id, c]))
+    const seedConceptIds = conceptIdsMatchingKeywords(concepts, activeEntity.conceptKeywords)
+    const prereqOneHop = new Set<string>()
+    for (const sid of seedConceptIds) {
+      const c = conceptById.get(sid)
+      for (const p of c?.prerequisites ?? []) {
+        if (conceptById.has(p)) prereqOneHop.add(p)
+      }
+    }
+
     const scored: Array<{ card: RecommendedLessonCard; score: number }> = []
     for (const mod of modules) {
       for (const node of mod.nodes) {
@@ -385,18 +589,32 @@ function ExplorePageContent() {
               if (!text.includes(kw)) continue
               score += kw.length >= 7 ? 3 : 2
             }
+            const lcSet = new Set(lesson.conceptIds ?? [])
+            let graphBoost = 0
+            for (const sid of seedConceptIds) {
+              if (lcSet.has(sid)) graphBoost += 5
+            }
+            for (const pid of prereqOneHop) {
+              if (lcSet.has(pid)) graphBoost += 2
+            }
+            score += graphBoost
             if (depth === 'beginner') score += 1
             if (score <= 0) continue
+
+            let reason =
+              score >= 10
+                ? `Khớp trực tiếp với "${activeEntity.label}"`
+                : `Liên quan "${activeEntity.label}" trong ngữ cảnh ${sceneAnchor.label}`
+            if (graphBoost >= 5) reason += ' — khớp concept trong đồ thị lộ trình'
+            else if (graphBoost >= 2) reason += ' — ôn kiến thức nền (prerequisite)'
+
             scored.push({
               score,
               card: {
                 id: lesson.id,
                 title: lesson.titleVi || lesson.title || lesson.id,
                 href: `/tutorial/${mod.id}/${node.id}/${encodeURIComponent(lesson.id)}`,
-                reason:
-                  score >= 10
-                    ? `Khớp trực tiếp với "${activeEntity.label}"`
-                    : `Liên quan "${activeEntity.label}" trong ngữ cảnh ${sceneAnchor.label}`,
+                reason,
               },
             })
           }
@@ -410,7 +628,31 @@ function ExplorePageContent() {
       if (uniq.size >= 3) break
     }
     return Array.from(uniq.values())
-  })()
+  }, [modules, concepts, sceneAnchor, selectedEntityId, activeEntity])
+
+  const explorePrepConcepts = useMemo(() => {
+    if (!sceneAnchor || !activeEntity) return []
+    const conceptById = new Map(concepts.map((c) => [c.id, c]))
+    const seedConceptIds = conceptIdsMatchingKeywords(concepts, activeEntity.conceptKeywords)
+    const rows: { id: string; title: string; href: string | null; lessonTitle: string | null }[] = []
+    const seen = new Set<string>()
+    for (const sid of seedConceptIds) {
+      const c = conceptById.get(sid)
+      for (const p of c?.prerequisites ?? []) {
+        if (seen.has(p) || !conceptById.has(p)) continue
+        seen.add(p)
+        const pc = conceptById.get(p)!
+        const hit = findFirstLessonForConcept(modules, p)
+        rows.push({
+          id: p,
+          title: pc.title || p,
+          href: hit?.href ?? null,
+          lessonTitle: hit?.lessonTitle ?? null,
+        })
+      }
+    }
+    return rows.slice(0, 6)
+  }, [sceneAnchor, selectedEntityId, activeEntity, concepts, modules])
 
   const canvasInlineStyle =
     dockCanvasInTargetFrame && planetFrameRect
@@ -440,24 +682,54 @@ function ExplorePageContent() {
         <Suspense fallback={<Loading />}>
           {showEarthHistory && <EarthScene />}
           {!showEarthHistory && viewMode === 'solar' && (
-            <SolarSystemScene
-              mode={solarControlMode}
-              flightTargetIndex={selectedSolarPlanetIndex}
-              sceneNavigationEnabled={solarControlMode !== 'cockpit'}
-              onPlanetSelect={setSelectedSolarPlanetIndex}
-              onTelemetry={onTelemetry}
-              observerLockPending={solarControlMode === 'observer' && observerLockPending}
-              observerTargetLock={solarControlMode === 'observer' && observerTargetLock}
-              onObserverLockArrived={onObserverLockArrived}
-              cockpitCanvasInTargetFrame={dockCanvasInTargetFrame}
-              observerDisableAutoTarget={sceneExploreActive}
-              observerExploreEntityId={sceneExploreActive ? activeEntity?.id ?? null : null}
-            />
+            isSolarObserverShowcase ? (
+              <ShowcaseScene
+                showcaseActiveItemId={showcaseActiveItemId}
+                onShowcaseItemSelect={(id) => {
+                  setShowcaseActiveItemId(id)
+                  const item = NASA_SHOWCASE_ITEMS.find((x) => x.id === id)
+                  if (item?.linkedPlanetName) {
+                    const idx = planetsData.findIndex((p) => p.name === item.linkedPlanetName)
+                    if (idx >= 0) setSelectedSolarPlanetIndex(idx)
+                  }
+                }}
+                flightTargetIndex={selectedSolarPlanetIndex}
+                onPlanetSelect={(idx) => {
+                  setSelectedSolarPlanetIndex(idx)
+                  if (idx === null) return
+                  const planetName = planetsData[idx]?.name
+                  if (!planetName) return
+                  const planetItem = NASA_SHOWCASE_ITEMS.find(
+                    (item) => item.group === 'planets_moons' && item.name === planetName,
+                  )
+                  if (planetItem) setShowcaseActiveItemId(planetItem.id)
+                }}
+                observerTargetLock={observerTargetLock}
+                observerDisableAutoTarget={sceneExploreActive}
+                observerExploreEntityId={sceneExploreActive ? activeEntity?.id ?? null : null}
+                initialSpherical={initialShowcaseSpherical}
+                onCameraSettled={handleShowcaseCameraSettled}
+              />
+            ) : (
+              <SolarSystemScene
+                mode={solarControlMode}
+                flightTargetIndex={selectedSolarPlanetIndex}
+                sceneNavigationEnabled={solarControlMode !== 'cockpit'}
+                onPlanetSelect={setSelectedSolarPlanetIndex}
+                onTelemetry={onTelemetry}
+                observerLockPending={solarControlMode === 'observer' && observerLockPending}
+                observerTargetLock={solarControlMode === 'observer' && observerTargetLock}
+                onObserverLockArrived={onObserverLockArrived}
+                cockpitCanvasInTargetFrame={dockCanvasInTargetFrame}
+                observerDisableAutoTarget={sceneExploreActive}
+                observerExploreEntityId={sceneExploreActive ? activeEntity?.id ?? null : null}
+              />
+            )
           )}
           {!showEarthHistory && viewMode === 'milkyway' && <MilkyWayScene />}
         </Suspense>
       </div>
-      {showExploreLearningDock && sceneAnchor && activeEntity && (
+      {showExploreLearningDock && sceneAnchor && activeEntity && !isSolarObserverShowcase && (
         <>
         <aside className="fixed right-0 top-14 bottom-0 z-[18] w-[22rem] border-l border-white/10 bg-[#040a14]/96 p-3 backdrop-blur">
           <div className="rounded-xl border border-white/10 bg-black/30 p-3">
@@ -500,6 +772,30 @@ function ExplorePageContent() {
               Tìm hiểu chuyên sâu
             </button>
           </div>
+          {explorePrepConcepts.length > 0 && (
+            <div className="mt-3 rounded-xl border border-white/10 bg-black/30 p-3">
+              <p className="text-[10px] uppercase tracking-[0.18em] text-sky-300/90">Chuẩn bị (đồ thị concept)</p>
+              <p className="mt-1 text-[11px] text-slate-400">
+                Các khái niệm nền từ API — liên kết tới bài học trong lộ trình nếu có.
+              </p>
+              <ul className="mt-2 space-y-1.5">
+                {explorePrepConcepts.map((row) => (
+                  <li key={row.id} className="text-[11px] text-slate-200">
+                    {row.href ? (
+                      <a href={row.href} className="text-sky-200 underline-offset-2 hover:text-sky-100 hover:underline">
+                        {row.title}
+                      </a>
+                    ) : (
+                      <span>{row.title}</span>
+                    )}
+                    {row.lessonTitle ? (
+                      <span className="ml-1 text-[10px] text-slate-500">({row.lessonTitle})</span>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
           {recommendedLessons.length > 0 && (
             <div className="mt-3 grid gap-2">
               {recommendedLessons.map((lesson, idx) => (
@@ -642,7 +938,7 @@ function ExplorePageContent() {
               </button>
             </div>
           )}
-        {showExploreTopBar && (
+        {showExploreTopBar && !isSolarObserverShowcase && (
           <div
             className={`fixed top-14 left-0 p-3 sm:p-4 flex flex-wrap items-start sm:items-center justify-between gap-2 sm:gap-4 z-10 ${
               showExploreLearningDock ? (deepDiveOpen ? 'right-[48rem]' : 'right-[22rem]') : 'right-0'
@@ -674,7 +970,20 @@ function ExplorePageContent() {
                     <div className="flex rounded-lg overflow-hidden border border-white/10">
                       <button
                         type="button"
-                        onClick={() => setSolarControlMode('observer')}
+                        onClick={() => setShowcaseMode((v) => !v)}
+                        className={`px-2 sm:px-2.5 py-1.5 text-[10px] sm:text-xs font-medium ${
+                          showcaseMode ? 'bg-amber-600/45 text-amber-100' : 'text-gray-300 hover:bg-white/5'
+                        }`}
+                        title="Bật bố cục showcase theo phong cách NASA Eyes"
+                      >
+                        ✨ Showcase
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSolarControlMode('observer')
+                          setShowcaseMode(false)
+                        }}
                         className={`px-2 sm:px-2.5 py-1.5 text-[10px] sm:text-xs font-medium ${
                           solarControlMode === 'observer' ? 'bg-white/15 text-white' : 'text-gray-400 hover:bg-white/5'
                         }`}
@@ -724,6 +1033,7 @@ function ExplorePageContent() {
               viewMode === 'solar' &&
               selectedSolarPlanetIndex !== null &&
               !showExploreLearningDock &&
+              !isSolarObserverShowcase &&
               solarControlMode !== 'cockpit' && (
                 <div className="glass rounded-xl px-3 sm:px-4 py-3 max-w-[min(92vw,22rem)] text-left border border-cyan-500/25">
                   <p className="text-[10px] uppercase tracking-wider text-cyan-400/90 mb-1">
@@ -814,17 +1124,16 @@ function ExplorePageContent() {
           </>
         )}
 
-        {!showEarthHistory && (
+        {!showEarthHistory && !isSolarObserverShowcase && (
           <div
             className={`fixed left-1/2 -translate-x-1/2 glass rounded-lg px-3 sm:px-4 py-2 text-xs sm:text-sm text-gray-400 text-center max-w-[95vw] sm:max-w-md ${
               viewMode === 'solar' && solarControlMode === 'cockpit'
                 ? 'bottom-3 sm:bottom-4'
                 : 'bottom-3 sm:bottom-4'
             }`}
-            style={showExploreLearningDock ? { right: '22rem', width: 'calc(100vw - 22rem)' } : undefined}
             style={showExploreLearningDock ? { right: `${dockWidthRem}rem`, width: `calc(100vw - ${dockWidthRem}rem)` } : undefined}
           >
-            {viewMode === 'solar' && solarControlMode === 'observer' && (
+            {viewMode === 'solar' && solarControlMode === 'observer' && !isSolarObserverShowcase && (
               <>
                 Chọn đích → <span className="text-cyan-300">Khóa mục tiêu</span> để bay camera tới — Target lock chỉ hiện khi đã tới nơi
               </>
@@ -838,6 +1147,217 @@ function ExplorePageContent() {
             )}
             {viewMode === 'milkyway' && 'Milky Way sky. Drag to rotate, scroll to zoom.'}
           </div>
+        )}
+
+        {isSolarObserverShowcase && (
+          <>
+            <div className="fixed top-14 left-0 right-0 z-[22] border-b border-white/10 bg-black/35 backdrop-blur-sm">
+              <div className="mx-auto max-w-[1400px] px-4 py-2 flex items-center justify-between text-[11px]">
+                <div className="flex items-center gap-2 text-slate-200">
+                  <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-white/20 text-[9px] font-semibold">NASA</span>
+                  <span className="tracking-[0.14em] uppercase text-slate-200/90">Eyes on the Solar System</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    className="rounded border border-white/15 px-2 py-1 text-[10px] uppercase tracking-wider text-slate-300 hover:bg-white/10"
+                  >
+                    Search
+                  </button>
+                  <button
+                    type="button"
+                    className="rounded border border-white/15 px-2 py-1 text-[10px] uppercase tracking-wider text-slate-300 hover:bg-white/10"
+                  >
+                    Share
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowcaseMenuOpen((v) => !v)}
+                    className={`rounded border px-2 py-1 text-[10px] uppercase tracking-wider ${
+                      showcaseMenuOpen
+                        ? 'border-cyan-300/45 bg-cyan-500/20 text-cyan-100'
+                        : 'border-white/15 text-slate-300 hover:bg-white/10'
+                    }`}
+                  >
+                    {showcaseMenuOpen ? 'Close' : 'Menu'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowcaseMode(false)}
+                    className="rounded border border-amber-300/35 px-2 py-1 text-[10px] uppercase tracking-wider text-amber-100 hover:bg-amber-500/15"
+                  >
+                    Exit showcase
+                  </button>
+                </div>
+              </div>
+            </div>
+            <aside className="fixed left-0 top-[5.5rem] bottom-0 z-[21] w-[288px] border-r border-white/10 bg-black/40 backdrop-blur-sm overflow-y-auto">
+              <div className="border-b border-white/10 px-3 py-2">
+                <p className="text-[10px] uppercase tracking-[0.16em] text-slate-400">Featured Stories</p>
+              </div>
+              <div className="p-2 space-y-2">
+                {NASA_SHOWCASE_STORIES.map((story) => {
+                  const active = showcaseActiveStoryId === story.id
+                  return (
+                    <button
+                      key={story.id}
+                      type="button"
+                      onClick={() => {
+                        setShowcaseActiveStoryId(story.id)
+                        const idx = planetsData.findIndex((p) => p.name === story.targetPlanetName)
+                        if (idx >= 0) {
+                          setSelectedSolarPlanetIndex(idx)
+                          setObserverLockPending(false)
+                          setObserverTargetLock(true)
+                        }
+                        const linked = NASA_SHOWCASE_ITEMS.find((item) => item.linkedPlanetName === story.targetPlanetName)
+                        if (linked) setShowcaseActiveItemId(linked.id)
+                      }}
+                      className={`w-full rounded-lg border p-2.5 text-left transition-colors ${
+                        active
+                          ? 'border-cyan-300/45 bg-cyan-500/15 text-cyan-50'
+                          : 'border-white/10 bg-black/35 text-slate-200 hover:bg-white/10'
+                      }`}
+                    >
+                      <p className="text-sm leading-tight">{story.title}</p>
+                      <p className="mt-1 text-[10px] uppercase tracking-[0.14em] text-slate-400">{story.subtitle}</p>
+                      <p className="mt-1 text-[11px] text-slate-300/90">{story.detail}</p>
+                    </button>
+                  )
+                })}
+              </div>
+              <div className="border-t border-white/10 px-3 py-2">
+                <p className="text-[10px] uppercase tracking-[0.16em] text-slate-400">Catalog highlight</p>
+                <div className="mt-2 rounded-lg border border-white/10 bg-black/30 p-2">
+                  <p className="text-xs text-slate-200">{activeShowcaseItem?.name ?? 'No selection'}</p>
+                  {activeShowcaseItem?.texturePath ? (
+                    <img
+                      src={getStaticAssetUrl(activeShowcaseItem.texturePath)}
+                      alt={activeShowcaseItem.name}
+                      className="mt-2 h-20 w-full object-cover rounded border border-white/10"
+                    />
+                  ) : (
+                    <p className="mt-2 text-[11px] text-slate-500">No texture preview available</p>
+                  )}
+                </div>
+              </div>
+            </aside>
+
+            {showcaseMenuOpen && (
+              <div className="fixed inset-0 z-[23] bg-black/45 backdrop-blur-[1px]">
+                <div className="absolute left-1/2 top-[5.6rem] w-[min(1080px,calc(100vw-2rem))] -translate-x-1/2 rounded-2xl border border-white/10 bg-[#050a13]/96 p-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4 text-sm">
+                    <div className="space-y-2 border-r border-white/10 pr-4">
+                      <p className="text-[10px] uppercase tracking-[0.16em] text-slate-400">Stories</p>
+                      {NASA_SHOWCASE_STORIES.map((story) => (
+                        <button
+                          key={`menu-${story.id}`}
+                          type="button"
+                          onClick={() => {
+                            setShowcaseActiveStoryId(story.id)
+                            const idx = planetsData.findIndex((p) => p.name === story.targetPlanetName)
+                            if (idx >= 0) {
+                              setSelectedSolarPlanetIndex(idx)
+                              setObserverLockPending(false)
+                              setObserverTargetLock(true)
+                            }
+                            const linked = NASA_SHOWCASE_ITEMS.find((item) => item.linkedPlanetName === story.targetPlanetName)
+                            if (linked) setShowcaseActiveItemId(linked.id)
+                            setShowcaseMenuOpen(false)
+                          }}
+                          className="block w-full text-left rounded px-2 py-1.5 text-slate-200 hover:bg-white/10"
+                        >
+                          {story.title}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="space-y-2 border-r border-white/10 pr-4">
+                      <p className="text-[10px] uppercase tracking-[0.16em] text-slate-400">Planets & Moons</p>
+                      {showcasePlanetsMoons.map((item) => (
+                        <button
+                          key={`menu-planet-${item.id}`}
+                          type="button"
+                          onPointerEnter={() => useShowcaseStore.getState().setPreloadGroup(item.group)}
+                          onPointerLeave={() => useShowcaseStore.getState().setPreloadGroup(null)}
+                          onClick={() => {
+                            if (item.linkedPlanetName) {
+                              const idx = planetsData.findIndex((p) => p.name === item.linkedPlanetName)
+                              if (idx >= 0) {
+                                setSelectedSolarPlanetIndex(idx)
+                                setObserverLockPending(false)
+                                setObserverTargetLock(true)
+                              }
+                            }
+                            setShowcaseActiveItemId(item.id)
+                            setShowcaseMenuOpen(false)
+                          }}
+                          className="block w-full text-left rounded px-2 py-1.5 text-slate-200 hover:bg-white/10"
+                        >
+                          {item.name}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="space-y-2 border-r border-white/10 pr-4">
+                      <p className="text-[10px] uppercase tracking-[0.16em] text-slate-400">Dwarf Planets & Asteroids</p>
+                      {showcaseDwarfPlanets.map((item) => (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onPointerEnter={() => useShowcaseStore.getState().setPreloadGroup(item.group)}
+                          onPointerLeave={() => useShowcaseStore.getState().setPreloadGroup(null)}
+                          onClick={() => setShowcaseActiveItemId(item.id)}
+                          className="block w-full text-left rounded px-2 py-1.5 text-slate-200/80 bg-white/[0.02] hover:bg-white/10"
+                        >
+                          {item.name}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="space-y-2 border-r border-white/10 pr-4">
+                      <p className="text-[10px] uppercase tracking-[0.16em] text-slate-400">Comets</p>
+                      {showcaseComets.map((item) => (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onPointerEnter={() => useShowcaseStore.getState().setPreloadGroup(item.group)}
+                          onPointerLeave={() => useShowcaseStore.getState().setPreloadGroup(null)}
+                          onClick={() => setShowcaseActiveItemId(item.id)}
+                          className="block w-full text-left rounded px-2 py-1.5 text-slate-200/80 bg-white/[0.02] hover:bg-white/10"
+                        >
+                          {item.name}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="space-y-2">
+                      <p className="text-[10px] uppercase tracking-[0.16em] text-slate-400">Spacecraft</p>
+                      {showcaseSpacecraft.map((item) => (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onPointerEnter={() => useShowcaseStore.getState().setPreloadGroup(item.group)}
+                          onPointerLeave={() => useShowcaseStore.getState().setPreloadGroup(null)}
+                          onClick={() => setShowcaseActiveItemId(item.id)}
+                          className="block w-full text-left rounded px-2 py-1.5 text-slate-200/80 bg-white/[0.02] hover:bg-white/10"
+                        >
+                          {item.name}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="fixed bottom-3 left-1/2 z-[21] w-[min(760px,calc(100vw-2.5rem))] -translate-x-1/2 rounded-full border border-white/10 bg-black/45 px-4 py-2 backdrop-blur-sm">
+              <div className="flex items-center justify-between text-[11px] text-slate-300">
+                <span className="text-emerald-300">● SHOWCASE</span>
+                <span>CURATED SOLAR VIEW</span>
+                <span>STATIC MODE</span>
+              </div>
+              <div className="mt-1 h-1.5 rounded-full bg-white/10 overflow-hidden">
+                <div className="h-full w-[48%] rounded-full bg-cyan-400/70" />
+              </div>
+            </div>
+          </>
         )}
 
         {!showEarthHistory && viewMode === 'solar' && solarControlMode === 'cockpit' && (

@@ -83,6 +83,7 @@ export type AdminLearningPathAnalytics = {
     uniqueSessions: number
     lessonOpens: number
     lessonCompletions: number
+    lessonMastered: number
     depthSwitches: number
   }
   funnel: AdminLearningPathFunnelItem[]
@@ -110,6 +111,12 @@ export type AdminLearningPathAnalytics = {
     uniqueCompletionSessions: number
     dropOffCount: number
     dropOffRate: number
+  }>
+  topConcepts: Array<{
+    conceptId: string
+    conceptTitle: string
+    opens: number
+    uniqueUsers: number
   }>
 }
 

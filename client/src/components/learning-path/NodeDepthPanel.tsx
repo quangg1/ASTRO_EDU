@@ -7,12 +7,15 @@ import type { DepthLevel, LearningModule, LearningNode } from '@/data/learningPa
 import { DEPTH_META, DEPTH_ORDER } from '@/data/learningPathCurriculum'
 import {
   loadLessonCompletion,
+  loadLessonMastery,
   syncLearningPathCompletion,
   isLessonComplete,
+  isLessonMastered,
   type LessonCompletionMap,
+  type LessonMasteryMap,
 } from '@/lib/learningPathProgress'
 import { trackLearningPathBehavior } from '@/lib/learningPathBehavior'
-import { CheckCircle2, ChevronRight } from 'lucide-react'
+import { Award, CheckCircle2, ChevronRight } from 'lucide-react'
 import { useAuthStore } from '@/store/useAuthStore'
 
 type Props = {
@@ -25,12 +28,19 @@ export default function NodeDepthPanel({ module, node }: Props) {
   const depths = useMemo(() => DEPTH_ORDER.filter((d) => (node.depths[d]?.length ?? 0) > 0), [node])
   const [active, setActive] = useState<DepthLevel>(depths[0] ?? 'beginner')
   const [completion, setCompletion] = useState<LessonCompletionMap>({})
+  const [mastery, setMastery] = useState<LessonMasteryMap>({})
 
   useEffect(() => {
-    const refresh = () => setCompletion(loadLessonCompletion(userId))
+    const refresh = () => {
+      setCompletion(loadLessonCompletion(userId))
+      setMastery(loadLessonMastery(userId))
+    }
     const refreshAndSync = () => {
       refresh()
-      void syncLearningPathCompletion(userId).then((synced) => setCompletion(synced))
+      void syncLearningPathCompletion(userId).then((synced) => {
+        setCompletion(synced)
+        setMastery(loadLessonMastery(userId))
+      })
     }
     refreshAndSync()
     window.addEventListener('focus', refreshAndSync)
@@ -114,6 +124,7 @@ export default function NodeDepthPanel({ module, node }: Props) {
           <ul className="space-y-2">
             {lessons.map((lesson, i) => {
               const done = isLessonComplete(completion, lesson.id)
+              const mast = isLessonMastered(mastery, lesson.id)
               const href = `/tutorial/${encodeURIComponent(module.id)}/${encodeURIComponent(node.id)}/${encodeURIComponent(lesson.id)}`
               return (
                 <motion.li
@@ -126,7 +137,9 @@ export default function NodeDepthPanel({ module, node }: Props) {
                     href={href}
                     className="group flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.02] px-4 py-3 hover:border-cyan-500/35 hover:bg-cyan-500/5 transition-all"
                   >
-                    {done ? (
+                    {mast ? (
+                      <Award className="w-5 h-5 shrink-0 text-violet-300" aria-label="Đã nắm" />
+                    ) : done ? (
                       <CheckCircle2 className="w-5 h-5 shrink-0 text-emerald-400" aria-hidden />
                     ) : (
                       <span className="mt-0.5 h-2 w-2 shrink-0 rounded-full bg-cyan-400/80 shadow-[0_0_8px_rgba(34,211,238,0.5)]" />

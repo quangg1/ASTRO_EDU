@@ -10,6 +10,7 @@ export type AnalyticsEventName =
   | 'login_success'
   | 'register_success'
   | 'lesson_complete_toggled'
+  | 'lesson_mastered'
   | 'concept_panel_opened'
   | 'checkout_started'
   | 'payment_return_viewed'

@@ -52,6 +52,12 @@ function buildLearningPathLookup(doc) {
   const moduleMap = new Map();
   const nodeMap = new Map();
   const lessonMap = new Map();
+  const conceptMap = new Map();
+  for (const c of Array.isArray(doc?.concepts) ? doc.concepts : []) {
+    const id = String(c?.id || '').trim();
+    if (!id) continue;
+    conceptMap.set(id, String(c.title || c.short_description || id).trim() || id);
+  }
 
   for (const module of modules) {
     moduleMap.set(String(module.id), {
@@ -83,7 +89,7 @@ function buildLearningPathLookup(doc) {
     }
   }
 
-  return { modules, moduleMap, nodeMap, lessonMap };
+  return { modules, moduleMap, nodeMap, lessonMap, conceptMap };
 }
 
 function ensureArray(value) {
@@ -509,6 +515,9 @@ router.get('/analytics/learning-path', authMiddleware, requireRole('admin'), asy
                 ],
               },
             },
+            lessonMastered: {
+              $sum: { $cond: [{ $eq: ['$eventName', 'lp_lesson_mastered'] }, 1, 0] },
+            },
             depthSwitches: {
               $sum: {
                 $cond: [{ $eq: ['$eventName', 'lp_depth_switched'] }, 1, 0],
@@ -590,7 +599,20 @@ router.get('/analytics/learning-path', authMiddleware, requireRole('admin'), asy
         { $sort: { opens: -1, completions: -1 } },
       ]),
       LearningPathEvent.aggregate([
-        { $match: { ...baseMatch, eventName: { $in: ['lp_module_viewed', 'lp_node_viewed', 'lp_lesson_opened', 'lp_lesson_completed_toggled'] } } },
+        {
+          $match: {
+            ...baseMatch,
+            eventName: {
+              $in: [
+                'lp_module_viewed',
+                'lp_node_viewed',
+                'lp_lesson_opened',
+                'lp_lesson_completed_toggled',
+                'lp_lesson_mastered',
+              ],
+            },
+          },
+        },
         {
           $group: {
             _id: null,
@@ -617,6 +639,9 @@ router.get('/analytics/learning-path', authMiddleware, requireRole('admin'), asy
                 ],
               },
             },
+            lessonMastered: {
+              $sum: { $cond: [{ $eq: ['$eventName', 'lp_lesson_mastered'] }, 1, 0] },
+            },
           },
         },
       ]),
@@ -633,10 +658,24 @@ router.get('/analytics/learning-path', authMiddleware, requireRole('admin'), asy
     ]);
     const dwellByModule = new Map(dwellAgg.map((row) => [String(row._id || ''), row.avgDurationSec || 0]));
 
+    const conceptEngagementAgg = await LearningPathEvent.aggregate([
+      { $match: { ...baseMatch, eventName: 'lp_concept_opened' } },
+      { $match: { 'metadata.conceptId': { $exists: true, $nin: [null, ''] } } },
+      {
+        $group: {
+          _id: { $toString: '$metadata.conceptId' },
+          opens: { $sum: 1 },
+          users: { $addToSet: '$userId' },
+        },
+      },
+      { $sort: { opens: -1 } },
+      { $limit: 25 },
+    ]);
+
     const summaryRow = summaryAgg[0] || {};
     const uniqueUsers = ensureArray(summaryRow.uniqueUsers).filter(Boolean);
     const uniqueSessions = ensureArray(summaryRow.uniqueSessions).filter(Boolean);
-    const funnel = funnelAgg[0] || { moduleViewed: 0, nodeViewed: 0, lessonOpened: 0, lessonCompleted: 0 };
+    const funnel = funnelAgg[0] || { moduleViewed: 0, nodeViewed: 0, lessonOpened: 0, lessonCompleted: 0, lessonMastered: 0 };
 
     const funnelSteps = [
       { step: 'session_started', label: 'Phiên học', value: uniqueSessions.length },
@@ -644,6 +683,7 @@ router.get('/analytics/learning-path', authMiddleware, requireRole('admin'), asy
       { step: 'node_viewed', label: 'Xem chủ đề', value: funnel.nodeViewed || 0 },
       { step: 'lesson_opened', label: 'Mở bài học', value: funnel.lessonOpened || 0 },
       { step: 'lesson_completed', label: 'Hoàn thành bài', value: funnel.lessonCompleted || 0 },
+      { step: 'lesson_mastered', label: 'Vượt kiểm tra (mastery)', value: funnel.lessonMastered || 0 },
     ];
     const base = funnelSteps[0].value || 1;
     const funnelWithRates = funnelSteps.map((row, idx) => ({
@@ -676,6 +716,7 @@ router.get('/analytics/learning-path', authMiddleware, requireRole('admin'), asy
         uniqueSessions: uniqueSessions.length,
         lessonOpens: summaryRow.lessonOpens || 0,
         lessonCompletions: summaryRow.lessonCompletions || 0,
+        lessonMastered: summaryRow.lessonMastered || 0,
         depthSwitches: summaryRow.depthSwitches || 0,
       },
       funnel: funnelWithRates,
@@ -717,6 +758,15 @@ router.get('/analytics/learning-path', authMiddleware, requireRole('admin'), asy
         })
         .sort((a, b) => b.dropOffCount - a.dropOffCount || b.completions - a.completions || b.opens - a.opens)
         .slice(0, 15),
+      topConcepts: conceptEngagementAgg.map((row) => {
+        const conceptId = String(row._id || '').trim();
+        return {
+          conceptId,
+          conceptTitle: lookup.conceptMap.get(conceptId) || conceptId,
+          opens: row.opens || 0,
+          uniqueUsers: ensureArray(row.users).filter(Boolean).length,
+        };
+      }),
     });
   } catch (err) {
     req.logger?.error('admin_analytics_learning_path_failed', { error: err.message, range: req.query.range });

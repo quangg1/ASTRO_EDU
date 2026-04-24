@@ -13,6 +13,7 @@ const learningPathEventSchema = new mongoose.Schema(
         'lp_lesson_opened',
         'lp_lesson_completed_toggled',
         'lp_lesson_dwell',
+        'lp_lesson_mastered',
         'lp_concept_opened',
         'lp_concept_anchor_clicked',
         'lp_depth_switched',

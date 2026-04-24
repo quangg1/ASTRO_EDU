@@ -11,12 +11,19 @@ const API = `${getApiPathBase()}/learning-path`
 const LAST_LESSON_SUFFIX = ':lastLessonId'
 
 export type LessonCompletionMap = Record<string, boolean>
+export type LessonMasteryMap = Record<string, boolean>
+
+const MASTERY_KEY_SUFFIX = ':mastery'
 
 /** Key lưu localStorage: mỗi user đăng nhập một key; khách dùng `:guest` */
 export function getProgressStorageKey(userId: string | null | undefined): string {
   const id = userId != null && String(userId).trim() ? String(userId).trim() : null
   if (id) return `${PREFIX}:user:${id}`
   return `${PREFIX}:guest`
+}
+
+export function getMasteryStorageKey(userId: string | null | undefined): string {
+  return `${getProgressStorageKey(userId)}${MASTERY_KEY_SUFFIX}`
 }
 
 function getLastLessonStorageKey(userId: string | null | undefined): string {
@@ -92,6 +99,48 @@ function isGuestScope(userId: string | null | undefined): boolean {
  * - User đăng nhập: chỉ đọc key theo `user.id` (không merge từ key chung — tránh lẫn tiến độ giữa các account).
  * - Khách: migrate một lần từ key cũ không scope → `:guest`.
  */
+export function loadLessonMastery(userId?: string | null): LessonMasteryMap {
+  if (typeof window === 'undefined') return {}
+  const key = getMasteryStorageKey(userId)
+  try {
+    let data = parseRawMap(localStorage.getItem(key))
+    if (isGuestScope(userId) && Object.keys(data).length === 0) {
+      const guestBase = getProgressStorageKey(userId)
+      const legacyM = parseRawMap(localStorage.getItem(`${guestBase}${MASTERY_KEY_SUFFIX}`))
+      if (Object.keys(legacyM).length > 0) data = legacyM
+    }
+    const normalized = normalizeCompletionKeys(data) as LessonMasteryMap
+    const serialized = JSON.stringify(normalized)
+    if (localStorage.getItem(key) !== serialized) {
+      localStorage.setItem(key, serialized)
+    }
+    return normalized
+  } catch {
+    return {}
+  }
+}
+
+export function saveLessonMastery(map: LessonMasteryMap, userId?: string | null) {
+  if (typeof window === 'undefined') return
+  try {
+    localStorage.setItem(getMasteryStorageKey(userId), JSON.stringify(map))
+  } catch {
+    /* quota */
+  }
+}
+
+export function setLessonMastered(map: LessonMasteryMap, lessonId: string, mastered: boolean): LessonMasteryMap {
+  const k = progressKey(lessonId)
+  const next = { ...map }
+  if (mastered) next[k] = true
+  else delete next[k]
+  return next
+}
+
+export function isLessonMastered(map: LessonMasteryMap, lessonId: string): boolean {
+  return !!map[progressKey(lessonId)]
+}
+
 export function loadLessonCompletion(userId?: string | null): LessonCompletionMap {
   if (typeof window === 'undefined') return {}
   const key = getProgressStorageKey(userId)
@@ -184,10 +233,17 @@ export async function syncLearningPathCompletion(userId?: string | null): Promis
     const serverIds = normalizeIdArray(
       data?.success && Array.isArray(data?.data?.completedLessonIds) ? data.data.completedLessonIds : [],
     )
+    const serverMasteredIds = normalizeIdArray(
+      data?.success && Array.isArray(data?.data?.masteredLessonIds) ? data.data.masteredLessonIds : [],
+    )
     const serverLastLessonId = String(data?.data?.lastLessonId || '').trim() || null
     const serverMap = mapFromCompletedIds(serverIds)
+    const serverMastery = mapFromCompletedIds(serverMasteredIds)
     if (serverIds.length > 0) {
       saveLessonCompletion(serverMap, userId)
+      if (serverMasteredIds.length > 0) {
+        saveLessonMastery(serverMastery, userId)
+      }
       if (serverLastLessonId && serverMap[serverLastLessonId]) {
         saveLastLearningPathLessonId(serverLastLessonId, userId)
       }
@@ -196,6 +252,9 @@ export async function syncLearningPathCompletion(userId?: string | null): Promis
     const localIds = completedIdsFromMap(localMap)
     if (localIds.length > 0) {
       await pushLearningPathCompletion(localMap, userId)
+    }
+    if (serverMasteredIds.length > 0) {
+      saveLessonMastery(serverMastery, userId)
     }
     return localMap
   } catch {
@@ -216,6 +275,7 @@ export async function pushLearningPathCompletionWithLast(
   const token = getAuthToken()
   if (!token || !userId) return
   const last = String(lastLessonId || '').trim()
+  const mastery = loadLessonMastery(userId)
   try {
     await fetch(`${API}/progress`, {
       method: 'PUT',
@@ -223,10 +283,38 @@ export async function pushLearningPathCompletionWithLast(
         Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ completedLessonIds: completedIdsFromMap(map), lastLessonId: last || null }),
+      body: JSON.stringify({
+        completedLessonIds: completedIdsFromMap(map),
+        masteredLessonIds: completedIdsFromMap(mastery),
+        lastLessonId: last || null,
+      }),
     })
   } catch {
     /* ignore network */
+  }
+}
+
+/** Ghi mastery lên server (kèm completion hiện tại). */
+export async function pushLessonMasteryMap(mastery: LessonMasteryMap, userId?: string | null): Promise<void> {
+  const token = getAuthToken()
+  if (!token || !userId) return
+  const completion = loadLessonCompletion(userId)
+  const last = loadLastLearningPathLessonId(userId)
+  try {
+    await fetch(`${API}/progress`, {
+      method: 'PUT',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        completedLessonIds: completedIdsFromMap(completion),
+        masteredLessonIds: completedIdsFromMap(mastery),
+        lastLessonId: last || null,
+      }),
+    })
+  } catch {
+    /* ignore */
   }
 }
 

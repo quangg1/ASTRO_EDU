@@ -19,6 +19,19 @@ const lessonItemSchema = new mongoose.Schema(
     body: { type: String, default: '' },
     /** Cùng schema block với Course (LessonSection[]) */
     sections: { type: [mongoose.Schema.Types.Mixed], default: [] },
+    /** Quiz mastery do Studio biên tập (3-5 câu). */
+    recallQuiz: {
+      type: [
+        {
+          id: { type: String, default: '' },
+          question: { type: String, required: true },
+          options: [{ type: String }],
+          correctIndex: { type: Number, default: 0 },
+          optionExplanations: [{ type: String }],
+        },
+      ],
+      default: [],
+    },
   },
   { _id: false },
 );

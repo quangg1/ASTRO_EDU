@@ -9,6 +9,11 @@
     "dev": "node server.js",
     "test": "node --test",
     "sync:learning-path": "node scripts/sync-learning-path-modules-from-json.js",
+    "export:concepts-json": "node scripts/export-concepts-json.js --out data/concepts.json",
+    "build:concept-prerequisites": "node scripts/build-concept-prerequisites.js --dry-run",
+    "build:concept-prerequisites:openrouter": "node scripts/build-concept-prerequisites.js --dry-run --provider openrouter",
+    "build:concept-prerequisites:openrouter:free-all": "node scripts/build-concept-prerequisites.js --dry-run --provider openrouter --use-all-free-models",
+    "apply:concept-prerequisites": "node scripts/build-concept-prerequisites.js --apply",
     "patch:topic-weights-json": "node scripts/patch-learning-path-topic-weights.js",
     "crawl-news": "node scripts/crawl-news.js",
     "purge-news": "node scripts/purge-news-posts.js"

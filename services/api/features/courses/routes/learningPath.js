@@ -4,6 +4,7 @@ const UserProgress = require('../models/UserProgress');
 const LearningPathEvent = require('../models/LearningPathEvent');
 const Concept = require('../models/Concept');
 const { authMiddleware, optionalAuth, requireRole } = require('../../../shared/jwtAuth');
+const { generateRecallQuizFromLesson } = require('../../../lib/ai/tasks/generateRecallQuiz');
 
 const router = express.Router();
 
@@ -65,12 +66,44 @@ function normalizeModules(modules) {
           .filter((a) => a.conceptId && a.phrase);
         return anchors;
       };
+      const normalizeRecallQuiz = (lesson) => {
+        const raw = Array.isArray(lesson?.recallQuiz) ? lesson.recallQuiz : [];
+        return raw
+          .slice(0, 5)
+          .map((q, idx) => {
+            const question = String(q?.question || '').trim();
+            const rawOpts = Array.isArray(q?.options) ? q.options : [];
+            const rawExpl = Array.isArray(q?.optionExplanations) ? q.optionExplanations : [];
+            const pairs = rawOpts
+              .map((o, i) => ({
+                text: String(o || '').trim(),
+                reason: String(rawExpl[i] || '').trim(),
+                orig: i,
+              }))
+              .filter((p) => p.text);
+            const options = pairs.map((p) => p.text);
+            const ciRaw = Number(q?.correctIndex);
+            const ciSafe = Number.isFinite(ciRaw) ? ciRaw : 0;
+            const mappedIdx = pairs.findIndex((p) => p.orig === ciSafe);
+            const correctIndex = Math.max(0, Math.min(mappedIdx >= 0 ? mappedIdx : 0, Math.max(0, options.length - 1)));
+            const optionExplanations = pairs.map((p, i) => p.reason || (i === correctIndex ? 'Đây là đáp án đúng theo nội dung bài học.' : 'Phương án này chưa khớp với nội dung bài học.'));
+            return {
+              id: String(q?.id || '').trim() || `rq-${String(lesson?.id || 'lesson')}-${idx}`,
+              question,
+              options,
+              correctIndex,
+              optionExplanations,
+            };
+          })
+          .filter((q) => q.question && q.options.length >= 3 && q.options[q.correctIndex]);
+      };
       const normalizeConceptIds = (lesson) => ({
         ...lesson,
         conceptIds: Array.isArray(lesson?.conceptIds)
           ? [...new Set(lesson.conceptIds.map((x) => String(x || '').trim()).filter(Boolean))]
           : [],
         conceptAnchors: normalizeConceptAnchors(lesson),
+        recallQuiz: normalizeRecallQuiz(lesson),
       });
       const depths = n.depths || {};
       const nextDepths = {
@@ -188,6 +221,24 @@ router.put('/editor', authMiddleware, requireRole('teacher', 'admin'), async (re
   }
 });
 
+router.post('/editor/generate-quiz', authMiddleware, requireRole('teacher', 'admin'), async (req, res) => {
+  try {
+    const result = await generateRecallQuizFromLesson(req.body?.lesson || {});
+    if (!result.ok) {
+      return res.status(result.status || 422).json({
+        success: false,
+        code: result.code || 'QUIZ_GENERATION_FAILED',
+        error: result.error || 'Không thể sinh quiz',
+        details: result.details || [],
+      });
+    }
+    res.json({ success: true, data: { recallQuiz: result.recallQuiz } });
+  } catch (err) {
+    console.error('POST learning-path generate-quiz error:', err);
+    res.status(500).json({ success: false, code: 'QUIZ_GENERATION_FAILED', error: 'Lỗi máy chủ khi sinh quiz' });
+  }
+});
+
 function normalizeIdArray(arr) {
   if (!Array.isArray(arr)) return [];
   return [...new Set(arr.map((x) => String(x || '').trim()).filter(Boolean))];
@@ -200,6 +251,7 @@ router.get('/progress', authMiddleware, async (req, res) => {
       success: true,
       data: {
         completedLessonIds: normalizeIdArray(doc?.learningPathCompletedLessonIds),
+        masteredLessonIds: normalizeIdArray(doc?.learningPathMasteredLessonIds),
         lastLessonId: String(doc?.learningPathLastLessonId || '').trim() || null,
       },
     });
@@ -212,17 +264,22 @@ router.get('/progress', authMiddleware, async (req, res) => {
 router.put('/progress', authMiddleware, async (req, res) => {
   try {
     const completedLessonIds = normalizeIdArray(req.body?.completedLessonIds);
+    const masteredLessonIds = normalizeIdArray(req.body?.masteredLessonIds);
     const rawLast = String(req.body?.lastLessonId || '').trim();
     const lastLessonId = rawLast && completedLessonIds.includes(rawLast) ? rawLast : '';
-    const doc = await UserProgress.findOneAndUpdate(
-      { userId: req.userId },
-      { $set: { learningPathCompletedLessonIds: completedLessonIds, learningPathLastLessonId: lastLessonId } },
-      { upsert: true, new: true, setDefaultsOnInsert: true },
-    ).lean();
+    const setDoc = {
+      learningPathCompletedLessonIds: completedLessonIds,
+      learningPathLastLessonId: lastLessonId,
+    };
+    if (Array.isArray(req.body?.masteredLessonIds)) {
+      setDoc.learningPathMasteredLessonIds = masteredLessonIds;
+    }
+    const doc = await UserProgress.findOneAndUpdate({ userId: req.userId }, { $set: setDoc }, { upsert: true, new: true, setDefaultsOnInsert: true }).lean();
     res.json({
       success: true,
       data: {
         completedLessonIds: normalizeIdArray(doc?.learningPathCompletedLessonIds),
+        masteredLessonIds: normalizeIdArray(doc?.learningPathMasteredLessonIds),
         lastLessonId: String(doc?.learningPathLastLessonId || '').trim() || null,
       },
     });
@@ -280,6 +337,7 @@ function normalizeEvent(rawEvent, userId) {
     'lp_lesson_opened',
     'lp_lesson_completed_toggled',
     'lp_lesson_dwell',
+    'lp_lesson_mastered',
     'lp_concept_opened',
     'lp_concept_anchor_clicked',
     'lp_depth_switched',

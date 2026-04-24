@@ -1,6 +1,6 @@
 # AI Service (Python) – RAG, Security, Multimodal (text + ảnh)
 
-Service AI tập trung: bảo mật đầu vào, RAG (embedding + retrieval), hội thoại đa phương thức (text + hình ảnh). Sinh câu trả lời qua **OpenRouter** (khi có `OPENROUTER_API_KEY`) hoặc **LM Studio** (OpenAI-compatible local) nếu không cấu hình OpenRouter.
+Service AI tập trung: bảo mật đầu vào, RAG (embedding + retrieval), hội thoại đa phương thức (text + hình ảnh). Sinh câu trả lời qua **Groq Cloud** (OpenAI-compatible), mặc định model `llama-3.3-70b-versatile`.
 
 ## Tính năng
 
@@ -23,15 +23,9 @@ pip install -r requirements.txt
 
 | Biến | Mặc định | Mô tả |
 |------|----------|--------|
-| `OPENROUTER_API_KEY` | *(trống)* | Nếu set → dùng [OpenRouter](https://openrouter.ai/) (`POST …/chat/completions`). Free tier: đặt `OPENROUTER_MODEL=openrouter/free` (router chọn model miễn phí, hỗ trợ cả ảnh khi phù hợp). |
-| `OPENROUTER_BASE_URL` | https://openrouter.ai/api/v1 | Base URL API OpenRouter |
-| `OPENROUTER_MODEL` | openrouter/free | Model chat (text); tier miễn phí nên dùng router hoặc slug model có hậu tố `:free` trên trang Models |
-| `OPENROUTER_VLM_MODEL` | *(trống)* | Nếu set: khi có ảnh (`image_base64`) dùng model này thay cho `OPENROUTER_MODEL` (vd. một VLM `:free` cố định). Trống = dùng chung `OPENROUTER_MODEL` |
-| `OPENROUTER_HTTP_REFERER` | *(trống)* | Tùy chọn — OpenRouter khuyến nghị URL site (xếp hạng / attribution) |
-| `OPENROUTER_APP_TITLE` | Galaxies Edu AI | Header `X-Title` gửi kèm request |
-| `OPENROUTER_MERGE_SYSTEM` | 1 | `1` = không gửi role `system` tới OpenRouter; gộp system+RAG vào tin **user đầu** (tránh lỗi Google/Gemma *Developer instruction is not enabled*). `0` = gửi `system` như cũ (model phải hỗ trợ). |
-| `LM_STUDIO_URL` | http://localhost:1234 | Chỉ khi **không** có `OPENROUTER_API_KEY`: LM Studio API local |
-| `LM_STUDIO_MODEL` | local | Model local khi dùng LM Studio |
+| `GROQ_API_KEY` | *(trống)* | API key của [Groq Cloud](https://console.groq.com/keys) |
+| `GROQ_BASE_URL` | https://api.groq.com/openai/v1 | Base URL API Groq |
+| `GROQ_MODEL` | llama-3.3-70b-versatile | Model LLM dùng cho chat + quiz |
 | `EMBEDDING_URL` | http://localhost:5004 | Embedding service (Flag BGE-M3) |
 | `USE_RAG` | 1 | Bật/tắt RAG (1 hoặc 0) |
 | `RAG_INDEX_PATH` | data/rag_index.json | Đường dẫn file index RAG |
@@ -43,19 +37,19 @@ pip install -r requirements.txt
 | `KNOWLEDGE_ADMIN_TOKEN` | *(trống)* | Nếu set, các `POST /knowledge/*` (trừ khi chỉ đọc) cần `Authorization: Bearer …` hoặc header `X-Knowledge-Token` |
 | `USE_AGENT_TOOLS` | 1 | Bật gửi `tools` tới LLM (0 = tắt, chỉ còn fallback `[ACTION:…]` phía course) |
 
-### Đặt OpenRouter API key (local)
+### Đặt Groq API key (local)
 
-1. Lấy key tại [openrouter.ai/keys](https://openrouter.ai/keys) (dạng `sk-or-v1-…`).
+1. Lấy key tại [console.groq.com/keys](https://console.groq.com/keys) (dạng `gsk_...`).
 2. Trong thư mục `services/ai`, tạo file **`.env`** (đã bị git ignore). Có thể copy mẫu: `copy example.env .env` (Windows) rồi sửa giá trị.
-3. Trong `.env` ghi một dòng: `OPENROUTER_API_KEY=sk-or-v1-...` (không có dấu ngoặc kép).
+3. Trong `.env` ghi một dòng: `GROQ_API_KEY=gsk_...` (không có dấu ngoặc kép).
 4. Cài lại phụ thuộc nếu chưa có: `pip install -r requirements.txt` (có `python-dotenv` để tự đọc `.env` khi chạy `server.py`).
 5. Chạy lại từ `services/ai`: `uvicorn server:app --host 0.0.0.0 --port 5005`.
 
 **Cách khác (PowerShell, chỉ phiên hiện tại):** trước khi chạy uvicorn:
 
-`$env:OPENROUTER_API_KEY = "sk-or-v1-..."`
+`$env:GROQ_API_KEY = "gsk_..."`
 
-**Biến hệ thống Windows (bền):** Cài đặt → Hệ thống → Giới thiệu → Cài đặt hệ thống nâng cao → Biến môi trường → Thêm biến người dùng `OPENROUTER_API_KEY`, rồi mở terminal mới.
+**Biến hệ thống Windows (bền):** Cài đặt → Hệ thống → Giới thiệu → Cài đặt hệ thống nâng cao → Biến môi trường → Thêm biến người dùng `GROQ_API_KEY`, rồi mở terminal mới.
 
 ## Chạy
 

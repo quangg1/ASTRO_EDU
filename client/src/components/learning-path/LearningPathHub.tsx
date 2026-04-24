@@ -9,7 +9,7 @@ import {
   moduleProgressPercent,
   syncLearningPathCompletion,
 } from '@/lib/learningPathProgress'
-import { Sparkles, Orbit } from 'lucide-react'
+import { Sparkles, Orbit, Network } from 'lucide-react'
 import { useLearningPath } from '@/hooks/useLearningPath'
 import { useAuthStore } from '@/store/useAuthStore'
 
@@ -109,6 +109,29 @@ export default function LearningPathHub() {
                 transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
               />
             </div>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.25, duration: 0.45 }}
+            className="mt-8 flex justify-center"
+          >
+            <Link
+              href="/tutorial/knowledge-map"
+              className="group inline-flex max-w-lg items-center gap-3 rounded-2xl border border-violet-400/25 bg-gradient-to-r from-violet-950/60 to-cyan-950/40 px-5 py-4 text-left shadow-[0_0_40px_rgba(139,92,246,0.12)] transition hover:border-violet-300/40 hover:from-violet-900/50 hover:to-cyan-900/35"
+            >
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-violet-500/20 text-violet-200 ring-1 ring-violet-400/30">
+                <Network className="h-5 w-5" aria-hidden />
+              </span>
+              <span>
+                <span className="block text-sm font-semibold text-white">Bản đồ tri thức (star map)</span>
+                <span className="mt-0.5 block text-xs leading-relaxed text-slate-400">
+                  Xem toàn bộ graph concept — prerequisite như các vì sao nối nhau; tiến độ bài học làm sáng các điểm đã
+                  gặp.
+                </span>
+              </span>
+            </Link>
           </motion.div>
         </motion.header>
 

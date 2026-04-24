@@ -470,7 +470,7 @@ export default function AdminPage() {
                       ))}
                     </select>
                   </div>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                     <div className="rounded-xl border border-white/10 bg-black/20 p-3">
                       <p className="text-[11px] text-gray-500 uppercase">Sự kiện</p>
                       <p className="text-xl font-semibold text-white mt-1">{learningPathAnalytics?.summary.totalEvents ?? 0}</p>
@@ -482,6 +482,10 @@ export default function AdminPage() {
                     <div className="rounded-xl border border-white/10 bg-black/20 p-3">
                       <p className="text-[11px] text-gray-500 uppercase">Hoàn thành bài</p>
                       <p className="text-xl font-semibold text-emerald-300 mt-1">{learningPathAnalytics?.summary.lessonCompletions ?? 0}</p>
+                    </div>
+                    <div className="rounded-xl border border-white/10 bg-black/20 p-3">
+                      <p className="text-[11px] text-gray-500 uppercase">Mastery (quiz)</p>
+                      <p className="text-xl font-semibold text-violet-300 mt-1">{learningPathAnalytics?.summary.lessonMastered ?? 0}</p>
                     </div>
                   </div>
                   <div className="rounded-xl border border-white/10 bg-black/20 p-4">
@@ -530,6 +534,33 @@ export default function AdminPage() {
                       </div>
                     </div>
                   </div>
+                  <div className="rounded-xl border border-white/10 bg-black/20 p-3">
+                    <p className="text-sm text-white font-medium mb-2">Concept được mở nhiều (heatmap)</p>
+                    <p className="text-xs text-gray-500 mb-3">Từ sự kiện mở panel concept trong bài học.</p>
+                    {!(learningPathAnalytics?.topConcepts?.length) ? (
+                      <p className="text-sm text-gray-500">Chưa có dữ liệu concept trong khoảng thời gian này.</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {learningPathAnalytics.topConcepts.slice(0, 12).map((row) => (
+                          <div key={row.conceptId} className="flex items-center justify-between gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm">
+                            <div className="min-w-0">
+                              <p className="text-gray-200 truncate">{row.conceptTitle}</p>
+                              <p className="text-[11px] text-gray-500 font-mono truncate">{row.conceptId}</p>
+                            </div>
+                            <div className="shrink-0 text-right text-xs text-gray-400">
+                              <p>
+                                Mở: <span className="text-cyan-300">{row.opens}</span>
+                              </p>
+                              <p>
+                                User: <span className="text-emerald-300">{row.uniqueUsers}</span>
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
                   <div className="rounded-xl border border-white/10 bg-black/20 p-3">
                     <p className="text-sm text-white font-medium mb-3">Drop-off theo bài học</p>
                     {!(learningPathAnalytics?.topLessons?.length) ? (

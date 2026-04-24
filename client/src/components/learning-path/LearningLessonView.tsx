@@ -14,14 +14,22 @@ import type {
 import { DEPTH_META, getLessonNeighbors, getLessonById } from '@/data/learningPathCurriculum'
 import {
   loadLessonCompletion,
+  loadLessonMastery,
   saveLessonCompletion,
+  saveLessonMastery,
   saveLastLearningPathLessonId,
   syncLearningPathCompletion,
   pushLearningPathCompletionWithLast,
+  pushLessonMasteryMap,
   toggleLessonComplete,
   isLessonComplete,
+  setLessonMastered,
+  isLessonMastered,
   type LessonCompletionMap,
+  type LessonMasteryMap,
 } from '@/lib/learningPathProgress'
+import { normalizeStudioRecallQuiz } from '@/lib/lessonRecallQuiz'
+import { LessonRecallQuiz } from '@/components/learning-path/LessonRecallQuiz'
 import { awardGemsForLearningPathLesson } from '@/lib/gemWallet'
 import { useLearningPath } from '@/hooks/useLearningPath'
 import { useAuthStore } from '@/store/useAuthStore'
@@ -69,12 +77,42 @@ export default function LearningLessonView({
   const meta = DEPTH_META[depth]
 
   const [completion, setCompletion] = useState<LessonCompletionMap>({})
+  const [mastery, setMastery] = useState<LessonMasteryMap>({})
   useEffect(() => {
     setCompletion(loadLessonCompletion(userId))
-    void syncLearningPathCompletion(userId).then((synced) => setCompletion(synced))
+    setMastery(loadLessonMastery(userId))
+    void syncLearningPathCompletion(userId).then((synced) => {
+      setCompletion(synced)
+      setMastery(loadLessonMastery(userId))
+    })
   }, [userId])
 
   const done = isLessonComplete(completion, lesson.id)
+  const mastered = isLessonMastered(mastery, lesson.id)
+
+  const recallQuestions = useMemo(() => normalizeStudioRecallQuiz(lesson), [lesson])
+  const recallGateActive = recallQuestions.length >= 3
+
+  const handleRecallPassed = () => {
+    const next = setLessonMastered(mastery, lesson.id, true)
+    setMastery(next)
+    saveLessonMastery(next, userId)
+    void pushLessonMasteryMap(next, userId)
+    trackEvent('lesson_mastered', {
+      lesson_id: lesson.id,
+      module_id: displayModule.id,
+      node_id: displayNode.id,
+    })
+    trackLearningPathBehavior({
+      eventName: 'lp_lesson_mastered',
+      moduleId: displayModule.id,
+      nodeId: displayNode.id,
+      lessonId: lesson.id,
+      depth,
+      metadata: { source: 'recall_quiz' },
+    })
+    window.dispatchEvent(new Event('lp-progress-changed'))
+  }
   const toggle = () => {
     const markingComplete = !done
     const nextMap = toggleLessonComplete(completion, lesson.id, markingComplete)
@@ -456,6 +494,24 @@ export default function LearningLessonView({
             {lesson.titleVi}
           </h1>
           {lesson.title ? <p className="text-slate-400 text-sm md:text-base">{lesson.title}</p> : null}
+          <div className="mt-3 flex flex-wrap gap-2">
+            {done ? (
+              <span className="rounded-full border border-emerald-500/35 bg-emerald-500/15 px-2.5 py-0.5 text-[11px] font-medium text-emerald-100">
+                Đã đọc
+              </span>
+            ) : (
+              <span className="rounded-full border border-white/10 px-2.5 py-0.5 text-[11px] text-slate-500">Chưa đánh dấu đọc</span>
+            )}
+            {mastered ? (
+              <span className="rounded-full border border-violet-500/40 bg-violet-500/15 px-2.5 py-0.5 text-[11px] font-medium text-violet-100">
+                Đã nắm (mastery)
+              </span>
+            ) : recallGateActive ? (
+              <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-0.5 text-[11px] text-amber-100/90">
+                Chưa kiểm tra nhanh
+              </span>
+            ) : null}
+          </div>
           <div className="mt-4">
             <div className="flex items-center justify-between text-[11px] text-slate-500 mb-1">
               <span>Tiến độ đọc</span>
@@ -578,6 +634,12 @@ export default function LearningLessonView({
           </div>
         )}
 
+        {recallQuestions.length > 0 ? (
+          <div className="mb-8">
+            <LessonRecallQuiz questions={recallQuestions} passed={mastered} onPassed={handleRecallPassed} />
+          </div>
+        ) : null}
+
         {linkedConcepts.length > 0 && (
           <aside className="mb-8 rounded-2xl border border-cyan-500/20 bg-[#071018]/80 p-4">
             <h3 className="text-sm font-semibold text-cyan-100 mb-2">Khái niệm trong bài</h3>
@@ -647,7 +709,24 @@ export default function LearningLessonView({
           ) : (
             <div className="flex-1" />
           )}
-          {next ? (
+          {next && recallGateActive && !mastered ? (
+            <div className="group flex-1 rounded-xl border border-amber-500/30 bg-amber-500/5 px-4 py-3 text-right">
+              <span className="text-[10px] uppercase tracking-wider text-amber-200/90 flex items-center justify-end gap-1">
+                Bài tiếp <ChevronRight className="w-3.5 h-3.5 opacity-40" />
+              </span>
+              <p className="text-sm font-medium text-amber-50 mt-1 line-clamp-2">{next.lesson.titleVi}</p>
+              <p className="mt-2 text-[11px] text-amber-100/80">
+                Làm đúng kiểm tra nhanh phía trên để mở khóa &quot;Đã nắm&quot; — sau đó mới nên sang bài tiếp.
+              </p>
+              <button
+                type="button"
+                onClick={() => document.getElementById('lesson-recall-quiz')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                className="mt-2 inline-flex rounded-lg border border-amber-400/40 bg-amber-600/20 px-3 py-1.5 text-[11px] font-medium text-amber-50 hover:bg-amber-600/30"
+              >
+                Cuộn tới kiểm tra
+              </button>
+            </div>
+          ) : next ? (
             <Link
               href={`/tutorial/${next.moduleId}/${next.nodeId}/${encodeURIComponent(next.lesson.id)}`}
               className="group flex-1 rounded-xl border border-cyan-500/25 bg-cyan-500/5 px-4 py-3 hover:border-cyan-400/40 hover:bg-cyan-500/10 transition-all text-right"

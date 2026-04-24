@@ -23,14 +23,14 @@ import {
   type LessonItem,
   type TopicWeight,
 } from '@/data/learningPathCurriculum'
-import { fetchEditorLearningPath, saveEditorLearningPath } from '@/lib/learningPathApi'
+import { fetchEditorLearningPath, generateRecallQuizForLesson, saveEditorLearningPath } from '@/lib/learningPathApi'
 import {
   FALLBACK_TAXONOMY_REGISTRY,
   fetchEditorConcepts,
   fetchTaxonomyRegistryEditor,
   type TaxonomyRegistry,
 } from '@/lib/conceptsApi'
-import type { Lesson } from '@/lib/coursesApi'
+import type { Lesson, LessonSection } from '@/lib/coursesApi'
 import { useAuthStore } from '@/store/useAuthStore'
 import {
   BookOpen,
@@ -40,6 +40,7 @@ import {
   Copy,
   GripVertical,
   Layers,
+  ClipboardList,
   ListTree,
   Plus,
   Save,
@@ -47,10 +48,12 @@ import {
   Trash2,
 } from 'lucide-react'
 import { NodeTopicWeightsEditor } from '@/components/studio/NodeTopicWeightsEditor'
+import { LearningPathRecallQuizEditor } from '@/components/studio/LearningPathRecallQuizEditor'
 
 const BlockEditor = dynamic(() => import('@/components/studio/BlockEditor'), { ssr: false })
 const BlockPalette = dynamic(() => import('@/components/studio/BlockPalette'), { ssr: false })
 const LessonPreview = dynamic(() => import('@/components/studio/LessonPreview'), { ssr: false })
+const BLOCK_CLIPBOARD_STORAGE_KEY = 'lp_studio_block_clipboard_v1'
 
 function cloneJson<T>(obj: T): T {
   return JSON.parse(JSON.stringify(obj))
@@ -200,6 +203,8 @@ function LearningPathLessonEditor({
   setEditorTab,
   updateLesson: applyPatch,
   setModules,
+  blockClipboard,
+  setBlockClipboard,
   inputCls,
 }: {
   activeLesson: LessonItem
@@ -208,18 +213,23 @@ function LearningPathLessonEditor({
   moduleId: string
   nodeId: string
   depth: DepthLevel
-  editorTab: 'blocks' | 'preview' | 'lesson-page'
-  setEditorTab: (t: 'blocks' | 'preview' | 'lesson-page') => void
+  editorTab: 'blocks' | 'preview' | 'lesson-page' | 'quiz'
+  setEditorTab: (t: 'blocks' | 'preview' | 'lesson-page' | 'quiz') => void
   updateLesson: typeof updateLesson
   setModules: Dispatch<SetStateAction<LearningModule[]>>
+  blockClipboard: LessonSection | null
+  setBlockClipboard: Dispatch<SetStateAction<LessonSection | null>>
   inputCls: string
 }) {
   const sections = activeLesson.sections ?? []
   const selectedConceptIds = activeLesson.conceptIds ?? []
   const [previewConceptId, setPreviewConceptId] = useState<string | null>(null)
+  const [quizGenerating, setQuizGenerating] = useState(false)
+  const [quizGenerateError, setQuizGenerateError] = useState<string | null>(null)
   const [conceptQuery, setConceptQuery] = useState('')
   const [conceptDomain, setConceptDomain] = useState('all')
   const [conceptSubdomain, setConceptSubdomain] = useState('all')
+  const [selectedBlockIndex, setSelectedBlockIndex] = useState<number | null>(null)
 
   const conceptDomains = useMemo(() => {
     return Object.keys(taxonomyRegistry).sort((a, b) => a.localeCompare(b, 'vi'))
@@ -333,6 +343,36 @@ function LearningPathLessonEditor({
   const patchLesson = (patch: Partial<LessonItem>) => {
     setModules((prev) => applyPatch(prev, moduleId, nodeId, depth, activeLesson.id, patch))
   }
+
+  const generateQuizByAi = async () => {
+    if (quizGenerating) return
+    const token = typeof window !== 'undefined' ? localStorage.getItem('galaxies_token') : null
+    if (!token) {
+      setQuizGenerateError('Thiếu token đăng nhập. Vui lòng đăng nhập lại.')
+      return
+    }
+    setQuizGenerating(true)
+    setQuizGenerateError(null)
+    const r = await generateRecallQuizForLesson(token, activeLesson)
+    if (!r.ok || !Array.isArray(r.recallQuiz)) {
+      setQuizGenerateError(r.error || 'Không thể sinh quiz lúc này')
+      setQuizGenerating(false)
+      return
+    }
+    patchLesson({ recallQuiz: r.recallQuiz })
+    setQuizGenerating(false)
+  }
+
+  useEffect(() => {
+    if (sections.length === 0) {
+      setSelectedBlockIndex(null)
+      return
+    }
+    if (selectedBlockIndex == null) return
+    if (selectedBlockIndex >= sections.length) {
+      setSelectedBlockIndex(sections.length - 1)
+    }
+  }, [sections.length, selectedBlockIndex])
 
   const previewLesson: Lesson = useMemo(
     () => ({
@@ -728,17 +768,77 @@ function LearningPathLessonEditor({
           >
             Full Lesson Page
           </button>
+          <button
+            type="button"
+            onClick={() => setEditorTab('quiz')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+              editorTab === 'quiz'
+                ? 'bg-amber-600/90 text-white'
+                : 'text-slate-500 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            <span className="inline-flex items-center gap-1.5">
+              <ClipboardList className="w-3.5 h-3.5" />
+              Quiz mastery
+            </span>
+          </button>
           </div>
         </div>
 
+        {editorTab === 'quiz' && (
+          <LearningPathRecallQuizEditor
+            lessonId={activeLesson.id}
+            recallQuiz={activeLesson.recallQuiz}
+            onChange={(next) => patchLesson({ recallQuiz: next })}
+            onAutoGenerate={generateQuizByAi}
+            generating={quizGenerating}
+            generateError={quizGenerateError}
+            inputCls={inputCls}
+          />
+        )}
+
         {editorTab === 'blocks' && (
           <div className="p-4">
+          <div className="mb-3 flex items-center justify-end">
+            <button
+              type="button"
+              onClick={() => {
+                let source = blockClipboard
+                if (typeof window !== 'undefined') {
+                  try {
+                    const raw = window.localStorage.getItem(BLOCK_CLIPBOARD_STORAGE_KEY)
+                    if (raw) source = JSON.parse(raw) as LessonSection
+                  } catch {
+                    // ignore storage parse errors and fallback to in-memory clipboard
+                  }
+                }
+                if (!source) {
+                  window.alert('Chưa có block nào được copy.')
+                  return
+                }
+                const next = [...sections]
+                const insertAt = selectedBlockIndex == null ? next.length : Math.min(next.length, selectedBlockIndex + 1)
+                next.splice(insertAt, 0, cloneJson(source))
+                patchLesson({ sections: next })
+                setSelectedBlockIndex(insertAt)
+              }}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-cyan-500/30 bg-cyan-500/10 px-3 py-1.5 text-xs text-cyan-200 hover:bg-cyan-500/20"
+            >
+              <Copy className="w-3.5 h-3.5" />
+              Dán block đã copy
+            </button>
+          </div>
             <div className="space-y-3 min-w-0">
               {sections.map((sec, bi) => (
                 <div
                   key={bi}
                   id={`lp-studio-block-${bi}`}
-                  className="rounded-2xl border border-white/10 bg-[#0a0f17]/80 p-4 space-y-3 group/block relative scroll-mt-24"
+                  onClick={() => setSelectedBlockIndex(bi)}
+                  className={`rounded-2xl bg-[#0a0f17]/80 p-4 space-y-3 group/block relative scroll-mt-24 cursor-pointer ${
+                    selectedBlockIndex === bi
+                      ? 'border border-cyan-500/40 shadow-[0_0_0_1px_rgba(34,211,238,0.18)]'
+                      : 'border border-white/10'
+                  }`}
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -761,6 +861,25 @@ function LearningPathLessonEditor({
                         className="text-[10px] text-slate-600 hover:text-white disabled:opacity-20 px-1"
                       >
                         ↓
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const copied = cloneJson(sections[bi])
+                          setBlockClipboard(copied)
+                          if (typeof window !== 'undefined') {
+                            try {
+                              window.localStorage.setItem(BLOCK_CLIPBOARD_STORAGE_KEY, JSON.stringify(copied))
+                            } catch {
+                              // ignore storage write errors
+                            }
+                          }
+                        }}
+                        className="text-[10px] text-slate-600 hover:text-cyan-300 px-1"
+                        title="Copy block"
+                        aria-label="Copy block"
+                      >
+                        <Copy className="w-3.5 h-3.5" />
                       </button>
                       <button
                         type="button"
@@ -899,7 +1018,19 @@ export default function StudioLearningPathPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
-  const [editorTab, setEditorTab] = useState<'blocks' | 'preview' | 'lesson-page'>('blocks')
+  const [editorTab, setEditorTab] = useState<'blocks' | 'preview' | 'lesson-page' | 'quiz'>('blocks')
+  const [blockClipboard, setBlockClipboard] = useState<LessonSection | null>(null)
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    try {
+      const raw = window.localStorage.getItem(BLOCK_CLIPBOARD_STORAGE_KEY)
+      if (!raw) return
+      setBlockClipboard(JSON.parse(raw) as LessonSection)
+    } catch {
+      // ignore storage parse errors
+    }
+  }, [])
 
   /** Điều hướng phân cấp */
   const [moduleId, setModuleId] = useState<string | null>(null)
@@ -1779,6 +1910,8 @@ export default function StudioLearningPathPage() {
                       setEditorTab={setEditorTab}
                       updateLesson={updateLesson}
                       setModules={setModules}
+                      blockClipboard={blockClipboard}
+                      setBlockClipboard={setBlockClipboard}
                       inputCls={inputCls}
                     />
                   )}

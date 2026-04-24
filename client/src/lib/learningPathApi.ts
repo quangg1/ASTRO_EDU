@@ -1,5 +1,5 @@
 import { getApiPathBase } from './apiConfig'
-import type { LearningConcept, LearningModule } from '@/data/learningPathCurriculum'
+import type { LearningConcept, LearningModule, LessonItem, LessonRecallQuizItem } from '@/data/learningPathCurriculum'
 
 const API = `${getApiPathBase()}/learning-path`
 
@@ -105,6 +105,29 @@ export async function saveEditorLearningPath(
     }
     if (data.success) return { ok: true }
     return { ok: false, error: data.error || 'Save failed' }
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : 'Network error' }
+  }
+}
+
+export async function generateRecallQuizForLesson(
+  token: string,
+  lesson: LessonItem,
+): Promise<{ ok: boolean; recallQuiz?: LessonRecallQuizItem[]; error?: string }> {
+  try {
+    const res = await fetch(`${API}/editor/generate-quiz`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ lesson }),
+    })
+    const data = await res.json()
+    if (data.success && Array.isArray(data.data?.recallQuiz)) {
+      return { ok: true, recallQuiz: data.data.recallQuiz as LessonRecallQuizItem[] }
+    }
+    return { ok: false, error: data.error || 'Generate quiz failed' }
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : 'Network error' }
   }

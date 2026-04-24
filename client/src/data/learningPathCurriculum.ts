@@ -42,6 +42,16 @@ export type LessonConceptAnchor = {
   phrase: string
 }
 
+/** Câu hỏi trắc nghiệm cuối bài (mastery) — biên tập trong Studio. */
+export type LessonRecallQuizItem = {
+  id?: string
+  question: string
+  options: string[]
+  correctIndex: number
+  /** Giải thích theo từng phương án (A-D), gồm cả lý do đúng/sai. */
+  optionExplanations?: string[]
+}
+
 export type LessonItem = {
   id: string
   titleVi: string
@@ -50,6 +60,8 @@ export type LessonItem = {
   conceptIds?: string[]
   /** Highlight + link theo cụm văn bản cụ thể (ưu tiên hơn auto keyword). */
   conceptAnchors?: LessonConceptAnchor[]
+  /** 3–5 câu kiểm tra nhanh; nếu thiếu, client sinh câu từ concept gắn bài. */
+  recallQuiz?: LessonRecallQuizItem[]
   /** Block content — cùng schema với khóa học (richtext, image, video, …) */
   sections?: LessonSection[]
   /** Legacy: HTML đơn nếu chưa có sections (hoặc ghi đè từ API cũ) */
@@ -75,6 +87,8 @@ export type LearningConcept = {
   aliases?: string[]
   /** Concept cần biết trước khi học concept này. */
   prerequisites?: string[]
+  /** Khi sync từ API Mongo. */
+  published?: boolean
 }
 
 export type LearningNode = {
