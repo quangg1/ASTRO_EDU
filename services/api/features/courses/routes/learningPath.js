@@ -18,7 +18,14 @@ router.get('/', async (req, res) => {
     if (!doc.published) {
       return res.status(404).json({ success: false, code: 'LEARNING_PATH_UNAVAILABLE', error: 'Lộ trình chưa khả dụng' });
     }
-    res.json({ success: true, data: { modules: doc.modules || [], concepts: doc.concepts || [] } });
+    res.json({
+      success: true,
+      data: {
+        modules: doc.modules || [],
+        concepts: doc.concepts || [],
+        bridgeRules: Array.isArray(doc.bridgeRules) ? doc.bridgeRules : [],
+      },
+    });
   } catch (err) {
     console.error('GET learning-path error:', err);
     res.status(500).json({ success: false, code: 'LEARNING_PATH_GET_FAILED', error: 'Lỗi máy chủ' });
@@ -34,7 +41,12 @@ router.get('/editor', authMiddleware, requireRole('teacher', 'admin'), async (re
     }
     res.json({
       success: true,
-      data: { modules: doc.modules || [], concepts: doc.concepts || [], published: doc.published },
+      data: {
+        modules: doc.modules || [],
+        concepts: doc.concepts || [],
+        bridgeRules: Array.isArray(doc.bridgeRules) ? doc.bridgeRules : [],
+        published: doc.published,
+      },
     });
   } catch (err) {
     console.error('GET learning-path editor error:', err);
@@ -170,9 +182,41 @@ function normalizeConcepts(concepts) {
     .filter((c) => c.id && c.definition);
 }
 
+function normalizeBridgeRules(rules) {
+  if (!Array.isArray(rules)) return [];
+  const allowedEvents = new Set([
+    'entity_focus_stable',
+    'entity_clicked',
+    'entity_discovered_first_time',
+    'entity_focus_duration',
+  ]);
+  const allowedActions = new Set([
+    'show_concept_overlay',
+    'mark_lessons_visited3d',
+    'trigger_contextual_quiz',
+    'unlock_discovery_badge',
+  ]);
+  return rules
+    .map((r, idx) => {
+      const id = String(r?.id || '').trim() || `rule-${Date.now()}-${idx}`;
+      const entityId = String(r?.entityId || '').trim();
+      const event = String(r?.event || '').trim();
+      const action = String(r?.action || '').trim();
+      const conceptId = String(r?.conceptId || '').trim();
+      const active = r?.active !== false;
+      const thresholdSecRaw = Number(r?.thresholdSec);
+      const thresholdSec = Number.isFinite(thresholdSecRaw)
+        ? Math.max(0, Math.min(60, thresholdSecRaw))
+        : null;
+      if (!entityId || !allowedEvents.has(event) || !allowedActions.has(action)) return null;
+      return { id, entityId, event, action, conceptId, thresholdSec, active };
+    })
+    .filter(Boolean);
+}
+
 router.put('/editor', authMiddleware, requireRole('teacher', 'admin'), async (req, res) => {
   try {
-    const { modules, concepts, published } = req.body || {};
+    const { modules, concepts, bridgeRules, published } = req.body || {};
     if (!Array.isArray(modules)) {
       return res.status(400).json({ success: false, error: 'modules phải là mảng' });
     }
@@ -180,6 +224,8 @@ router.put('/editor', authMiddleware, requireRole('teacher', 'admin'), async (re
     /** Chỉ ghi concepts nhúng trong document khi client gửi — tránh xóa sạch khi body thiếu concepts */
     const normalizedConcepts =
       Array.isArray(concepts) ? normalizeConcepts(concepts) : null;
+    const normalizedBridgeRules =
+      Array.isArray(bridgeRules) ? normalizeBridgeRules(bridgeRules) : null;
     const conceptDocs = await Concept.find({}, { id: 1 }).lean();
     const conceptIdSet = new Set((conceptDocs || []).map((c) => String(c.id || '').trim()).filter(Boolean));
     const { modules: validatedModules, invalidConceptIds } = validateModulesByConceptIds(
@@ -192,6 +238,7 @@ router.put('/editor', authMiddleware, requireRole('teacher', 'admin'), async (re
         slug: 'main',
         modules: validatedModules,
         concepts: normalizedConcepts ?? [],
+        bridgeRules: normalizedBridgeRules ?? [],
         published: typeof published === 'boolean' ? published : true,
       });
     } else {
@@ -199,6 +246,10 @@ router.put('/editor', authMiddleware, requireRole('teacher', 'admin'), async (re
       if (normalizedConcepts !== null) {
         doc.concepts = normalizedConcepts;
         doc.markModified('concepts');
+      }
+      if (normalizedBridgeRules !== null) {
+        doc.bridgeRules = normalizedBridgeRules;
+        doc.markModified('bridgeRules');
       }
       doc.published = typeof published === 'boolean' ? published : true;
       doc.markModified('modules');
@@ -211,6 +262,7 @@ router.put('/editor', authMiddleware, requireRole('teacher', 'admin'), async (re
       data: {
         modules: fresh?.modules || [],
         concepts: fresh?.concepts || [],
+        bridgeRules: Array.isArray(fresh?.bridgeRules) ? fresh.bridgeRules : [],
         published: fresh?.published ?? true,
         invalidConceptIds,
       },
@@ -342,6 +394,11 @@ function normalizeEvent(rawEvent, userId) {
     'lp_concept_anchor_clicked',
     'lp_depth_switched',
     'lp_path_exited',
+    'scene_entity_focus_duration',
+    'scene_entity_clicked',
+    'scene_concept_overlay_shown',
+    'scene_contextual_quiz_prompted',
+    'scene_entity_discovered',
   ]);
 
   const eventName = String(rawEvent?.eventName || '').trim();

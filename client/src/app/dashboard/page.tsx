@@ -96,46 +96,48 @@ export default function DashboardOverviewPage() {
         </p>
       </header>
 
-      {/* Hàng chỉ số chung — giữ card hiện tại, chỉ bố cục 3 cột */}
+      {/* Hàng chỉ số chung */}
       <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <article className="rounded-2xl border border-violet-500/25 bg-[#12101c] p-5 shadow-[0_8px_40px_rgba(0,0,0,0.35)]">
-          <p className="text-[10px] uppercase tracking-wider text-slate-500 mb-3">Cấp độ</p>
+          <p className="text-[10px] uppercase tracking-wider text-slate-500 mb-3">Tiến trình Gem (dữ liệu thật)</p>
           <div className="flex items-center gap-3 mb-4">
             <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-violet-600/40 to-fuchsia-600/30 border border-white/10 flex items-center justify-center">
               <Sparkles className="w-6 h-6 text-violet-200" />
             </div>
             <div>
-              <p className="text-lg font-semibold text-white">Mầm non</p>
-              <p className="text-xs text-slate-500">Học tập & khám phá</p>
+              <p className="text-lg font-semibold text-white">Gem hiện có: {gemBalance}</p>
+              <p className="text-xs text-slate-500">Mốc kế tiếp: {gemNextMilestone} Gem</p>
             </div>
           </div>
           <div className="flex justify-between text-[10px] text-slate-500 mb-1">
-            <span>10 Gem</span>
+            <span>0 Gem</span>
             <span>100 Gem</span>
           </div>
           <div className="h-2 rounded-full bg-white/5 border border-white/10 overflow-hidden">
-            <div className="h-full w-[10%] rounded-full bg-gradient-to-r from-violet-500 to-cyan-400" />
+            <div className="h-full rounded-full bg-gradient-to-r from-violet-500 to-cyan-400" style={{ width: `${gemProgressPct}%` }} />
           </div>
-          <p className="text-xs text-slate-500 mt-2">90 Gem đến cấp độ tiếp theo</p>
+          <p className="text-xs text-slate-500 mt-2">{gemToNext} Gem đến mốc tiếp theo</p>
         </article>
 
         <article className="rounded-2xl border border-orange-500/20 bg-gradient-to-br from-orange-950/40 to-[#12101c] p-5 shadow-[0_8px_40px_rgba(0,0,0,0.35)]">
-          <p className="text-[10px] uppercase tracking-wider text-slate-500 mb-3">Chuỗi ngày hiện tại</p>
+          <p className="text-[10px] uppercase tracking-wider text-slate-500 mb-3">Chuỗi ngày học</p>
           <div className="flex items-center gap-3">
             <Flame className="w-10 h-10 text-orange-400" />
             <div>
-              <p className="text-3xl font-bold text-orange-200 tabular-nums">1</p>
-              <p className="text-sm text-orange-200/80">ngày</p>
+              <p className="text-lg font-semibold text-orange-200 tabular-nums">Đang cập nhật</p>
+              <p className="text-sm text-orange-200/80">sắp có dữ liệu thật</p>
             </div>
           </div>
-          <p className="text-xs text-slate-500 mt-4 border-t border-white/10 pt-3">Chuỗi dài nhất: 1 ngày</p>
+          <p className="text-xs text-slate-500 mt-4 border-t border-white/10 pt-3">
+            Chỉ số này sẽ hiển thị khi bật tracking chuỗi ngày học.
+          </p>
         </article>
 
         <article className="rounded-2xl border border-cyan-500/25 bg-[#12101c] p-5 sm:col-span-2 lg:col-span-1 shadow-[0_8px_40px_rgba(0,0,0,0.35)]">
           <div className="grid grid-cols-2 gap-4 mb-4">
             <div>
               <p className="text-[10px] uppercase tracking-wider text-slate-500 mb-1">Điểm cộng đồng</p>
-              <p className="text-2xl font-semibold text-white tabular-nums">0</p>
+              <p className="text-sm font-semibold text-white">Chưa bật trên tài khoản này</p>
             </div>
             <div>
               <p className="text-[10px] uppercase tracking-wider text-slate-500 mb-1 flex items-center gap-1">

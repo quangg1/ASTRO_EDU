@@ -7,21 +7,25 @@ import {
   type LearningConcept,
   type LearningModule,
 } from '@/data/learningPathCurriculum'
-import { fetchPublicLearningPath } from '@/lib/learningPathApi'
+import { fetchPublicLearningPathData, type LearningPathBridgeRule } from '@/lib/learningPathApi'
 import { fetchPublicConcepts } from '@/lib/conceptsApi'
 
 export function useLearningPath() {
   const [modules, setModules] = useState<LearningModule[]>(LEARNING_MODULES)
   const [concepts, setConcepts] = useState<LearningConcept[]>(LEARNING_CONCEPTS)
+  const [bridgeRules, setBridgeRules] = useState<LearningPathBridgeRule[]>([])
   const [loaded, setLoaded] = useState(false)
 
   useEffect(() => {
     let cancelled = false
-    Promise.all([fetchPublicLearningPath(), fetchPublicConcepts()]).then(([incomingModules, incomingConcepts]) => {
+    Promise.all([fetchPublicLearningPathData(), fetchPublicConcepts()]).then(([incomingPath, incomingConcepts]) => {
       if (cancelled) return
-      if (incomingModules?.length) {
+      if (incomingPath?.modules?.length) {
         // Source of truth: DB learning path structure (module/node/lesson ids and ordering)
-        setModules(incomingModules)
+        setModules(incomingPath.modules)
+      }
+      if (incomingPath) {
+        setBridgeRules(Array.isArray(incomingPath.bridgeRules) ? incomingPath.bridgeRules : [])
       }
       if (incomingConcepts?.length) {
         setConcepts(incomingConcepts)
@@ -33,5 +37,5 @@ export function useLearningPath() {
     }
   }, [])
 
-  return { modules, concepts, loaded, setModules }
+  return { modules, concepts, bridgeRules, loaded, setModules }
 }

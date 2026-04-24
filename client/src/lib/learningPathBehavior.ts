@@ -12,6 +12,11 @@ export type LearningPathBehaviorEventName =
   | 'lp_concept_anchor_clicked'
   | 'lp_depth_switched'
   | 'lp_path_exited'
+  | 'scene_entity_focus_duration'
+  | 'scene_entity_clicked'
+  | 'scene_concept_overlay_shown'
+  | 'scene_contextual_quiz_prompted'
+  | 'scene_entity_discovered'
 
 export type LearningPathBehaviorEvent = {
   eventName: LearningPathBehaviorEventName

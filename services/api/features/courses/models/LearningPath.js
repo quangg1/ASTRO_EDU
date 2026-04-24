@@ -93,6 +93,10 @@ const learningPathSchema = new mongoose.Schema(
     published: { type: Boolean, default: true },
     concepts: [conceptSchema],
     modules: [moduleSchema],
+    bridgeRules: {
+      type: [mongoose.Schema.Types.Mixed],
+      default: [],
+    },
   },
   { timestamps: true, minimize: false },
 );

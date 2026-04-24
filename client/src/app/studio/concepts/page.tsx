@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useAuthStore } from '@/store/useAuthStore'
@@ -102,6 +102,29 @@ function buildUsage(modules: LearningModule[]): UsageRow[] {
   return out
 }
 
+function collectConceptSaveIssues(concepts: LearningConcept[]): string[] {
+  const issues: string[] = []
+  const seenIds = new Set<string>()
+  for (const concept of concepts) {
+    if (!concept.id?.trim()) issues.push('Có concept thiếu id.')
+    if (!concept.title?.trim()) issues.push(`Concept ${concept.id || '(không id)'}: thiếu title.`)
+    if (!concept.explanation?.trim()) issues.push(`Concept ${concept.id || '(không id)'}: thiếu explanation.`)
+    if (concept.id && seenIds.has(concept.id)) issues.push(`Trùng concept id: ${concept.id}`)
+    if (concept.id) seenIds.add(concept.id)
+  }
+  return issues
+}
+
+function parseSaveIssuesFromError(errorText: string): string[] {
+  const raw = String(errorText || '').trim()
+  if (!raw) return []
+  return raw
+    .split(/[\n;]+/g)
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .slice(0, 8)
+}
+
 export default function StudioConceptsPage() {
   const router = useRouter()
   const { user, checked } = useAuthStore()
@@ -111,6 +134,9 @@ export default function StudioConceptsPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
+  const [saveIssues, setSaveIssues] = useState<string[]>([])
+  const [undoConceptDelete, setUndoConceptDelete] = useState<LearningConcept[] | null>(null)
+  const [baselineSnapshot, setBaselineSnapshot] = useState('')
   const [conceptSearch, setConceptSearch] = useState('')
   const [domainFilter, setDomainFilter] = useState('all')
   const [subdomainFilter, setSubdomainFilter] = useState('all')
@@ -150,9 +176,25 @@ export default function StudioConceptsPage() {
         setConcepts(cs || [])
         setModules(lp?.modules || [])
         if (tx) setTaxonomyRegistry(tx)
+        setBaselineSnapshot(
+          JSON.stringify({
+            concepts: cs || [],
+            taxonomyRegistry: tx || FALLBACK_TAXONOMY_REGISTRY,
+          }),
+        )
       })
       .finally(() => setLoading(false))
   }, [user])
+
+  const isDirty = useMemo(() => {
+    if (loading) return false
+    const current = JSON.stringify({ concepts, taxonomyRegistry })
+    return baselineSnapshot !== '' && current !== baselineSnapshot
+  }, [loading, concepts, taxonomyRegistry, baselineSnapshot])
+  const confirmLeaveIfDirty = useCallback(() => {
+    if (!isDirty || saving) return true
+    return window.confirm('Bạn có thay đổi chưa lưu. Rời trang và bỏ thay đổi?')
+  }, [isDirty, saving])
 
   const usageByConcept = useMemo(() => {
     const rows = buildUsage(modules)
@@ -350,6 +392,8 @@ export default function StudioConceptsPage() {
   const save = async () => {
     const token = localStorage.getItem('galaxies_token')
     if (!token) return
+    const localIssues = collectConceptSaveIssues(concepts)
+    setSaveIssues(localIssues)
     setSaving(true)
     setMessage('')
     const [conceptSave, taxonomySave] = await Promise.all([
@@ -360,12 +404,32 @@ export default function StudioConceptsPage() {
       const fresh = await fetchEditorConcepts(token)
       if (fresh) setConcepts(fresh)
       if (taxonomySave.taxonomy) setTaxonomyRegistry(taxonomySave.taxonomy)
+      setBaselineSnapshot(
+        JSON.stringify({
+          concepts: fresh || concepts,
+          taxonomyRegistry: taxonomySave.taxonomy || taxonomyRegistry,
+        }),
+      )
+      setSaveIssues([])
+      setUndoConceptDelete(null)
       setMessage('Đã lưu Concept Library vào server.')
     } else {
+      const serverIssues = parseSaveIssuesFromError(conceptSave.error || taxonomySave.error || '')
+      if (serverIssues.length > 0) setSaveIssues((prev) => [...prev, ...serverIssues])
       setMessage(conceptSave.error || taxonomySave.error || 'Lỗi lưu concept')
     }
     setSaving(false)
   }
+
+  useEffect(() => {
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (!isDirty || saving) return
+      e.preventDefault()
+      e.returnValue = ''
+    }
+    window.addEventListener('beforeunload', onBeforeUnload)
+    return () => window.removeEventListener('beforeunload', onBeforeUnload)
+  }, [isDirty, saving])
 
   if (!checked || !user) {
     return <div className="min-h-screen bg-black pt-20 px-4 text-gray-400">Đang kiểm tra đăng nhập...</div>
@@ -375,7 +439,14 @@ export default function StudioConceptsPage() {
     <div className="min-h-screen bg-[#050508] pt-14 pb-10 px-3 md:px-6">
       <div className="max-w-6xl mx-auto space-y-4">
         <nav className="text-sm">
-          <Link href="/studio" className="text-cyan-400 hover:text-cyan-300">
+          <Link
+            href="/studio"
+            onClick={(e) => {
+              if (confirmLeaveIfDirty()) return
+              e.preventDefault()
+            }}
+            className="text-cyan-400 hover:text-cyan-300"
+          >
             ← Studio
           </Link>
         </nav>
@@ -388,8 +459,21 @@ export default function StudioConceptsPage() {
             </p>
           </div>
           <div className="flex items-center gap-2">
+            <span
+              className={`text-[11px] rounded-full border px-2.5 py-1 ${
+                isDirty
+                  ? 'border-amber-400/45 bg-amber-500/15 text-amber-200'
+                  : 'border-emerald-400/35 bg-emerald-500/10 text-emerald-200'
+              }`}
+            >
+              {isDirty ? 'Chưa lưu' : 'Đã lưu'}
+            </span>
             <Link
               href="/studio/learning-path"
+              onClick={(e) => {
+                if (confirmLeaveIfDirty()) return
+                e.preventDefault()
+              }}
               className="text-xs min-h-10 px-3 inline-flex items-center rounded-lg border border-white/15 text-slate-200 hover:bg-white/10"
             >
               Đi tới Learning Path mapping
@@ -406,6 +490,34 @@ export default function StudioConceptsPage() {
         </header>
 
         {message ? <p className="text-sm text-emerald-400/90">{message}</p> : null}
+        {undoConceptDelete ? (
+          <div className="rounded-xl border border-amber-400/35 bg-amber-500/10 px-3 py-2 flex flex-wrap items-center justify-between gap-2">
+            <p className="text-xs text-amber-200">Đã xóa concept. Bạn có thể hoàn tác trước khi lưu.</p>
+            <button
+              type="button"
+              onClick={() => {
+                setConcepts(undoConceptDelete)
+                setUndoConceptDelete(null)
+                setMessage('Đã hoàn tác xóa concept.')
+              }}
+              className="rounded-md border border-amber-300/40 px-2.5 py-1 text-[11px] text-amber-100 hover:bg-amber-500/20"
+            >
+              Hoàn tác
+            </button>
+          </div>
+        ) : null}
+        {saveIssues.length > 0 ? (
+          <div className="rounded-xl border border-rose-400/35 bg-rose-500/10 p-3">
+            <p className="text-xs font-semibold text-rose-200">Các lỗi dữ liệu cần kiểm tra</p>
+            <ul className="mt-2 space-y-1">
+              {saveIssues.slice(0, 8).map((issue, idx) => (
+                <li key={`${issue}-${idx}`} className="text-[11px] text-rose-100/90">
+                  - {issue}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
         <section className="rounded-2xl border border-white/10 bg-[#0b1220]/70 p-4 space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="text-sm font-semibold text-cyan-100">Taxonomy Registry</h2>
@@ -1050,6 +1162,7 @@ export default function StudioConceptsPage() {
                                     )
                                   : window.confirm(`Xóa concept "${c.id}"?`)
                               if (!ok) return
+                              setUndoConceptDelete(concepts)
                               setConcepts((prev) => prev.filter((x) => x.id !== c.id))
                             }}
                             className="text-[11px] text-red-400/80 hover:text-red-300"

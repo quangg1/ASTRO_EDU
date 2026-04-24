@@ -312,8 +312,8 @@ export default function KnowledgeStarMap() {
                 Bản đồ tri thức
               </h1>
               <p className="mt-1 max-w-2xl text-sm text-slate-400">
-                Chọn một điểm trên đồ — cột bên phải giải thích <strong className="text-slate-300">học trước / làm nền
-                cho đâu</strong>. Vùng lan cận thu nhỏ đồ thị; toàn cục có lọc cạnh theo hover.
+                Chọn một điểm kiến thức để xem <strong className="text-slate-300">cần học trước gì</strong> và{' '}
+                <strong className="text-slate-300">mở khóa được gì</strong>. Chế độ "vùng lân cận" giúp nhìn gọn hơn.
               </p>
             </div>
           </div>
@@ -323,7 +323,7 @@ export default function KnowledgeStarMap() {
       <div className="relative z-10 mx-auto max-w-[1600px] px-4 pb-10 pt-4">
         <div className="mb-4 flex flex-col gap-3 rounded-2xl border border-white/10 bg-black/30 p-4 backdrop-blur-sm lg:flex-row lg:flex-wrap lg:items-end">
           <div className="flex flex-wrap gap-2">
-            <span className="w-full text-[10px] uppercase tracking-wide text-slate-500 lg:w-auto">Chế độ</span>
+            <span className="w-full text-[10px] uppercase tracking-wide text-slate-500 lg:w-auto">Cách xem</span>
             <div className="flex rounded-lg border border-white/15 p-0.5">
               <button
                 type="button"
@@ -344,7 +344,7 @@ export default function KnowledgeStarMap() {
                   viewMode === 'focus' ? 'bg-cyan-600/40 text-cyan-50' : 'text-slate-400 hover:text-white'
                 }`}
               >
-                Vùng lan cận
+                Vùng lân cận
               </button>
               <button
                 type="button"
@@ -372,7 +372,7 @@ export default function KnowledgeStarMap() {
 
           {viewMode === 'focus' ? (
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-[10px] uppercase tracking-wide text-slate-500">Bán kính</span>
+              <span className="text-[10px] uppercase tracking-wide text-slate-500">Mức lan</span>
               {[1, 2, 3].map((h) => (
                 <button
                   key={h}
@@ -395,7 +395,7 @@ export default function KnowledgeStarMap() {
                       : 'border-white/10 text-slate-400 hover:border-white/20'
                   }`}
                 >
-                  {h} bước
+                  {h} lớp
                 </button>
               ))}
             </div>
@@ -467,10 +467,10 @@ export default function KnowledgeStarMap() {
 
           <div className="relative min-w-[200px] flex-1 lg:max-w-sm">
             <ScanSearch className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-500" />
-            <input
+              <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Tìm concept (id, tiêu đề)…"
+                placeholder="Tìm kiến thức theo tên hoặc mã..."
               className="w-full rounded-lg border border-white/15 bg-black/50 py-2 pl-8 pr-3 text-sm text-slate-200 outline-none placeholder:text-slate-600 focus:ring-2 focus:ring-cyan-500/35"
             />
             {search.trim() && searchHits.length > 0 ? (
@@ -525,9 +525,9 @@ export default function KnowledgeStarMap() {
           >
             {displayGraph.nodes.length === 0 ? (
               <div className="flex h-full flex-col items-center justify-center gap-2 px-4 text-center text-sm text-slate-500">
-                <p>Không có dữ liệu hiển thị.</p>
+              <p>Không có dữ liệu để hiển thị.</p>
                 {viewMode === 'focus' ? (
-                  <p className="text-xs">Thử đổi domain hoặc tìm concept khác làm trung tâm.</p>
+                  <p className="text-xs">Thử đổi nhóm kiến thức hoặc chọn điểm trung tâm khác.</p>
                 ) : null}
               </div>
             ) : (
@@ -560,11 +560,11 @@ export default function KnowledgeStarMap() {
 
           <aside className="flex max-h-[min(72vh,720px)] min-h-[280px] flex-col rounded-2xl border border-white/10 bg-[#060d18]/95 p-4 backdrop-blur-sm lg:min-h-[400px]">
             {!selectedConcept ? (
-              <p className="text-sm text-slate-500">Chọn một điểm trên đồ để xem quan hệ prerequisite.</p>
+              <p className="text-sm text-slate-500">Chọn một điểm để xem kiến thức cần học trước và kiến thức mở rộng.</p>
             ) : (
               <>
                 <div className="border-b border-white/10 pb-3">
-                  <p className="text-[10px] uppercase tracking-wide text-slate-500">Concept</p>
+                  <p className="text-[10px] uppercase tracking-wide text-slate-500">Điểm kiến thức</p>
                   <h2 className="mt-1 text-base font-semibold leading-snug text-white">
                     {selectedConcept.title || selectedConcept.id}
                   </h2>
@@ -576,10 +576,10 @@ export default function KnowledgeStarMap() {
                     </span>
                     {seen.has(selectedConcept.id) ? (
                       <span className="rounded border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-emerald-200/90">
-                        Đã gặp trong bài
+                        Đã học qua
                       </span>
                     ) : (
-                      <span className="rounded border border-white/10 px-2 py-0.5 text-slate-500">Chưa trong tiến độ</span>
+                      <span className="rounded border border-white/10 px-2 py-0.5 text-slate-500">Chưa học</span>
                     )}
                   </div>
                   {selectedConcept.short_description ? (
@@ -592,9 +592,9 @@ export default function KnowledgeStarMap() {
                     <h3 className="text-[11px] font-medium uppercase tracking-wide text-cyan-200/90">
                       Học trước ({prereqConcepts.length})
                     </h3>
-                    <p className="mt-1 text-[11px] text-slate-500">Mũi tên trên đồ trỏ từ đây → vào concept hiện tại.</p>
+                    <p className="mt-1 text-[11px] text-slate-500">Những kiến thức nên học trước điểm hiện tại.</p>
                     {prereqConcepts.length === 0 ? (
-                      <p className="mt-2 text-xs text-slate-500">Không có prerequisite trong dữ liệu.</p>
+                      <p className="mt-2 text-xs text-slate-500">Không có kiến thức tiền đề trực tiếp.</p>
                     ) : (
                       <ul className="mt-2 space-y-1">
                         {prereqConcepts.map((c) => (
@@ -617,9 +617,9 @@ export default function KnowledgeStarMap() {
                     <h3 className="text-[11px] font-medium uppercase tracking-wide text-violet-200/90">
                       Làm nền cho ({dependentConcepts.length})
                     </h3>
-                    <p className="mt-1 text-[11px] text-slate-500">Các concept liệt kê prerequisite này.</p>
+                    <p className="mt-1 text-[11px] text-slate-500">Những kiến thức có thể học tốt hơn sau điểm này.</p>
                     {dependentConcepts.length === 0 ? (
-                      <p className="mt-2 text-xs text-slate-500">Không có concept phụ thuộc trực tiếp.</p>
+                      <p className="mt-2 text-xs text-slate-500">Chưa có kiến thức phụ thuộc trực tiếp.</p>
                     ) : (
                       <ul className="mt-2 space-y-1">
                         {dependentConcepts.map((c) => (
@@ -644,7 +644,7 @@ export default function KnowledgeStarMap() {
                       onClick={() => jumpToConcept(selectedConcept)}
                       className="w-full rounded-lg border border-cyan-500/40 bg-cyan-600/25 py-2.5 text-xs font-medium text-cyan-100 hover:bg-cyan-600/35"
                     >
-                      Thu vùng quanh concept này
+                      Thu gọn quanh điểm này
                     </button>
                   ) : null}
                 </div>

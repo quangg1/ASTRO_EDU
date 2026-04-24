@@ -23,7 +23,12 @@ import {
   type LessonItem,
   type TopicWeight,
 } from '@/data/learningPathCurriculum'
-import { fetchEditorLearningPath, generateRecallQuizForLesson, saveEditorLearningPath } from '@/lib/learningPathApi'
+import {
+  fetchEditorLearningPath,
+  generateRecallQuizForLesson,
+  saveEditorLearningPath,
+  type LearningPathBridgeRule,
+} from '@/lib/learningPathApi'
 import {
   FALLBACK_TAXONOMY_REGISTRY,
   fetchEditorConcepts,
@@ -49,6 +54,7 @@ import {
 } from 'lucide-react'
 import { NodeTopicWeightsEditor } from '@/components/studio/NodeTopicWeightsEditor'
 import { LearningPathRecallQuizEditor } from '@/components/studio/LearningPathRecallQuizEditor'
+import { BridgeRuleBuilder } from '@/components/studio/BridgeRuleBuilder'
 
 const BlockEditor = dynamic(() => import('@/components/studio/BlockEditor'), { ssr: false })
 const BlockPalette = dynamic(() => import('@/components/studio/BlockPalette'), { ssr: false })
@@ -122,6 +128,41 @@ function buildConceptUsage(modules: LearningModule[]): ConceptUsageItem[] {
 
 const inputCls =
   'w-full rounded-lg bg-black/50 border border-white/15 px-3 py-2 text-white text-sm focus:border-cyan-500/50 focus:outline-none transition-colors'
+
+function collectLearningPathIssues(modules: LearningModule[]): string[] {
+  const issues: string[] = []
+  if (modules.length === 0) return ['Chưa có module nào để lưu.']
+  for (const module of modules) {
+    if (!module.titleVi?.trim()) issues.push(`Module ${module.id}: thiếu tiêu đề tiếng Việt`)
+    if (module.nodes.length === 0) issues.push(`Module ${module.id}: chưa có chủ đề`)
+    for (const node of module.nodes) {
+      if (!node.titleVi?.trim()) issues.push(`Chủ đề ${node.id}: thiếu tiêu đề tiếng Việt`)
+      for (const depth of DEPTH_ORDER) {
+        const lessons = node.depths[depth] ?? []
+        const seenLessonIds = new Set<string>()
+        for (const lesson of lessons) {
+          if (!lesson.id?.trim()) issues.push(`Bài ở ${node.id}/${depth}: thiếu lesson id`)
+          if (!lesson.titleVi?.trim()) issues.push(`Bài ${lesson.id || '(không id)'}: thiếu tiêu đề tiếng Việt`)
+          if (lesson.id && seenLessonIds.has(lesson.id)) {
+            issues.push(`Chủ đề ${node.id}/${depth}: trùng lesson id "${lesson.id}"`)
+          }
+          if (lesson.id) seenLessonIds.add(lesson.id)
+        }
+      }
+    }
+  }
+  return issues
+}
+
+function parseSaveIssuesFromError(errorText: string): string[] {
+  const raw = String(errorText || '').trim()
+  if (!raw) return []
+  return raw
+    .split(/[\n;]+/g)
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .slice(0, 8)
+}
 
 function updateLesson(
   modules: LearningModule[],
@@ -1015,11 +1056,15 @@ export default function StudioLearningPathPage() {
   const [concepts, setConcepts] = useState<LearningConcept[]>([])
   const [taxonomyRegistry, setTaxonomyRegistry] = useState<TaxonomyRegistry>(FALLBACK_TAXONOMY_REGISTRY)
   const [published, setPublished] = useState(true)
+  const [bridgeRules, setBridgeRules] = useState<LearningPathBridgeRule[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
+  const [saveIssues, setSaveIssues] = useState<string[]>([])
+  const [undoDelete, setUndoDelete] = useState<{ label: string; modules: LearningModule[] } | null>(null)
   const [editorTab, setEditorTab] = useState<'blocks' | 'preview' | 'lesson-page' | 'quiz'>('blocks')
   const [blockClipboard, setBlockClipboard] = useState<LessonSection | null>(null)
+  const [baselineSnapshot, setBaselineSnapshot] = useState('')
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -1058,6 +1103,14 @@ export default function StudioLearningPathPage() {
         if (!d) return
         setModules(d.modules || [])
         setConcepts(cs || [])
+        setBridgeRules(d.bridgeRules || [])
+        setBaselineSnapshot(
+          JSON.stringify({
+            modules: d.modules || [],
+            bridgeRules: d.bridgeRules || [],
+            published: !!d.published,
+          }),
+        )
         if (tx) setTaxonomyRegistry(tx)
         setPublished(d.published)
 
@@ -1088,6 +1141,16 @@ export default function StudioLearningPathPage() {
       })
       .finally(() => setLoading(false))
   }, [user?.id])
+
+  const isDirty = useMemo(() => {
+    if (loading) return false
+    const current = JSON.stringify({ modules, bridgeRules, published })
+    return baselineSnapshot !== '' && current !== baselineSnapshot
+  }, [loading, modules, bridgeRules, published, baselineSnapshot])
+  const confirmLeaveIfDirty = useCallback(() => {
+    if (!isDirty || saving) return true
+    return window.confirm('Bạn có thay đổi chưa lưu. Rời trang và bỏ thay đổi?')
+  }, [isDirty, saving])
 
   const sortedModules = useMemo(
     () => [...modules].sort((a, b) => a.order - b.order),
@@ -1226,6 +1289,7 @@ export default function StudioLearningPathPage() {
     if (!currentModule) return
     if (!confirm(`Xóa module "${currentModule.titleVi}" và toàn bộ chủ đề / bài bên trong?`)) return
     const mid = currentModule.id
+    setUndoDelete({ label: `Đã xóa module "${currentModule.titleVi}"`, modules: cloneJson(modules) })
     setModules((prev) => {
       const next = renumberModuleOrders(prev.filter((x) => x.id !== mid))
       queueMicrotask(() => {
@@ -1276,6 +1340,7 @@ export default function StudioLearningPathPage() {
       return
     }
     if (!confirm(`Xóa chủ đề "${currentNode.titleVi}" và mọi bài trong 3 tầng?`)) return
+    setUndoDelete({ label: `Đã xóa chủ đề "${currentNode.titleVi}"`, modules: cloneJson(modules) })
     const mid = currentModule.id
     const nid = currentNode.id
     const remaining = currentModule.nodes.filter((n) => n.id !== nid)
@@ -1303,6 +1368,7 @@ export default function StudioLearningPathPage() {
   const removeCurrentLesson = () => {
     if (!currentModule || !currentNode || !depth || !activeLesson) return
     if (!confirm(`Xóa bài "${activeLesson.titleVi}"?`)) return
+    setUndoDelete({ label: `Đã xóa bài "${activeLesson.titleVi}"`, modules: cloneJson(modules) })
     const lid = activeLesson.id
     setModules((prev) =>
       updateLessonList(prev, currentModule.id, currentNode.id, depth, (list) => list.filter((l) => l.id !== lid)),
@@ -1345,17 +1411,43 @@ export default function StudioLearningPathPage() {
   const save = useCallback(async () => {
     const token = localStorage.getItem('galaxies_token')
     if (!token) return
+    const localIssues = collectLearningPathIssues(modules)
+    setSaveIssues(localIssues)
     setSaving(true)
     setMessage('')
-    const rPath = await saveEditorLearningPath(token, modules, published)
+    const rPath = await saveEditorLearningPath(token, modules, bridgeRules, published)
     setSaving(false)
     if (rPath.ok && rPath.modules) {
       setModules(rPath.modules)
+      setBridgeRules(Array.isArray(rPath.bridgeRules) ? rPath.bridgeRules : [])
       if (typeof rPath.published === 'boolean') setPublished(rPath.published)
       setInvalidConceptIds(rPath.invalidConceptIds || [])
+      setBaselineSnapshot(
+        JSON.stringify({
+          modules: rPath.modules,
+          bridgeRules: Array.isArray(rPath.bridgeRules) ? rPath.bridgeRules : [],
+          published: typeof rPath.published === 'boolean' ? rPath.published : published,
+        }),
+      )
+      setSaveIssues([])
+      setUndoDelete(null)
+    }
+    if (!rPath.ok) {
+      const serverIssues = parseSaveIssuesFromError(rPath.error || '')
+      setSaveIssues((prev) => (serverIssues.length > 0 ? [...prev, ...serverIssues] : prev))
     }
     setMessage(rPath.ok ? 'Đã lưu Learning Path.' : rPath.error || 'Lỗi lưu')
-  }, [modules, published])
+  }, [bridgeRules, modules, published])
+
+  useEffect(() => {
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (!isDirty || saving) return
+      e.preventDefault()
+      e.returnValue = ''
+    }
+    window.addEventListener('beforeunload', onBeforeUnload)
+    return () => window.removeEventListener('beforeunload', onBeforeUnload)
+  }, [isDirty, saving])
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -1377,7 +1469,14 @@ export default function StudioLearningPathPage() {
     <div className="min-h-screen bg-[#050508] pt-14 pb-10 px-3 md:px-6">
       <div className="max-w-7xl mx-auto flex flex-col gap-4">
         <nav className="text-sm shrink-0">
-          <Link href="/studio" className="text-cyan-400 hover:text-cyan-300">
+          <Link
+            href="/studio"
+            onClick={(e) => {
+              if (confirmLeaveIfDirty()) return
+              e.preventDefault()
+            }}
+            className="text-cyan-400 hover:text-cyan-300"
+          >
             ← Studio
           </Link>
         </nav>
@@ -1396,6 +1495,15 @@ export default function StudioLearningPathPage() {
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
+            <span
+              className={`text-[11px] rounded-full border px-2.5 py-1 ${
+                isDirty
+                  ? 'border-amber-400/45 bg-amber-500/15 text-amber-200'
+                  : 'border-emerald-400/35 bg-emerald-500/10 text-emerald-200'
+              }`}
+            >
+              {isDirty ? 'Chưa lưu' : 'Đã lưu'}
+            </span>
             <label className="flex items-center gap-2 text-xs text-slate-300 cursor-pointer">
               <input
                 type="checkbox"
@@ -1426,6 +1534,34 @@ export default function StudioLearningPathPage() {
           </div>
         </header>
         {message ? <p className="text-sm text-emerald-400/90 px-1">{message}</p> : null}
+        {undoDelete ? (
+          <div className="rounded-xl border border-amber-400/35 bg-amber-500/10 px-3 py-2 flex flex-wrap items-center justify-between gap-2">
+            <p className="text-xs text-amber-200">{undoDelete.label}</p>
+            <button
+              type="button"
+              onClick={() => {
+                setModules(cloneJson(undoDelete.modules))
+                setUndoDelete(null)
+                setMessage('Đã hoàn tác thao tác xóa.')
+              }}
+              className="rounded-md border border-amber-300/40 px-2.5 py-1 text-[11px] text-amber-100 hover:bg-amber-500/20"
+            >
+              Hoàn tác
+            </button>
+          </div>
+        ) : null}
+        {saveIssues.length > 0 ? (
+          <div className="rounded-xl border border-rose-400/35 bg-rose-500/10 p-3">
+            <p className="text-xs font-semibold text-rose-200">Các mục cần kiểm tra trước/sau khi lưu</p>
+            <ul className="mt-2 space-y-1">
+              {saveIssues.slice(0, 8).map((issue, idx) => (
+                <li key={`${issue}-${idx}`} className="text-[11px] text-rose-100/90">
+                  - {issue}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
         {invalidConceptIds.length > 0 ? (
           <p className="text-sm text-amber-300/90 px-1">
             Đã loại bỏ concept không tồn tại khỏi lesson:{' '}
@@ -1720,48 +1856,63 @@ export default function StudioLearningPathPage() {
                 </p>
                 <Link
                   href="/studio/concepts"
+                  onClick={(e) => {
+                    if (confirmLeaveIfDirty()) return
+                    e.preventDefault()
+                  }}
                   className="inline-flex items-center rounded-lg bg-cyan-600/80 hover:bg-cyan-500 text-white text-xs font-medium px-3 py-2"
                 >
                   Mở Concept Studio
                 </Link>
               </section>
 
-              <section className="rounded-2xl border border-white/10 bg-[#0c1018] p-4">
-                <p className="text-[10px] uppercase tracking-wider text-slate-500 font-semibold mb-2">
-                  Concept Usage Report
-                </p>
-                {concepts.length === 0 ? (
-                  <p className="text-xs text-slate-600">Chưa có concept để thống kê.</p>
-                ) : (
-                  <div className="space-y-2 max-h-[280px] overflow-y-auto pr-1">
-                    {concepts.map((c) => {
-                      const rows = conceptUsageById.get(c.id) || []
-                      return (
-                        <details
-                          key={`usage-${c.id}`}
-                          className="rounded-lg border border-white/10 bg-black/30 px-2.5 py-2"
-                        >
-                          <summary className="cursor-pointer text-xs text-cyan-200">
-                            #{c.id} · {c.title || c.id} ({rows.length})
-                          </summary>
-                          <div className="mt-2 space-y-1">
-                            {rows.length === 0 ? (
-                              <p className="text-[11px] text-slate-500">Chưa được gắn vào lesson nào.</p>
-                            ) : (
-                              rows.map((r) => (
-                                <p key={`${r.lessonId}-${r.depth}`} className="text-[11px] text-slate-300 leading-snug">
-                                  <span className="text-slate-500">{r.moduleTitle}</span> → {r.nodeTitle} →{' '}
-                                  <span className="text-cyan-300">{DEPTH_META[r.depth].labelVi}</span> → {r.lessonTitle}
-                                </p>
-                              ))
-                            )}
-                          </div>
-                        </details>
-                      )
-                    })}
-                  </div>
-                )}
-              </section>
+              <details className="rounded-2xl border border-white/10 bg-[#0c1018] p-4" open={false}>
+                <summary className="cursor-pointer text-[10px] uppercase tracking-wider text-slate-500 font-semibold">
+                  Concept Usage Report (nâng cao)
+                </summary>
+                <div className="mt-3">
+                  {concepts.length === 0 ? (
+                    <p className="text-xs text-slate-600">Chưa có concept để thống kê.</p>
+                  ) : (
+                    <div className="space-y-2 max-h-[280px] overflow-y-auto pr-1">
+                      {concepts.map((c) => {
+                        const rows = conceptUsageById.get(c.id) || []
+                        return (
+                          <details
+                            key={`usage-${c.id}`}
+                            className="rounded-lg border border-white/10 bg-black/30 px-2.5 py-2"
+                          >
+                            <summary className="cursor-pointer text-xs text-cyan-200">
+                              #{c.id} · {c.title || c.id} ({rows.length})
+                            </summary>
+                            <div className="mt-2 space-y-1">
+                              {rows.length === 0 ? (
+                                <p className="text-[11px] text-slate-500">Chưa được gắn vào lesson nào.</p>
+                              ) : (
+                                rows.map((r) => (
+                                  <p key={`${r.lessonId}-${r.depth}`} className="text-[11px] text-slate-300 leading-snug">
+                                    <span className="text-slate-500">{r.moduleTitle}</span> → {r.nodeTitle} →{' '}
+                                    <span className="text-cyan-300">{DEPTH_META[r.depth].labelVi}</span> → {r.lessonTitle}
+                                  </p>
+                                ))
+                              )}
+                            </div>
+                          </details>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              </details>
+
+              <details className="rounded-2xl border border-white/10 bg-[#0c1018] p-4" open>
+                <summary className="cursor-pointer text-[10px] uppercase tracking-wider text-slate-500 font-semibold">
+                  Rule Builder (nhiệm vụ: map hành vi Explore)
+                </summary>
+                <div className="mt-3">
+                  <BridgeRuleBuilder rules={bridgeRules} concepts={concepts} onChange={setBridgeRules} />
+                </div>
+              </details>
 
               <section className="rounded-2xl border border-white/10 bg-[#0c1018] p-4">
                 <p className="text-[10px] uppercase tracking-wider text-slate-500 font-semibold mb-2 flex items-center gap-1">

@@ -8,6 +8,7 @@ import { clearToken } from '@/lib/authApi'
 import { SiteLogo } from '@/components/ui/SiteLogo'
 import { viText } from '@/messages/vi'
 import { canModerate } from '@/lib/roles'
+import { navItemsForSurface, navLabel } from '@/lib/navigationConfig'
 import {
   BookOpen,
   ChevronDown,
@@ -61,6 +62,22 @@ export function AppHeader() {
   const isTeacher = !!user && (user.role === 'teacher' || user.role === 'admin')
   const isAdmin = !!user && user.role === 'admin'
   const showModerate = !!user && canModerate(user)
+  const headerDesktopItems = navItemsForSurface('headerDesktop')
+  const headerMobileItems = navItemsForSurface('headerMobileMenu')
+  const desktopIconById = {
+    dashboard: LayoutDashboard,
+    community: MessageCircle,
+  } as const
+  const dropdownIconById = {
+    profile: UserRound,
+    myLearning: BookOpen,
+    courses: Sparkles,
+    learningPath: ListTree,
+    explore: Compass,
+    search: Search,
+  } as const
+  const mobileTopItemIds = new Set(['dashboard', 'community'])
+  const mobileMoreItemIds = new Set(['profile', 'myLearning', 'courses', 'learningPath', 'explore', 'search'])
 
   return (
     <header className="app-header fixed top-0 left-0 right-0 z-40 border-b border-white/[0.07] bg-[#070a10]/85 backdrop-blur-xl supports-[backdrop-filter]:bg-[#070a10]/75 shadow-[0_1px_0_rgba(34,211,238,0.06)]">
@@ -73,28 +90,29 @@ export function AppHeader() {
             <span className="text-xs text-slate-500 tabular-nums">…</span>
           ) : user ? (
             <>
-              <Link
-                href="/dashboard"
-                className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
-                  navActive(pathname, '/dashboard')
-                    ? 'bg-cyan-500/15 text-cyan-100 ring-1 ring-cyan-400/35'
-                    : 'text-slate-400 hover:text-white hover:bg-white/[0.06]'
-                }`}
-              >
-                <LayoutDashboard className="w-4 h-4 opacity-90" aria-hidden />
-                {viText.nav.dashboard}
-              </Link>
-              <Link
-                href="/community"
-                className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
-                  navActive(pathname, '/community')
-                    ? 'bg-violet-500/15 text-violet-100 ring-1 ring-violet-400/30'
-                    : 'text-slate-400 hover:text-white hover:bg-white/[0.06]'
-                }`}
-              >
-                <MessageCircle className="w-4 h-4 opacity-90" aria-hidden />
-                {viText.nav.community}
-              </Link>
+              {headerDesktopItems
+                .filter((item) => item.id in desktopIconById)
+                .map((item) => {
+                  const Icon = desktopIconById[item.id as keyof typeof desktopIconById]
+                  const activeCls =
+                    item.id === 'dashboard'
+                      ? 'bg-cyan-500/15 text-cyan-100 ring-1 ring-cyan-400/35'
+                      : 'bg-violet-500/15 text-violet-100 ring-1 ring-violet-400/30'
+                  return (
+                    <Link
+                      key={`desktop-${item.id}`}
+                      href={item.href}
+                      className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
+                        navActive(pathname, item.href)
+                          ? activeCls
+                          : 'text-slate-400 hover:text-white hover:bg-white/[0.06]'
+                      }`}
+                    >
+                      <Icon className="w-4 h-4 opacity-90" aria-hidden />
+                      {navLabel(item)}
+                    </Link>
+                  )
+                })}
 
               <div className="relative ml-1" ref={userMenuRef}>
                 <button
@@ -129,65 +147,26 @@ export function AppHeader() {
                     role="menu"
                   >
                     <p className="px-3 py-1.5 text-[10px] uppercase tracking-wider text-slate-500">Tài khoản</p>
-                    <Link
-                      href="/profile"
-                      role="menuitem"
-                      className="flex items-center gap-2 px-3 py-2 text-sm text-slate-200 hover:bg-white/[0.06]"
-                      onClick={() => setUserMenuOpen(false)}
-                    >
-                      <UserRound className="w-4 h-4 text-slate-500" />
-                      {viText.nav.profile}
-                    </Link>
+                    {headerMobileItems
+                      .filter((item) => item.id in dropdownIconById)
+                      .map((item) => {
+                        const Icon = dropdownIconById[item.id as keyof typeof dropdownIconById]
+                        return (
+                          <Link
+                            key={`dropdown-${item.id}`}
+                            href={item.href}
+                            role="menuitem"
+                            className="flex items-center gap-2 px-3 py-2 text-sm text-slate-200 hover:bg-white/[0.06]"
+                            onClick={() => setUserMenuOpen(false)}
+                          >
+                            <Icon className="w-4 h-4 text-slate-500" />
+                            {navLabel(item)}
+                          </Link>
+                        )
+                      })}
                     <div className="my-1 h-px bg-white/[0.06]" />
-                    <p className="px-3 py-1.5 text-[10px] uppercase tracking-wider text-slate-500">Học tập</p>
-                    <Link
-                      href="/my-courses"
-                      role="menuitem"
-                      className="flex items-center gap-2 px-3 py-2 text-sm text-slate-200 hover:bg-white/[0.06]"
-                      onClick={() => setUserMenuOpen(false)}
-                    >
-                      <BookOpen className="w-4 h-4 text-slate-500" />
-                      {viText.nav.myLearning}
-                    </Link>
-                    <Link
-                      href="/courses"
-                      role="menuitem"
-                      className="flex items-center gap-2 px-3 py-2 text-sm text-slate-200 hover:bg-white/[0.06]"
-                      onClick={() => setUserMenuOpen(false)}
-                    >
-                      <Sparkles className="w-4 h-4 text-slate-500" />
-                      {viText.nav.courses}
-                    </Link>
-                    <Link
-                      href="/tutorial"
-                      role="menuitem"
-                      className="flex items-center gap-2 px-3 py-2 text-sm text-slate-200 hover:bg-white/[0.06]"
-                      onClick={() => setUserMenuOpen(false)}
-                    >
-                      <ListTree className="w-4 h-4 text-slate-500" />
-                      {viText.nav.learningPath}
-                    </Link>
-                    <Link
-                      href="/explore"
-                      role="menuitem"
-                      className="flex items-center gap-2 px-3 py-2 text-sm text-slate-200 hover:bg-white/[0.06]"
-                      onClick={() => setUserMenuOpen(false)}
-                    >
-                      <Compass className="w-4 h-4 text-slate-500" />
-                      {viText.nav.explore}
-                    </Link>
-                    <Link
-                      href="/search"
-                      role="menuitem"
-                      className="flex items-center gap-2 px-3 py-2 text-sm text-slate-200 hover:bg-white/[0.06]"
-                      onClick={() => setUserMenuOpen(false)}
-                    >
-                      <Search className="w-4 h-4 text-slate-500" />
-                      {viText.nav.search}
-                    </Link>
                     {isTeacher && (
                       <>
-                        <div className="my-1 h-px bg-white/[0.06]" />
                         <p className="px-3 py-1.5 text-[10px] uppercase tracking-wider text-slate-500">Giảng viên</p>
                         <Link
                           href="/studio"
@@ -287,44 +266,38 @@ export function AppHeader() {
               <div className="px-3 py-2 text-sm text-slate-500">{viText.common.loading}</div>
             ) : user ? (
               <>
-                <Link
-                  href="/dashboard"
-                  className={`flex items-center gap-2 rounded-xl px-3 py-3 text-sm font-medium ${
-                    navActive(pathname, '/dashboard') ? 'bg-cyan-500/15 text-cyan-100' : 'text-slate-200 hover:bg-white/[0.06]'
-                  }`}
-                >
-                  <LayoutDashboard className="w-4 h-4" />
-                  {viText.nav.dashboard}
-                </Link>
-                <Link
-                  href="/community"
-                  className={`flex items-center gap-2 rounded-xl px-3 py-3 text-sm font-medium ${
-                    navActive(pathname, '/community') ? 'bg-violet-500/15 text-violet-100' : 'text-slate-200 hover:bg-white/[0.06]'
-                  }`}
-                >
-                  <MessageCircle className="w-4 h-4" />
-                  {viText.nav.community}
-                </Link>
+                {headerMobileItems
+                  .filter((item) => mobileTopItemIds.has(item.id))
+                  .map((item) => {
+                    const Icon = desktopIconById[item.id as keyof typeof desktopIconById]
+                    const activeCls =
+                      item.id === 'dashboard' ? 'bg-cyan-500/15 text-cyan-100' : 'bg-violet-500/15 text-violet-100'
+                    return (
+                      <Link
+                        key={`mobile-top-${item.id}`}
+                        href={item.href}
+                        className={`flex items-center gap-2 rounded-xl px-3 py-3 text-sm font-medium ${
+                          navActive(pathname, item.href) ? activeCls : 'text-slate-200 hover:bg-white/[0.06]'
+                        }`}
+                      >
+                        <Icon className="w-4 h-4" />
+                        {navLabel(item)}
+                      </Link>
+                    )
+                  })}
                 <div className="my-2 h-px bg-white/[0.06]" />
                 <p className="px-3 text-[10px] uppercase tracking-wider text-slate-500">{viText.nav.more}</p>
-                <Link href="/profile" className="block rounded-xl px-3 py-2.5 text-sm text-slate-300 hover:bg-white/[0.06]">
-                  {viText.nav.profile}
-                </Link>
-                <Link href="/my-courses" className="block rounded-xl px-3 py-2.5 text-sm text-slate-300 hover:bg-white/[0.06]">
-                  {viText.nav.myLearning}
-                </Link>
-                <Link href="/courses" className="block rounded-xl px-3 py-2.5 text-sm text-slate-300 hover:bg-white/[0.06]">
-                  {viText.nav.courses}
-                </Link>
-                <Link href="/tutorial" className="block rounded-xl px-3 py-2.5 text-sm text-slate-300 hover:bg-white/[0.06]">
-                  {viText.nav.learningPath}
-                </Link>
-                <Link href="/explore" className="block rounded-xl px-3 py-2.5 text-sm text-slate-300 hover:bg-white/[0.06]">
-                  {viText.nav.explore}
-                </Link>
-                <Link href="/search" className="block rounded-xl px-3 py-2.5 text-sm text-slate-300 hover:bg-white/[0.06]">
-                  {viText.nav.search}
-                </Link>
+                {headerMobileItems
+                  .filter((item) => mobileMoreItemIds.has(item.id))
+                  .map((item) => (
+                    <Link
+                      key={`mobile-more-${item.id}`}
+                      href={item.href}
+                      className="block rounded-xl px-3 py-2.5 text-sm text-slate-300 hover:bg-white/[0.06]"
+                    >
+                      {navLabel(item)}
+                    </Link>
+                  ))}
                 {isTeacher && (
                   <Link href="/studio" className="block rounded-xl px-3 py-2.5 text-sm text-slate-300 hover:bg-white/[0.06]">
                     Studio

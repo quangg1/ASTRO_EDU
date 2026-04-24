@@ -12,8 +12,10 @@ const LAST_LESSON_SUFFIX = ':lastLessonId'
 
 export type LessonCompletionMap = Record<string, boolean>
 export type LessonMasteryMap = Record<string, boolean>
+export type LessonVisited3DMap = Record<string, boolean>
 
 const MASTERY_KEY_SUFFIX = ':mastery'
+const VISITED_3D_KEY_SUFFIX = ':visited3d'
 
 /** Key lưu localStorage: mỗi user đăng nhập một key; khách dùng `:guest` */
 export function getProgressStorageKey(userId: string | null | undefined): string {
@@ -24,6 +26,10 @@ export function getProgressStorageKey(userId: string | null | undefined): string
 
 export function getMasteryStorageKey(userId: string | null | undefined): string {
   return `${getProgressStorageKey(userId)}${MASTERY_KEY_SUFFIX}`
+}
+
+export function getVisited3DStorageKey(userId: string | null | undefined): string {
+  return `${getProgressStorageKey(userId)}${VISITED_3D_KEY_SUFFIX}`
 }
 
 function getLastLessonStorageKey(userId: string | null | undefined): string {
@@ -118,6 +124,37 @@ export function loadLessonMastery(userId?: string | null): LessonMasteryMap {
   } catch {
     return {}
   }
+}
+
+export function loadLessonVisited3D(userId?: string | null): LessonVisited3DMap {
+  if (typeof window === 'undefined') return {}
+  const key = getVisited3DStorageKey(userId)
+  try {
+    const data = parseRawMap(localStorage.getItem(key))
+    const normalized = normalizeCompletionKeys(data) as LessonVisited3DMap
+    const serialized = JSON.stringify(normalized)
+    if (localStorage.getItem(key) !== serialized) localStorage.setItem(key, serialized)
+    return normalized
+  } catch {
+    return {}
+  }
+}
+
+export function saveLessonVisited3D(map: LessonVisited3DMap, userId?: string | null) {
+  if (typeof window === 'undefined') return
+  try {
+    localStorage.setItem(getVisited3DStorageKey(userId), JSON.stringify(map))
+  } catch {
+    /* ignore */
+  }
+}
+
+export function setLessonVisited3D(map: LessonVisited3DMap, lessonId: string, visited: boolean): LessonVisited3DMap {
+  const k = progressKey(lessonId)
+  const next = { ...map }
+  if (visited) next[k] = true
+  else delete next[k]
+  return next
 }
 
 export function saveLessonMastery(map: LessonMasteryMap, userId?: string | null) {

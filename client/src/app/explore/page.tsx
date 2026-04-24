@@ -1,9 +1,8 @@
 'use client'
 
 import dynamic from 'next/dynamic'
-import { Suspense, useState, useEffect, useRef, useCallback, useMemo } from 'react'
-import { useSearchParams } from 'next/navigation'
-import { usePathname, useRouter } from 'next/navigation'
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { Timeline } from '@/components/ui/Timeline'
 import { InfoPanel } from '@/components/ui/InfoPanel'
 import { FossilPanel } from '@/components/ui/FossilPanel'
@@ -13,112 +12,42 @@ import { useSimulatorStore } from '@/store/useSimulatorStore'
 import { planetsData } from '@/lib/solarSystemData'
 import { getStaticAssetUrl } from '@/lib/apiConfig'
 import { NASA_SHOWCASE_ITEMS, NASA_SHOWCASE_STORIES } from '@/lib/nasaShowcaseCatalog'
-import CockpitInterior from '@/components/ui/CockpitInterior'
-import { CockpitHudTargetProvider, useCockpitHudTarget } from '@/contexts/CockpitHudTargetContext'
-import { CockpitEngineController, loadCockpitEngineVolume, saveCockpitEngineVolume } from '@/lib/cockpitEngineAudio'
 import { useLearningPath } from '@/hooks/useLearningPath'
-import { DEPTH_ORDER, type LearningConcept, type LearningModule } from '@/data/learningPathCurriculum'
-import type { ShowcaseCameraSpherical } from '@/components/3d/showcase/ShowcaseCameraManager'
+import type { LearningPathBridgeRule } from '@/lib/learningPathApi'
 import { useShowcaseStore } from '@/store/showcaseStore'
+import {
+  buildContextualQuizFromLessons,
+  guessEntityRarity,
+  loadBridgeVisitedEntityMap,
+  loadDiscoveryMap,
+  resolveMappedConcepts,
+  resolveMappedLessons,
+  saveBridgeVisitedEntityMap,
+  saveDiscoveryMap,
+} from '@/lib/showcaseLearningBridge'
+import {
+  loadLessonVisited3D,
+  saveLessonVisited3D,
+  setLessonVisited3D,
+  type LessonVisited3DMap,
+} from '@/lib/learningPathProgress'
+import { trackLearningPathBehavior } from '@/lib/learningPathBehavior'
+import type { ShowcaseCameraSpherical } from '@/components/3d/showcase/ShowcaseCameraManager'
 
 const EarthScene = dynamic(() => import('@/components/3d/EarthScene'), {
   ssr: false,
-  loading: () => <Loading />
-})
-const SolarSystemScene = dynamic(() => import('@/components/3d/SolarSystemScene'), {
-  ssr: false,
-  loading: () => <Loading />
+  loading: () => <Loading />,
 })
 const ShowcaseScene = dynamic(() => import('@/components/3d/showcase/ShowcaseScene'), {
   ssr: false,
-  loading: () => <Loading />
-})
-const MilkyWayScene = dynamic(() => import('@/components/3d/MilkyWayScene'), {
-  ssr: false,
-  loading: () => <Loading />
+  loading: () => <Loading />,
 })
 
-export type ViewMode = 'solar' | 'milkyway'
-type SolarControlMode = 'observer' | 'cockpit'
-type RecommendedLessonCard = {
-  id: string
-  title: string
-  href: string
-  reason: string
-}
 type QuickQuizQuestion = {
   id: string
   question: string
   options: string[]
   correctIndex: number
-}
-type SceneEntity = {
-  id: string
-  label: string
-  summary: string
-  mission: string
-  lessonKeywords: string[]
-  conceptKeywords: string[]
-}
-type SceneAnchorConfig = {
-  sceneKey: string
-  label: string
-  intro: string
-  entities: SceneEntity[]
-  planetKeywords: string[]
-}
-
-const EARTH_PLANET_INDEX = 2
-const VENUS_PLANET_INDEX = 1
-
-function conceptHaystack(c: LearningConcept): string {
-  return [c.id, c.title || '', c.short_description || '', ...(c.aliases || [])].join(' ').toLowerCase()
-}
-
-/** Map scene entity theme keywords → concept ids (API graph includes prerequisites). */
-function conceptIdsMatchingKeywords(concepts: LearningConcept[], keywords: string[]): Set<string> {
-  const kws = keywords.map((k) => String(k || '').trim().toLowerCase()).filter((k) => k.length >= 2)
-  const out = new Set<string>()
-  if (!kws.length) return out
-  for (const c of concepts) {
-    const hay = conceptHaystack(c)
-    for (const kw of kws) {
-      if (hay.includes(kw)) {
-        out.add(c.id)
-        break
-      }
-    }
-  }
-  return out
-}
-
-function findFirstLessonForConcept(
-  modules: LearningModule[],
-  conceptId: string,
-): { href: string; lessonTitle: string } | null {
-  for (const mod of modules) {
-    for (const node of mod.nodes) {
-      for (const depth of DEPTH_ORDER) {
-        for (const lesson of node.depths[depth] ?? []) {
-          if ((lesson.conceptIds ?? []).includes(conceptId)) {
-            return {
-              href: `/tutorial/${mod.id}/${node.id}/${encodeURIComponent(lesson.id)}`,
-              lessonTitle: lesson.titleVi || lesson.title || lesson.id,
-            }
-          }
-          for (const a of lesson.conceptAnchors ?? []) {
-            if (String(a.conceptId || '').trim() === conceptId) {
-              return {
-                href: `/tutorial/${mod.id}/${node.id}/${encodeURIComponent(lesson.id)}`,
-                lessonTitle: lesson.titleVi || lesson.title || lesson.id,
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-  return null
 }
 
 function ExplorePageContent() {
@@ -127,107 +56,43 @@ function ExplorePageContent() {
   const searchParams = useSearchParams()
   const stageParam = searchParams.get('stage')
   const stageTime = stageParam != null ? parseFloat(stageParam) : null
-  const [viewMode, setViewMode] = useState<ViewMode>('solar')
-  const [selectedSolarPlanetIndex, setSelectedSolarPlanetIndex] = useState<number | null>(null)
-  const [solarControlMode, setSolarControlMode] = useState<SolarControlMode>('observer')
-  /** Observer: đang phóng camera tới hành tinh (chưa hiện Target lock / solo) */
-  const [observerLockPending, setObserverLockPending] = useState(false)
-  /** Observer: camera đã tới — mới solo + Target lock UI */
-  const [observerTargetLock, setObserverTargetLock] = useState(false)
-  const [telemetry, setTelemetry] = useState({
-    speed: 0,
-    distance: 0,
-    distToNavTarget: 0,
-    dockedAtPlanet: false,
-  })
+  const bridgeDebugOn = searchParams.get('bridgeDebug') === '1'
+
   const [earthHistoryOpen, setEarthHistoryOpen] = useState(!!stageTime)
-  const [reducedMode, setReducedMode] = useState(false)
+  const [showcaseMenuOpen, setShowcaseMenuOpen] = useState(false)
+  const [showcaseActiveStoryId, setShowcaseActiveStoryId] = useState('story-artemis')
+  const [showcaseActiveItemId, setShowcaseActiveItemId] = useState('planet-earth')
+  const [selectedSolarPlanetIndex, setSelectedSolarPlanetIndex] = useState<number | null>(2)
+  const [bridgeOverlayOpen, setBridgeOverlayOpen] = useState(false)
+  const [bridgeOverlayEntityId, setBridgeOverlayEntityId] = useState<string | null>(null)
+  const [bridgeQuizPromptOpen, setBridgeQuizPromptOpen] = useState(false)
+  const [bridgeQuizQuestions, setBridgeQuizQuestions] = useState<QuickQuizQuestion[]>([])
+  const [bridgeQuizAnswers, setBridgeQuizAnswers] = useState<Record<string, number>>({})
+  const [bridgeDebugEntries, setBridgeDebugEntries] = useState<string[]>([])
+  const [bridgeRuntimeHint, setBridgeRuntimeHint] = useState<string | null>(null)
+  const [discoveryToast, setDiscoveryToast] = useState<{ entityId: string; rarity: 'common' | 'rare' | 'epic' } | null>(
+    null,
+  )
+  const [visited3DMap, setVisited3DMap] = useState<LessonVisited3DMap>({})
+  const bridgeFocusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const bridgeQuizTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const showcaseCameraUrlTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const appliedStageRef = useRef<number | null>(null)
+
   const loadStages = useSimulatorStore((s) => s.loadStages)
   const stages = useSimulatorStore((s) => s.stages)
   const stagesLoading = useSimulatorStore((s) => s.stagesLoading)
   const setStage = useSimulatorStore((s) => s.setStage)
-  const { modules, concepts } = useLearningPath()
-
-  const engineRef = useRef<CockpitEngineController | null>(null)
-  const lastDestSyncedRef = useRef<number | null | undefined>(undefined)
-  const arrivalSoundPlayedRef = useRef(false)
-  const [cockpitVolume, setCockpitVolume] = useState(() =>
-    typeof window !== 'undefined' ? loadCockpitEngineVolume() : 1
-  )
-  const [selectedEntityId, setSelectedEntityId] = useState<string | null>(null)
-  const [sceneExploreActive, setSceneExploreActive] = useState(false)
-  const [deepDiveOpen, setDeepDiveOpen] = useState(false)
-  const [quizAnswers, setQuizAnswers] = useState<Record<string, number>>({})
-  const [showcaseMode, setShowcaseMode] = useState(true)
-  const [showcaseMenuOpen, setShowcaseMenuOpen] = useState(false)
-  const [showcaseActiveStoryId, setShowcaseActiveStoryId] = useState('story-artemis')
-  const [showcaseActiveItemId, setShowcaseActiveItemId] = useState('planet-earth')
-  const isApplyingUrlStateRef = useRef(false)
-
-  const showEarthHistory = earthHistoryOpen
-  const isEarthSelected = viewMode === 'solar' && selectedSolarPlanetIndex === EARTH_PLANET_INDEX
-
-  const cockpitFullscreen =
-    !showEarthHistory && viewMode === 'solar' && solarControlMode === 'cockpit'
+  const { modules, concepts, bridgeRules } = useLearningPath()
 
   useEffect(() => {
-    if (typeof document === 'undefined') return
-    if (cockpitFullscreen) {
-      document.body.classList.add('explore-cockpit-fullscreen')
-    } else {
-      document.body.classList.remove('explore-cockpit-fullscreen')
-    }
-    return () => document.body.classList.remove('explore-cockpit-fullscreen')
-  }, [cockpitFullscreen])
-
-  useEffect(() => {
-    if (viewMode !== 'solar' && solarControlMode === 'cockpit') {
-      setSolarControlMode('observer')
-    }
-  }, [viewMode, solarControlMode])
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-    const mediaQuery = window.matchMedia('(max-width: 768px), (prefers-reduced-motion: reduce)')
-    const apply = () => setReducedMode(mediaQuery.matches)
-    apply()
-    mediaQuery.addEventListener('change', apply)
-    return () => mediaQuery.removeEventListener('change', apply)
+    setVisited3DMap(loadLessonVisited3D())
   }, [])
 
   useEffect(() => {
-    if (reducedMode && viewMode === 'milkyway') {
-      setViewMode('solar')
-    }
-  }, [reducedMode, viewMode])
-
-  useEffect(() => {
-    setObserverTargetLock(false)
-    setObserverLockPending(false)
-    setSceneExploreActive(false)
-    setDeepDiveOpen(false)
-    setQuizAnswers({})
-  }, [selectedSolarPlanetIndex])
-
-  useEffect(() => {
-    if (solarControlMode !== 'observer') {
-      setObserverTargetLock(false)
-      setObserverLockPending(false)
-      setSceneExploreActive(false)
-      setDeepDiveOpen(false)
-      setQuizAnswers({})
-    }
-  }, [solarControlMode])
-
-  const onObserverLockArrived = useCallback(() => {
-    setObserverTargetLock(true)
-    setObserverLockPending(false)
-  }, [])
-
-  useEffect(() => {
-    if (showEarthHistory) loadStages()
-  }, [showEarthHistory, loadStages])
+    if (!earthHistoryOpen) return
+    loadStages()
+  }, [earthHistoryOpen, loadStages])
 
   useEffect(() => {
     if (stageTime == null) {
@@ -237,103 +102,177 @@ function ExplorePageContent() {
     if (stagesLoading || stages.length === 0) return
     if (appliedStageRef.current === stageTime) return
     const idx = stages.findIndex((s) => s.time === stageTime)
-    const index = idx >= 0 ? idx : stages.reduce((best, s, i) => (Math.abs(s.time - stageTime) < Math.abs(stages[best].time - stageTime) ? i : best), 0)
+    const index =
+      idx >= 0
+        ? idx
+        : stages.reduce(
+            (best, s, i) =>
+              Math.abs(s.time - stageTime) < Math.abs(stages[best].time - stageTime) ? i : best,
+            0,
+          )
     setStage(index)
     appliedStageRef.current = stageTime
   }, [stageTime, stagesLoading, stages, setStage])
 
-  useEffect(() => {
-    if (!cockpitFullscreen) {
-      engineRef.current?.dispose()
-      engineRef.current = null
-      lastDestSyncedRef.current = undefined
-      arrivalSoundPlayedRef.current = false
-      return
-    }
-    const vol = loadCockpitEngineVolume()
-    setCockpitVolume(vol)
-    engineRef.current = new CockpitEngineController(vol)
-    lastDestSyncedRef.current = undefined
-    arrivalSoundPlayedRef.current = false
-    return () => {
-      engineRef.current?.dispose()
-      engineRef.current = null
-    }
-  }, [cockpitFullscreen])
+  const activeShowcaseItem = NASA_SHOWCASE_ITEMS.find((i) => i.id === showcaseActiveItemId) ?? null
+  const showcasePlanetsMoons = NASA_SHOWCASE_ITEMS.filter((i) => i.group === 'planets_moons')
+  const showcaseDwarfPlanets = NASA_SHOWCASE_ITEMS.filter((i) => i.group === 'dwarf_asteroids')
+  const showcaseComets = NASA_SHOWCASE_ITEMS.filter((i) => i.group === 'comets')
+  const showcaseSpacecraft = NASA_SHOWCASE_ITEMS.filter((i) => i.group === 'spacecraft')
 
-  useEffect(() => {
-    if (!cockpitFullscreen) return
-    if (typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
-    const engine = engineRef.current
-    if (!engine) return
-    if (lastDestSyncedRef.current === undefined) {
-      lastDestSyncedRef.current = selectedSolarPlanetIndex
-      return
+  const activeBridgeRules = useMemo(
+    () =>
+      (bridgeRules || []).filter(
+        (r) => r.active !== false && String(r.entityId || '').trim() === showcaseActiveItemId,
+      ),
+    [bridgeRules, showcaseActiveItemId],
+  )
+  const hasBridgeRulesForEntity = activeBridgeRules.length > 0
+  const actionRules = useMemo(
+    () =>
+      activeBridgeRules.reduce<Record<string, LearningPathBridgeRule[]>>((acc, rule) => {
+        const key = String(rule.action || '')
+        if (!acc[key]) acc[key] = []
+        acc[key].push(rule)
+        return acc
+      }, {}),
+    [activeBridgeRules],
+  )
+  const focusRules = useMemo(
+    () =>
+      activeBridgeRules.filter((r) => r.event === 'entity_focus_stable' || r.event === 'entity_focus_duration'),
+    [activeBridgeRules],
+  )
+  const focusDelaySec = useMemo(() => {
+    const secs = focusRules
+      .map((r) => (Number.isFinite(Number(r.thresholdSec)) ? Number(r.thresholdSec) : null))
+      .filter((v): v is number => v !== null && v > 0)
+    return secs.length ? Math.max(1, Math.min(...secs)) : 3
+  }, [focusRules])
+  const shouldRunOverlay = !hasBridgeRulesForEntity || (actionRules.show_concept_overlay?.length ?? 0) > 0
+  const shouldRunVisited3d = !hasBridgeRulesForEntity || (actionRules.mark_lessons_visited3d?.length ?? 0) > 0
+  const shouldRunDiscovery = !hasBridgeRulesForEntity || (actionRules.unlock_discovery_badge?.length ?? 0) > 0
+  const shouldRunContextualQuiz = !hasBridgeRulesForEntity || (actionRules.trigger_contextual_quiz?.length ?? 0) > 0
+  const overlayRuleConceptIds = useMemo(
+    () =>
+      (actionRules.show_concept_overlay || [])
+        .map((r) => String(r.conceptId || '').trim())
+        .filter(Boolean),
+    [actionRules.show_concept_overlay],
+  )
+  const bridgeConceptCards = useMemo(() => {
+    if (overlayRuleConceptIds.length > 0) {
+      const set = new Set(overlayRuleConceptIds)
+      return concepts.filter((c) => set.has(c.id)).slice(0, 6)
     }
-    if (lastDestSyncedRef.current !== selectedSolarPlanetIndex) {
-      lastDestSyncedRef.current = selectedSolarPlanetIndex
-      arrivalSoundPlayedRef.current = false
-      void engine.ensureRunning().then((ok) => {
-        if (ok) engine.playStartup()
-      })
-    }
-  }, [selectedSolarPlanetIndex, cockpitFullscreen])
+    return resolveMappedConcepts(concepts, showcaseActiveItemId).slice(0, 6)
+  }, [concepts, showcaseActiveItemId, overlayRuleConceptIds])
+  const bridgeLessonLinks = useMemo(
+    () => resolveMappedLessons(modules, bridgeConceptCards.map((c) => c.id)).slice(0, 5),
+    [modules, bridgeConceptCards],
+  )
+  const bridgeVisitedLessonsForEntity = useMemo(
+    () => bridgeLessonLinks.filter((row) => visited3DMap[row.lessonId]).length,
+    [bridgeLessonLinks, visited3DMap],
+  )
+  const bridgeEnabledActions = useMemo(() => {
+    const out: string[] = []
+    if (shouldRunOverlay) out.push('Concept overlay')
+    if (shouldRunVisited3d) out.push('Progress sync')
+    if (shouldRunContextualQuiz) out.push('Contextual quiz')
+    if (shouldRunDiscovery) out.push('Discovery badge')
+    return out
+  }, [shouldRunOverlay, shouldRunVisited3d, shouldRunContextualQuiz, shouldRunDiscovery])
+  const bridgeQuizScore = useMemo(() => {
+    const answered = bridgeQuizQuestions.filter((q) => bridgeQuizAnswers[q.id] !== undefined).length
+    const correct = bridgeQuizQuestions.filter((q) => bridgeQuizAnswers[q.id] === q.correctIndex).length
+    return { answered, correct, total: bridgeQuizQuestions.length }
+  }, [bridgeQuizQuestions, bridgeQuizAnswers])
 
-  const handleCockpitVolumeChange = useCallback((v: number) => {
-    const next = Math.max(0, Math.min(1, v))
-    saveCockpitEngineVolume(next)
-    setCockpitVolume(next)
-    engineRef.current?.setUserVolume(next)
-  }, [])
-
-  const cockpitHud = useCockpitHudTarget()
-  const planetFrameRect = cockpitHud?.target.planetFrameRect
-  const dockCanvasInTargetFrame = Boolean(
-    cockpitFullscreen &&
-      telemetry.dockedAtPlanet &&
-      planetFrameRect &&
-      planetFrameRect.width > 4 &&
-      planetFrameRect.height > 4
+  const pushBridgeDebug = useCallback(
+    (msg: string) => {
+      if (!bridgeDebugOn) return
+      const stamp = new Date().toLocaleTimeString('vi-VN', { hour12: false })
+      setBridgeDebugEntries((prev) => [`${stamp} ${msg}`, ...prev].slice(0, 8))
+    },
+    [bridgeDebugOn],
   )
 
-  const onTelemetry = useCallback(
-    (payload: {
-      speed: number
-      distance: number
-      targetIndex: number | null
-      distToNavTarget: number
-      dockedAtPlanet: boolean
-    }) => {
-      setTelemetry({
-        speed: payload.speed,
-        distance: payload.distance,
-        distToNavTarget: payload.distToNavTarget,
-        dockedAtPlanet: payload.dockedAtPlanet,
+  const openEarthHistoryFromItem = useCallback(
+    (entityId: string) => {
+      const item = NASA_SHOWCASE_ITEMS.find((x) => x.id === entityId)
+      const planetName = item?.linkedPlanetName
+      if (!planetName) return
+      const idx = planetsData.findIndex((p) => p.name === planetName)
+      if (idx >= 0) setSelectedSolarPlanetIndex(idx)
+      if (planetName === 'Earth') setEarthHistoryOpen(true)
+    },
+    [],
+  )
+
+  const handleShowcaseEntityClicked = useCallback(
+    (entityId: string, source: string) => {
+      setShowcaseActiveItemId(entityId)
+      const clickedRules = (bridgeRules || []).filter(
+        (r) => r.active !== false && String(r.entityId || '').trim() === entityId && r.event === 'entity_clicked',
+      )
+      const clickActionSet = new Set(clickedRules.map((r) => r.action))
+      const hasClickRules = clickedRules.length > 0
+      trackLearningPathBehavior({
+        eventName: 'scene_entity_clicked',
+        metadata: { schemaVersion: 'scene_event_v1', entityId, source, hasClickRules },
       })
-      if (!cockpitFullscreen) return
-      if (typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
-      const engine = engineRef.current
-      if (!engine) return
-      const { speed, distToNavTarget, dockedAtPlanet } = payload
-      const atHold = distToNavTarget < 0.06
-      if (atHold || dockedAtPlanet) {
-        engine.stopRumble()
-        if (!arrivalSoundPlayedRef.current && (atHold || dockedAtPlanet)) {
-          arrivalSoundPlayedRef.current = true
-          void engine.ensureRunning().then((ok) => {
-            if (ok) engine.playShutdown()
+      pushBridgeDebug(`click ${entityId} (${source})`)
+      if (!hasClickRules) return
+
+      const clickOverlayConceptIds = clickedRules
+        .filter((r) => r.action === 'show_concept_overlay')
+        .map((r) => String(r.conceptId || '').trim())
+        .filter(Boolean)
+      const clickConceptCards =
+        clickOverlayConceptIds.length > 0
+          ? concepts.filter((c) => clickOverlayConceptIds.includes(c.id))
+          : resolveMappedConcepts(concepts, entityId)
+      const clickLessonLinks = resolveMappedLessons(modules, clickConceptCards.map((c) => c.id))
+
+      if (clickActionSet.has('show_concept_overlay')) {
+        setBridgeOverlayEntityId(entityId)
+        setBridgeOverlayOpen(true)
+        setBridgeRuntimeHint('Đã mở concept overlay theo rule click.')
+      }
+      if (clickActionSet.has('mark_lessons_visited3d') && clickLessonLinks.length > 0) {
+        let nextVisited3D = loadLessonVisited3D()
+        for (const row of clickLessonLinks) nextVisited3D = setLessonVisited3D(nextVisited3D, row.lessonId, true)
+        saveLessonVisited3D(nextVisited3D)
+        setVisited3DMap(nextVisited3D)
+        setBridgeRuntimeHint(`Đã sync tiến độ 3D cho ${clickLessonLinks.length} lesson.`)
+      }
+      if (clickActionSet.has('trigger_contextual_quiz')) {
+        const contextual = buildContextualQuizFromLessons(modules, clickLessonLinks.map((r) => r.lessonId), 2)
+        if (contextual.length > 0) {
+          setBridgeQuizQuestions(contextual)
+          setBridgeQuizAnswers({})
+          setBridgeQuizPromptOpen(true)
+          trackLearningPathBehavior({
+            eventName: 'scene_contextual_quiz_prompted',
+            metadata: { schemaVersion: 'scene_event_v1', entityId, questionCount: contextual.length, source: 'click-rule' },
           })
+          setBridgeRuntimeHint(`Đã bật quiz ngữ cảnh (${contextual.length} câu).`)
         }
-      } else if (!arrivalSoundPlayedRef.current || speed > 0.2) {
-        engine.updateRumble(Math.min(1, speed / 3.5))
+      }
+      if (clickActionSet.has('unlock_discovery_badge')) {
+        const discovered = loadDiscoveryMap()
+        if (!discovered[entityId]) {
+          const nextDiscovered = { ...discovered, [entityId]: true }
+          saveDiscoveryMap(nextDiscovered)
+          setDiscoveryToast({ entityId, rarity: guessEntityRarity(entityId) })
+          setBridgeRuntimeHint('Đã unlock discovery badge.')
+        }
       }
     },
-    [cockpitFullscreen]
+    [bridgeRules, concepts, modules, pushBridgeDebug],
   )
 
-  const showExploreTopBar = !(solarControlMode === 'cockpit' && viewMode === 'solar' && !showEarthHistory)
-  const isSolarObserverShowcase =
-    !showEarthHistory && viewMode === 'solar' && solarControlMode === 'observer' && showcaseMode
   const distQ = searchParams.get('dist')
   const azQ = searchParams.get('az')
   const elQ = searchParams.get('el')
@@ -345,7 +284,7 @@ function ExplorePageContent() {
     if (!Number.isFinite(distance) || !Number.isFinite(az) || !Number.isFinite(el)) return null
     return { distance, az, el }
   }, [distQ, azQ, elQ])
-  const showcaseCameraUrlTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
   const handleShowcaseCameraSettled = useCallback(
     (sph: ShowcaseCameraSpherical) => {
       if (showcaseCameraUrlTimerRef.current) clearTimeout(showcaseCameraUrlTimerRef.current)
@@ -362,814 +301,212 @@ function ExplorePageContent() {
     },
     [pathname, router, searchParams],
   )
-  const showcasePlanetsMoons = NASA_SHOWCASE_ITEMS.filter((i) => i.group === 'planets_moons')
-  const showcaseDwarfPlanets = NASA_SHOWCASE_ITEMS.filter((i) => i.group === 'dwarf_asteroids')
-  const showcaseComets = NASA_SHOWCASE_ITEMS.filter((i) => i.group === 'comets')
-  const showcaseSpacecraft = NASA_SHOWCASE_ITEMS.filter((i) => i.group === 'spacecraft')
-  const activeShowcaseItem = NASA_SHOWCASE_ITEMS.find((i) => i.id === showcaseActiveItemId) ?? null
 
   useEffect(() => {
-    if (typeof document === 'undefined') return
-    if (isSolarObserverShowcase) {
-      document.body.classList.add('explore-showcase-focus')
-    } else {
-      document.body.classList.remove('explore-showcase-focus')
-    }
-    return () => document.body.classList.remove('explore-showcase-focus')
-  }, [isSolarObserverShowcase])
-
-  useEffect(() => {
-    const modeParam = (searchParams.get('mode') || '').toLowerCase()
-    const targetParam = (searchParams.get('target') || '').toLowerCase()
     const entityParam = searchParams.get('entity') || ''
-    const hasRouteState = !!modeParam || !!targetParam || !!entityParam
-    if (!hasRouteState) return
-
-    isApplyingUrlStateRef.current = true
-    if (modeParam === 'showcase') {
-      setViewMode('solar')
-      setSolarControlMode('observer')
-      setShowcaseMode(true)
-      setEarthHistoryOpen(false)
-    }
-    if (targetParam) {
-      const idx = planetsData.findIndex((p) => p.name.toLowerCase() === targetParam)
-      if (idx >= 0) {
-        setSelectedSolarPlanetIndex(idx)
-        if (modeParam === 'showcase') {
-          setObserverLockPending(false)
-          setObserverTargetLock(true)
-        } else {
-          setObserverTargetLock(false)
-          setObserverLockPending(true)
-        }
-      }
-    }
-    if (entityParam) {
-      const exists = NASA_SHOWCASE_ITEMS.some((item) => item.id === entityParam)
-      if (exists) setShowcaseActiveItemId(entityParam)
-    }
-    queueMicrotask(() => {
-      isApplyingUrlStateRef.current = false
-    })
+    if (!entityParam) return
+    const exists = NASA_SHOWCASE_ITEMS.some((item) => item.id === entityParam)
+    if (exists) setShowcaseActiveItemId(entityParam)
   }, [searchParams])
 
   useEffect(() => {
-    if (isApplyingUrlStateRef.current) return
     const next = new URLSearchParams(searchParams.toString())
-    const shouldRouteShowcase = viewMode === 'solar' && solarControlMode === 'observer' && showcaseMode
-
-    if (shouldRouteShowcase) {
-      next.set('mode', 'showcase')
-      if (selectedSolarPlanetIndex !== null) {
-        const p = planetsData[selectedSolarPlanetIndex]
-        if (p) next.set('target', p.name.toLowerCase())
-      } else {
-        next.delete('target')
-      }
-      if (showcaseActiveItemId) {
-        next.set('entity', showcaseActiveItemId)
-        const item = NASA_SHOWCASE_ITEMS.find((x) => x.id === showcaseActiveItemId)
-        if (item?.group) next.set('group', item.group)
-      } else {
-        next.delete('entity')
-        next.delete('group')
-      }
-    } else {
-      next.delete('mode')
-      next.delete('target')
-      next.delete('entity')
-      next.delete('group')
-      next.delete('dist')
-      next.delete('az')
-      next.delete('el')
+    next.set('mode', 'showcase')
+    if (showcaseActiveItemId) {
+      next.set('entity', showcaseActiveItemId)
+      const item = NASA_SHOWCASE_ITEMS.find((x) => x.id === showcaseActiveItemId)
+      if (item?.group) next.set('group', item.group)
+      if (item?.linkedPlanetName) next.set('target', item.linkedPlanetName.toLowerCase())
     }
-
-    const current = searchParams.toString()
     const updated = next.toString()
-    if (current === updated) return
-    router.replace(updated ? `${pathname}?${updated}` : pathname, { scroll: false })
-  }, [
-    pathname,
-    router,
-    searchParams,
-    viewMode,
-    solarControlMode,
-    showcaseMode,
-    selectedSolarPlanetIndex,
-    showcaseActiveItemId,
-  ])
-  const sceneAnchor: SceneAnchorConfig | null =
-    !showEarthHistory && viewMode === 'solar' && selectedSolarPlanetIndex === VENUS_PLANET_INDEX
-      ? {
-          sceneKey: 'solar:venus',
-          label: 'Sao Kim',
-          intro:
-            'Bạn đang ở Sao Kim: khí quyển dày đặc CO2, mây acid sulfuric và hiệu ứng nhà kính cực mạnh.',
-          entities: [
-            {
-              id: 'venus-atmosphere',
-              label: 'CO2 atmosphere',
-              summary: 'Khí quyển Sao Kim chủ yếu là CO2, áp suất bề mặt cực lớn so với Trái Đất.',
-              mission: 'So sánh khí quyển Sao Kim và Trái Đất: vì sao một bên khắc nghiệt hơn hẳn?',
-              lessonKeywords: ['venus', 'sao kim', 'atmosphere', 'khí quyển', 'co2', 'planet'],
-              conceptKeywords: ['venus', 'sao kim', 'atmosphere', 'khí quyển', 'co2'],
-            },
-            {
-              id: 'venus-greenhouse',
-              label: 'Greenhouse',
-              summary: 'Nhiệt bị giữ lại mạnh khiến bề mặt nóng hơn nhiều hành tinh khác.',
-              mission: 'Quan sát và giải thích vì sao Sao Kim nóng hơn dù không gần Mặt Trời nhất.',
-              lessonKeywords: ['greenhouse', 'hiệu ứng nhà kính', 'radiation', 'nhiệt', 'venus', 'sao kim'],
-              conceptKeywords: ['greenhouse', 'hiệu ứng nhà kính', 'radiation', 'nhiệt'],
-            },
-            {
-              id: 'venus-clouds',
-              label: 'Sulfuric clouds',
-              summary: 'Lớp mây dày phản xạ ánh sáng mạnh, che phủ toàn bộ bề mặt hành tinh.',
-              mission: 'Liên hệ màu sáng của Sao Kim với tính chất mây và phản xạ ánh sáng.',
-              lessonKeywords: ['cloud', 'mây', 'sulfur', 'acid', 'reflect', 'phản xạ', 'venus'],
-              conceptKeywords: ['mây', 'sulfur', 'acid', 'albedo', 'phản xạ'],
-            },
-            {
-              id: 'venus-pressure',
-              label: 'Pressure',
-              summary: 'Áp suất bề mặt Sao Kim cực lớn, tạo môi trường khắc nghiệt cho thiết bị thăm dò.',
-              mission: 'So sánh áp suất Venus và Earth, đánh giá tác động lên vật liệu tàu đổ bộ.',
-              lessonKeywords: ['pressure', 'áp suất', 'venus', 'surface', 'planet'],
-              conceptKeywords: ['pressure', 'áp suất', 'planetary atmosphere'],
-            },
-            {
-              id: 'venus-rotation',
-              label: 'Rotation',
-              summary: 'Sao Kim có đặc điểm quay chậm và khác biệt, tạo bức tranh động lực học rất riêng.',
-              mission: 'Đối chiếu quỹ đạo và tự quay để hiểu khác biệt ngày-đêm giữa các hành tinh đá.',
-              lessonKeywords: ['orbit', 'quỹ đạo', 'rotation', 'tự quay', 'planet', 'venus'],
-              conceptKeywords: ['orbit', 'quỹ đạo', 'rotation', 'tự quay', 'planet'],
-            },
-          ],
-          planetKeywords: ['venus', 'sao kim'],
-        }
-      : null
+    if (updated === searchParams.toString()) return
+    router.replace(`${pathname}?${updated}`, { scroll: false })
+  }, [pathname, router, searchParams, showcaseActiveItemId])
 
   useEffect(() => {
-    if (!sceneAnchor) {
-      setSelectedEntityId(null)
-      setSceneExploreActive(false)
-      setDeepDiveOpen(false)
-      setQuizAnswers({})
-      return
-    }
-    setSelectedEntityId((prev) => {
-      if (prev && sceneAnchor.entities.some((e) => e.id === prev)) return prev
-      return sceneAnchor.entities[0]?.id ?? null
-    })
-  }, [sceneAnchor?.sceneKey])
+    if (bridgeFocusTimerRef.current) clearTimeout(bridgeFocusTimerRef.current)
+    if (bridgeQuizTimerRef.current) clearTimeout(bridgeQuizTimerRef.current)
+    setBridgeOverlayOpen(false)
+    setBridgeQuizPromptOpen(false)
+    if (earthHistoryOpen || !showcaseActiveItemId) return
 
-  const activeEntity = sceneAnchor?.entities.find((e) => e.id === selectedEntityId) ?? sceneAnchor?.entities[0] ?? null
-  const showExploreLearningDock = solarControlMode !== 'cockpit' && sceneExploreActive && sceneAnchor && activeEntity
-  const dockWidthRem = showExploreLearningDock ? (deepDiveOpen ? 48 : 22) : 0
-  const quickQuizQuestions: QuickQuizQuestion[] = [
-    {
-      id: 'q1',
-      question: 'Vì sao Sao Kim nóng hơn Sao Thủy?',
-      options: [
-        'Vì Sao Kim gần Mặt Trời hơn',
-        'Vì khí quyển CO2 dày gây hiệu ứng nhà kính mạnh',
-        'Vì Sao Kim có lõi lớn hơn nhiều',
-      ],
-      correctIndex: 1,
-    },
-    {
-      id: 'q2',
-      question: 'Thành phần chính trong khí quyển Sao Kim là gì?',
-      options: ['Nitơ', 'CO2', 'Oxy'],
-      correctIndex: 1,
-    },
-    {
-      id: 'q3',
-      question: 'Nhiệt độ bề mặt điển hình của Sao Kim gần mức nào?',
-      options: ['~120°C', '~260°C', '~464°C'],
-      correctIndex: 2,
-    },
-  ]
-  const answeredCount = quickQuizQuestions.filter((q) => quizAnswers[q.id] !== undefined).length
-  const correctCount = quickQuizQuestions.filter((q) => quizAnswers[q.id] === q.correctIndex).length
-
-  const recommendedLessons = useMemo((): RecommendedLessonCard[] => {
-    if (!sceneAnchor || !activeEntity) return []
-    const conceptById = new Map(concepts.map((c) => [c.id, c]))
-    const seedConceptIds = conceptIdsMatchingKeywords(concepts, activeEntity.conceptKeywords)
-    const prereqOneHop = new Set<string>()
-    for (const sid of seedConceptIds) {
-      const c = conceptById.get(sid)
-      for (const p of c?.prerequisites ?? []) {
-        if (conceptById.has(p)) prereqOneHop.add(p)
+    bridgeFocusTimerRef.current = setTimeout(() => {
+      if (shouldRunOverlay) {
+        setBridgeOverlayEntityId(showcaseActiveItemId)
+        setBridgeOverlayOpen(true)
       }
-    }
-
-    const scored: Array<{ card: RecommendedLessonCard; score: number }> = []
-    for (const mod of modules) {
-      for (const node of mod.nodes) {
-        for (const depth of ['beginner', 'explorer', 'researcher'] as const) {
-          for (const lesson of node.depths[depth] || []) {
-            const text = [
-              lesson.titleVi,
-              lesson.title,
-              lesson.body || '',
-              JSON.stringify(lesson.sections || []),
-              (lesson.conceptIds || []).join(' '),
-            ]
-              .join(' ')
-              .toLowerCase()
-            const hasPlanetMatch = sceneAnchor.planetKeywords.some((kw) => text.includes(kw))
-            if (!hasPlanetMatch) continue
-            let score = 0
-            for (const kw of activeEntity.lessonKeywords) {
-              if (!text.includes(kw)) continue
-              score += kw.length >= 7 ? 3 : 2
-            }
-            const lcSet = new Set(lesson.conceptIds ?? [])
-            let graphBoost = 0
-            for (const sid of seedConceptIds) {
-              if (lcSet.has(sid)) graphBoost += 5
-            }
-            for (const pid of prereqOneHop) {
-              if (lcSet.has(pid)) graphBoost += 2
-            }
-            score += graphBoost
-            if (depth === 'beginner') score += 1
-            if (score <= 0) continue
-
-            let reason =
-              score >= 10
-                ? `Khớp trực tiếp với "${activeEntity.label}"`
-                : `Liên quan "${activeEntity.label}" trong ngữ cảnh ${sceneAnchor.label}`
-            if (graphBoost >= 5) reason += ' — khớp concept trong đồ thị lộ trình'
-            else if (graphBoost >= 2) reason += ' — ôn kiến thức nền (prerequisite)'
-
-            scored.push({
-              score,
-              card: {
-                id: lesson.id,
-                title: lesson.titleVi || lesson.title || lesson.id,
-                href: `/tutorial/${mod.id}/${node.id}/${encodeURIComponent(lesson.id)}`,
-                reason,
-              },
-            })
-          }
-        }
-      }
-    }
-    scored.sort((a, b) => b.score - a.score)
-    const uniq = new Map<string, RecommendedLessonCard>()
-    for (const row of scored) {
-      if (!uniq.has(row.card.id)) uniq.set(row.card.id, row.card)
-      if (uniq.size >= 3) break
-    }
-    return Array.from(uniq.values())
-  }, [modules, concepts, sceneAnchor, selectedEntityId, activeEntity])
-
-  const explorePrepConcepts = useMemo(() => {
-    if (!sceneAnchor || !activeEntity) return []
-    const conceptById = new Map(concepts.map((c) => [c.id, c]))
-    const seedConceptIds = conceptIdsMatchingKeywords(concepts, activeEntity.conceptKeywords)
-    const rows: { id: string; title: string; href: string | null; lessonTitle: string | null }[] = []
-    const seen = new Set<string>()
-    for (const sid of seedConceptIds) {
-      const c = conceptById.get(sid)
-      for (const p of c?.prerequisites ?? []) {
-        if (seen.has(p) || !conceptById.has(p)) continue
-        seen.add(p)
-        const pc = conceptById.get(p)!
-        const hit = findFirstLessonForConcept(modules, p)
-        rows.push({
-          id: p,
-          title: pc.title || p,
-          href: hit?.href ?? null,
-          lessonTitle: hit?.lessonTitle ?? null,
+      trackLearningPathBehavior({
+        eventName: 'scene_entity_focus_duration',
+        metadata: { schemaVersion: 'scene_event_v1', entityId: showcaseActiveItemId, durationSec: focusDelaySec, mode: 'showcase' },
+      })
+      if (shouldRunOverlay) {
+        trackLearningPathBehavior({
+          eventName: 'scene_concept_overlay_shown',
+          metadata: {
+            schemaVersion: 'scene_event_v1',
+            entityId: showcaseActiveItemId,
+            conceptIds: bridgeConceptCards.map((c) => c.id),
+          },
         })
       }
-    }
-    return rows.slice(0, 6)
-  }, [sceneAnchor, selectedEntityId, activeEntity, concepts, modules])
 
-  const canvasInlineStyle =
-    dockCanvasInTargetFrame && planetFrameRect
-      ? {
-          position: 'fixed' as const,
-          top: planetFrameRect.top,
-          left: planetFrameRect.left,
-          width: planetFrameRect.width,
-          height: planetFrameRect.height,
-          right: 'auto',
-          bottom: 'auto',
-          zIndex: 5,
+      const visitedEntities = loadBridgeVisitedEntityMap()
+      if (shouldRunDiscovery && !visitedEntities[showcaseActiveItemId]) {
+        const nextVisited = { ...visitedEntities, [showcaseActiveItemId]: true }
+        saveBridgeVisitedEntityMap(nextVisited)
+        const discovered = loadDiscoveryMap()
+        if (!discovered[showcaseActiveItemId]) {
+          const nextDiscovered = { ...discovered, [showcaseActiveItemId]: true }
+          saveDiscoveryMap(nextDiscovered)
+          const rarity = guessEntityRarity(showcaseActiveItemId)
+          setDiscoveryToast({ entityId: showcaseActiveItemId, rarity })
+          trackLearningPathBehavior({
+            eventName: 'scene_entity_discovered',
+            metadata: { schemaVersion: 'scene_event_v1', entityId: showcaseActiveItemId, rarity },
+          })
         }
-      : showExploreLearningDock
-        ? {
-            right: `${dockWidthRem}rem`,
-            width: `calc(100vw - ${dockWidthRem}rem)`,
-          }
-        : undefined
+      }
+
+      if (shouldRunVisited3d && bridgeLessonLinks.length > 0) {
+        let nextVisited3D = loadLessonVisited3D()
+        for (const row of bridgeLessonLinks) nextVisited3D = setLessonVisited3D(nextVisited3D, row.lessonId, true)
+        saveLessonVisited3D(nextVisited3D)
+        setVisited3DMap(nextVisited3D)
+      }
+
+      if (shouldRunContextualQuiz) {
+        const contextual = buildContextualQuizFromLessons(modules, bridgeLessonLinks.map((r) => r.lessonId), 2)
+        if (contextual.length >= 1) {
+          bridgeQuizTimerRef.current = setTimeout(() => {
+            setBridgeQuizQuestions(contextual)
+            setBridgeQuizAnswers({})
+            setBridgeQuizPromptOpen(true)
+            trackLearningPathBehavior({
+              eventName: 'scene_contextual_quiz_prompted',
+              metadata: { schemaVersion: 'scene_event_v1', entityId: showcaseActiveItemId, questionCount: contextual.length },
+            })
+          }, 3000)
+        }
+      }
+    }, focusDelaySec * 1000)
+
+    return () => {
+      if (bridgeFocusTimerRef.current) clearTimeout(bridgeFocusTimerRef.current)
+      if (bridgeQuizTimerRef.current) clearTimeout(bridgeQuizTimerRef.current)
+    }
+  }, [
+    earthHistoryOpen,
+    showcaseActiveItemId,
+    shouldRunOverlay,
+    shouldRunDiscovery,
+    shouldRunVisited3d,
+    shouldRunContextualQuiz,
+    focusDelaySec,
+    bridgeConceptCards,
+    bridgeLessonLinks,
+    modules,
+  ])
+
+  useEffect(() => {
+    if (!discoveryToast) return
+    const t = setTimeout(() => setDiscoveryToast(null), 3200)
+    return () => clearTimeout(t)
+  }, [discoveryToast])
+  useEffect(() => {
+    if (!bridgeRuntimeHint) return
+    const t = setTimeout(() => setBridgeRuntimeHint(null), 2600)
+    return () => clearTimeout(t)
+  }, [bridgeRuntimeHint])
 
   return (
     <main className="relative w-screen h-screen overflow-hidden bg-black min-h-screen min-w-[320px]">
-      <div
-        className={`canvas-container${dockCanvasInTargetFrame ? ' cockpit-canvas-target-lock' : ''}`}
-        style={canvasInlineStyle}
-      >
+      <div className="canvas-container">
         <Suspense fallback={<Loading />}>
-          {showEarthHistory && <EarthScene />}
-          {!showEarthHistory && viewMode === 'solar' && (
-            isSolarObserverShowcase ? (
-              <ShowcaseScene
-                showcaseActiveItemId={showcaseActiveItemId}
-                onShowcaseItemSelect={(id) => {
-                  setShowcaseActiveItemId(id)
-                  const item = NASA_SHOWCASE_ITEMS.find((x) => x.id === id)
-                  if (item?.linkedPlanetName) {
-                    const idx = planetsData.findIndex((p) => p.name === item.linkedPlanetName)
-                    if (idx >= 0) setSelectedSolarPlanetIndex(idx)
-                  }
-                }}
-                flightTargetIndex={selectedSolarPlanetIndex}
-                onPlanetSelect={(idx) => {
-                  setSelectedSolarPlanetIndex(idx)
-                  if (idx === null) return
-                  const planetName = planetsData[idx]?.name
-                  if (!planetName) return
-                  const planetItem = NASA_SHOWCASE_ITEMS.find(
-                    (item) => item.group === 'planets_moons' && item.name === planetName,
-                  )
-                  if (planetItem) setShowcaseActiveItemId(planetItem.id)
-                }}
-                observerTargetLock={observerTargetLock}
-                observerDisableAutoTarget={sceneExploreActive}
-                observerExploreEntityId={sceneExploreActive ? activeEntity?.id ?? null : null}
-                initialSpherical={initialShowcaseSpherical}
-                onCameraSettled={handleShowcaseCameraSettled}
-              />
-            ) : (
-              <SolarSystemScene
-                mode={solarControlMode}
-                flightTargetIndex={selectedSolarPlanetIndex}
-                sceneNavigationEnabled={solarControlMode !== 'cockpit'}
-                onPlanetSelect={setSelectedSolarPlanetIndex}
-                onTelemetry={onTelemetry}
-                observerLockPending={solarControlMode === 'observer' && observerLockPending}
-                observerTargetLock={solarControlMode === 'observer' && observerTargetLock}
-                onObserverLockArrived={onObserverLockArrived}
-                cockpitCanvasInTargetFrame={dockCanvasInTargetFrame}
-                observerDisableAutoTarget={sceneExploreActive}
-                observerExploreEntityId={sceneExploreActive ? activeEntity?.id ?? null : null}
-              />
-            )
+          {earthHistoryOpen ? (
+            <EarthScene />
+          ) : (
+            <ShowcaseScene
+              showcaseActiveItemId={showcaseActiveItemId}
+              onShowcaseItemSelect={(id) => {
+                handleShowcaseEntityClicked(id, 'scene')
+                openEarthHistoryFromItem(id)
+              }}
+              flightTargetIndex={selectedSolarPlanetIndex}
+              onPlanetSelect={(idx) => {
+                setSelectedSolarPlanetIndex(idx)
+                if (idx === null) return
+                const planetName = planetsData[idx]?.name
+                if (!planetName) return
+                const planetItem = NASA_SHOWCASE_ITEMS.find(
+                  (item) => item.group === 'planets_moons' && item.name === planetName,
+                )
+                if (planetItem) handleShowcaseEntityClicked(planetItem.id, 'planet-select')
+              }}
+              observerTargetLock
+              observerDisableAutoTarget={false}
+              observerExploreEntityId={null}
+              initialSpherical={initialShowcaseSpherical}
+              onCameraSettled={handleShowcaseCameraSettled}
+            />
           )}
-          {!showEarthHistory && viewMode === 'milkyway' && <MilkyWayScene />}
         </Suspense>
       </div>
-      {showExploreLearningDock && sceneAnchor && activeEntity && !isSolarObserverShowcase && (
-        <>
-        <aside className="fixed right-0 top-14 bottom-0 z-[18] w-[22rem] border-l border-white/10 bg-[#040a14]/96 p-3 backdrop-blur">
-          <div className="rounded-xl border border-white/10 bg-black/30 p-3">
-            <p className="text-[10px] uppercase tracking-[0.18em] text-amber-300/90">Venus Entities</p>
-            <p className="mt-1 text-xs text-slate-400">Mô tả ngắn để định hướng nhanh trước khi học sâu.</p>
-            <div className="mt-2 space-y-1.5">
-              {sceneAnchor.entities.map((entity) => {
-                const isActive = activeEntity.id === entity.id
-                return (
-                  <button
-                    key={entity.id}
-                    type="button"
-                    onClick={() => {
-                      setSelectedEntityId(entity.id)
-                      setDeepDiveOpen(false)
-                      setQuizAnswers({})
-                    }}
-                    className={`w-full rounded-lg border px-3 py-2 text-left text-xs transition-colors ${
-                      isActive
-                        ? 'border-amber-300/65 bg-amber-500/25 text-amber-100'
-                        : 'border-white/10 bg-black/30 text-slate-200 hover:bg-white/10'
-                    }`}
-                  >
-                    {entity.label}
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-          <div className="mt-3 rounded-xl border border-white/10 bg-black/30 p-3">
-            <p className="text-[10px] uppercase tracking-[0.18em] text-amber-300/90">Khám phá {sceneAnchor.label}</p>
-            <h3 className="mt-1 text-sm font-semibold text-white">{activeEntity.label}</h3>
-            <p className="mt-2 text-xs leading-relaxed text-slate-300 line-clamp-3">{activeEntity.summary}</p>
-            <p className="mt-1 text-xs leading-relaxed text-emerald-200/95 line-clamp-2">{activeEntity.mission}</p>
-            <button
-              type="button"
-              onClick={() => setDeepDiveOpen(true)}
-              className="mt-3 w-full rounded-lg border border-cyan-300/40 bg-cyan-600/35 px-3 py-2 text-xs font-medium text-cyan-100 hover:bg-cyan-500/35"
-            >
-              Tìm hiểu chuyên sâu
-            </button>
-          </div>
-          {explorePrepConcepts.length > 0 && (
-            <div className="mt-3 rounded-xl border border-white/10 bg-black/30 p-3">
-              <p className="text-[10px] uppercase tracking-[0.18em] text-sky-300/90">Chuẩn bị (đồ thị concept)</p>
-              <p className="mt-1 text-[11px] text-slate-400">
-                Các khái niệm nền từ API — liên kết tới bài học trong lộ trình nếu có.
-              </p>
-              <ul className="mt-2 space-y-1.5">
-                {explorePrepConcepts.map((row) => (
-                  <li key={row.id} className="text-[11px] text-slate-200">
-                    {row.href ? (
-                      <a href={row.href} className="text-sky-200 underline-offset-2 hover:text-sky-100 hover:underline">
-                        {row.title}
-                      </a>
-                    ) : (
-                      <span>{row.title}</span>
-                    )}
-                    {row.lessonTitle ? (
-                      <span className="ml-1 text-[10px] text-slate-500">({row.lessonTitle})</span>
-                    ) : null}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-          {recommendedLessons.length > 0 && (
-            <div className="mt-3 grid gap-2">
-              {recommendedLessons.map((lesson, idx) => (
-                <a
-                  key={lesson.id}
-                  href={lesson.href}
-                  className="block rounded-lg border border-white/10 bg-black/30 p-2.5 hover:bg-white/10"
-                >
-                  <p className="text-[10px] uppercase tracking-wide text-slate-500">
-                    {idx === 0 ? 'Bài nên học tiếp' : 'Bài tiếp theo'}
-                  </p>
-                  <p className="mt-1 text-xs font-medium text-amber-200">{lesson.title}</p>
-                  <p className="mt-1 text-[11px] text-slate-400">{lesson.reason}</p>
-                </a>
-              ))}
-            </div>
-          )}
-        </aside>
-        <aside
-          className={`fixed top-14 bottom-0 z-[19] w-[26rem] border-l border-white/10 bg-[#06111f]/97 p-4 backdrop-blur transition-transform duration-300 ${
-            deepDiveOpen ? 'translate-x-0' : 'translate-x-full'
-          }`}
-          style={{ right: '22rem' }}
-        >
-          <div className="flex items-center justify-between">
-            <p className="text-[10px] uppercase tracking-[0.18em] text-cyan-300/90">Bài học chuyên sâu</p>
-            <button
-              type="button"
-              onClick={() => setDeepDiveOpen(false)}
-              className="rounded border border-white/20 px-2 py-1 text-[11px] text-slate-200 hover:bg-white/10"
-            >
-              Đóng
-            </button>
-          </div>
-          <h3 className="mt-2 text-sm font-semibold text-white">{sceneAnchor.label} vs Trái Đất</h3>
-          <div className="mt-2 rounded-lg border border-white/10 bg-black/35 p-3">
-            <p className="text-[11px] text-slate-300">So sánh nhanh (đơn vị tương đối)</p>
-            <div className="mt-2 space-y-2 text-[11px] text-slate-300">
-              <div>
-                <p className="mb-1">Nhiệt độ bề mặt</p>
-                <div className="h-2 rounded bg-white/10">
-                  <div className="h-2 rounded bg-amber-400" style={{ width: '92%' }} />
-                </div>
-                <div className="mt-1 flex justify-between text-[10px] text-slate-400"><span>Venus ~464°C</span><span>Earth ~15°C</span></div>
-              </div>
-              <div>
-                <p className="mb-1">Áp suất khí quyển</p>
-                <div className="h-2 rounded bg-white/10">
-                  <div className="h-2 rounded bg-rose-400" style={{ width: '88%' }} />
-                </div>
-                <div className="mt-1 flex justify-between text-[10px] text-slate-400"><span>Venus ~92 bar</span><span>Earth ~1 bar</span></div>
-              </div>
-              <div>
-                <p className="mb-1">Kích thước</p>
-                <div className="h-2 rounded bg-white/10">
-                  <div className="h-2 rounded bg-cyan-400" style={{ width: '95%' }} />
-                </div>
-                <div className="mt-1 flex justify-between text-[10px] text-slate-400"><span>Venus ~0.95 Earth</span><span>Earth = 1.0</span></div>
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-3 rounded-lg border border-white/10 bg-black/35 p-3">
-            <p className="text-[11px] text-slate-300">Mô phỏng dòng khí CO2 dày đặc</p>
-            <div className="relative mt-2 h-24 overflow-hidden rounded border border-amber-300/20 bg-gradient-to-b from-[#3a1e10] via-[#1d120d] to-[#0c0a0a]">
-              {[...Array(8)].map((_, i) => (
-                <div
-                  key={i}
-                  className="absolute top-0 h-full w-1 rounded-full bg-gradient-to-b from-amber-200/60 via-orange-300/40 to-transparent"
-                  style={{
-                    left: `${10 + i * 11}%`,
-                    transform: `translateY(${(i % 2 === 0 ? -10 : 8)}%)`,
-                    opacity: 0.55,
-                    animation: `pulse ${1.4 + i * 0.18}s ease-in-out infinite`,
-                  }}
-                />
-              ))}
-              <div className="absolute inset-x-2 bottom-2 h-2 rounded-full bg-rose-500/30 blur-sm" />
-            </div>
-          </div>
-
-          <div className="mt-3 rounded-lg border border-white/10 bg-black/35 p-3">
-            <p className="text-[11px] text-slate-300">Quick Quiz</p>
-            <div className="mt-2 space-y-2">
-              {quickQuizQuestions.map((q, qIdx) => (
-                <div key={q.id} className="rounded border border-white/10 bg-black/20 p-2">
-                  <p className="text-[11px] text-slate-200">{qIdx + 1}. {q.question}</p>
-                  <div className="mt-2 space-y-1">
-                    {q.options.map((opt, optIdx) => {
-                      const picked = quizAnswers[q.id] === optIdx
-                      return (
-                        <button
-                          key={opt}
-                          type="button"
-                          onClick={() => setQuizAnswers((prev) => ({ ...prev, [q.id]: optIdx }))}
-                          className={`w-full rounded border px-2 py-1 text-left text-[11px] ${
-                            picked ? 'border-cyan-300/60 bg-cyan-500/20 text-cyan-100' : 'border-white/10 bg-white/5 text-slate-300 hover:bg-white/10'
-                          }`}
-                        >
-                          {opt}
-                        </button>
-                      )
-                    })}
-                  </div>
-                </div>
-              ))}
-            </div>
-            <div className="mt-3 rounded border border-emerald-300/30 bg-emerald-500/10 px-2 py-1.5 text-[11px] text-emerald-100">
-              Kết quả: {answeredCount}/{quickQuizQuestions.length} câu đã trả lời • đúng {correctCount} câu
-            </div>
-          </div>
-        </aside>
-        </>
-      )}
 
       <div className="ui-overlay">
-        {!showEarthHistory &&
-          viewMode === 'solar' &&
-          solarControlMode === 'observer' &&
-          observerTargetLock &&
-          showExploreLearningDock && (
-            <div className="fixed top-[4.25rem] z-[19] flex items-center gap-2" style={{ right: `${dockWidthRem + 0.75}rem` }}>
-              <button
-                type="button"
-                onClick={() => setSceneExploreActive(false)}
-                className="rounded-lg bg-white/10 hover:bg-white/15 px-3 py-1.5 text-xs font-medium text-gray-100 border border-white/20"
-              >
-                Đóng khám phá
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setObserverTargetLock(false)
-                  setObserverLockPending(false)
-                  setSceneExploreActive(false)
-                }}
-                className="rounded-lg bg-white/10 hover:bg-white/15 px-3 py-1.5 text-xs font-medium text-gray-200 border border-white/20"
-              >
-                Thoát khóa
-              </button>
-            </div>
-          )}
-        {showExploreTopBar && !isSolarObserverShowcase && (
-          <div
-            className={`fixed top-14 left-0 p-3 sm:p-4 flex flex-wrap items-start sm:items-center justify-between gap-2 sm:gap-4 z-10 ${
-              showExploreLearningDock ? (deepDiveOpen ? 'right-[48rem]' : 'right-[22rem]') : 'right-0'
-            }`}
-          >
-            <div className="glass rounded-lg px-2.5 sm:px-4 py-2 flex flex-wrap items-center gap-1.5 sm:gap-2">
-              {showEarthHistory ? (
+        {earthHistoryOpen ? (
+          <>
+            <div className="fixed top-14 left-0 right-0 z-[22] border-b border-white/10 bg-black/35 backdrop-blur-sm">
+              <div className="mx-auto max-w-[1400px] px-4 py-2 flex items-center justify-between text-[11px]">
+                <span className="tracking-[0.14em] uppercase text-slate-200/90">Earth History</span>
                 <button
                   type="button"
                   onClick={() => setEarthHistoryOpen(false)}
-                  className="px-2.5 sm:px-3 py-1.5 rounded text-xs sm:text-sm font-medium bg-cyan-500/40 text-cyan-300"
+                  className="rounded border border-cyan-300/40 px-2 py-1 text-[10px] uppercase tracking-wider text-cyan-100 hover:bg-cyan-500/15"
                 >
-                  ← Back to Solar System
+                  Back to Showcase
                 </button>
-              ) : (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => setViewMode('solar')}
-                    className={`px-2.5 sm:px-3 py-1.5 rounded text-xs sm:text-sm font-medium transition-colors ${
-                      viewMode === 'solar'
-                        ? 'bg-cyan-500/40 text-cyan-300'
-                        : 'text-gray-400 hover:text-white hover:bg-white/10'
-                    }`}
-                  >
-                    ☀️ Solar System
-                  </button>
-                  {viewMode === 'solar' && (
-                    <div className="flex rounded-lg overflow-hidden border border-white/10">
-                      <button
-                        type="button"
-                        onClick={() => setShowcaseMode((v) => !v)}
-                        className={`px-2 sm:px-2.5 py-1.5 text-[10px] sm:text-xs font-medium ${
-                          showcaseMode ? 'bg-amber-600/45 text-amber-100' : 'text-gray-300 hover:bg-white/5'
-                        }`}
-                        title="Bật bố cục showcase theo phong cách NASA Eyes"
-                      >
-                        ✨ Showcase
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setSolarControlMode('observer')
-                          setShowcaseMode(false)
-                        }}
-                        className={`px-2 sm:px-2.5 py-1.5 text-[10px] sm:text-xs font-medium ${
-                          solarControlMode === 'observer' ? 'bg-white/15 text-white' : 'text-gray-400 hover:bg-white/5'
-                        }`}
-                      >
-                        Học tập
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setSolarControlMode((prev) => (prev === 'cockpit' ? 'observer' : 'cockpit'))
-                        }
-                        className={`px-2 sm:px-2.5 py-1.5 text-[10px] sm:text-xs font-medium ${
-                          solarControlMode === 'cockpit' ? 'bg-emerald-600/50 text-emerald-100' : 'text-gray-300 hover:bg-white/5'
-                        }`}
-                      >
-                        🚀 Pilot Mode
-                      </button>
-                    </div>
-                  )}
-                  {!reducedMode && (
-                    <button
-                      type="button"
-                      onClick={() => setViewMode('milkyway')}
-                      className={`px-2.5 sm:px-3 py-1.5 rounded text-xs sm:text-sm font-medium transition-colors ${
-                        viewMode === 'milkyway'
-                          ? 'bg-cyan-500/40 text-cyan-300'
-                          : 'text-gray-400 hover:text-white hover:bg-white/10'
-                      }`}
-                    >
-                      🌌 Milky Way
-                    </button>
-                  )}
-                </>
-              )}
+              </div>
             </div>
-            {!showEarthHistory && isEarthSelected && solarControlMode !== 'cockpit' && (
-              <button
-                type="button"
-                onClick={() => setEarthHistoryOpen(true)}
-                className="glass rounded-lg px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium text-cyan-300 hover:bg-cyan-500/30 transition-colors"
-              >
-                🌍 Explore Earth History
-              </button>
-            )}
-
-            {!showEarthHistory &&
-              viewMode === 'solar' &&
-              selectedSolarPlanetIndex !== null &&
-              !showExploreLearningDock &&
-              !isSolarObserverShowcase &&
-              solarControlMode !== 'cockpit' && (
-                <div className="glass rounded-xl px-3 sm:px-4 py-3 max-w-[min(92vw,22rem)] text-left border border-cyan-500/25">
-                  <p className="text-[10px] uppercase tracking-wider text-cyan-400/90 mb-1">
-                    {solarControlMode === 'observer' && observerLockPending
-                      ? 'Đang phóng tới…'
-                      : solarControlMode === 'observer' && observerTargetLock
-                        ? 'Target lock'
-                        : 'Destination'}
-                  </p>
-                  <p className="text-sm sm:text-base font-semibold text-white">
-                    {planetsData[selectedSolarPlanetIndex]?.name ?? 'Planet'}
-                  </p>
-                  <p className="text-xs text-gray-300 mt-2 leading-relaxed">
-                    {planetsData[selectedSolarPlanetIndex]?.explorerBlurb}
-                  </p>
-                  {solarControlMode === 'observer' && (
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {!observerTargetLock && !observerLockPending && (
-                        <button
-                          type="button"
-                          onClick={() => setObserverLockPending(true)}
-                          className="rounded-lg bg-cyan-600/50 hover:bg-cyan-500/50 px-3 py-1.5 text-xs font-medium text-white border border-cyan-400/40"
-                        >
-                          Khóa mục tiêu · phóng to
-                        </button>
-                      )}
-                      {observerLockPending && (
-                        <span className="text-[11px] text-cyan-300/90 py-1.5">Đang tới đích…</span>
-                      )}
-                      {observerTargetLock && (
-                        <>
-                          {sceneAnchor && (
-                            <button
-                              type="button"
-                              onClick={() => setSceneExploreActive(true)}
-                              className="rounded-lg bg-cyan-600/55 hover:bg-cyan-500/55 px-3 py-1.5 text-xs font-medium text-white border border-cyan-300/40"
-                            >
-                              Khám phá {sceneAnchor.label}
-                            </button>
-                          )}
-                          {sceneExploreActive && (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setSceneExploreActive(false)
-                              }}
-                              className="rounded-lg bg-white/10 hover:bg-white/15 px-3 py-1.5 text-xs font-medium text-gray-100 border border-white/20"
-                            >
-                              Đóng khám phá
-                            </button>
-                          )}
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setObserverTargetLock(false)
-                              setObserverLockPending(false)
-                              setSceneExploreActive(false)
-                            }}
-                            className="rounded-lg bg-white/10 hover:bg-white/15 px-3 py-1.5 text-xs font-medium text-gray-200 border border-white/20"
-                          >
-                            Thoát khóa
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
-          </div>
-        )}
-
-        {cockpitFullscreen && (
-          <button
-            type="button"
-            className="fixed top-3 right-3 z-[40] pointer-events-auto rounded-xl border border-white/15 bg-black/70 px-3 py-2 text-xs font-medium text-emerald-200 shadow-lg backdrop-blur hover:bg-white/10 sm:top-4 sm:right-4 sm:px-4 sm:text-sm"
-            onClick={() => setSolarControlMode('observer')}
-          >
-            Tắt Pilot Mode
-          </button>
-        )}
-
-        {showEarthHistory && (
-          <>
             <Timeline />
             <InfoPanel />
             <FossilPanel />
             <Controls />
           </>
-        )}
-
-        {!showEarthHistory && !isSolarObserverShowcase && (
-          <div
-            className={`fixed left-1/2 -translate-x-1/2 glass rounded-lg px-3 sm:px-4 py-2 text-xs sm:text-sm text-gray-400 text-center max-w-[95vw] sm:max-w-md ${
-              viewMode === 'solar' && solarControlMode === 'cockpit'
-                ? 'bottom-3 sm:bottom-4'
-                : 'bottom-3 sm:bottom-4'
-            }`}
-            style={showExploreLearningDock ? { right: `${dockWidthRem}rem`, width: `calc(100vw - ${dockWidthRem}rem)` } : undefined}
-          >
-            {viewMode === 'solar' && solarControlMode === 'observer' && !isSolarObserverShowcase && (
-              <>
-                Chọn đích → <span className="text-cyan-300">Khóa mục tiêu</span> để bay camera tới — Target lock chỉ hiện khi đã tới nơi
-              </>
-            )}
-            {viewMode === 'solar' && solarControlMode === 'cockpit' && (
-              <span className="text-emerald-300/90">
-                {telemetry.dockedAtPlanet
-                  ? 'Đã tới nơi — mở mục khám phá ở bảng điều khiển'
-                  : 'Pilot Mode: chọn hành tinh, rồi nhấn Travel để bay'}
-              </span>
-            )}
-            {viewMode === 'milkyway' && 'Milky Way sky. Drag to rotate, scroll to zoom.'}
-          </div>
-        )}
-
-        {isSolarObserverShowcase && (
+        ) : (
           <>
             <div className="fixed top-14 left-0 right-0 z-[22] border-b border-white/10 bg-black/35 backdrop-blur-sm">
               <div className="mx-auto max-w-[1400px] px-4 py-2 flex items-center justify-between text-[11px]">
                 <div className="flex items-center gap-2 text-slate-200">
-                  <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-white/20 text-[9px] font-semibold">NASA</span>
-                  <span className="tracking-[0.14em] uppercase text-slate-200/90">Eyes on the Solar System</span>
+                  <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-white/20 text-[9px] font-semibold">
+                    NASA
+                  </span>
+                  <span className="tracking-[0.14em] uppercase text-slate-200/90">Showcase 3D</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    className="rounded border border-white/15 px-2 py-1 text-[10px] uppercase tracking-wider text-slate-300 hover:bg-white/10"
+                  <span
+                    className={`rounded border px-2 py-1 text-[10px] uppercase tracking-wider ${
+                      hasBridgeRulesForEntity
+                        ? 'border-violet-300/40 text-violet-100 bg-violet-500/10'
+                        : 'border-slate-400/35 text-slate-200 bg-white/5'
+                    }`}
+                    title={hasBridgeRulesForEntity ? 'Entity đang chạy theo rule editor cấu hình.' : 'Entity đang chạy theo fallback mặc định.'}
                   >
-                    Search
-                  </button>
-                  <button
-                    type="button"
-                    className="rounded border border-white/15 px-2 py-1 text-[10px] uppercase tracking-wider text-slate-300 hover:bg-white/10"
-                  >
-                    Share
-                  </button>
+                    {hasBridgeRulesForEntity ? 'Rule Mode: Custom' : 'Rule Mode: Default'}
+                  </span>
+                  {bridgeLessonLinks.length > 0 ? (
+                    <span className="rounded border border-emerald-300/35 px-2 py-1 text-[10px] uppercase tracking-wider text-emerald-100 bg-emerald-500/10">
+                      Progress {bridgeVisitedLessonsForEntity}/{bridgeLessonLinks.length}
+                    </span>
+                  ) : null}
+                  {activeShowcaseItem?.linkedPlanetName === 'Earth' ? (
+                    <button
+                      type="button"
+                      onClick={() => setEarthHistoryOpen(true)}
+                      className="rounded border border-emerald-300/40 px-2 py-1 text-[10px] uppercase tracking-wider text-emerald-100 hover:bg-emerald-500/15"
+                    >
+                      Earth History
+                    </button>
+                  ) : null}
                   <button
                     type="button"
                     onClick={() => setShowcaseMenuOpen((v) => !v)}
@@ -1181,16 +518,10 @@ function ExplorePageContent() {
                   >
                     {showcaseMenuOpen ? 'Close' : 'Menu'}
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => setShowcaseMode(false)}
-                    className="rounded border border-amber-300/35 px-2 py-1 text-[10px] uppercase tracking-wider text-amber-100 hover:bg-amber-500/15"
-                  >
-                    Exit showcase
-                  </button>
                 </div>
               </div>
             </div>
+
             <aside className="fixed left-0 top-[5.5rem] bottom-0 z-[21] w-[288px] border-r border-white/10 bg-black/40 backdrop-blur-sm overflow-y-auto">
               <div className="border-b border-white/10 px-3 py-2">
                 <p className="text-[10px] uppercase tracking-[0.16em] text-slate-400">Featured Stories</p>
@@ -1204,14 +535,13 @@ function ExplorePageContent() {
                       type="button"
                       onClick={() => {
                         setShowcaseActiveStoryId(story.id)
-                        const idx = planetsData.findIndex((p) => p.name === story.targetPlanetName)
-                        if (idx >= 0) {
-                          setSelectedSolarPlanetIndex(idx)
-                          setObserverLockPending(false)
-                          setObserverTargetLock(true)
+                        const linked = NASA_SHOWCASE_ITEMS.find(
+                          (item) => item.linkedPlanetName === story.targetPlanetName,
+                        )
+                        if (linked) {
+                          handleShowcaseEntityClicked(linked.id, 'story-sidebar')
+                          openEarthHistoryFromItem(linked.id)
                         }
-                        const linked = NASA_SHOWCASE_ITEMS.find((item) => item.linkedPlanetName === story.targetPlanetName)
-                        if (linked) setShowcaseActiveItemId(linked.id)
                       }}
                       className={`w-full rounded-lg border p-2.5 text-left transition-colors ${
                         active
@@ -1243,7 +573,7 @@ function ExplorePageContent() {
               </div>
             </aside>
 
-            {showcaseMenuOpen && (
+            {showcaseMenuOpen ? (
               <div className="fixed inset-0 z-[23] bg-black/45 backdrop-blur-[1px]">
                 <div className="absolute left-1/2 top-[5.6rem] w-[min(1080px,calc(100vw-2rem))] -translate-x-1/2 rounded-2xl border border-white/10 bg-[#050a13]/96 p-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4 text-sm">
@@ -1255,14 +585,13 @@ function ExplorePageContent() {
                           type="button"
                           onClick={() => {
                             setShowcaseActiveStoryId(story.id)
-                            const idx = planetsData.findIndex((p) => p.name === story.targetPlanetName)
-                            if (idx >= 0) {
-                              setSelectedSolarPlanetIndex(idx)
-                              setObserverLockPending(false)
-                              setObserverTargetLock(true)
+                            const linked = NASA_SHOWCASE_ITEMS.find(
+                              (item) => item.linkedPlanetName === story.targetPlanetName,
+                            )
+                            if (linked) {
+                              handleShowcaseEntityClicked(linked.id, 'story-menu')
+                              openEarthHistoryFromItem(linked.id)
                             }
-                            const linked = NASA_SHOWCASE_ITEMS.find((item) => item.linkedPlanetName === story.targetPlanetName)
-                            if (linked) setShowcaseActiveItemId(linked.id)
                             setShowcaseMenuOpen(false)
                           }}
                           className="block w-full text-left rounded px-2 py-1.5 text-slate-200 hover:bg-white/10"
@@ -1280,15 +609,8 @@ function ExplorePageContent() {
                           onPointerEnter={() => useShowcaseStore.getState().setPreloadGroup(item.group)}
                           onPointerLeave={() => useShowcaseStore.getState().setPreloadGroup(null)}
                           onClick={() => {
-                            if (item.linkedPlanetName) {
-                              const idx = planetsData.findIndex((p) => p.name === item.linkedPlanetName)
-                              if (idx >= 0) {
-                                setSelectedSolarPlanetIndex(idx)
-                                setObserverLockPending(false)
-                                setObserverTargetLock(true)
-                              }
-                            }
-                            setShowcaseActiveItemId(item.id)
+                            handleShowcaseEntityClicked(item.id, 'menu-planets')
+                            openEarthHistoryFromItem(item.id)
                             setShowcaseMenuOpen(false)
                           }}
                           className="block w-full text-left rounded px-2 py-1.5 text-slate-200 hover:bg-white/10"
@@ -1305,7 +627,10 @@ function ExplorePageContent() {
                           type="button"
                           onPointerEnter={() => useShowcaseStore.getState().setPreloadGroup(item.group)}
                           onPointerLeave={() => useShowcaseStore.getState().setPreloadGroup(null)}
-                          onClick={() => setShowcaseActiveItemId(item.id)}
+                          onClick={() => {
+                            handleShowcaseEntityClicked(item.id, 'menu-dwarf')
+                            setShowcaseMenuOpen(false)
+                          }}
                           className="block w-full text-left rounded px-2 py-1.5 text-slate-200/80 bg-white/[0.02] hover:bg-white/10"
                         >
                           {item.name}
@@ -1320,7 +645,10 @@ function ExplorePageContent() {
                           type="button"
                           onPointerEnter={() => useShowcaseStore.getState().setPreloadGroup(item.group)}
                           onPointerLeave={() => useShowcaseStore.getState().setPreloadGroup(null)}
-                          onClick={() => setShowcaseActiveItemId(item.id)}
+                          onClick={() => {
+                            handleShowcaseEntityClicked(item.id, 'menu-comets')
+                            setShowcaseMenuOpen(false)
+                          }}
                           className="block w-full text-left rounded px-2 py-1.5 text-slate-200/80 bg-white/[0.02] hover:bg-white/10"
                         >
                           {item.name}
@@ -1335,7 +663,10 @@ function ExplorePageContent() {
                           type="button"
                           onPointerEnter={() => useShowcaseStore.getState().setPreloadGroup(item.group)}
                           onPointerLeave={() => useShowcaseStore.getState().setPreloadGroup(null)}
-                          onClick={() => setShowcaseActiveItemId(item.id)}
+                          onClick={() => {
+                            handleShowcaseEntityClicked(item.id, 'menu-spacecraft')
+                            setShowcaseMenuOpen(false)
+                          }}
                           className="block w-full text-left rounded px-2 py-1.5 text-slate-200/80 bg-white/[0.02] hover:bg-white/10"
                         >
                           {item.name}
@@ -1345,45 +676,138 @@ function ExplorePageContent() {
                   </div>
                 </div>
               </div>
-            )}
+            ) : null}
 
-            <div className="fixed bottom-3 left-1/2 z-[21] w-[min(760px,calc(100vw-2.5rem))] -translate-x-1/2 rounded-full border border-white/10 bg-black/45 px-4 py-2 backdrop-blur-sm">
-              <div className="flex items-center justify-between text-[11px] text-slate-300">
-                <span className="text-emerald-300">● SHOWCASE</span>
-                <span>CURATED SOLAR VIEW</span>
-                <span>STATIC MODE</span>
+            {bridgeDebugOn ? (
+              <aside className="fixed right-4 top-24 z-[24] w-[21rem] rounded-xl border border-white/15 bg-black/55 p-2.5 backdrop-blur">
+                <p className="text-[10px] uppercase tracking-[0.16em] text-slate-300">Bridge debug</p>
+                <p className="mt-1 text-[10px] text-slate-500">entity={showcaseActiveItemId} | rules={activeBridgeRules.length}</p>
+                <div className="mt-2 max-h-32 overflow-y-auto space-y-1">
+                  {bridgeDebugEntries.length > 0 ? (
+                    bridgeDebugEntries.map((line, idx) => (
+                      <p key={`${line}-${idx}`} className="text-[10px] text-slate-300">
+                        {line}
+                      </p>
+                    ))
+                  ) : (
+                    <p className="text-[10px] text-slate-500">Chưa có event runtime.</p>
+                  )}
+                </div>
+              </aside>
+            ) : null}
+            {!bridgeDebugOn ? (
+              <aside className="fixed right-4 top-24 z-[24] w-[20rem] rounded-xl border border-white/10 bg-black/45 p-2.5 backdrop-blur">
+                <p className="text-[10px] uppercase tracking-[0.16em] text-slate-300">Learning Bridge</p>
+                <p className="mt-1 text-[11px] text-slate-300">
+                  {activeShowcaseItem?.name || showcaseActiveItemId} • focus {focusDelaySec}s
+                </p>
+                <p className="mt-1 text-[10px] text-slate-500">
+                  Actions: {bridgeEnabledActions.length > 0 ? bridgeEnabledActions.join(' • ') : 'Không có'}
+                </p>
+              </aside>
+            ) : null}
+
+            {bridgeOverlayOpen && bridgeOverlayEntityId === showcaseActiveItemId ? (
+              <aside className="fixed left-4 bottom-4 z-[20] w-[22rem] rounded-xl border border-cyan-400/30 bg-[#07111d]/95 p-3 backdrop-blur">
+                <p className="text-[10px] uppercase tracking-[0.18em] text-cyan-300/90">Concept overlay</p>
+                <p className="mt-1 text-xs text-slate-300">
+                  Bạn vừa tập trung vào <span className="text-white font-medium">{activeShowcaseItem?.name || showcaseActiveItemId}</span> hơn {focusDelaySec} giây.
+                </p>
+                {bridgeConceptCards.length > 0 ? (
+                  <div className="mt-2 grid gap-2">
+                    {bridgeConceptCards.map((c) => (
+                      <a
+                        key={c.id}
+                        href={`/search?q=${encodeURIComponent(c.id)}`}
+                        className="rounded-lg border border-white/10 bg-black/30 px-2.5 py-2 hover:bg-white/10"
+                      >
+                        <p className="text-xs font-medium text-cyan-100">{c.title || c.id}</p>
+                        <p className="mt-1 text-[11px] text-slate-400 line-clamp-2">{c.short_description || c.explanation}</p>
+                      </a>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="mt-2 text-[11px] text-slate-400">Chưa map concept cho entity này trong bridge v1.</p>
+                )}
+                {bridgeLessonLinks.length > 0 ? (
+                  <div className="mt-2 rounded-lg border border-white/10 bg-black/25 p-2">
+                    <p className="text-[10px] uppercase tracking-wide text-emerald-300/90">Learning path sync</p>
+                    <p className="mt-1 text-[11px] text-slate-300">
+                      Đã đánh dấu <span className="text-emerald-200 font-medium">{bridgeLessonLinks.length}</span> mục liên quan là visited_3d.
+                    </p>
+                    <p className="mt-1 text-[10px] text-slate-500">Tổng visited_3d hiện có: {Object.keys(visited3DMap).length}</p>
+                  </div>
+                ) : null}
+              </aside>
+            ) : null}
+
+            {bridgeQuizPromptOpen && bridgeQuizQuestions.length > 0 ? (
+              <aside className="fixed right-4 bottom-4 z-[21] w-[23rem] rounded-xl border border-amber-400/35 bg-[#16100a]/95 p-3 backdrop-blur">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-[10px] uppercase tracking-[0.18em] text-amber-300/90">Contextual quiz</p>
+                  <button
+                    type="button"
+                    onClick={() => setBridgeQuizPromptOpen(false)}
+                    className="rounded border border-white/20 px-2 py-0.5 text-[10px] text-slate-200 hover:bg-white/10"
+                  >
+                    Đóng
+                  </button>
+                </div>
+                <p className="mt-1 text-xs text-slate-200">
+                  Bạn vừa khám phá <span className="font-medium text-white">{activeShowcaseItem?.name || showcaseActiveItemId}</span>. Thử nhanh {bridgeQuizQuestions.length} câu nhé?
+                </p>
+                <div className="mt-2 space-y-2">
+                  {bridgeQuizQuestions.map((q, qIdx) => (
+                    <div key={q.id} className="rounded border border-white/10 bg-black/25 p-2">
+                      <p className="text-[11px] text-slate-100">{qIdx + 1}. {q.question}</p>
+                      <div className="mt-1.5 grid gap-1">
+                        {q.options.map((opt, oi) => {
+                          const picked = bridgeQuizAnswers[q.id] === oi
+                          const reveal = bridgeQuizAnswers[q.id] !== undefined
+                          const correct = oi === q.correctIndex
+                          return (
+                            <button
+                              key={`${q.id}-${oi}`}
+                              type="button"
+                              onClick={() => setBridgeQuizAnswers((prev) => ({ ...prev, [q.id]: oi }))}
+                              className={`rounded border px-2 py-1 text-left text-[11px] ${
+                                reveal
+                                  ? correct
+                                    ? 'border-emerald-400/45 bg-emerald-500/15 text-emerald-100'
+                                    : picked
+                                      ? 'border-rose-400/45 bg-rose-500/15 text-rose-100'
+                                      : 'border-white/10 bg-white/5 text-slate-400'
+                                  : picked
+                                    ? 'border-cyan-300/55 bg-cyan-500/20 text-cyan-100'
+                                    : 'border-white/10 bg-white/5 text-slate-200 hover:bg-white/10'
+                              }`}
+                            >
+                              {opt}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <p className="mt-2 text-[11px] text-amber-100/90">
+                  Điểm nhanh: {bridgeQuizScore.correct}/{bridgeQuizScore.total} đúng ({bridgeQuizScore.answered} đã trả lời)
+                </p>
+              </aside>
+            ) : null}
+
+            {discoveryToast ? (
+              <div className="fixed left-1/2 top-20 z-[25] -translate-x-1/2 rounded-xl border border-violet-400/40 bg-violet-900/85 px-4 py-2 text-sm text-violet-100 shadow-lg">
+                Unlock: {discoveryToast.entityId} • rarity: {discoveryToast.rarity}
               </div>
-              <div className="mt-1 h-1.5 rounded-full bg-white/10 overflow-hidden">
-                <div className="h-full w-[48%] rounded-full bg-cyan-400/70" />
+            ) : null}
+            {bridgeRuntimeHint ? (
+              <div className="fixed left-1/2 top-32 z-[25] -translate-x-1/2 rounded-xl border border-cyan-400/35 bg-cyan-950/80 px-4 py-2 text-xs text-cyan-100 shadow-lg">
+                {bridgeRuntimeHint}
               </div>
-            </div>
+            ) : null}
           </>
         )}
-
-        {!showEarthHistory && viewMode === 'solar' && solarControlMode === 'cockpit' && (
-          <CockpitInterior
-            targetLabel={
-              selectedSolarPlanetIndex !== null
-                ? planetsData[selectedSolarPlanetIndex]?.name ?? 'Planet'
-                : 'Staging / Sun'
-            }
-            distance={telemetry.distance}
-            speed={telemetry.speed}
-            distToNavTarget={telemetry.distToNavTarget}
-            dockedAtPlanet={telemetry.dockedAtPlanet}
-            selectedIndex={selectedSolarPlanetIndex}
-            onSelectDestination={(idx) => {
-              void engineRef.current?.ensureRunning()
-              setSelectedSolarPlanetIndex(idx)
-            }}
-            onEarthHistory={() => setEarthHistoryOpen(true)}
-            earthHistoryEnabled={selectedSolarPlanetIndex === EARTH_PLANET_INDEX}
-            engineVolume={cockpitVolume}
-            onEngineVolumeChange={handleCockpitVolumeChange}
-          />
-        )}
-
-        {/* Explore mode now avoids 2D overlays to keep 3D interaction clean. */}
       </div>
     </main>
   )
@@ -1392,9 +816,7 @@ function ExplorePageContent() {
 export default function ExplorePage() {
   return (
     <Suspense fallback={<main className="min-h-screen bg-black pt-20"><Loading /></main>}>
-      <CockpitHudTargetProvider>
-        <ExplorePageContent />
-      </CockpitHudTargetProvider>
+      <ExplorePageContent />
     </Suspense>
   )
 }

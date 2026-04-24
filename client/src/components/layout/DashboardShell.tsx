@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useAuthStore } from '@/store/useAuthStore'
 import { canModerate } from '@/lib/roles'
+import { navItemsForSurface, navLabel, type NavGroup } from '@/lib/navigationConfig'
 
 function navItemActive(href: string, pathname: string): boolean {
   if (href === '/dashboard') return pathname === '/dashboard' || pathname === '/dashboard/'
@@ -11,36 +12,23 @@ function navItemActive(href: string, pathname: string): boolean {
   return href !== '/' && pathname.startsWith(`${href}/`)
 }
 
-const sections: { title: string; items: { href: string; label: string; badge?: string }[] }[] = [
-  {
-    title: 'Học tập',
-    items: [
-      { href: '/dashboard', label: 'Tổng quan' },
-      { href: '/my-courses', label: 'Khóa của tôi' },
-      { href: '/courses', label: 'Khóa học' },
-      { href: '/tutorial', label: 'Lộ trình' },
-      { href: '/explore', label: 'Khám phá 3D' },
-    ],
-  },
-  {
-    title: 'Cộng đồng',
-    items: [
-      { href: '/community', label: 'Diễn đàn' },
-      { href: '/search', label: 'Tìm kiếm' },
-    ],
-  },
-  {
-    title: 'Phần thưởng',
-    items: [
-      { href: '/gem', label: 'Gem' },
-      { href: '/gem-shop', label: 'Cửa hàng Gem', badge: 'SẮP RA MẮT' },
-    ],
-  },
-]
+const groupTitle: Record<NavGroup, string> = {
+  learning: 'Học tập',
+  community: 'Cộng đồng',
+  rewards: 'Phần thưởng',
+  account: 'Tài khoản',
+}
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const { user } = useAuthStore()
+  const dashboardItems = navItemsForSurface('dashboardSidebar')
+  const sections = (['learning', 'community', 'rewards'] as const)
+    .map((group) => ({
+      title: groupTitle[group],
+      items: dashboardItems.filter((item) => item.group === group),
+    }))
+    .filter((sec) => sec.items.length > 0)
 
   return (
     <div className="min-h-screen pt-14 flex bg-[#0a0612] text-slate-100">
@@ -74,7 +62,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                             : 'text-slate-400 hover:bg-white/5 hover:text-slate-200 border border-transparent'
                         }`}
                       >
-                        <span>{item.label}</span>
+                        <span>{navLabel(item)}</span>
                         {item.badge && (
                           <span className="text-[10px] px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300">{item.badge}</span>
                         )}

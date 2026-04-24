@@ -72,22 +72,22 @@ function searchConceptsList(q: string, concepts: LearningConcept[]): LearningCon
 const FACETS: { id: Facet; label: string }[] = [
   { id: 'all', label: 'Tất cả' },
   { id: 'courses', label: 'Khóa học' },
-  { id: 'path_modules', label: 'Module LP' },
-  { id: 'path_nodes', label: 'Chủ đề LP' },
-  { id: 'path_lessons', label: 'Bài LP' },
-  { id: 'concepts', label: 'Concept' },
+  { id: 'path_modules', label: 'Chặng học' },
+  { id: 'path_nodes', label: 'Chủ đề' },
+  { id: 'path_lessons', label: 'Bài học' },
+  { id: 'concepts', label: 'Kiến thức' },
 ]
 
 function facetLabel(kind: PathHit['kind'] | 'concept' | 'course'): string {
   switch (kind) {
     case 'module':
-      return 'Module'
+      return 'Chặng học'
     case 'node':
       return 'Chủ đề'
     case 'lesson':
       return 'Bài học'
     case 'concept':
-      return 'Concept'
+      return 'Kiến thức'
     case 'course':
       return 'Khóa học'
     default:
@@ -149,15 +149,15 @@ export default function SearchPage() {
   return (
     <div className="min-h-screen bg-black pt-16 px-4 pb-12">
       <main className="max-w-3xl mx-auto">
-        <h1 className="text-xl font-bold text-cyan-400 mt-8 mb-2">Tìm kiếm thống nhất</h1>
+        <h1 className="text-xl font-bold text-cyan-400 mt-8 mb-2">Tìm kiếm học tập</h1>
         <p className="text-sm text-slate-500 mb-4">
-          Một ô tìm — lọc theo loại: khóa học, module/chủ đề/bài trong Lộ trình học, hoặc concept (đồ thị tri thức).
+          Một ô tìm cho toàn bộ nội dung học: khóa học, chặng học, chủ đề, bài học và bản đồ kiến thức.
         </p>
         <input
           type="search"
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="Gõ từ khóa: bài học, module, concept id…"
+          placeholder="Gõ từ khóa: bài học, chủ đề, kiến thức..."
           className="w-full rounded-xl bg-white/5 border border-white/15 px-4 py-3 text-white placeholder-gray-500 focus:border-cyan-500/50 focus:outline-none"
           autoFocus
         />
@@ -207,7 +207,7 @@ export default function SearchPage() {
 
             {showModules && modulesOnly.length > 0 && (
               <section>
-                <h2 className="text-sm font-semibold text-gray-400 mb-3">Module lộ trình</h2>
+                <h2 className="text-sm font-semibold text-gray-400 mb-3">Chặng học trong lộ trình</h2>
                 <div className="space-y-3">
                   {modulesOnly.map((h) => (
                     <Link key={h.href} href={h.href} className="block rounded-xl border border-white/10 bg-white/5 p-4 hover:bg-white/10 transition-colors">
@@ -222,7 +222,7 @@ export default function SearchPage() {
 
             {showNodes && nodesOnly.length > 0 && (
               <section>
-                <h2 className="text-sm font-semibold text-gray-400 mb-3">Chủ đề (node)</h2>
+                <h2 className="text-sm font-semibold text-gray-400 mb-3">Chủ đề trong lộ trình</h2>
                 <div className="space-y-3">
                   {nodesOnly.map((h) => (
                     <Link key={h.href} href={h.href} className="block rounded-xl border border-white/10 bg-white/5 p-4 hover:bg-white/10 transition-colors">
@@ -237,7 +237,7 @@ export default function SearchPage() {
 
             {showLessons && lessonsOnly.length > 0 && (
               <section>
-                <h2 className="text-sm font-semibold text-gray-400 mb-3">Bài học lộ trình</h2>
+                <h2 className="text-sm font-semibold text-gray-400 mb-3">Bài học trong lộ trình</h2>
                 <div className="space-y-3">
                   {lessonsOnly.map((h) => (
                     <Link key={h.href} href={h.href} className="block rounded-xl border border-white/10 bg-white/5 p-4 hover:bg-white/10 transition-colors">
@@ -252,7 +252,7 @@ export default function SearchPage() {
 
             {showConcepts && conceptHits.length > 0 && (
               <section>
-                <h2 className="text-sm font-semibold text-gray-400 mb-3">Concept</h2>
+                <h2 className="text-sm font-semibold text-gray-400 mb-3">Kiến thức nền</h2>
                 <div className="space-y-3">
                   {conceptHits.map((c) => (
                     <Link

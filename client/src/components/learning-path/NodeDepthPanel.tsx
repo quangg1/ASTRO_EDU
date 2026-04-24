@@ -8,15 +8,18 @@ import { DEPTH_META, DEPTH_ORDER } from '@/data/learningPathCurriculum'
 import {
   loadLessonCompletion,
   loadLessonMastery,
+  loadLessonVisited3D,
   syncLearningPathCompletion,
   isLessonComplete,
   isLessonMastered,
   type LessonCompletionMap,
   type LessonMasteryMap,
+  type LessonVisited3DMap,
 } from '@/lib/learningPathProgress'
 import { trackLearningPathBehavior } from '@/lib/learningPathBehavior'
 import { Award, CheckCircle2, ChevronRight } from 'lucide-react'
 import { useAuthStore } from '@/store/useAuthStore'
+import { suggestShowcaseTargetForLesson } from '@/lib/showcaseLearningBridge'
 
 type Props = {
   module: LearningModule
@@ -29,17 +32,20 @@ export default function NodeDepthPanel({ module, node }: Props) {
   const [active, setActive] = useState<DepthLevel>(depths[0] ?? 'beginner')
   const [completion, setCompletion] = useState<LessonCompletionMap>({})
   const [mastery, setMastery] = useState<LessonMasteryMap>({})
+  const [visited3D, setVisited3D] = useState<LessonVisited3DMap>({})
 
   useEffect(() => {
     const refresh = () => {
       setCompletion(loadLessonCompletion(userId))
       setMastery(loadLessonMastery(userId))
+      setVisited3D(loadLessonVisited3D(userId))
     }
     const refreshAndSync = () => {
       refresh()
       void syncLearningPathCompletion(userId).then((synced) => {
         setCompletion(synced)
         setMastery(loadLessonMastery(userId))
+        setVisited3D(loadLessonVisited3D(userId))
       })
     }
     refreshAndSync()
@@ -126,6 +132,8 @@ export default function NodeDepthPanel({ module, node }: Props) {
               const done = isLessonComplete(completion, lesson.id)
               const mast = isLessonMastered(mastery, lesson.id)
               const href = `/tutorial/${encodeURIComponent(module.id)}/${encodeURIComponent(node.id)}/${encodeURIComponent(lesson.id)}`
+              const showcaseJump = suggestShowcaseTargetForLesson(lesson)
+              const visitedScene = !!visited3D[lesson.id]
               return (
                 <motion.li
                   key={lesson.id}
@@ -133,22 +141,49 @@ export default function NodeDepthPanel({ module, node }: Props) {
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: i * 0.04 }}
                 >
-                  <Link
-                    href={href}
-                    className="group flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.02] px-4 py-3 hover:border-cyan-500/35 hover:bg-cyan-500/5 transition-all"
-                  >
-                    {mast ? (
-                      <Award className="w-5 h-5 shrink-0 text-violet-300" aria-label="Đã nắm" />
-                    ) : done ? (
-                      <CheckCircle2 className="w-5 h-5 shrink-0 text-emerald-400" aria-hidden />
-                    ) : (
-                      <span className="mt-0.5 h-2 w-2 shrink-0 rounded-full bg-cyan-400/80 shadow-[0_0_8px_rgba(34,211,238,0.5)]" />
-                    )}
-                    <span className="flex-1 text-slate-200 text-sm md:text-base group-hover:text-white">
-                      {lesson.titleVi}
-                    </span>
-                    <ChevronRight className="w-5 h-5 text-slate-600 group-hover:text-cyan-400 shrink-0 transition-colors" />
-                  </Link>
+                  <div className="rounded-xl border border-white/10 bg-white/[0.02] px-4 py-3">
+                    <Link
+                      href={href}
+                      className="group flex items-center gap-3 hover:text-white"
+                    >
+                      {mast ? (
+                        <Award className="w-5 h-5 shrink-0 text-violet-300" aria-label="Đã nắm" />
+                      ) : done ? (
+                        <CheckCircle2 className="w-5 h-5 shrink-0 text-emerald-400" aria-hidden />
+                      ) : (
+                        <span className="mt-0.5 h-2 w-2 shrink-0 rounded-full bg-cyan-400/80 shadow-[0_0_8px_rgba(34,211,238,0.5)]" />
+                      )}
+                      <span className="flex-1 text-slate-200 text-sm md:text-base group-hover:text-white">
+                        {lesson.titleVi}
+                      </span>
+                      <ChevronRight className="w-5 h-5 text-slate-600 group-hover:text-cyan-400 shrink-0 transition-colors" />
+                    </Link>
+                    {showcaseJump ? (
+                      <div className="mt-2 flex items-center justify-between gap-2 rounded-lg border border-white/10 bg-black/20 px-2.5 py-2">
+                        <p className={`text-[11px] ${visitedScene ? 'text-emerald-300' : 'text-amber-200'}`}>
+                          {visitedScene ? 'Đã khám phá 3D liên quan' : 'Bạn chưa khám phá entity 3D liên quan'}
+                        </p>
+                        {!visitedScene ? (
+                          <Link
+                            href={showcaseJump.href}
+                            onClick={() =>
+                              trackLearningPathBehavior({
+                                eventName: 'lp_lesson_opened',
+                                moduleId: module.id,
+                                nodeId: node.id,
+                                lessonId: lesson.id,
+                                depth: active,
+                                metadata: { source: 'learning-cta-to-showcase', entityId: showcaseJump.entityId },
+                              })
+                            }
+                            className="rounded-md border border-cyan-400/40 bg-cyan-500/20 px-2 py-1 text-[11px] font-medium text-cyan-100 hover:bg-cyan-500/30"
+                          >
+                            Khám phá 3D
+                          </Link>
+                        ) : null}
+                      </div>
+                    ) : null}
+                  </div>
                 </motion.li>
               )
             })}

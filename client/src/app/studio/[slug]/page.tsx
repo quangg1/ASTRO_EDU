@@ -69,6 +69,8 @@ export default function StudioEditorPage() {
   const [saving, setSaving] = useState(false)
   const [si, setSi] = useState(0)
   const [msg, setMsg] = useState<string | null>(null)
+  const [baselineSnapshot, setBaselineSnapshot] = useState('')
+  const [undoSnapshot, setUndoSnapshot] = useState<{ label: string; course: EditorCourse } | null>(null)
   const [tab, setTab] = useState<Tab>('blocks')
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({})
   const [editingModId, setEditingModId] = useState<string | null>(null)
@@ -91,9 +93,13 @@ export default function StudioEditorPage() {
             order: i,
           }))
           const fixedLessons = (c.lessons as Lesson[]).map((l) => ({ ...l, moduleId: l.moduleId || `auto-w${l.week ?? 1}` }))
-          setCourse({ ...(c as Course), modules: autoModules, lessons: fixedLessons })
+          const nextCourse = { ...(c as Course), modules: autoModules, lessons: fixedLessons }
+          setCourse(nextCourse)
+          setBaselineSnapshot(JSON.stringify(nextCourse))
         } else {
-          setCourse({ ...(c as Course), modules, lessons: c.lessons as Lesson[] })
+          const nextCourse = { ...(c as Course), modules, lessons: c.lessons as Lesson[] }
+          setCourse(nextCourse)
+          setBaselineSnapshot(JSON.stringify(nextCourse))
         }
       }
       setLoading(false)
@@ -101,6 +107,14 @@ export default function StudioEditorPage() {
   }, [slug, user])
 
   const lesson = useMemo(() => course?.lessons?.[si] ?? null, [course, si])
+  const isDirty = useMemo(() => {
+    if (!course || !baselineSnapshot) return false
+    return JSON.stringify(course) !== baselineSnapshot
+  }, [course, baselineSnapshot])
+  const confirmLeaveIfDirty = useCallback(() => {
+    if (!isDirty || saving) return true
+    return window.confirm('Bạn có thay đổi chưa lưu. Rời trang và bỏ thay đổi?')
+  }, [isDirty, saving])
   const modules = useMemo(() => (course?.modules ?? []).sort((a, b) => a.order - b.order), [course])
 
   const uc = useCallback((fn: (p: EditorCourse) => EditorCourse) => setCourse((p) => p ? fn(p) : p), [])
@@ -110,6 +124,7 @@ export default function StudioEditorPage() {
   const renameModule = (id: string, title: string) => { uc((p) => ({ ...p, modules: p.modules.map((m) => m._id === id ? { ...m, title, slug: slugify(title) } : m) })); setEditingModId(null) }
   const deleteModule = (id: string) => {
     if (!confirm('Delete this module and unassign its lessons?')) return
+    if (course) setUndoSnapshot({ label: 'Đã xóa module.', course: clone(course) })
     uc((p) => ({
       ...p,
       modules: p.modules.filter((m) => m._id !== id).map((m, i) => ({ ...m, order: i })),
@@ -130,7 +145,7 @@ export default function StudioEditorPage() {
     if (course) setSi(course.lessons.length)
   }
   const dupLesson = (i: number) => { uc((p) => { const s = clone(p.lessons[i]); s.title += ' (copy)'; s.slug = `${slugify(s.title)}-${Date.now()}`; const a = [...p.lessons]; a.splice(i + 1, 0, s); return { ...p, lessons: a.map((l, j) => ({ ...l, order: j })) } }); setSi(i + 1) }
-  const delLesson = (i: number) => { if (!confirm('Delete this lesson?')) return; uc((p) => ({ ...p, lessons: p.lessons.filter((_, j) => j !== i).map((l, j) => ({ ...l, order: j })) })); setSi((v) => Math.max(0, Math.min(v, (course?.lessons.length ?? 1) - 2))) }
+  const delLesson = (i: number) => { if (!confirm('Delete this lesson?')) return; if (course) setUndoSnapshot({ label: 'Đã xóa bài học.', course: clone(course) }); uc((p) => ({ ...p, lessons: p.lessons.filter((_, j) => j !== i).map((l, j) => ({ ...l, order: j })) })); setSi((v) => Math.max(0, Math.min(v, (course?.lessons.length ?? 1) - 2))) }
 
   const toggleCollapse = (id: string) => setCollapsed((p) => ({ ...p, [id]: !p[id] }))
 
@@ -144,8 +159,21 @@ export default function StudioEditorPage() {
       lessons: course.lessons.map((l, i) => ({ ...l, order: i })),
     })
     setSaving(false); setMsg(r.success ? 'Saved!' : r.error || 'Failed')
-    if (r.success) setTimeout(() => setMsg(null), 2500)
+    if (r.success && course) {
+      setBaselineSnapshot(JSON.stringify(course))
+      setTimeout(() => setMsg(null), 2500)
+    }
   }
+
+  useEffect(() => {
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (!isDirty || saving) return
+      e.preventDefault()
+      e.returnValue = ''
+    }
+    window.addEventListener('beforeunload', onBeforeUnload)
+    return () => window.removeEventListener('beforeunload', onBeforeUnload)
+  }, [isDirty, saving])
 
   if (!checked || !user || loading) return <div className="min-h-screen bg-[#030712] pt-24 text-center text-gray-500">Loading studio...</div>
   if (!course) return <div className="min-h-screen bg-[#030712] pt-24 text-center text-gray-500">Course not found.</div>
@@ -165,11 +193,21 @@ export default function StudioEditorPage() {
         <aside className="space-y-3">
           <div className="rounded-2xl border border-white/10 bg-[#0a0f17]/80 backdrop-blur p-3">
             <div className="flex items-center gap-2 mb-2">
-              <Link href="/studio" className="text-xs text-gray-500 hover:text-cyan-300">&larr; Studio</Link>
+              <Link
+                href="/studio"
+                onClick={(e) => {
+                  if (confirmLeaveIfDirty()) return
+                  e.preventDefault()
+                }}
+                className="text-xs text-gray-500 hover:text-cyan-300"
+              >
+                &larr; Studio
+              </Link>
               <button onClick={() => uc((p) => ({ ...p, published: !p.published }))} className={`ml-auto text-[10px] px-2 py-0.5 rounded-full border ${pubCls}`}>
                 {course.published ? 'Published' : 'Draft'}
               </button>
             </div>
+            <p className={`text-[11px] ${isDirty ? 'text-amber-300' : 'text-emerald-300'}`}>{isDirty ? 'Chưa lưu' : 'Đã lưu'}</p>
             <h2 className="text-sm font-semibold text-white truncate">{course.title}</h2>
             <p className="text-[11px] text-gray-500 mt-0.5">{modules.length} modules &middot; {course.lessons.length} lessons</p>
           </div>
@@ -275,6 +313,19 @@ export default function StudioEditorPage() {
             </button>
           </div>
           {msg && <p className={`text-xs text-center ${msg === 'Saved!' ? 'text-emerald-400' : 'text-red-400'}`}>{msg}</p>}
+          {undoSnapshot ? (
+            <button
+              type="button"
+              onClick={() => {
+                setCourse(clone(undoSnapshot.course))
+                setUndoSnapshot(null)
+                setMsg('Đã hoàn tác thao tác xóa.')
+              }}
+              className="w-full text-[11px] py-2 rounded-xl border border-amber-400/35 text-amber-200 hover:bg-amber-500/10"
+            >
+              {undoSnapshot.label} Nhấn để hoàn tác
+            </button>
+          ) : null}
         </aside>
 
         {/* ===== RIGHT: Editor ===== */}

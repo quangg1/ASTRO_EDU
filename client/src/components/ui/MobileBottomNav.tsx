@@ -4,6 +4,8 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Home, ListTree, BookOpen, MessageCircle, UserRound } from 'lucide-react'
 import { useAuthStore } from '@/store/useAuthStore'
+import { viText } from '@/messages/vi'
+import { navItemsForSurface, navLabel } from '@/lib/navigationConfig'
 
 function active(pathname: string, href: string, rootOnly = false): boolean {
   if (href === '/') return pathname === '/' || pathname === ''
@@ -17,7 +19,7 @@ export function MobileBottomNav() {
   const { user } = useAuthStore()
 
   const accountHref = user ? '/dashboard' : '/login'
-  const accountLabel = user ? 'Tài khoản' : 'Đăng nhập'
+  const accountLabel = user ? viText.nav.account : viText.nav.signIn
 
   const accountActive =
     !!user &&
@@ -26,11 +28,25 @@ export function MobileBottomNav() {
       pathname.startsWith('/my-courses') ||
       pathname.startsWith('/gem'))
 
+  const itemsFromConfig = navItemsForSurface('mobileBottom')
+  const iconById = {
+    home: Home,
+    learningPath: ListTree,
+    courses: BookOpen,
+    community: MessageCircle,
+  } as const
   const items = [
-    { href: '/', label: 'Trang chủ', icon: Home, isActive: () => pathname === '/' || pathname === '' },
-    { href: '/tutorial', label: 'Lộ trình', icon: ListTree, isActive: () => active(pathname, '/tutorial') },
-    { href: '/courses', label: 'Khóa học', icon: BookOpen, isActive: () => active(pathname, '/courses') },
-    { href: '/community', label: 'Cộng đồng', icon: MessageCircle, isActive: () => active(pathname, '/community') },
+    ...itemsFromConfig
+      .filter((item) => item.id in iconById)
+      .map((item) => {
+      const Icon = iconById[item.id as keyof typeof iconById]
+      return {
+        href: item.href,
+        label: navLabel(item),
+        icon: Icon,
+        isActive: () => active(pathname, item.href, item.href === '/'),
+      }
+    }),
     {
       href: accountHref,
       label: accountLabel,
