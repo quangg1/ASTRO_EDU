@@ -1,6 +1,7 @@
 'use client'
 
 import { useEditor, EditorContent } from '@tiptap/react'
+import { Extension } from '@tiptap/core'
 import StarterKit from '@tiptap/starter-kit'
 import { Underline } from '@tiptap/extension-underline'
 import { TextAlign } from '@tiptap/extension-text-align'
@@ -13,6 +14,53 @@ import { Placeholder } from '@tiptap/extension-placeholder'
 import { useCallback, useEffect, useRef } from 'react'
 
 const COLORS = ['#ffffff', '#94a3b8', '#22d3ee', '#34d399', '#facc15', '#f87171', '#c084fc', '#fb923c']
+const FONT_FAMILIES = [
+  { label: 'Default', value: '' },
+  { label: 'Arial', value: 'Arial, Helvetica, sans-serif' },
+  { label: 'Times New Roman', value: '"Times New Roman", Times, serif' },
+  { label: 'Georgia', value: 'Georgia, serif' },
+  { label: 'Courier New', value: '"Courier New", Courier, monospace' },
+  { label: 'Verdana', value: 'Verdana, Geneva, sans-serif' },
+]
+const FONT_SIZES = ['12px', '14px', '16px', '18px', '20px', '24px', '30px', '36px']
+
+const FontFamilyExt = Extension.create({
+  name: 'fontFamily',
+  addGlobalAttributes() {
+    return [
+      {
+        types: ['textStyle'],
+        attributes: {
+          fontFamily: {
+            default: null,
+            parseHTML: (element) => element.style.fontFamily || null,
+            renderHTML: (attributes) =>
+              attributes.fontFamily ? { style: `font-family:${attributes.fontFamily}` } : {},
+          },
+        },
+      },
+    ]
+  },
+})
+
+const FontSizeExt = Extension.create({
+  name: 'fontSize',
+  addGlobalAttributes() {
+    return [
+      {
+        types: ['textStyle'],
+        attributes: {
+          fontSize: {
+            default: null,
+            parseHTML: (element) => element.style.fontSize || null,
+            renderHTML: (attributes) =>
+              attributes.fontSize ? { style: `font-size:${attributes.fontSize}` } : {},
+          },
+        },
+      },
+    ]
+  },
+})
 
 interface Props {
   value: string
@@ -74,6 +122,8 @@ export default function RichTextEditor({ value, onChange, placeholder }: Props) 
       StarterKit.configure({ codeBlock: false }),
       Underline,
       TextStyle,
+      FontFamilyExt,
+      FontSizeExt,
       Color,
       Highlight.configure({ multicolor: true }),
       TextAlign.configure({ types: ['heading', 'paragraph'] }),
@@ -189,6 +239,44 @@ export default function RichTextEditor({ value, onChange, placeholder }: Props) 
         <ToolBtn active={editor.isActive('underline')} onClick={() => editor.chain().focus().toggleUnderline().run()} title="Underline"><u>U</u></ToolBtn>
         <ToolBtn active={editor.isActive('strike')} onClick={() => editor.chain().focus().toggleStrike().run()} title="Strikethrough"><s>S</s></ToolBtn>
         <ToolBtn active={editor.isActive('code')} onClick={() => editor.chain().focus().toggleCode().run()} title="Inline code"><span className="font-mono">&lt;&gt;</span></ToolBtn>
+        <ToolBtn onClick={() => editor.chain().focus().unsetAllMarks().clearNodes().run()} title="Clear formatting">Tx</ToolBtn>
+
+        <div className="w-px h-5 bg-white/15 mx-1" />
+
+        {/* Font family + size (Gmail-like controls) */}
+        <select
+          value={String(editor.getAttributes('textStyle').fontFamily || '')}
+          onChange={(e) => {
+            const val = e.target.value
+            if (!val) editor.chain().focus().setMark('textStyle', { fontFamily: null }).run()
+            else editor.chain().focus().setMark('textStyle', { fontFamily: val }).run()
+          }}
+          className="h-7 rounded border border-white/15 bg-black/40 px-2 text-[11px] text-slate-200 focus:border-cyan-500/50 focus:outline-none"
+          title="Font family"
+        >
+          {FONT_FAMILIES.map((f) => (
+            <option key={f.label} value={f.value}>
+              {f.label}
+            </option>
+          ))}
+        </select>
+        <select
+          value={String(editor.getAttributes('textStyle').fontSize || '')}
+          onChange={(e) => {
+            const val = e.target.value
+            if (!val) editor.chain().focus().setMark('textStyle', { fontSize: null }).run()
+            else editor.chain().focus().setMark('textStyle', { fontSize: val }).run()
+          }}
+          className="h-7 w-[74px] rounded border border-white/15 bg-black/40 px-2 text-[11px] text-slate-200 focus:border-cyan-500/50 focus:outline-none"
+          title="Font size"
+        >
+          <option value="">Size</option>
+          {FONT_SIZES.map((s) => (
+            <option key={s} value={s}>
+              {s}
+            </option>
+          ))}
+        </select>
 
         <div className="w-px h-5 bg-white/15 mx-1" />
 

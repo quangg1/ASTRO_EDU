@@ -17,6 +17,8 @@ export function ShowcaseEntityMesh({
   active: boolean
   onSelect?: () => void
 }) {
+  if (!active) return null
+
   if (entity.modelPath) {
     return <ShowcaseModelEntityMesh entity={entity} active={active} onSelect={onSelect} />
   }
@@ -29,23 +31,45 @@ export function ShowcaseEntityMesh({
     }
     let alive = true
     const loader = new THREE.TextureLoader()
+    loader.setCrossOrigin('anonymous')
+    const assetVersion =
+      (typeof process !== 'undefined' && process.env.NEXT_PUBLIC_ASSET_VERSION) || ''
+    const baseUrl = getStaticAssetUrl(entity.texturePath)
+    const url = assetVersion
+      ? `${baseUrl}${baseUrl.includes('?') ? '&' : '?'}v=${encodeURIComponent(assetVersion)}`
+      : baseUrl
+    const applyLoaded = (loaded: THREE.Texture) => {
+      if (!alive) return
+      applyGlobeTextureQuality(loaded, gl)
+      setTex(loaded)
+    }
     loader.load(
-      getStaticAssetUrl(entity.texturePath),
-      (loaded) => {
-        if (!alive) return
-        applyGlobeTextureQuality(loaded, gl)
-        setTex(loaded)
-      },
+      url,
+      applyLoaded,
       undefined,
       () => {
         if (!alive) return
-        setTex(null)
+        const retryUrl = `${baseUrl}${baseUrl.includes('?') ? '&' : '?'}cb=${Date.now()}`
+        loader.load(
+          retryUrl,
+          applyLoaded,
+          undefined,
+          () => {
+            if (!alive) return
+            console.error('[ShowcaseEntityMesh] Texture load failed:', retryUrl)
+            // Keep scene usable when CDN/browser cache serves a broken cross-origin response.
+            setTex(null)
+          },
+        )
       },
     )
     return () => {
       alive = false
     }
   }, [entity.texturePath, gl])
+
+  if (entity.texturePath && !tex) return null
+
   return (
     <mesh
       onClick={(e) => {
@@ -59,11 +83,11 @@ export function ShowcaseEntityMesh({
         document.body.style.cursor = 'auto'
       }}
     >
-      <sphereGeometry args={[active ? entity.size * 1.45 : entity.size, 16, 16]} />
+      <sphereGeometry args={[Math.max(0.055, entity.size * 1.5), 28, 20]} />
       {tex ? (
-        <meshBasicMaterial map={tex} />
+        <meshBasicMaterial map={tex} toneMapped={false} />
       ) : (
-        <meshBasicMaterial color={entity.color} />
+        <meshBasicMaterial color={entity.color} toneMapped={false} />
       )}
     </mesh>
   )

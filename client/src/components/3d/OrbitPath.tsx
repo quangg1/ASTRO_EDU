@@ -3,7 +3,7 @@
 import { useMemo, useRef } from 'react'
 import * as THREE from 'three'
 import type { PlanetData } from '@/lib/solarSystemData'
-import { ORBIT_SEGMENTS, computeOrbitalPosition } from '@/lib/solarOrbitMath'
+import { computeOrbitalPosition } from '@/lib/solarOrbitMath'
 import { useLineProximityFade, type OrbitProximityFade } from '@/components/3d/orbitProximityFade'
 
 export function OrbitPath({
@@ -23,9 +23,20 @@ export function OrbitPath({
   proximityFade?: OrbitProximityFade
 }) {
   const points = useMemo(() => {
+    const e = THREE.MathUtils.clamp(data.orbitEccentricity ?? 0, 0, 0.95)
+    const segments = Math.max(128, Math.min(720, Math.round(128 + data.distance * 2.2 + e * 240)))
     const pts: THREE.Vector3[] = []
-    for (let i = 0; i <= ORBIT_SEGMENTS; i++) {
-      const t = (i / ORBIT_SEGMENTS) * Math.PI * 2
+    for (let i = 0; i <= segments; i++) {
+      const u = (i / segments) * Math.PI * 2
+      // Sample via eccentric anomaly to avoid visibly "equal-step" corners on elliptical orbits.
+      const t =
+        e > 1e-5
+          ? 2 *
+            Math.atan2(
+              Math.sqrt(1 + e) * Math.sin(u / 2),
+              Math.sqrt(1 - e) * Math.cos(u / 2),
+            )
+          : u
       pts.push(computeOrbitalPosition(data, t))
     }
     return pts
@@ -64,6 +75,7 @@ export function OrbitPath({
         transparent
         opacity={highlighted ? 0.92 : 0.42}
         depthWrite={false}
+        linewidth={highlighted ? 2 : 1.5}
       />
     </lineLoop>
   )

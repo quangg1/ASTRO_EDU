@@ -68,6 +68,7 @@ export function ShowcaseCameraManager({
 }: Props) {
   const setFocusedStudioPosition = useShowcaseStore((s) => s.setFocusedStudioPosition)
   const setShowcaseCameraUserOverride = useShowcaseStore((s) => s.setShowcaseCameraUserOverride)
+  const prevDistRef = useRef(0)
 
   const focusKeyRef = useRef<string | null>(null)
   const appliedUrlRef = useRef(false)
@@ -84,6 +85,11 @@ export function ShowcaseCameraManager({
     const c = controlsRef.current
     if (!c) return
     sanitizeControlsCamera(c)
+    const distToSun = c.object.position.length()
+    if (Number.isFinite(distToSun) && Math.abs(distToSun - prevDistRef.current) > 0.5) {
+      useShowcaseStore.getState().setCameraDistanceToSun(distToSun)
+      prevDistRef.current = distToSun
+    }
 
     const settleKey = `${activeItemId ?? ''}|${selectedIndex ?? 'x'}`
     if (focusKeyRef.current !== settleKey) {
@@ -111,19 +117,19 @@ export function ShowcaseCameraManager({
       if (pIdx >= 0 && moonPos) {
         const parentPos = planetPositionsRef.current[pIdx]
         if (parentPos && parentPos.lengthSq() > 1e-6 && moonPos.lengthSq() > 1e-6) {
-          focus = parentPos.clone().lerp(moonPos, 0.38)
+          // Entity closeup: lock focus on entity itself (not midpoint) to match NASA Eyes interaction.
+          focus = moonPos.clone()
           const span = parentPos.distanceTo(moonPos)
-          const pr = planetsData[pIdx]?.radius ?? 0.3
-          wantDist = THREE.MathUtils.clamp(span * 2.2 + pr * 3.5, 2.4, 22)
+          wantDist = THREE.MathUtils.clamp(Math.max(1.4, span * 0.75), 1.35, 4.6)
         }
       }
     } else if (orbitEnt?.parentShowcaseEntityId && aid) {
       const self = showcaseEntityPositionsRef.current.get(aid)
       const par = showcaseEntityPositionsRef.current.get(orbitEnt.parentShowcaseEntityId)
       if (self && par && self.lengthSq() > 1e-6 && par.lengthSq() > 1e-6) {
-        focus = par.clone().lerp(self, 0.36)
+        focus = self.clone()
         const span = par.distanceTo(self)
-        wantDist = THREE.MathUtils.clamp(span * 2.35, 1.8, 18)
+        wantDist = THREE.MathUtils.clamp(Math.max(1.1, span * 0.7), 1.1, 3.8)
       }
     } else if (catalog?.linkedPlanetName) {
       const pIdx = planetsData.findIndex((p) => p.name === catalog.linkedPlanetName)

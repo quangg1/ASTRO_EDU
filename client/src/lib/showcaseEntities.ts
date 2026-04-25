@@ -56,7 +56,7 @@ export const NASA_SHOWCASE_STORIES: NasaStory[] = [
 export const NASA_SHOWCASE_ITEMS: NasaCatalogItem[] = [
   { id: 'planet-mercury', name: 'Mercury', group: 'planets_moons', linkedPlanetName: 'Mercury' },
   { id: 'planet-venus', name: 'Venus', group: 'planets_moons', linkedPlanetName: 'Venus', texturePath: '/textures/nasa/venus_nasa.jpg' },
-  { id: 'planet-earth', name: 'Earth', group: 'planets_moons', linkedPlanetName: 'Earth', texturePath: '/textures/8k_earth_daymap.jpg' },
+  { id: 'planet-earth', name: 'Earth', group: 'planets_moons', linkedPlanetName: 'Earth', texturePath: '/textures/nasa/earth_nasa.jpg' },
   { id: 'planet-mars', name: 'Mars', group: 'planets_moons', linkedPlanetName: 'Mars', texturePath: '/textures/nasa/mars_nasa.jpg' },
   { id: 'planet-jupiter', name: 'Jupiter', group: 'planets_moons', linkedPlanetName: 'Jupiter', texturePath: '/textures/nasa/jupiter_nasa.jpg' },
   { id: 'planet-saturn', name: 'Saturn', group: 'planets_moons', linkedPlanetName: 'Saturn', texturePath: '/textures/nasa/saturn_nasa.jpg' },

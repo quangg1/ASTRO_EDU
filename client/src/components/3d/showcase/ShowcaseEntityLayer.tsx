@@ -58,17 +58,21 @@ export function ShowcaseEntityLayer({
         if (pIdx == null) continue
         const p = planetPositionsRef.current[pIdx]
         if (!p || p.lengthSq() < 1e-6) continue
-        const x = Math.cos(nextA) * entity.distance
-        const z = Math.sin(nextA) * entity.distance
-        const y = Math.sin(nextA * 0.5) * entity.distance * 0.08
+        const parentRadius = planetsData[pIdx]?.radius ?? 0.6
+        // Keep moon/entity orbit outside parent sphere for readable, NASA-Eyes-like composition.
+        const orbitRadius = Math.max(entity.distance, parentRadius * 1.55 + entity.distance * 0.65)
+        const x = Math.cos(nextA) * orbitRadius
+        const z = Math.sin(nextA) * orbitRadius
+        const y = Math.sin(nextA * 0.5) * orbitRadius * 0.06
         g.position.set(p.x + x, p.y + y, p.z + z)
       } else if (entity.parentShowcaseEntityId) {
         const parentG = groupsRef.current.get(entity.parentShowcaseEntityId)
         if (!parentG) continue
         const p = parentG.position
-        const x = Math.cos(nextA) * entity.distance
-        const z = Math.sin(nextA) * entity.distance
-        const y = Math.sin(nextA * 0.5) * entity.distance * 0.08
+        const orbitRadius = Math.max(entity.distance, entity.distance * 1.45)
+        const x = Math.cos(nextA) * orbitRadius
+        const z = Math.sin(nextA) * orbitRadius
+        const y = Math.sin(nextA * 0.5) * orbitRadius * 0.06
         g.position.set(p.x + x, p.y + y, p.z + z)
       } else {
         const pseudo = {
@@ -134,14 +138,19 @@ function FadedLocalEllipticOrbit({
 }) {
   const matRef = useRef<THREE.LineBasicMaterial>(null)
   const scratch = useRef(new THREE.Vector3())
+  const anchorScratch = useRef(new THREE.Vector3())
+  const near = Math.max(0.7, entity.distance * 1.05)
+  const far = Math.max(2.4, entity.distance * 3)
   const proximityFade: OrbitProximityFade = {
-    getWorldPosition: () => {
-      const g = groupsRef.current.get(entity.id)
-      if (!g) return null
-      return g.getWorldPosition(scratch.current)
+    getWorldPosition: () => getAnchor()?.clone() ?? null,
+    getCameraDistance: (camera) => {
+      const anchor = getAnchor()
+      if (!anchor) return null
+      anchorScratch.current.copy(anchor)
+      return camera.position.distanceTo(anchorScratch.current)
     },
-    near: 0.95,
-    far: 3.8,
+    near,
+    far,
   }
   useLineProximityFade(matRef, proximityFade, () => baseOpacity)
   return (
@@ -152,8 +161,9 @@ function FadedLocalEllipticOrbit({
           const c = getAnchor()
           if (!c) return
           const pts: THREE.Vector3[] = []
-          for (let i = 0; i <= 48; i++) {
-            const t = (i / 48) * Math.PI * 2
+          const segs = Math.max(72, Math.min(240, Math.round(entity.distance * 60)))
+          for (let i = 0; i <= segs; i++) {
+            const t = (i / segs) * Math.PI * 2
             pts.push(
               new THREE.Vector3(
                 c.x + Math.cos(t) * entity.distance,
@@ -211,8 +221,8 @@ function ShowcaseEntityRow({
             if (!g) return null
             return g.getWorldPosition(bodyWorldScratch.current)
           },
-          near: 2.0,
-          far: 8.2,
+          near: Math.max(2.0, entity.distance * 0.7),
+          far: Math.max(6.5, entity.distance * 3),
         }
       : undefined
 
@@ -265,13 +275,16 @@ function ShowcaseEntityRow({
           active={active}
           onSelect={() => onSelectEntity?.(entity.id)}
         />
-        <Html distanceFactor={12}>
+        <Html distanceFactor={9.2} occlude>
           <div
-            className="select-none whitespace-nowrap rounded px-1.5 py-0.5 text-[10px] uppercase tracking-wide"
+            className="select-none whitespace-nowrap px-1 py-0.5 text-[9px] uppercase tracking-wide inline-flex items-center gap-1"
             style={{
-              color: active ? '#d9f5ff' : '#b6c8d8',
-              background: active ? 'rgba(34,211,238,0.24)' : 'rgba(0,0,0,0.35)',
-              border: active ? '1px solid rgba(34,211,238,0.55)' : '1px solid rgba(255,255,255,0.12)',
+              color: active ? '#c9f4ff' : 'rgba(225,234,245,0.86)',
+              background: active ? 'rgba(18, 24, 32, 0.38)' : 'transparent',
+              border: 'none',
+              borderRadius: active ? 5 : 0,
+              opacity: active ? 1 : activeItemId ? 0.56 : 0.88,
+              textShadow: '0 0 6px rgba(0,0,0,0.65)',
             }}
             role="button"
             tabIndex={0}
@@ -287,6 +300,18 @@ function ShowcaseEntityRow({
               }
             }}
           >
+            <span
+              aria-hidden
+              style={{
+                width: active ? 8 : 6,
+                height: active ? 8 : 6,
+                borderRadius: 1,
+                display: 'inline-block',
+                background: active ? '#66e3ff' : 'rgba(240,244,252,0.82)',
+                boxShadow: active ? '0 0 6px rgba(102,227,255,0.5)' : 'none',
+                opacity: active ? 1 : 0.78,
+              }}
+            />
             {entity.name}
           </div>
         </Html>

@@ -9,6 +9,8 @@ export type OrbitProximityFade = {
   getWorldPosition: () => THREE.Vector3 | null
   near: number
   far: number
+  /** Optional camera distance provider (e.g. to parent planet instead of Sun/body). */
+  getCameraDistance?: (camera: THREE.Camera) => number | null
 }
 
 export function useLineProximityFade(
@@ -30,7 +32,10 @@ export function useLineProximityFade(
       m.opacity = base
       return
     }
-    const d = camera.position.distanceTo(p)
+    const overrideDist = proximityFade.getCameraDistance?.(camera) ?? null
+    const d = Number.isFinite(overrideDist as number)
+      ? (overrideDist as number)
+      : camera.position.distanceTo(p)
     const { near, far } = proximityFade
     if (far <= near) {
       m.opacity = base

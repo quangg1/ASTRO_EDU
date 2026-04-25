@@ -77,7 +77,8 @@ export const planetsData: PlanetData[] = [
     name: 'Earth',
     nameVi: 'Trái Đất',
     explorerBlurb: 'Our blue world — oceans, atmosphere, and the only known life in the solar system.',
-    texture: `${T}/8k_earth_daymap.jpg`,
+    // Explore/NASA showcase uses nasa texture set; Earth-history keeps separate paleo/8k pipeline.
+    texture: `${T}/nasa/earth_nasa.jpg`,
     radius: 0.34 * PLANET_SIZE_SCALE,
     distance: 21,
     period: 24,

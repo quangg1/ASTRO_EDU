@@ -28,7 +28,7 @@ export function ShowcaseModelEntityMesh({
     return targetDiameter / maxAxis
   }, [model, entity.size])
   const userScale = entity.modelScale ?? 1
-  const scale = normalizedScale * userScale * (active ? 1.18 : 1)
+  const scale = normalizedScale * userScale * (active ? 1.35 : 1)
   const rot = entity.modelRotationDeg ?? [0, 0, 0]
   useFrame((_, dt) => {
     if (!groupRef.current) return

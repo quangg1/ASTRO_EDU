@@ -35,9 +35,9 @@ function sanitizeControlsCamera(c: OrbitControlsImpl) {
   }
 }
 
-/** World units: orbit of the focused planet fades between these camera–body distances. */
-const PLANET_HELIO_ORBIT_FADE_NEAR = 3.4
-const PLANET_HELIO_ORBIT_FADE_FAR = 12
+/** Per-orbit fade scales with semi-major axis (NASA Eyes-like behavior). */
+const PLANET_HELIO_ORBIT_FADE_NEAR_SCALE = 0.75
+const PLANET_HELIO_ORBIT_FADE_FAR_SCALE = 3
 
 function ShowcaseSceneContent({
   showcaseActiveItemId,
@@ -74,10 +74,18 @@ function ShowcaseSceneContent({
     () => NASA_SHOWCASE_ITEMS.find((i) => i.id === showcaseActiveItemId)?.group ?? 'planets_moons',
     [showcaseActiveItemId],
   )
+  const isPlanetFocus = Boolean(showcaseActiveItemId?.startsWith('planet-'))
+  const isEntityFocus = Boolean(showcaseActiveItemId && !isPlanetFocus)
   const focusPlanetIndex = useMemo(
     () => resolveShowcaseFocusPlanetIndex(showcaseActiveItemId, selectedIndex),
     [showcaseActiveItemId, selectedIndex],
   )
+  const setFocusedEntity = useShowcaseStore((s) => s.setFocusedEntity)
+  const cameraDistanceToSun = useShowcaseStore((s) => s.cameraDistanceToSun)
+
+  useEffect(() => {
+    setFocusedEntity(showcaseActiveItemId ?? null)
+  }, [showcaseActiveItemId, setFocusedEntity])
 
   const setSelection = (idx: number | null) => {
     if (flightTargetIndex === undefined) setInternalIndex(idx)
@@ -85,9 +93,18 @@ function ShowcaseSceneContent({
   }
 
   const locked = observerTargetLock === true
-  const exploreSolo = observerDisableAutoTarget === true && locked && selectedIndex !== null
-  const showcaseFreeze = selectedIndex !== null
-  const lockMotionScale = showcaseFreeze && !exploreSolo ? 0 : 1
+  // Continuous single-scene behavior: this only enables camera assistance, not a hard scene mode switch.
+  const focusAssistActive = observerDisableAutoTarget === true && locked && selectedIndex !== null
+  const selectedSemiMajorAxis = selectedIndex !== null ? Math.max(1, planetsData[selectedIndex]?.distance ?? 1) : 1
+  const focusBlend =
+    selectedIndex !== null
+      ? THREE.MathUtils.clamp(
+          1 - cameraDistanceToSun / Math.max(6, selectedSemiMajorAxis * 3),
+          0,
+          1,
+        )
+      : 0
+  const motionScale = selectedIndex !== null ? 0 : 1
 
   useEffect(() => {
     scene.fog = null
@@ -112,7 +129,7 @@ function ShowcaseSceneContent({
 
   useFrame((_, dt) => {
     const c = controlsRef.current
-    if (!c || !exploreSolo || selectedIndex === null) return
+    if (!c || !focusAssistActive || selectedIndex === null) return
     sanitizeControlsCamera(c)
     const p = planetPositionsRef.current[selectedIndex]
     if (!p || p.lengthSq() < 1e-6) return
@@ -140,24 +157,23 @@ function ShowcaseSceneContent({
       {planetsData.map((data, i) => {
         const isSelected = i === selectedIndex
         const isHovered = i === hoveredOrbitIndex
-        const hideOtherPlanetOrbits = !exploreSolo && selectedIndex !== null && i !== selectedIndex
-        const proximityFade =
-          focusPlanetIndex === i
-            ? {
-                getWorldPosition: () => {
-                  const p = planetPositionsRef.current[i]
-                  return p && p.lengthSq() > 1e-8 ? p : null
-                },
-                near: PLANET_HELIO_ORBIT_FADE_NEAR,
-                far: PLANET_HELIO_ORBIT_FADE_FAR,
-              }
-            : undefined
+        const a = Math.max(1, data.distance)
+        const proximityFade = {
+          getWorldPosition: () => {
+            const p = planetPositionsRef.current[i]
+            return p && p.lengthSq() > 1e-8 ? p : null
+          },
+          // Each orbit fades by its own scale (NASA Eyes-like), not a flat global threshold.
+          near: Math.max(2.4, a * PLANET_HELIO_ORBIT_FADE_NEAR_SCALE),
+          far: Math.max(6.2, a * PLANET_HELIO_ORBIT_FADE_FAR_SCALE),
+          getCameraDistance: () => cameraDistanceToSun,
+        }
         return (
           <OrbitPath
             key={data.name}
             data={data}
             highlighted={isSelected || isHovered}
-            visible={!exploreSolo && !hideOtherPlanetOrbits}
+            visible
             interactive={false}
             proximityFade={proximityFade}
             onHoverChange={(hovered) => setHoveredOrbitIndex(hovered ? i : (prev) => (prev === i ? null : prev))}
@@ -166,7 +182,8 @@ function ShowcaseSceneContent({
       })}
 
       <Sun
-        visible={!exploreSolo}
+        visible
+        interactive={!isEntityFocus}
         onSelect={() => {
           setSelection(null)
         }}
@@ -177,12 +194,13 @@ function ShowcaseSceneContent({
           data={data}
           index={i}
           positionRef={planetPositionsRef}
-          visible={!exploreSolo || i === selectedIndex}
-          unlitTexture={!exploreSolo || i === selectedIndex}
-          orbitTimeScale={exploreSolo && i === selectedIndex ? 0 : lockMotionScale}
-          spinTimeScale={exploreSolo && i === selectedIndex ? 0 : lockMotionScale}
-          showLabel={!exploreSolo}
-          compactPlanetLabel={!exploreSolo}
+          visible
+          unlitTexture
+          orbitTimeScale={motionScale}
+          spinTimeScale={motionScale}
+          showLabel
+          compactPlanetLabel
+          interactive={!isEntityFocus}
           onHoverChange={(hovered) => setHoveredOrbitIndex(hovered ? i : (prev) => (prev === i ? null : prev))}
           onSelect={() => {
             setSelection(i)
@@ -196,14 +214,14 @@ function ShowcaseSceneContent({
         planetPositionsRef={planetPositionsRef}
         selectedIndex={selectedIndex}
         selectedRadius={selectedIndex !== null ? planetsData[selectedIndex]?.radius ?? 1 : 1}
-        visible={exploreSolo}
+        visible={Boolean(observerExploreEntityId && selectedIndex !== null && focusBlend > 0.3)}
       />
 
       <ShowcaseEntityLayer
         planetPositionsRef={planetPositionsRef}
         activeItemId={showcaseActiveItemId}
-        visible={!exploreSolo}
-        frozen={showcaseFreeze}
+        visible
+        frozen={selectedIndex !== null}
         activeGroup={activeGroup}
         selectedPlanetName={selectedIndex !== null ? planetsData[selectedIndex]?.name ?? null : null}
         onPositionUpdate={(id, p) => showcaseEntityPositionsRef.current.set(id, p.clone())}
@@ -273,6 +291,7 @@ export default function ShowcaseScene({
       useShowcaseStore.getState().setFocusedStudioPosition(null)
       useShowcaseStore.getState().setPreloadGroup(null)
       useShowcaseStore.getState().setShowcaseCameraUserOverride(false)
+      useShowcaseStore.getState().setFocusedEntity(null)
     }
   }, [])
 

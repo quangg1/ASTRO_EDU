@@ -13,6 +13,11 @@ type ShowcaseStore = {
    */
   showcaseCameraUserOverride: boolean
   setShowcaseCameraUserOverride: (v: boolean) => void
+  /** Camera distance from heliocentric origin (Sun at 0,0,0). */
+  cameraDistanceToSun: number
+  setCameraDistanceToSun: (d: number) => void
+  focusedEntity: string | null
+  setFocusedEntity: (id: string | null) => void
 }
 
 export const useShowcaseStore = create<ShowcaseStore>((set) => ({
@@ -22,4 +27,8 @@ export const useShowcaseStore = create<ShowcaseStore>((set) => ({
   setFocusedStudioPosition: (v) => set({ focusedStudioPosition: v }),
   showcaseCameraUserOverride: false,
   setShowcaseCameraUserOverride: (v) => set({ showcaseCameraUserOverride: v }),
+  cameraDistanceToSun: 0,
+  setCameraDistanceToSun: (d) => set({ cameraDistanceToSun: d }),
+  focusedEntity: null,
+  setFocusedEntity: (id) => set({ focusedEntity: id }),
 }))

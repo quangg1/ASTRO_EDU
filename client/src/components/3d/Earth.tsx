@@ -7,11 +7,12 @@
  * - Còn lại (ví dụ > 750 Ma): màu đơn sắc.
  */
 
-import React, { useRef, useMemo, Suspense } from 'react'
-import { useFrame, useLoader } from '@react-three/fiber'
+import React, { useRef, useMemo, useEffect, useState } from 'react'
+import { useFrame } from '@react-three/fiber'
 import { Sphere } from '@react-three/drei'
 import * as THREE from 'three'
 import { EarthStage } from '@/types'
+import { getStaticAssetUrl } from '@/lib/apiConfig'
 import { hasPaleoTexture, getPaleoTexturePath } from '@/lib/paleoTextureMap'
 
 const TEXTURE_BASE = '/textures'
@@ -42,22 +43,16 @@ export function Earth({ stage }: EarthProps) {
     <group>
       {/* Earth: 8k_earth (Neogene+) | texture paleo (có trong web) | màu đơn sắc */}
       {useRealisticTextures ? (
-        <Suspense fallback={<ColoredEarth ref={earthRef} stage={stage} />}>
-          <RealisticEarth ref={earthRef} />
-        </Suspense>
+        <RealisticEarth ref={earthRef} stage={stage} />
       ) : usePaleoTexture ? (
-        <Suspense fallback={<ColoredEarth ref={earthRef} stage={stage} />}>
-          <PaleoEarth ref={earthRef} stageTime={stage.time} />
-        </Suspense>
+        <PaleoEarth ref={earthRef} stageTime={stage.time} stage={stage} />
       ) : (
         <ColoredEarth ref={earthRef} stage={stage} />
       )}
 
       {/* Mây (chỉ khi dùng 8k_earth) */}
       {useRealisticTextures && (
-        <Suspense fallback={null}>
-          <CloudsLayer ref={cloudsRef} />
-        </Suspense>
+        <CloudsLayer ref={cloudsRef} />
       )}
 
       {/* Grid (kinh/vĩ tuyến, xích đạo nổi bật) */}
@@ -88,16 +83,41 @@ export function Earth({ stage }: EarthProps) {
   )
 }
 
+function useOptionalTexture(path: string): THREE.Texture | null {
+  const [texture, setTexture] = useState<THREE.Texture | null>(null)
+  useEffect(() => {
+    let cancelled = false
+    const loader = new THREE.TextureLoader()
+    loader.load(
+      path,
+      (loaded) => {
+        if (!cancelled) setTexture(loaded)
+      },
+      undefined,
+      () => {
+        if (!cancelled) setTexture(null)
+      },
+    )
+    return () => {
+      cancelled = true
+    }
+  }, [path])
+  return texture
+}
+
 /** Lục địa + đèn đêm + độ cao (normal) + độ bóng đại dương (specular) */
-const RealisticEarth = React.forwardRef<THREE.Mesh>(function RealisticEarth(_, ref) {
-  const [day, night, normal, specular] = useLoader(THREE.TextureLoader, [
-    `${TEXTURE_BASE}/8k_earth_daymap.jpg`,
-    `${TEXTURE_BASE}/8k_earth_nightmap.jpg`,
-    `${TEXTURE_BASE}/8k_earth_normal_map.jpg`,
-    `${TEXTURE_BASE}/8k_earth_specular_map.jpg`,
-  ]) as [THREE.Texture, THREE.Texture, THREE.Texture, THREE.Texture]
+const RealisticEarth = React.forwardRef<THREE.Mesh, { stage: EarthStage }>(function RealisticEarth(
+  { stage },
+  ref,
+) {
+  const day = useOptionalTexture(getStaticAssetUrl(`${TEXTURE_BASE}/8k_earth_daymap.jpg`))
+  const night = useOptionalTexture(getStaticAssetUrl(`${TEXTURE_BASE}/8k_earth_nightmap.jpg`))
+  const normal = useOptionalTexture(getStaticAssetUrl(`${TEXTURE_BASE}/8k_earth_normal_map.jpg`))
+  const specular = useOptionalTexture(getStaticAssetUrl(`${TEXTURE_BASE}/8k_earth_specular_map.jpg`))
+  const ready = day && night && normal && specular
 
   useMemo(() => {
+    if (!ready) return
     day.colorSpace = THREE.SRGBColorSpace
     night.colorSpace = THREE.SRGBColorSpace
     day.wrapS = day.wrapT = THREE.RepeatWrapping
@@ -106,7 +126,9 @@ const RealisticEarth = React.forwardRef<THREE.Mesh>(function RealisticEarth(_, r
     normal.wrapS = normal.wrapT = THREE.RepeatWrapping
     specular.colorSpace = THREE.LinearSRGBColorSpace
     specular.wrapS = specular.wrapT = THREE.RepeatWrapping
-  }, [day, night, normal, specular])
+  }, [day, night, normal, specular, ready])
+
+  if (!ready) return <ColoredEarth ref={ref} stage={stage} />
 
   return (
     <Sphere ref={ref} args={[5, 128, 128]}>
@@ -126,16 +148,19 @@ const RealisticEarth = React.forwardRef<THREE.Mesh>(function RealisticEarth(_, r
 })
 
 /** Trái Đất theo bản đồ cổ địa lý: cùng texture cho day (map) và night (emissive tối hơn) */
-const PaleoEarth = React.forwardRef<THREE.Mesh, { stageTime: number }>(function PaleoEarth(
-  { stageTime },
+const PaleoEarth = React.forwardRef<THREE.Mesh, { stageTime: number; stage: EarthStage }>(function PaleoEarth(
+  { stageTime, stage },
   ref
 ) {
   const path = getPaleoTexturePath(stageTime)!
-  const map = useLoader(THREE.TextureLoader, path) as THREE.Texture
+  const map = useOptionalTexture(path)
   useMemo(() => {
+    if (!map) return
     map.colorSpace = THREE.SRGBColorSpace
     map.wrapS = map.wrapT = THREE.ClampToEdgeWrapping
   }, [map])
+
+  if (!map) return <ColoredEarth ref={ref} stage={stage} />
   return (
     <Sphere ref={ref} args={[5, 128, 128]}>
       <meshStandardMaterial
@@ -172,7 +197,8 @@ const ColoredEarth = React.forwardRef<THREE.Mesh, { stage: EarthStage }>(functio
 
 /** Lớp mây từ texture */
 const CloudsLayer = React.forwardRef<THREE.Mesh>(function CloudsLayer(_, ref) {
-  const cloudsTex = useLoader(THREE.TextureLoader, `${TEXTURE_BASE}/8k_earth_clouds.jpg`) as THREE.Texture
+  const cloudsTex = useOptionalTexture(getStaticAssetUrl(`${TEXTURE_BASE}/8k_earth_clouds.jpg`))
+  if (!cloudsTex) return null
   cloudsTex.colorSpace = THREE.SRGBColorSpace
   cloudsTex.wrapS = cloudsTex.wrapT = THREE.RepeatWrapping
 
