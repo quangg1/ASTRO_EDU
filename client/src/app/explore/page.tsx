@@ -10,18 +10,28 @@ import { Controls } from '@/components/ui/Controls'
 import { Loading } from '@/components/ui/Loading'
 import { useSimulatorStore } from '@/store/useSimulatorStore'
 import { planetsData } from '@/lib/solarSystemData'
-import { getStaticAssetUrl } from '@/lib/apiConfig'
-import { NASA_SHOWCASE_ITEMS, NASA_SHOWCASE_STORIES } from '@/lib/nasaShowcaseCatalog'
+import { NASA_SHOWCASE_ITEMS } from '@/lib/nasaShowcaseCatalog'
+import { SHOWCASE_ORBIT_ENTITIES } from '@/lib/showcaseEntities'
+import {
+  mergeNasaCatalog,
+  mergeOrbitEntities,
+  mergeOrbitalElementsPreferUsable,
+} from '@/lib/mergeShowcaseCatalog'
+import {
+  fetchPublicShowcaseEntityContents,
+  type ShowcaseEntityContentDTO,
+} from '@/lib/showcaseEntitiesApi'
+import { fetchJplShowcaseOrbits, type ShowcaseJplOrbitDTO } from '@/lib/showcaseOrbitsApi'
 import { useLearningPath } from '@/hooks/useLearningPath'
-import type { LearningPathBridgeRule } from '@/lib/learningPathApi'
 import { useShowcaseStore } from '@/store/showcaseStore'
 import {
   buildContextualQuizFromLessons,
+  getShowcaseMuseumLabelVi,
   guessEntityRarity,
   loadBridgeVisitedEntityMap,
   loadDiscoveryMap,
+  resolveAllLessonsForEntity,
   resolveMappedConcepts,
-  resolveMappedLessons,
   saveBridgeVisitedEntityMap,
   saveDiscoveryMap,
 } from '@/lib/showcaseLearningBridge'
@@ -33,6 +43,8 @@ import {
 } from '@/lib/learningPathProgress'
 import { trackLearningPathBehavior } from '@/lib/learningPathBehavior'
 import type { ShowcaseCameraSpherical } from '@/components/3d/showcase/ShowcaseCameraManager'
+import { useShowcaseCatalogGen } from '@/components/showcase/ShowcaseCatalogProvider'
+import { ShowcaseEntityPanel } from '@/components/3d/showcase/ShowcaseEntityPanel'
 
 const EarthScene = dynamic(() => import('@/components/3d/EarthScene'), {
   ssr: false,
@@ -60,7 +72,6 @@ function ExplorePageContent() {
 
   const [earthHistoryOpen, setEarthHistoryOpen] = useState(!!stageTime)
   const [showcaseMenuOpen, setShowcaseMenuOpen] = useState(false)
-  const [showcaseActiveStoryId, setShowcaseActiveStoryId] = useState('story-artemis')
   const [showcaseActiveItemId, setShowcaseActiveItemId] = useState('planet-earth')
   const [selectedSolarPlanetIndex, setSelectedSolarPlanetIndex] = useState<number | null>(2)
   const [bridgeOverlayOpen, setBridgeOverlayOpen] = useState(false)
@@ -77,13 +88,77 @@ function ExplorePageContent() {
   const bridgeFocusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const bridgeQuizTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const showcaseCameraUrlTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const lastCameraQueryRef = useRef<string>('')
   const appliedStageRef = useRef<number | null>(null)
 
   const loadStages = useSimulatorStore((s) => s.loadStages)
   const stages = useSimulatorStore((s) => s.stages)
   const stagesLoading = useSimulatorStore((s) => s.stagesLoading)
   const setStage = useSimulatorStore((s) => s.setStage)
-  const { modules, concepts, bridgeRules } = useLearningPath()
+  const { modules, concepts } = useLearningPath()
+
+  /** Độ trễ trước khi bật overlay / quiz sau khi entity ổn định (Learning Bridge cố định). */
+  const FOCUS_DELAY_SEC = 3
+  const showcaseCatalogGen = useShowcaseCatalogGen()
+
+  const [showcaseContent, setShowcaseContent] = useState<ShowcaseEntityContentDTO[]>([])
+  const [jplOrbits, setJplOrbits] = useState<ShowcaseJplOrbitDTO[]>([])
+  useEffect(() => {
+    let cancelled = false
+    fetchPublicShowcaseEntityContents().then((rows) => {
+      if (!cancelled) setShowcaseContent(rows)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const resolvedCatalog = useMemo(
+    () => mergeNasaCatalog(NASA_SHOWCASE_ITEMS, showcaseContent),
+    [showcaseContent, showcaseCatalogGen],
+  )
+  const mergedOrbitEntities = useMemo(
+    () => {
+      const merged = mergeOrbitEntities(SHOWCASE_ORBIT_ENTITIES, showcaseContent)
+      if (!jplOrbits.length) return merged
+      const byId = new Map(jplOrbits.map((o) => [o.id, o] as const))
+      return merged.map((e) => {
+        const j = byId.get(e.id)
+        if (!j) return e
+        return {
+          ...e,
+          horizonsId: j.horizonsId || e.horizonsId,
+          orbitAround: j.orbitAround || e.orbitAround,
+          parentId: j.parentId || e.parentId,
+          radiusKm: (j.radiusKm && j.radiusKm > 0 ? j.radiusKm : e.radiusKm) || e.radiusKm,
+          massKg: j.massKg || e.massKg,
+          rotRateRadS: j.rotRateRadS || e.rotRateRadS,
+          vectorAu: j.vectorAu || e.vectorAu,
+          vectorSim: j.vectorSim || e.vectorSim,
+          orbitalElements: mergeOrbitalElementsPreferUsable(j, e),
+          orbitEccentricity: j.orbitEccentricity,
+          inclinationDeg: j.inclinationDeg,
+          ascendingNodeDeg: j.ascendingNodeDeg,
+          phaseDeg: j.phaseDeg,
+          period: j.period,
+          periodDays: j.periodDays ?? undefined,
+          semiMajorAxisAu: j.semiMajorAxisAu ?? undefined,
+          orbitSource: 'jpl-horizons' as const,
+        }
+      })
+    },
+    [showcaseContent, showcaseCatalogGen, jplOrbits],
+  )
+
+  useEffect(() => {
+    let cancelled = false
+    fetchJplShowcaseOrbits().then((items) => {
+      if (!cancelled) setJplOrbits(items)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [showcaseCatalogGen])
 
   useEffect(() => {
     setVisited3DMap(loadLessonVisited3D())
@@ -114,75 +189,91 @@ function ExplorePageContent() {
     appliedStageRef.current = stageTime
   }, [stageTime, stagesLoading, stages, setStage])
 
-  const activeShowcaseItem = NASA_SHOWCASE_ITEMS.find((i) => i.id === showcaseActiveItemId) ?? null
-  const showcasePlanetsMoons = NASA_SHOWCASE_ITEMS.filter((i) => i.group === 'planets_moons')
-  const showcaseDwarfPlanets = NASA_SHOWCASE_ITEMS.filter((i) => i.group === 'dwarf_asteroids')
-  const showcaseComets = NASA_SHOWCASE_ITEMS.filter((i) => i.group === 'comets')
-  const showcaseSpacecraft = NASA_SHOWCASE_ITEMS.filter((i) => i.group === 'spacecraft')
+  const activeResolved = useMemo(
+    () => resolvedCatalog.find((i) => i.id === showcaseActiveItemId) ?? null,
+    [resolvedCatalog, showcaseActiveItemId],
+  )
+  const showcasePlanetsMoons = useMemo(
+    () => resolvedCatalog.filter((i) => i.group === 'planets_moons'),
+    [resolvedCatalog],
+  )
+  const showcaseDwarfPlanets = useMemo(
+    () => resolvedCatalog.filter((i) => i.group === 'dwarf_asteroids'),
+    [resolvedCatalog],
+  )
+  const showcaseComets = useMemo(() => resolvedCatalog.filter((i) => i.group === 'comets'), [resolvedCatalog])
+  const showcaseSpacecraft = useMemo(
+    () => resolvedCatalog.filter((i) => i.group === 'spacecraft'),
+    [resolvedCatalog],
+  )
 
-  const activeBridgeRules = useMemo(
-    () =>
-      (bridgeRules || []).filter(
-        (r) => r.active !== false && String(r.entityId || '').trim() === showcaseActiveItemId,
-      ),
-    [bridgeRules, showcaseActiveItemId],
+  const bridgeConceptCards = useMemo(
+    () => resolveMappedConcepts(concepts, showcaseActiveItemId).slice(0, 6),
+    [concepts, showcaseActiveItemId],
   )
-  const hasBridgeRulesForEntity = activeBridgeRules.length > 0
-  const actionRules = useMemo(
-    () =>
-      activeBridgeRules.reduce<Record<string, LearningPathBridgeRule[]>>((acc, rule) => {
-        const key = String(rule.action || '')
-        if (!acc[key]) acc[key] = []
-        acc[key].push(rule)
-        return acc
-      }, {}),
-    [activeBridgeRules],
+  const bridgeLessonLinks = useMemo(() => {
+    const rows = resolveAllLessonsForEntity(modules, concepts, showcaseActiveItemId)
+    return rows.map(({ lessonId, title, href }) => ({ lessonId, title, href }))
+  }, [modules, concepts, showcaseActiveItemId])
+  const bridgeEnabledActions = useMemo(
+    () => ['Concept overlay', 'Progress sync', 'Contextual quiz', 'Discovery badge'],
+    [],
   )
-  const focusRules = useMemo(
-    () =>
-      activeBridgeRules.filter((r) => r.event === 'entity_focus_stable' || r.event === 'entity_focus_duration'),
-    [activeBridgeRules],
+  const activeOrbitEntity = useMemo(
+    () => mergedOrbitEntities.find((e) => e.id === showcaseActiveItemId) ?? null,
+    [mergedOrbitEntities, showcaseActiveItemId],
   )
-  const focusDelaySec = useMemo(() => {
-    const secs = focusRules
-      .map((r) => (Number.isFinite(Number(r.thresholdSec)) ? Number(r.thresholdSec) : null))
-      .filter((v): v is number => v !== null && v > 0)
-    return secs.length ? Math.max(1, Math.min(...secs)) : 3
-  }, [focusRules])
-  const shouldRunOverlay = !hasBridgeRulesForEntity || (actionRules.show_concept_overlay?.length ?? 0) > 0
-  const shouldRunVisited3d = !hasBridgeRulesForEntity || (actionRules.mark_lessons_visited3d?.length ?? 0) > 0
-  const shouldRunDiscovery = !hasBridgeRulesForEntity || (actionRules.unlock_discovery_badge?.length ?? 0) > 0
-  const shouldRunContextualQuiz = !hasBridgeRulesForEntity || (actionRules.trigger_contextual_quiz?.length ?? 0) > 0
-  const overlayRuleConceptIds = useMemo(
-    () =>
-      (actionRules.show_concept_overlay || [])
-        .map((r) => String(r.conceptId || '').trim())
-        .filter(Boolean),
-    [actionRules.show_concept_overlay],
+  const activeContentRow = useMemo(
+    () => showcaseContent.find((r) => r.entityId === showcaseActiveItemId) ?? null,
+    [showcaseContent, showcaseActiveItemId],
   )
-  const bridgeConceptCards = useMemo(() => {
-    if (overlayRuleConceptIds.length > 0) {
-      const set = new Set(overlayRuleConceptIds)
-      return concepts.filter((c) => set.has(c.id)).slice(0, 6)
+  const lessonLinkById = useMemo(() => {
+    const m = new Map<string, { lessonId: string; title: string; href: string }>()
+    for (const mod of modules) {
+      for (const node of mod.nodes) {
+        for (const depth of ['beginner', 'explorer', 'researcher'] as const) {
+          for (const lesson of node.depths[depth] || []) {
+            const lessonId = lesson.id
+            if (!lessonId || m.has(lessonId)) continue
+            m.set(lessonId, {
+              lessonId,
+              title: lesson.titleVi || lesson.title || lessonId,
+              href: `/tutorial/${mod.id}/${node.id}/${encodeURIComponent(lessonId)}`,
+            })
+          }
+        }
+      }
     }
-    return resolveMappedConcepts(concepts, showcaseActiveItemId).slice(0, 6)
-  }, [concepts, showcaseActiveItemId, overlayRuleConceptIds])
-  const bridgeLessonLinks = useMemo(
-    () => resolveMappedLessons(modules, bridgeConceptCards.map((c) => c.id)).slice(0, 5),
-    [modules, bridgeConceptCards],
-  )
+    return m
+  }, [modules])
+  const effectiveConceptCards = useMemo(() => {
+    const ids = activeContentRow?.panelConfig?.conceptTagIds || []
+    if (!ids.length) return bridgeConceptCards
+    const set = new Set(ids.map((x) => String(x || '').trim()))
+    const picked = concepts.filter((c) => set.has(c.id))
+    return picked.length ? picked.slice(0, 12) : bridgeConceptCards
+  }, [activeContentRow?.panelConfig?.conceptTagIds, bridgeConceptCards, concepts])
+  const effectiveLessonLinks = useMemo(() => {
+    const ids = activeContentRow?.panelConfig?.lessonIds || []
+    if (!ids.length) return bridgeLessonLinks
+    const out = ids
+      .map((id) => lessonLinkById.get(String(id || '').trim()))
+      .filter((x): x is { lessonId: string; title: string; href: string } => Boolean(x))
+    return out.length ? out : bridgeLessonLinks
+  }, [activeContentRow?.panelConfig?.lessonIds, bridgeLessonLinks, lessonLinkById])
   const bridgeVisitedLessonsForEntity = useMemo(
-    () => bridgeLessonLinks.filter((row) => visited3DMap[row.lessonId]).length,
-    [bridgeLessonLinks, visited3DMap],
+    () => effectiveLessonLinks.filter((row) => visited3DMap[row.lessonId]).length,
+    [effectiveLessonLinks, visited3DMap],
   )
-  const bridgeEnabledActions = useMemo(() => {
-    const out: string[] = []
-    if (shouldRunOverlay) out.push('Concept overlay')
-    if (shouldRunVisited3d) out.push('Progress sync')
-    if (shouldRunContextualQuiz) out.push('Contextual quiz')
-    if (shouldRunDiscovery) out.push('Discovery badge')
-    return out
-  }, [shouldRunOverlay, shouldRunVisited3d, shouldRunContextualQuiz, shouldRunDiscovery])
+  const museumLabelVi = useMemo(
+    () =>
+      getShowcaseMuseumLabelVi(
+        showcaseActiveItemId,
+        activeResolved?.displayName ?? '',
+        activeResolved?.museumBlurbVi,
+      ),
+    [showcaseActiveItemId, activeResolved?.displayName, activeResolved?.museumBlurbVi],
+  )
   const bridgeQuizScore = useMemo(() => {
     const answered = bridgeQuizQuestions.filter((q) => bridgeQuizAnswers[q.id] !== undefined).length
     const correct = bridgeQuizQuestions.filter((q) => bridgeQuizAnswers[q.id] === q.correctIndex).length
@@ -213,64 +304,13 @@ function ExplorePageContent() {
   const handleShowcaseEntityClicked = useCallback(
     (entityId: string, source: string) => {
       setShowcaseActiveItemId(entityId)
-      const clickedRules = (bridgeRules || []).filter(
-        (r) => r.active !== false && String(r.entityId || '').trim() === entityId && r.event === 'entity_clicked',
-      )
-      const clickActionSet = new Set(clickedRules.map((r) => r.action))
-      const hasClickRules = clickedRules.length > 0
       trackLearningPathBehavior({
         eventName: 'scene_entity_clicked',
-        metadata: { schemaVersion: 'scene_event_v1', entityId, source, hasClickRules },
+        metadata: { schemaVersion: 'scene_event_v2', entityId, source },
       })
       pushBridgeDebug(`click ${entityId} (${source})`)
-      if (!hasClickRules) return
-
-      const clickOverlayConceptIds = clickedRules
-        .filter((r) => r.action === 'show_concept_overlay')
-        .map((r) => String(r.conceptId || '').trim())
-        .filter(Boolean)
-      const clickConceptCards =
-        clickOverlayConceptIds.length > 0
-          ? concepts.filter((c) => clickOverlayConceptIds.includes(c.id))
-          : resolveMappedConcepts(concepts, entityId)
-      const clickLessonLinks = resolveMappedLessons(modules, clickConceptCards.map((c) => c.id))
-
-      if (clickActionSet.has('show_concept_overlay')) {
-        setBridgeOverlayEntityId(entityId)
-        setBridgeOverlayOpen(true)
-        setBridgeRuntimeHint('Đã mở concept overlay theo rule click.')
-      }
-      if (clickActionSet.has('mark_lessons_visited3d') && clickLessonLinks.length > 0) {
-        let nextVisited3D = loadLessonVisited3D()
-        for (const row of clickLessonLinks) nextVisited3D = setLessonVisited3D(nextVisited3D, row.lessonId, true)
-        saveLessonVisited3D(nextVisited3D)
-        setVisited3DMap(nextVisited3D)
-        setBridgeRuntimeHint(`Đã sync tiến độ 3D cho ${clickLessonLinks.length} lesson.`)
-      }
-      if (clickActionSet.has('trigger_contextual_quiz')) {
-        const contextual = buildContextualQuizFromLessons(modules, clickLessonLinks.map((r) => r.lessonId), 2)
-        if (contextual.length > 0) {
-          setBridgeQuizQuestions(contextual)
-          setBridgeQuizAnswers({})
-          setBridgeQuizPromptOpen(true)
-          trackLearningPathBehavior({
-            eventName: 'scene_contextual_quiz_prompted',
-            metadata: { schemaVersion: 'scene_event_v1', entityId, questionCount: contextual.length, source: 'click-rule' },
-          })
-          setBridgeRuntimeHint(`Đã bật quiz ngữ cảnh (${contextual.length} câu).`)
-        }
-      }
-      if (clickActionSet.has('unlock_discovery_badge')) {
-        const discovered = loadDiscoveryMap()
-        if (!discovered[entityId]) {
-          const nextDiscovered = { ...discovered, [entityId]: true }
-          saveDiscoveryMap(nextDiscovered)
-          setDiscoveryToast({ entityId, rarity: guessEntityRarity(entityId) })
-          setBridgeRuntimeHint('Đã unlock discovery badge.')
-        }
-      }
     },
-    [bridgeRules, concepts, modules, pushBridgeDebug],
+    [pushBridgeDebug],
   )
 
   const distQ = searchParams.get('dist')
@@ -290,16 +330,29 @@ function ExplorePageContent() {
       if (showcaseCameraUrlTimerRef.current) clearTimeout(showcaseCameraUrlTimerRef.current)
       showcaseCameraUrlTimerRef.current = setTimeout(() => {
         showcaseCameraUrlTimerRef.current = null
-        const next = new URLSearchParams(searchParams.toString())
-        next.set('dist', sph.distance.toFixed(2))
-        next.set('az', sph.az.toFixed(1))
-        next.set('el', sph.el.toFixed(1))
+        if (typeof window === 'undefined') return
+        const next = new URLSearchParams(window.location.search)
+        const dist = sph.distance.toFixed(2)
+        const az = sph.az.toFixed(1)
+        const el = sph.el.toFixed(1)
+        if (
+          next.get('dist') === dist &&
+          next.get('az') === az &&
+          next.get('el') === el
+        ) {
+          return
+        }
+        next.set('dist', dist)
+        next.set('az', az)
+        next.set('el', el)
         const updated = next.toString()
-        if (updated === searchParams.toString()) return
-        router.replace(`${pathname}?${updated}`, { scroll: false })
+        if (updated === lastCameraQueryRef.current) return
+        lastCameraQueryRef.current = updated
+        // Camera sync is high-frequency; avoid App Router navigation loop for query-only updates.
+        window.history.replaceState(null, '', `${pathname}?${updated}`)
       }, 280)
     },
-    [pathname, router, searchParams],
+    [pathname],
   )
 
   useEffect(() => {
@@ -331,27 +384,28 @@ function ExplorePageContent() {
     if (earthHistoryOpen || !showcaseActiveItemId) return
 
     bridgeFocusTimerRef.current = setTimeout(() => {
-      if (shouldRunOverlay) {
-        setBridgeOverlayEntityId(showcaseActiveItemId)
-        setBridgeOverlayOpen(true)
-      }
+      setBridgeOverlayEntityId(showcaseActiveItemId)
+      setBridgeOverlayOpen(true)
       trackLearningPathBehavior({
         eventName: 'scene_entity_focus_duration',
-        metadata: { schemaVersion: 'scene_event_v1', entityId: showcaseActiveItemId, durationSec: focusDelaySec, mode: 'showcase' },
+        metadata: {
+          schemaVersion: 'scene_event_v2',
+          entityId: showcaseActiveItemId,
+          durationSec: FOCUS_DELAY_SEC,
+          mode: 'showcase',
+        },
       })
-      if (shouldRunOverlay) {
-        trackLearningPathBehavior({
-          eventName: 'scene_concept_overlay_shown',
-          metadata: {
-            schemaVersion: 'scene_event_v1',
-            entityId: showcaseActiveItemId,
-            conceptIds: bridgeConceptCards.map((c) => c.id),
-          },
-        })
-      }
+      trackLearningPathBehavior({
+        eventName: 'scene_concept_overlay_shown',
+        metadata: {
+          schemaVersion: 'scene_event_v2',
+          entityId: showcaseActiveItemId,
+          conceptIds: effectiveConceptCards.map((c) => c.id),
+        },
+      })
 
       const visitedEntities = loadBridgeVisitedEntityMap()
-      if (shouldRunDiscovery && !visitedEntities[showcaseActiveItemId]) {
+      if (!visitedEntities[showcaseActiveItemId]) {
         const nextVisited = { ...visitedEntities, [showcaseActiveItemId]: true }
         saveBridgeVisitedEntityMap(nextVisited)
         const discovered = loadDiscoveryMap()
@@ -362,50 +416,41 @@ function ExplorePageContent() {
           setDiscoveryToast({ entityId: showcaseActiveItemId, rarity })
           trackLearningPathBehavior({
             eventName: 'scene_entity_discovered',
-            metadata: { schemaVersion: 'scene_event_v1', entityId: showcaseActiveItemId, rarity },
+            metadata: { schemaVersion: 'scene_event_v2', entityId: showcaseActiveItemId, rarity },
           })
         }
       }
 
-      if (shouldRunVisited3d && bridgeLessonLinks.length > 0) {
+      if (effectiveLessonLinks.length > 0) {
         let nextVisited3D = loadLessonVisited3D()
-        for (const row of bridgeLessonLinks) nextVisited3D = setLessonVisited3D(nextVisited3D, row.lessonId, true)
+        for (const row of effectiveLessonLinks) nextVisited3D = setLessonVisited3D(nextVisited3D, row.lessonId, true)
         saveLessonVisited3D(nextVisited3D)
         setVisited3DMap(nextVisited3D)
       }
 
-      if (shouldRunContextualQuiz) {
-        const contextual = buildContextualQuizFromLessons(modules, bridgeLessonLinks.map((r) => r.lessonId), 2)
-        if (contextual.length >= 1) {
-          bridgeQuizTimerRef.current = setTimeout(() => {
-            setBridgeQuizQuestions(contextual)
-            setBridgeQuizAnswers({})
-            setBridgeQuizPromptOpen(true)
-            trackLearningPathBehavior({
-              eventName: 'scene_contextual_quiz_prompted',
-              metadata: { schemaVersion: 'scene_event_v1', entityId: showcaseActiveItemId, questionCount: contextual.length },
-            })
-          }, 3000)
-        }
+      const contextual = buildContextualQuizFromLessons(modules, effectiveLessonLinks.map((r) => r.lessonId), 2)
+      if (contextual.length >= 1) {
+        bridgeQuizTimerRef.current = setTimeout(() => {
+          setBridgeQuizQuestions(contextual)
+          setBridgeQuizAnswers({})
+          setBridgeQuizPromptOpen(true)
+          trackLearningPathBehavior({
+            eventName: 'scene_contextual_quiz_prompted',
+            metadata: {
+              schemaVersion: 'scene_event_v2',
+              entityId: showcaseActiveItemId,
+              questionCount: contextual.length,
+            },
+          })
+        }, 3000)
       }
-    }, focusDelaySec * 1000)
+    }, FOCUS_DELAY_SEC * 1000)
 
     return () => {
       if (bridgeFocusTimerRef.current) clearTimeout(bridgeFocusTimerRef.current)
       if (bridgeQuizTimerRef.current) clearTimeout(bridgeQuizTimerRef.current)
     }
-  }, [
-    earthHistoryOpen,
-    showcaseActiveItemId,
-    shouldRunOverlay,
-    shouldRunDiscovery,
-    shouldRunVisited3d,
-    shouldRunContextualQuiz,
-    focusDelaySec,
-    bridgeConceptCards,
-    bridgeLessonLinks,
-    modules,
-  ])
+  }, [earthHistoryOpen, showcaseActiveItemId, effectiveConceptCards, effectiveLessonLinks, modules])
 
   useEffect(() => {
     if (!discoveryToast) return
@@ -426,6 +471,7 @@ function ExplorePageContent() {
             <EarthScene />
           ) : (
             <ShowcaseScene
+              orbitEntities={mergedOrbitEntities}
               showcaseActiveItemId={showcaseActiveItemId}
               onShowcaseItemSelect={(id) => {
                 handleShowcaseEntityClicked(id, 'scene')
@@ -484,21 +530,17 @@ function ExplorePageContent() {
                 </div>
                 <div className="flex items-center gap-2">
                   <span
-                    className={`rounded border px-2 py-1 text-[10px] uppercase tracking-wider ${
-                      hasBridgeRulesForEntity
-                        ? 'border-violet-300/40 text-violet-100 bg-violet-500/10'
-                        : 'border-slate-400/35 text-slate-200 bg-white/5'
-                    }`}
-                    title={hasBridgeRulesForEntity ? 'Entity đang chạy theo rule editor cấu hình.' : 'Entity đang chạy theo fallback mặc định.'}
+                    className="rounded border border-slate-400/35 px-2 py-1 text-[10px] uppercase tracking-wider text-slate-200 bg-white/5"
+                    title="Layer 1: nhãn museum. Layer 2: map entity→concept. Layer 3: sceneContext trên bài."
                   >
-                    {hasBridgeRulesForEntity ? 'Rule Mode: Custom' : 'Rule Mode: Default'}
+                    Learning Bridge v2
                   </span>
-                  {bridgeLessonLinks.length > 0 ? (
+                  {effectiveLessonLinks.length > 0 ? (
                     <span className="rounded border border-emerald-300/35 px-2 py-1 text-[10px] uppercase tracking-wider text-emerald-100 bg-emerald-500/10">
-                      Progress {bridgeVisitedLessonsForEntity}/{bridgeLessonLinks.length}
+                      Progress {bridgeVisitedLessonsForEntity}/{effectiveLessonLinks.length}
                     </span>
                   ) : null}
-                  {activeShowcaseItem?.linkedPlanetName === 'Earth' ? (
+                  {activeResolved?.linkedPlanetName === 'Earth' ? (
                     <button
                       type="button"
                       onClick={() => setEarthHistoryOpen(true)}
@@ -522,84 +564,10 @@ function ExplorePageContent() {
               </div>
             </div>
 
-            <aside className="fixed left-0 top-[5.5rem] bottom-0 z-[21] w-[288px] border-r border-white/10 bg-black/40 backdrop-blur-sm overflow-y-auto">
-              <div className="border-b border-white/10 px-3 py-2">
-                <p className="text-[10px] uppercase tracking-[0.16em] text-slate-400">Featured Stories</p>
-              </div>
-              <div className="p-2 space-y-2">
-                {NASA_SHOWCASE_STORIES.map((story) => {
-                  const active = showcaseActiveStoryId === story.id
-                  return (
-                    <button
-                      key={story.id}
-                      type="button"
-                      onClick={() => {
-                        setShowcaseActiveStoryId(story.id)
-                        const linked = NASA_SHOWCASE_ITEMS.find(
-                          (item) => item.linkedPlanetName === story.targetPlanetName,
-                        )
-                        if (linked) {
-                          handleShowcaseEntityClicked(linked.id, 'story-sidebar')
-                          openEarthHistoryFromItem(linked.id)
-                        }
-                      }}
-                      className={`w-full rounded-lg border p-2.5 text-left transition-colors ${
-                        active
-                          ? 'border-cyan-300/45 bg-cyan-500/15 text-cyan-50'
-                          : 'border-white/10 bg-black/35 text-slate-200 hover:bg-white/10'
-                      }`}
-                    >
-                      <p className="text-sm leading-tight">{story.title}</p>
-                      <p className="mt-1 text-[10px] uppercase tracking-[0.14em] text-slate-400">{story.subtitle}</p>
-                      <p className="mt-1 text-[11px] text-slate-300/90">{story.detail}</p>
-                    </button>
-                  )
-                })}
-              </div>
-              <div className="border-t border-white/10 px-3 py-2">
-                <p className="text-[10px] uppercase tracking-[0.16em] text-slate-400">Catalog highlight</p>
-                <div className="mt-2 rounded-lg border border-white/10 bg-black/30 p-2">
-                  <p className="text-xs text-slate-200">{activeShowcaseItem?.name ?? 'No selection'}</p>
-                  {activeShowcaseItem?.texturePath ? (
-                    <img
-                      src={getStaticAssetUrl(activeShowcaseItem.texturePath)}
-                      alt={activeShowcaseItem.name}
-                      className="mt-2 h-20 w-full object-cover rounded border border-white/10"
-                    />
-                  ) : (
-                    <p className="mt-2 text-[11px] text-slate-500">No texture preview available</p>
-                  )}
-                </div>
-              </div>
-            </aside>
-
             {showcaseMenuOpen ? (
               <div className="fixed inset-0 z-[23] bg-black/45 backdrop-blur-[1px]">
                 <div className="absolute left-1/2 top-[5.6rem] w-[min(1080px,calc(100vw-2rem))] -translate-x-1/2 rounded-2xl border border-white/10 bg-[#050a13]/96 p-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4 text-sm">
-                    <div className="space-y-2 border-r border-white/10 pr-4">
-                      <p className="text-[10px] uppercase tracking-[0.16em] text-slate-400">Stories</p>
-                      {NASA_SHOWCASE_STORIES.map((story) => (
-                        <button
-                          key={`menu-${story.id}`}
-                          type="button"
-                          onClick={() => {
-                            setShowcaseActiveStoryId(story.id)
-                            const linked = NASA_SHOWCASE_ITEMS.find(
-                              (item) => item.linkedPlanetName === story.targetPlanetName,
-                            )
-                            if (linked) {
-                              handleShowcaseEntityClicked(linked.id, 'story-menu')
-                              openEarthHistoryFromItem(linked.id)
-                            }
-                            setShowcaseMenuOpen(false)
-                          }}
-                          className="block w-full text-left rounded px-2 py-1.5 text-slate-200 hover:bg-white/10"
-                        >
-                          {story.title}
-                        </button>
-                      ))}
-                    </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 text-sm">
                     <div className="space-y-2 border-r border-white/10 pr-4">
                       <p className="text-[10px] uppercase tracking-[0.16em] text-slate-400">Planets & Moons</p>
                       {showcasePlanetsMoons.map((item) => (
@@ -615,7 +583,7 @@ function ExplorePageContent() {
                           }}
                           className="block w-full text-left rounded px-2 py-1.5 text-slate-200 hover:bg-white/10"
                         >
-                          {item.name}
+                          {item.displayName}
                         </button>
                       ))}
                     </div>
@@ -633,7 +601,7 @@ function ExplorePageContent() {
                           }}
                           className="block w-full text-left rounded px-2 py-1.5 text-slate-200/80 bg-white/[0.02] hover:bg-white/10"
                         >
-                          {item.name}
+                          {item.displayName}
                         </button>
                       ))}
                     </div>
@@ -651,7 +619,7 @@ function ExplorePageContent() {
                           }}
                           className="block w-full text-left rounded px-2 py-1.5 text-slate-200/80 bg-white/[0.02] hover:bg-white/10"
                         >
-                          {item.name}
+                          {item.displayName}
                         </button>
                       ))}
                     </div>
@@ -669,7 +637,7 @@ function ExplorePageContent() {
                           }}
                           className="block w-full text-left rounded px-2 py-1.5 text-slate-200/80 bg-white/[0.02] hover:bg-white/10"
                         >
-                          {item.name}
+                          {item.displayName}
                         </button>
                       ))}
                     </div>
@@ -681,7 +649,9 @@ function ExplorePageContent() {
             {bridgeDebugOn ? (
               <aside className="fixed right-4 top-24 z-[24] w-[21rem] rounded-xl border border-white/15 bg-black/55 p-2.5 backdrop-blur">
                 <p className="text-[10px] uppercase tracking-[0.16em] text-slate-300">Bridge debug</p>
-                <p className="mt-1 text-[10px] text-slate-500">entity={showcaseActiveItemId} | rules={activeBridgeRules.length}</p>
+                <p className="mt-1 text-[10px] text-slate-500">
+                  entity={showcaseActiveItemId} | lessons={effectiveLessonLinks.length}
+                </p>
                 <div className="mt-2 max-h-32 overflow-y-auto space-y-1">
                   {bridgeDebugEntries.length > 0 ? (
                     bridgeDebugEntries.map((line, idx) => (
@@ -696,50 +666,17 @@ function ExplorePageContent() {
               </aside>
             ) : null}
             {!bridgeDebugOn ? (
-              <aside className="fixed right-4 top-24 z-[24] w-[20rem] rounded-xl border border-white/10 bg-black/45 p-2.5 backdrop-blur">
-                <p className="text-[10px] uppercase tracking-[0.16em] text-slate-300">Learning Bridge</p>
-                <p className="mt-1 text-[11px] text-slate-300">
-                  {activeShowcaseItem?.name || showcaseActiveItemId} • focus {focusDelaySec}s
-                </p>
-                <p className="mt-1 text-[10px] text-slate-500">
-                  Actions: {bridgeEnabledActions.length > 0 ? bridgeEnabledActions.join(' • ') : 'Không có'}
-                </p>
-              </aside>
+              <ShowcaseEntityPanel
+                item={activeResolved}
+                orbit={activeOrbitEntity}
+                museumLabelVi={museumLabelVi}
+                conceptChips={effectiveConceptCards}
+                learningLinks={effectiveLessonLinks}
+                panelConfig={activeContentRow?.panelConfig ?? null}
+              />
             ) : null}
 
-            {bridgeOverlayOpen && bridgeOverlayEntityId === showcaseActiveItemId ? (
-              <aside className="fixed left-4 bottom-4 z-[20] w-[22rem] rounded-xl border border-cyan-400/30 bg-[#07111d]/95 p-3 backdrop-blur">
-                <p className="text-[10px] uppercase tracking-[0.18em] text-cyan-300/90">Concept overlay</p>
-                <p className="mt-1 text-xs text-slate-300">
-                  Bạn vừa tập trung vào <span className="text-white font-medium">{activeShowcaseItem?.name || showcaseActiveItemId}</span> hơn {focusDelaySec} giây.
-                </p>
-                {bridgeConceptCards.length > 0 ? (
-                  <div className="mt-2 grid gap-2">
-                    {bridgeConceptCards.map((c) => (
-                      <a
-                        key={c.id}
-                        href={`/search?q=${encodeURIComponent(c.id)}`}
-                        className="rounded-lg border border-white/10 bg-black/30 px-2.5 py-2 hover:bg-white/10"
-                      >
-                        <p className="text-xs font-medium text-cyan-100">{c.title || c.id}</p>
-                        <p className="mt-1 text-[11px] text-slate-400 line-clamp-2">{c.short_description || c.explanation}</p>
-                      </a>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="mt-2 text-[11px] text-slate-400">Chưa map concept cho entity này trong bridge v1.</p>
-                )}
-                {bridgeLessonLinks.length > 0 ? (
-                  <div className="mt-2 rounded-lg border border-white/10 bg-black/25 p-2">
-                    <p className="text-[10px] uppercase tracking-wide text-emerald-300/90">Learning path sync</p>
-                    <p className="mt-1 text-[11px] text-slate-300">
-                      Đã đánh dấu <span className="text-emerald-200 font-medium">{bridgeLessonLinks.length}</span> mục liên quan là visited_3d.
-                    </p>
-                    <p className="mt-1 text-[10px] text-slate-500">Tổng visited_3d hiện có: {Object.keys(visited3DMap).length}</p>
-                  </div>
-                ) : null}
-              </aside>
-            ) : null}
+            {null}
 
             {bridgeQuizPromptOpen && bridgeQuizQuestions.length > 0 ? (
               <aside className="fixed right-4 bottom-4 z-[21] w-[23rem] rounded-xl border border-amber-400/35 bg-[#16100a]/95 p-3 backdrop-blur">
@@ -754,7 +691,9 @@ function ExplorePageContent() {
                   </button>
                 </div>
                 <p className="mt-1 text-xs text-slate-200">
-                  Bạn vừa khám phá <span className="font-medium text-white">{activeShowcaseItem?.name || showcaseActiveItemId}</span>. Thử nhanh {bridgeQuizQuestions.length} câu nhé?
+                  Bạn vừa khám phá{' '}
+                  <span className="font-medium text-white">{activeResolved?.displayName || showcaseActiveItemId}</span>. Thử
+                  nhanh {bridgeQuizQuestions.length} câu nhé?
                 </p>
                 <div className="mt-2 space-y-2">
                   {bridgeQuizQuestions.map((q, qIdx) => (

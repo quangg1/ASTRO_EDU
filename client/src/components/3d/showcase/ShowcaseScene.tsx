@@ -1,14 +1,13 @@
 'use client'
 
 import { useRef, useMemo, useState, useEffect } from 'react'
-import { Canvas, useFrame, useThree } from '@react-three/fiber'
+import { Canvas, useThree } from '@react-three/fiber'
 import { OrbitControls, Stars, Preload } from '@react-three/drei'
 import { Suspense } from 'react'
 import * as THREE from 'three'
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib'
 import { planetsData } from '@/lib/solarSystemData'
-import { NASA_SHOWCASE_ITEMS } from '@/lib/showcaseEntities'
-import { resolveShowcaseFocusPlanetIndex } from '@/lib/showcaseOrbitFocus'
+import { NASA_SHOWCASE_ITEMS, type ShowcaseOrbitEntity } from '@/lib/showcaseEntities'
 import { OrbitPath } from '@/components/3d/OrbitPath'
 import { Planet, Sun } from '@/components/3d/planetBodies'
 import { ExploreEntityFx } from '@/components/3d/ExploreEntityFx'
@@ -19,12 +18,6 @@ import {
   type ShowcaseCameraSpherical,
 } from '@/components/3d/showcase/ShowcaseCameraManager'
 import { useShowcaseStore } from '@/store/showcaseStore'
-
-function safeCameraRadialDir(from: THREE.Vector3, to: THREE.Vector3): THREE.Vector3 {
-  const d = from.clone().sub(to)
-  if (d.lengthSq() < 1e-10) return new THREE.Vector3(0, 0.22, 1).normalize()
-  return d.normalize()
-}
 
 function sanitizeControlsCamera(c: OrbitControlsImpl) {
   const p = c.object.position
@@ -38,6 +31,13 @@ function sanitizeControlsCamera(c: OrbitControlsImpl) {
 /** Per-orbit fade scales with semi-major axis (NASA Eyes-like behavior). */
 const PLANET_HELIO_ORBIT_FADE_NEAR_SCALE = 0.75
 const PLANET_HELIO_ORBIT_FADE_FAR_SCALE = 3
+const AU_TO_SCENE_UNITS = 26
+const SHOWCASE_MAX_DISTANCE_FLOOR = 420
+const SHOWCASE_MAX_DISTANCE_CEIL = 2600
+
+function planetEntityId(name: string): string {
+  return `planet-${name.toLowerCase()}`
+}
 
 function ShowcaseSceneContent({
   showcaseActiveItemId,
@@ -49,6 +49,7 @@ function ShowcaseSceneContent({
   observerTargetLock = false,
   initialSpherical,
   onCameraSettled,
+  orbitEntities,
 }: {
   showcaseActiveItemId: string | null
   onShowcaseItemSelect?: (id: string) => void
@@ -59,8 +60,14 @@ function ShowcaseSceneContent({
   observerTargetLock?: boolean
   initialSpherical?: ShowcaseCameraSpherical | null
   onCameraSettled?: (spherical: ShowcaseCameraSpherical) => void
+  orbitEntities?: ShowcaseOrbitEntity[]
 }) {
   const controlsRef = useRef<OrbitControlsImpl | null>(null)
+  const controlsTargetRef = useRef<[number, number, number]>([0, 0, 0])
+  const activeGroupById = useMemo(
+    () => new Map(NASA_SHOWCASE_ITEMS.map((i) => [String(i.id || '').trim(), i.group] as const)),
+    [],
+  )
   const { camera, scene } = useThree()
   const planetPositionsRef = useRef<THREE.Vector3[]>(
     Array.from({ length: planetsData.length }, () => new THREE.Vector3())
@@ -69,17 +76,34 @@ function ShowcaseSceneContent({
   const [internalIndex, setInternalIndex] = useState<number | null>(null)
   const [hoveredOrbitIndex, setHoveredOrbitIndex] = useState<number | null>(null)
   const selectedIndex = flightTargetIndex !== undefined ? flightTargetIndex : internalIndex
+  const runtimePlanetsData = useMemo(() => {
+    const byId = new Map((orbitEntities || []).map((e) => [String(e.id || '').trim(), e] as const))
+    return planetsData.map((p) => {
+      const o = byId.get(planetEntityId(p.name))
+      if (!o) return p
+      const periodDays = Number(o.orbitalElements?.periodDays ?? o.periodDays ?? 0)
+      const semiMajorAu = Number(o.semiMajorAxisAu ?? o.orbitalElements?.a ?? 0)
+      const nextDistance =
+        Number.isFinite(semiMajorAu) && semiMajorAu > 0 ? semiMajorAu * AU_TO_SCENE_UNITS : p.distance
+      return {
+        ...p,
+        distance: nextDistance,
+        period: Number.isFinite(periodDays) && periodDays > 0 ? periodDays : p.period,
+        orbitColor: o.orbitColor || p.orbitColor,
+        orbitEccentricity:
+          Number.isFinite(Number(o.orbitalElements?.e)) ? Number(o.orbitalElements?.e) : p.orbitEccentricity,
+        orbitInclinationDeg:
+          Number.isFinite(Number(o.orbitalElements?.i)) ? Number(o.orbitalElements?.i) : p.orbitInclinationDeg,
+        orbitAscendingNodeDeg:
+          Number.isFinite(Number(o.orbitalElements?.om)) ? Number(o.orbitalElements?.om) : p.orbitAscendingNodeDeg,
+        orbitPhaseDeg: Number.isFinite(Number(o.orbitalElements?.m)) ? Number(o.orbitalElements?.m) : p.orbitPhaseDeg,
+      }
+    })
+  }, [orbitEntities])
 
-  const activeGroup = useMemo(
-    () => NASA_SHOWCASE_ITEMS.find((i) => i.id === showcaseActiveItemId)?.group ?? 'planets_moons',
-    [showcaseActiveItemId],
-  )
+  const activeGroup = showcaseActiveItemId ? activeGroupById.get(showcaseActiveItemId) ?? 'planets_moons' : 'planets_moons'
   const isPlanetFocus = Boolean(showcaseActiveItemId?.startsWith('planet-'))
   const isEntityFocus = Boolean(showcaseActiveItemId && !isPlanetFocus)
-  const focusPlanetIndex = useMemo(
-    () => resolveShowcaseFocusPlanetIndex(showcaseActiveItemId, selectedIndex),
-    [showcaseActiveItemId, selectedIndex],
-  )
   const setFocusedEntity = useShowcaseStore((s) => s.setFocusedEntity)
   const cameraDistanceToSun = useShowcaseStore((s) => s.cameraDistanceToSun)
 
@@ -92,10 +116,7 @@ function ShowcaseSceneContent({
     onPlanetSelect?.(idx)
   }
 
-  const locked = observerTargetLock === true
-  // Continuous single-scene behavior: this only enables camera assistance, not a hard scene mode switch.
-  const focusAssistActive = observerDisableAutoTarget === true && locked && selectedIndex !== null
-  const selectedSemiMajorAxis = selectedIndex !== null ? Math.max(1, planetsData[selectedIndex]?.distance ?? 1) : 1
+  const selectedSemiMajorAxis = selectedIndex !== null ? Math.max(1, runtimePlanetsData[selectedIndex]?.distance ?? 1) : 1
   const focusBlend =
     selectedIndex !== null
       ? THREE.MathUtils.clamp(
@@ -104,7 +125,12 @@ function ShowcaseSceneContent({
           1,
         )
       : 0
-  const motionScale = selectedIndex !== null ? 0 : 1
+  const motionScale = 1
+  const maxOrbitDistance = useMemo(
+    () => runtimePlanetsData.reduce((m, p) => Math.max(m, Number.isFinite(p.distance) ? p.distance : 0), 0),
+    [runtimePlanetsData],
+  )
+  const dynamicMaxDistance = THREE.MathUtils.clamp(maxOrbitDistance * 1.65 + 70, SHOWCASE_MAX_DISTANCE_FLOOR, SHOWCASE_MAX_DISTANCE_CEIL)
 
   useEffect(() => {
     scene.fog = null
@@ -113,48 +139,26 @@ function ShowcaseSceneContent({
       cam.clearViewOffset()
       cam.fov = 45
       cam.near = 0.1
-      cam.far = 2000
+      cam.far = Math.max(2500, dynamicMaxDistance * 1.9)
       cam.updateProjectionMatrix()
     }
     camera.up.set(0, 1, 0)
-    const t = window.setTimeout(() => {
-      const c = controlsRef.current
-      if (!c) return
-      c.target.set(0, 0, 0)
-      c.object.position.set(0, 19, 58)
-      c.update()
-    }, 0)
-    return () => clearTimeout(t)
-  }, [scene, camera])
+  }, [scene, camera, dynamicMaxDistance])
 
-  useFrame((_, dt) => {
+  useEffect(() => {
     const c = controlsRef.current
-    if (!c || !focusAssistActive || selectedIndex === null) return
-    sanitizeControlsCamera(c)
-    const p = planetPositionsRef.current[selectedIndex]
-    if (!p || p.lengthSq() < 1e-6) return
-    const desiredDistance =
-      observerExploreEntityId === 'venus-greenhouse' ? 4.25 :
-      observerExploreEntityId === 'venus-atmosphere' ? 4.8 :
-      5.2
-    c.target.lerp(p, 0.18)
-    const dir = safeCameraRadialDir(c.object.position, c.target)
-    const desiredPos = c.target.clone().add(dir.multiplyScalar(desiredDistance))
-    c.object.position.lerp(desiredPos, Math.min(1, dt * 2.2))
+    if (!c) return
+    c.target.set(0, 0, 0)
+    c.object.position.set(0, 19, 58)
     sanitizeControlsCamera(c)
     c.update()
-  })
-
-  useFrame(() => {
-    const c = controlsRef.current
-    if (c) sanitizeControlsCamera(c)
-  })
+  }, [])
 
   return (
     <>
       <ShowcaseLighting />
 
-      {planetsData.map((data, i) => {
+      {runtimePlanetsData.map((data, i) => {
         const isSelected = i === selectedIndex
         const isHovered = i === hoveredOrbitIndex
         const a = Math.max(1, data.distance)
@@ -188,7 +192,7 @@ function ShowcaseSceneContent({
           setSelection(null)
         }}
       />
-      {planetsData.map((data, i) => (
+      {runtimePlanetsData.map((data, i) => (
         <Planet
           key={data.name}
           data={data}
@@ -200,6 +204,8 @@ function ShowcaseSceneContent({
           spinTimeScale={motionScale}
           showLabel
           compactPlanetLabel
+          exploreStyleLod
+          isSelected={selectedIndex === i}
           interactive={!isEntityFocus}
           onHoverChange={(hovered) => setHoveredOrbitIndex(hovered ? i : (prev) => (prev === i ? null : prev))}
           onSelect={() => {
@@ -213,7 +219,7 @@ function ShowcaseSceneContent({
         entityId={observerExploreEntityId}
         planetPositionsRef={planetPositionsRef}
         selectedIndex={selectedIndex}
-        selectedRadius={selectedIndex !== null ? planetsData[selectedIndex]?.radius ?? 1 : 1}
+        selectedRadius={selectedIndex !== null ? runtimePlanetsData[selectedIndex]?.radius ?? 1 : 1}
         visible={Boolean(observerExploreEntityId && selectedIndex !== null && focusBlend > 0.3)}
       />
 
@@ -223,9 +229,14 @@ function ShowcaseSceneContent({
         visible
         frozen={selectedIndex !== null}
         activeGroup={activeGroup}
-        selectedPlanetName={selectedIndex !== null ? planetsData[selectedIndex]?.name ?? null : null}
-        onPositionUpdate={(id, p) => showcaseEntityPositionsRef.current.set(id, p.clone())}
+        selectedPlanetName={selectedIndex !== null ? runtimePlanetsData[selectedIndex]?.name ?? null : null}
+        onPositionUpdate={(id, p) => {
+          const prev = showcaseEntityPositionsRef.current.get(id)
+          if (prev) prev.copy(p)
+          else showcaseEntityPositionsRef.current.set(id, p.clone())
+        }}
         onSelectEntity={(id) => onShowcaseItemSelect?.(id)}
+        orbitEntities={orbitEntities}
       />
 
       <ShowcaseCameraManager
@@ -238,15 +249,9 @@ function ShowcaseSceneContent({
         onCameraSettled={onCameraSettled}
       />
 
-      <group visible>
-        <Stars radius={260} depth={120} count={9000} factor={3.6} saturation={0.85} fade speed={0.45} />
-      </group>
-      <group visible>
-        <Stars radius={180} depth={70} count={4500} factor={5.2} saturation={1} fade speed={0.65} />
-      </group>
-      <group visible>
-        <Stars radius={360} depth={180} count={12000} factor={2.3} saturation={0.9} fade speed={0.28} />
-      </group>
+      <Stars radius={260} depth={120} count={9000} factor={3.6} saturation={0.85} fade speed={0.45} />
+      <Stars radius={180} depth={70} count={4500} factor={5.2} saturation={1} fade speed={0.65} />
+      <Stars radius={360} depth={180} count={12000} factor={2.3} saturation={0.9} fade speed={0.28} />
 
       <OrbitControls
         ref={controlsRef}
@@ -254,8 +259,8 @@ function ShowcaseSceneContent({
         enableZoom
         enableRotate
         minDistance={0.2}
-        maxDistance={220}
-        target={[0, 0, 0]}
+        maxDistance={dynamicMaxDistance}
+        target={controlsTargetRef.current}
         panSpeed={0.8}
         zoomSpeed={1.2}
         rotateSpeed={0.6}
@@ -275,6 +280,7 @@ export default function ShowcaseScene({
   observerTargetLock,
   initialSpherical,
   onCameraSettled,
+  orbitEntities,
 }: {
   showcaseActiveItemId: string | null
   onShowcaseItemSelect?: (id: string) => void
@@ -285,10 +291,10 @@ export default function ShowcaseScene({
   observerTargetLock?: boolean
   initialSpherical?: ShowcaseCameraSpherical | null
   onCameraSettled?: (spherical: ShowcaseCameraSpherical) => void
+  orbitEntities?: ShowcaseOrbitEntity[]
 }) {
   useEffect(() => {
     return () => {
-      useShowcaseStore.getState().setFocusedStudioPosition(null)
       useShowcaseStore.getState().setPreloadGroup(null)
       useShowcaseStore.getState().setShowcaseCameraUserOverride(false)
       useShowcaseStore.getState().setFocusedEntity(null)
@@ -323,6 +329,7 @@ export default function ShowcaseScene({
           observerTargetLock={observerTargetLock}
           initialSpherical={initialSpherical}
           onCameraSettled={onCameraSettled}
+          orbitEntities={orbitEntities}
         />
         <Preload all />
       </Suspense>

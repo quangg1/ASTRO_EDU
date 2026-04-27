@@ -1,5 +1,6 @@
 import * as THREE from 'three'
 import { create } from 'zustand'
+import type { RefObject } from 'react'
 
 type ShowcaseStore = {
   preloadGroup: string | null
@@ -18,6 +19,8 @@ type ShowcaseStore = {
   setCameraDistanceToSun: (d: number) => void
   focusedEntity: string | null
   setFocusedEntity: (id: string | null) => void
+  studioLightRef: RefObject<THREE.PointLight> | null
+  setStudioLightRef: (r: RefObject<THREE.PointLight> | null) => void
 }
 
 export const useShowcaseStore = create<ShowcaseStore>((set) => ({
@@ -31,4 +34,6 @@ export const useShowcaseStore = create<ShowcaseStore>((set) => ({
   setCameraDistanceToSun: (d) => set({ cameraDistanceToSun: d }),
   focusedEntity: null,
   setFocusedEntity: (id) => set({ focusedEntity: id }),
+  studioLightRef: null,
+  setStudioLightRef: (r) => set({ studioLightRef: r }),
 }))

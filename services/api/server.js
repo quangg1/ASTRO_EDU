@@ -7,7 +7,15 @@ const { bootstrapCoreData } = require('./bootstrap/seedCoreData');
 const { errorMiddleware } = require('./shared/errors');
 const { requestContextMiddleware } = require('./shared/requestContext');
 const authRouter = require('./features/auth');
-const { coursesRouter, tutorialsRouter, learningPathRouter, conceptsRouter } = require('./features/courses');
+const {
+  coursesRouter,
+  tutorialsRouter,
+  learningPathRouter,
+  conceptsRouter,
+  showcaseEntitiesRouter,
+  showcaseCatalogRouter,
+  showcaseOrbitsJplRouter,
+} = require('./features/courses');
 const paymentRouter = require('./features/payment');
 const { forumsRouter, postsRouter, newsRouter } = require('./features/community');
 const mediaRouter = require('./features/media');
@@ -27,6 +35,9 @@ app.use('/api/courses', coursesRouter);
 app.use('/api/tutorials', tutorialsRouter);
 app.use('/api/learning-path', learningPathRouter);
 app.use('/api/concepts', conceptsRouter);
+app.use('/api/showcase-entities', showcaseEntitiesRouter);
+app.use('/api/showcase-catalog', showcaseCatalogRouter);
+app.use('/api/showcase-orbits', showcaseOrbitsJplRouter);
 app.use('/api/payments', paymentRouter);
 app.use('/api/forums', forumsRouter);
 app.use('/api/posts', postsRouter);

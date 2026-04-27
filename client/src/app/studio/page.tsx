@@ -54,6 +54,12 @@ export default function StudioHomePage() {
               Mở Concept Studio
             </Link>
             <Link
+              href="/studio/showcase-entities"
+              className="inline-flex items-center min-h-10 px-4 rounded-xl bg-slate-600 text-white text-sm font-medium hover:bg-slate-500"
+            >
+              Showcase entity (CMS)
+            </Link>
+            <Link
               href="/tutorial"
               target="_blank"
               rel="noopener noreferrer"

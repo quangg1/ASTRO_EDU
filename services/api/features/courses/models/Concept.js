@@ -12,6 +12,7 @@ const conceptSchema = new mongoose.Schema(
     subdomain: { type: String, default: '' },
     aliases: [{ type: String }],
     prerequisites: [{ type: String }],
+    difficulty_level: { type: Number, enum: [0, 1, 2], default: 1 },
     published: { type: Boolean, default: true },
   },
   { timestamps: true, minimize: false },

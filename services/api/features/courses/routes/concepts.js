@@ -79,6 +79,9 @@ function normalizeConcepts(concepts) {
       prerequisites: Array.isArray(c.prerequisites)
         ? [...new Set(c.prerequisites.map((x) => String(x || '').trim()).filter(Boolean))]
         : [],
+      difficulty_level: Number.isFinite(Number(c.difficulty_level))
+        ? Math.max(0, Math.min(2, Number(c.difficulty_level)))
+        : 1,
       published: c.published !== false,
     }))
     .filter((c) => c.id);

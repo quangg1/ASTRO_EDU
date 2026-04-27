@@ -11,4 +11,6 @@ export {
   SHOWCASE_ORBIT_ENTITIES,
   getShowcaseOrbitEntityById,
   getNasaCatalogItemById,
+  hydrateShowcaseCatalogBundle,
+  type ShowcaseCatalogBundleDTO,
 } from './showcaseEntities'

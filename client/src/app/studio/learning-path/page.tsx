@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation'
 import {
   DEPTH_ORDER,
   DEPTH_META,
+  LEARNING_MODULES,
   createEmptyLessonItem,
   createEmptyModule,
   createEmptyNode,
@@ -27,7 +28,6 @@ import {
   fetchEditorLearningPath,
   generateRecallQuizForLesson,
   saveEditorLearningPath,
-  type LearningPathBridgeRule,
 } from '@/lib/learningPathApi'
 import {
   FALLBACK_TAXONOMY_REGISTRY,
@@ -54,7 +54,10 @@ import {
 } from 'lucide-react'
 import { NodeTopicWeightsEditor } from '@/components/studio/NodeTopicWeightsEditor'
 import { LearningPathRecallQuizEditor } from '@/components/studio/LearningPathRecallQuizEditor'
-import { BridgeRuleBuilder } from '@/components/studio/BridgeRuleBuilder'
+import { NASA_SHOWCASE_ITEMS } from '@/lib/showcaseEntities'
+import { useShowcaseCatalogGen } from '@/components/showcase/ShowcaseCatalogProvider'
+import { mergeNasaCatalog, type ResolvedNasaCatalogItem } from '@/lib/mergeShowcaseCatalog'
+import { fetchPublicShowcaseEntityContents, type ShowcaseEntityContentDTO } from '@/lib/showcaseEntitiesApi'
 
 const BlockEditor = dynamic(() => import('@/components/studio/BlockEditor'), { ssr: false })
 const BlockPalette = dynamic(() => import('@/components/studio/BlockPalette'), { ssr: false })
@@ -247,6 +250,7 @@ function LearningPathLessonEditor({
   blockClipboard,
   setBlockClipboard,
   inputCls,
+  resolvedShowcaseCatalog,
 }: {
   activeLesson: LessonItem
   concepts: LearningConcept[]
@@ -261,6 +265,7 @@ function LearningPathLessonEditor({
   blockClipboard: LessonSection | null
   setBlockClipboard: Dispatch<SetStateAction<LessonSection | null>>
   inputCls: string
+  resolvedShowcaseCatalog: ResolvedNasaCatalogItem[]
 }) {
   const sections = activeLesson.sections ?? []
   const selectedConceptIds = activeLesson.conceptIds ?? []
@@ -499,6 +504,67 @@ function LearningPathLessonEditor({
           className={`mt-1 ${inputCls}`}
         />
       </label>
+
+      <div className="rounded-xl border border-violet-500/25 bg-violet-500/5 p-3 space-y-2">
+        <p className="text-xs font-medium text-violet-200">Showcase 3D — sceneContext (Layer 3)</p>
+        <p className="text-[11px] text-slate-500">
+          Gắn bài với entity trong Explore; gộp với lesson tìm được qua concept (Layer 2). Để trống nếu bài không nhắm showcase.
+        </p>
+        <label className="block text-xs text-slate-400">
+          Entity chính (catalog)
+          <select
+            value={activeLesson.sceneContext?.primaryEntityId ?? ''}
+            onChange={(e) => {
+              const v = e.target.value.trim()
+              const extras = (activeLesson.sceneContext?.entityIds || []).filter(Boolean)
+              if (!v && extras.length === 0) {
+                patchLesson({ sceneContext: undefined })
+                return
+              }
+              patchLesson({
+                sceneContext: {
+                  ...(v ? { primaryEntityId: v } : {}),
+                  ...(extras.length ? { entityIds: extras } : {}),
+                },
+              })
+            }}
+            className={`mt-1 ${inputCls}`}
+          >
+            <option value="">— Không chọn —</option>
+            {resolvedShowcaseCatalog.map((it) => (
+              <option key={it.id} value={it.id}>
+                {it.displayName} ({it.id})
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="block text-xs text-slate-400">
+          Entity phụ (id, cách nhau bằng dấu phẩy)
+          <input
+            value={(activeLesson.sceneContext?.entityIds || []).join(', ')}
+            onChange={(e) => {
+              const parts = e.target.value
+                .split(',')
+                .map((s) => s.trim())
+                .filter(Boolean)
+              const primary = (activeLesson.sceneContext?.primaryEntityId || '').trim()
+              const unique = [...new Set(parts)].filter((id) => id !== primary)
+              if (!primary && unique.length === 0) {
+                patchLesson({ sceneContext: undefined })
+                return
+              }
+              patchLesson({
+                sceneContext: {
+                  ...(primary ? { primaryEntityId: primary } : {}),
+                  ...(unique.length ? { entityIds: unique } : {}),
+                },
+              })
+            }}
+            placeholder="vd: moon-europa, sc-cassini"
+            className={`mt-1 ${inputCls}`}
+          />
+        </label>
+      </div>
 
       <div className="rounded-xl border border-cyan-500/25 bg-cyan-500/5 p-3">
         <p className="text-xs font-medium text-cyan-200 mb-2">Concept mapping + highlight</p>
@@ -1056,7 +1122,6 @@ export default function StudioLearningPathPage() {
   const [concepts, setConcepts] = useState<LearningConcept[]>([])
   const [taxonomyRegistry, setTaxonomyRegistry] = useState<TaxonomyRegistry>(FALLBACK_TAXONOMY_REGISTRY)
   const [published, setPublished] = useState(true)
-  const [bridgeRules, setBridgeRules] = useState<LearningPathBridgeRule[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
@@ -1065,6 +1130,17 @@ export default function StudioLearningPathPage() {
   const [editorTab, setEditorTab] = useState<'blocks' | 'preview' | 'lesson-page' | 'quiz'>('blocks')
   const [blockClipboard, setBlockClipboard] = useState<LessonSection | null>(null)
   const [baselineSnapshot, setBaselineSnapshot] = useState('')
+  const [showcaseContent, setShowcaseContent] = useState<ShowcaseEntityContentDTO[]>([])
+  const showcaseCatalogGen = useShowcaseCatalogGen()
+
+  const resolvedShowcaseCatalog = useMemo(
+    () => mergeNasaCatalog(NASA_SHOWCASE_ITEMS, showcaseContent),
+    [showcaseContent, showcaseCatalogGen],
+  )
+
+  useEffect(() => {
+    void fetchPublicShowcaseEntityContents().then(setShowcaseContent)
+  }, [])
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -1100,23 +1176,40 @@ export default function StudioLearningPathPage() {
     }
     Promise.all([fetchEditorLearningPath(token), fetchEditorConcepts(token), fetchTaxonomyRegistryEditor(token)])
       .then(([d, cs, tx]) => {
-        if (!d) return
-        setModules(d.modules || [])
-        setConcepts(cs || [])
-        setBridgeRules(d.bridgeRules || [])
+        const dbModules = d?.modules && d.modules.length > 0 ? d.modules : null
+        const nextModules =
+          dbModules ??
+          (LEARNING_MODULES.length > 0
+            ? (JSON.parse(JSON.stringify(LEARNING_MODULES)) as LearningModule[])
+            : [])
+        const nextConcepts =
+          cs && cs.length > 0
+            ? cs
+            : d?.concepts && d.concepts.length > 0
+              ? d.concepts
+              : []
+        const publishedVal = d?.published ?? true
+        if (!dbModules && LEARNING_MODULES.length > 0) {
+          setMessage(
+            d == null
+              ? 'Chưa có bản ghi LearningPath trên Mongo (hoặc API lỗi). Đang tải lộ trình mặc định từ code — bấm Lưu để ghi vào database.'
+              : 'Mongo đang có LearningPath nhưng danh sách module rỗng. Đang tải lộ trình mặc định từ code — bấm Lưu để khôi phục.',
+          )
+        }
+        setModules(nextModules)
+        setConcepts(nextConcepts)
         setBaselineSnapshot(
           JSON.stringify({
-            modules: d.modules || [],
-            bridgeRules: d.bridgeRules || [],
-            published: !!d.published,
+            modules: nextModules,
+            published: publishedVal,
           }),
         )
         if (tx) setTaxonomyRegistry(tx)
-        setPublished(d.published)
+        setPublished(publishedVal)
 
         // Preserve current editing selection when data refreshes (e.g. tab blur/focus auth refresh).
-        if (!d.modules?.length) return
-        const sorted = [...d.modules].sort((a, b) => a.order - b.order)
+        if (!nextModules.length) return
+        const sorted = [...nextModules].sort((a, b) => a.order - b.order)
         const hasModule = moduleId && sorted.some((m) => m.id === moduleId)
         const selectedModule = hasModule
           ? sorted.find((m) => m.id === moduleId) || sorted[0]
@@ -1144,9 +1237,9 @@ export default function StudioLearningPathPage() {
 
   const isDirty = useMemo(() => {
     if (loading) return false
-    const current = JSON.stringify({ modules, bridgeRules, published })
+    const current = JSON.stringify({ modules, published })
     return baselineSnapshot !== '' && current !== baselineSnapshot
-  }, [loading, modules, bridgeRules, published, baselineSnapshot])
+  }, [loading, modules, published, baselineSnapshot])
   const confirmLeaveIfDirty = useCallback(() => {
     if (!isDirty || saving) return true
     return window.confirm('Bạn có thay đổi chưa lưu. Rời trang và bỏ thay đổi?')
@@ -1415,17 +1508,15 @@ export default function StudioLearningPathPage() {
     setSaveIssues(localIssues)
     setSaving(true)
     setMessage('')
-    const rPath = await saveEditorLearningPath(token, modules, bridgeRules, published)
+    const rPath = await saveEditorLearningPath(token, modules, published)
     setSaving(false)
     if (rPath.ok && rPath.modules) {
       setModules(rPath.modules)
-      setBridgeRules(Array.isArray(rPath.bridgeRules) ? rPath.bridgeRules : [])
       if (typeof rPath.published === 'boolean') setPublished(rPath.published)
       setInvalidConceptIds(rPath.invalidConceptIds || [])
       setBaselineSnapshot(
         JSON.stringify({
           modules: rPath.modules,
-          bridgeRules: Array.isArray(rPath.bridgeRules) ? rPath.bridgeRules : [],
           published: typeof rPath.published === 'boolean' ? rPath.published : published,
         }),
       )
@@ -1437,7 +1528,7 @@ export default function StudioLearningPathPage() {
       setSaveIssues((prev) => (serverIssues.length > 0 ? [...prev, ...serverIssues] : prev))
     }
     setMessage(rPath.ok ? 'Đã lưu Learning Path.' : rPath.error || 'Lỗi lưu')
-  }, [bridgeRules, modules, published])
+  }, [modules, published])
 
   useEffect(() => {
     const onBeforeUnload = (e: BeforeUnloadEvent) => {
@@ -1905,12 +1996,22 @@ export default function StudioLearningPathPage() {
                 </div>
               </details>
 
-              <details className="rounded-2xl border border-white/10 bg-[#0c1018] p-4" open>
+              <details className="rounded-2xl border border-white/10 bg-[#0c1018] p-4">
                 <summary className="cursor-pointer text-[10px] uppercase tracking-wider text-slate-500 font-semibold">
-                  Rule Builder (nhiệm vụ: map hành vi Explore)
+                  Learning Bridge (Layer 1–3)
                 </summary>
-                <div className="mt-3">
-                  <BridgeRuleBuilder rules={bridgeRules} concepts={concepts} onChange={setBridgeRules} />
+                <div className="mt-3 text-[11px] text-slate-400 space-y-2 leading-relaxed">
+                  <p>
+                    <span className="text-slate-200">Layer 1</span> — nhãn museum trên Explore theo catalog entity (không cần cấu hình
+                    thêm).
+                  </p>
+                  <p>
+                    <span className="text-slate-200">Layer 2</span> — map entity → concept trong code; lesson khớp qua concept gắn bài.
+                  </p>
+                  <p>
+                    <span className="text-slate-200">Layer 3</span> — dùng khối &quot;Showcase 3D — sceneContext&quot; ở form bài để gắn entity
+                    trực tiếp (ưu tiên gợi ý bài trên Explore).
+                  </p>
                 </div>
               </details>
 
@@ -2064,6 +2165,7 @@ export default function StudioLearningPathPage() {
                       blockClipboard={blockClipboard}
                       setBlockClipboard={setBlockClipboard}
                       inputCls={inputCls}
+                      resolvedShowcaseCatalog={resolvedShowcaseCatalog}
                     />
                   )}
                 </div>

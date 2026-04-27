@@ -151,6 +151,7 @@ export default function StudioConceptsPage() {
   const [newConceptSubdomain, setNewConceptSubdomain] = useState('')
   const [newConceptAliases, setNewConceptAliases] = useState('')
   const [newConceptPrerequisites, setNewConceptPrerequisites] = useState<string[]>([])
+  const [newConceptDifficulty, setNewConceptDifficulty] = useState<0 | 1 | 2>(1)
   const [queueConceptId, setQueueConceptId] = useState<string | null>(null)
   const [queueSelectedIds, setQueueSelectedIds] = useState<string[]>([])
   const [queueDomain, setQueueDomain] = useState('')
@@ -478,6 +479,12 @@ export default function StudioConceptsPage() {
             >
               Đi tới Learning Path mapping
             </Link>
+            <Link
+              href="/tutorial/knowledge-map?ui=studio&mode=full&domain=all"
+              className="text-xs min-h-10 px-3 inline-flex items-center rounded-lg border border-violet-300/25 text-violet-100 hover:bg-violet-500/15"
+            >
+              Mở Knowledge Map (technical)
+            </Link>
             <button
               type="button"
               onClick={save}
@@ -787,6 +794,15 @@ export default function StudioConceptsPage() {
                 placeholder='aliases (vd: quỹ đạo elip|elliptical orbit)'
                 className={inputCls}
               />
+              <select
+                value={String(newConceptDifficulty)}
+                onChange={(e) => setNewConceptDifficulty(Number(e.target.value) as 0 | 1 | 2)}
+                className={inputCls}
+              >
+                <option value="0">Difficulty: Beginner</option>
+                <option value="1">Difficulty: Explorer</option>
+                <option value="2">Difficulty: Researcher</option>
+              </select>
               <label className="block text-xs text-slate-400">
                 Prerequisites mapping
                 <div className="mt-1 max-h-[140px] overflow-y-auto rounded-lg border border-white/15 bg-black/40 p-2 space-y-1">
@@ -839,6 +855,7 @@ export default function StudioConceptsPage() {
                       subdomain: newConceptSubdomain.trim() || undefined,
                       aliases: parsePipeList(newConceptAliases),
                       prerequisites: newConceptPrerequisites,
+                      difficulty_level: newConceptDifficulty,
                     },
                   ])
                   setNewConceptId('')
@@ -851,6 +868,7 @@ export default function StudioConceptsPage() {
                   setNewConceptSubdomain('')
                   setNewConceptAliases('')
                   setNewConceptPrerequisites([])
+                  setNewConceptDifficulty(1)
                 }}
                 className="w-full rounded-lg bg-emerald-600/80 hover:bg-emerald-500 text-white text-xs font-medium py-2"
               >
@@ -1008,6 +1026,32 @@ export default function StudioConceptsPage() {
                               />
                               Published
                             </label>
+                            <label className="block text-[10px] text-slate-500">
+                              Difficulty level
+                              <select
+                                value={String(c.difficulty_level ?? 1)}
+                                onChange={(e) =>
+                                  setConcepts((prev) =>
+                                    prev.map((x) =>
+                                      x.id === c.id
+                                        ? {
+                                            ...x,
+                                            difficulty_level: Math.max(
+                                              0,
+                                              Math.min(2, Number(e.target.value) || 1),
+                                            ) as 0 | 1 | 2,
+                                          }
+                                        : x,
+                                    ),
+                                  )
+                                }
+                                className={`mt-1 ${inputCls}`}
+                              >
+                                <option value="0">Beginner</option>
+                                <option value="1">Explorer</option>
+                                <option value="2">Researcher</option>
+                              </select>
+                            </label>
                           </div>
                         </details>
                         {c.examples?.length > 0 && (
@@ -1151,6 +1195,12 @@ export default function StudioConceptsPage() {
                           </div>
                         </details>
                         <div className="mt-2 flex justify-end">
+                          <Link
+                            href={`/tutorial/knowledge-map?ui=studio&mode=focus&domain=all&c=${encodeURIComponent(c.id)}`}
+                            className="mr-3 text-[11px] text-violet-300/85 hover:text-violet-200"
+                          >
+                            Kiểm tra trên Knowledge Map
+                          </Link>
                           <button
                             type="button"
                             onClick={() => {

@@ -93,6 +93,15 @@ function buildExplanation(title, shortDescription) {
   return `${shortDescription} Phan noi dung nay giup nguoi hoc nam duoc ban chat, boi canh va cach ap dung cua "${title}" trong cac bai hoc lien quan.`
 }
 
+function inferDifficultyLevel(concept) {
+  const text = [concept.id, concept.title, concept.short_description, concept.explanation, ...(concept.aliases || [])]
+    .join(' ')
+    .toLowerCase()
+  if (/(equation|tensor|relativistic|n-?body|flrw|interferometry|lambda|lcdm|singularity)/.test(text)) return 2
+  if (/(doppler|spectrum|orbital|kepler|accretion|dark matter|hubble|hydrostatic)/.test(text)) return 1
+  return 0
+}
+
 async function main() {
   await mongoose.connect(uri)
 
@@ -135,6 +144,10 @@ async function main() {
     next.examples = uniq(next.examples)
     next.related = uniq(next.related).filter((rid) => rid !== id && allIds.has(rid))
     next.prerequisites = uniq(next.prerequisites).filter((pid) => pid !== id && allIds.has(pid))
+    next.difficulty_level =
+      Number.isFinite(Number(next.difficulty_level)) && Number(next.difficulty_level) >= 0 && Number(next.difficulty_level) <= 2
+        ? Number(next.difficulty_level)
+        : inferDifficultyLevel(next)
     if (typeof next.published !== 'boolean') next.published = true
 
     const changed =
@@ -146,6 +159,7 @@ async function main() {
       JSON.stringify(next.aliases || []) !== JSON.stringify(doc.aliases || []) ||
       JSON.stringify(next.related || []) !== JSON.stringify(doc.related || []) ||
       JSON.stringify(next.prerequisites || []) !== JSON.stringify(doc.prerequisites || []) ||
+      next.difficulty_level !== (Number.isFinite(Number(doc.difficulty_level)) ? Number(doc.difficulty_level) : 1) ||
       next.published !== doc.published
 
     if (changed) {
@@ -172,6 +186,7 @@ async function main() {
               subdomain: next.subdomain,
               aliases: next.aliases,
               prerequisites: next.prerequisites,
+              difficulty_level: next.difficulty_level,
               published: next.published,
             },
           },

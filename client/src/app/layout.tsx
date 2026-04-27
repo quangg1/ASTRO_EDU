@@ -13,6 +13,7 @@ import { PwaStatusBadge } from '@/components/ui/PwaStatusBadge'
 import { HybridBootstrap } from '@/components/ui/HybridBootstrap'
 import { ChunkLoadRecovery } from '@/components/ui/ChunkLoadRecovery'
 import { LayoutChromeProvider } from '@/components/ui/LayoutChromeContext'
+import { ShowcaseCatalogProvider } from '@/components/showcase/ShowcaseCatalogProvider'
 
 export const metadata: Metadata = {
   title: { default: 'Cosmo Learn – Học thiên văn tương tác 3D', template: '%s | Cosmo Learn' },
@@ -59,16 +60,18 @@ export default function RootLayout({
         <PwaRegister />
         <HybridBootstrap />
         <AuthProvider>
-          <LayoutChromeProvider>
-            <ErrorBoundaryWrap>
-              <PwaInstallPrompt />
-              <PwaStatusBadge />
-              <AppChrome>{children}</AppChrome>
-              <Suspense fallback={null}>
-                <AITutor />
-              </Suspense>
-            </ErrorBoundaryWrap>
-          </LayoutChromeProvider>
+          <ShowcaseCatalogProvider>
+            <LayoutChromeProvider>
+              <ErrorBoundaryWrap>
+                <PwaInstallPrompt />
+                <PwaStatusBadge />
+                <AppChrome>{children}</AppChrome>
+                <Suspense fallback={null}>
+                  <AITutor />
+                </Suspense>
+              </ErrorBoundaryWrap>
+            </LayoutChromeProvider>
+          </ShowcaseCatalogProvider>
         </AuthProvider>
       </body>
     </html>

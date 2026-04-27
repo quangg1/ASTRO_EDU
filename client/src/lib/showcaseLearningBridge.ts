@@ -1,7 +1,6 @@
-import type { LearningConcept, LearningModule } from '@/data/learningPathCurriculum'
+import type { LearningConcept, LearningModule, LessonItem } from '@/data/learningPathCurriculum'
 import type { RecallQuestion } from '@/lib/lessonRecallQuiz'
 import { normalizeStudioRecallQuiz } from '@/lib/lessonRecallQuiz'
-import type { LessonItem } from '@/data/learningPathCurriculum'
 import { NASA_SHOWCASE_ITEMS } from '@/lib/showcaseEntities'
 
 export type ShowcaseBridgeMap = {
@@ -73,6 +72,115 @@ export function resolveMappedLessons(modules: LearningModule[], conceptIds: stri
     }
   }
   return out
+}
+
+/** Museum-style copy (Layer 1) — ngắn, độc lập Learning Path. */
+const ENTITY_MUSEUM_LABEL_VI: Partial<Record<string, string>> = {
+  'planet-earth':
+    'Trái Đất là hành tinh đá duy nhất (tính đến nay) có nước lỏng trên bề mặt và sinh quyển rõ rệt. Đây là “điểm neo” để so sánh khí hậu, đại dương và sự sống với các thế giới khác.',
+  'planet-mars':
+    'Mars là hành tinh đá gần Trái Đất nhất, có băng và dấu vết nước trong quá khứ — lý do nó là mục tiêu tìm dấu hiệu sinh học cổ.',
+  'planet-jupiter':
+    'Jupiter là hành tinh khí khổng lồ: khối lượng lớn, từ trường mạnh, và hệ vệ tinh phong phú (gồm các mục tiêu “đại dương băng” như Europa).',
+  'planet-saturn':
+    'Saturn nổi bật với vành đai băng–đá và nhiều mặt trăng lớn (như Titan có khí quyển dày). Vành đai là “phòng thí nghiệm” về va chạm và hình thành hệ hành tinh.',
+  'moon-titan':
+    'Titan là mặt trăng duy nhất có khí quyển dày và hồ chất lỏng trên bề mặt — một thế giới thứ hai để học hóa học khí quyển và chu trình carbon.',
+  'moon-europa':
+    'Europa là mặt trăng băng với dấu hiệu đại dương dưới bề mặt — nơi người ta thảo luận về năng lượng thủy triều và khả năng môi trường sống.',
+  'sc-cassini':
+    'Cassini là tàu thăm dò từng quan sát cận Saturn và hệ vành/vệ tinh trong nhiều năm — ví dụ điển hình về quan sát hệ hành tinh bằng nhiều dụng cụ khoa học.',
+}
+
+export function getShowcaseMuseumLabelVi(
+  entityId: string,
+  displayName: string,
+  /** Nội dung từ ShowcaseEntityContent (DB) — ưu tiên cao nhất. */
+  editorialBlurbVi?: string | null,
+): string {
+  const ed = String(editorialBlurbVi || '').trim()
+  if (ed) return ed
+  const key = String(entityId || '').trim()
+  if (ENTITY_MUSEUM_LABEL_VI[key]) return ENTITY_MUSEUM_LABEL_VI[key]!
+  const name = String(displayName || key || 'thiên thể').trim()
+  return `Đây là “${name}” trong bản đồ khám phá 3D. Bạn có thể xoay/zoom để quan sát hình dạng và vị trí tương đối; phần liên kết bài học sẽ hiện bên dưới nếu lộ trình của bạn có nội dung liên quan.`
+}
+
+export function lessonClaimsEntity(lesson: LessonItem, entityId: string): boolean {
+  const sc = lesson.sceneContext
+  if (!sc) return false
+  const e = String(entityId || '').trim()
+  if (!e) return false
+  if (String(sc.primaryEntityId || '').trim() === e) return true
+  const ids = sc.entityIds || []
+  return ids.some((id) => String(id || '').trim() === e)
+}
+
+export function resolveSceneContextLessons(
+  modules: LearningModule[],
+  entityId: string,
+): Array<{ lessonId: string; title: string; href: string; primary: boolean }> {
+  const e = String(entityId || '').trim()
+  if (!e) return []
+  const rows: Array<{ lessonId: string; title: string; href: string; primary: boolean }> = []
+  for (const mod of modules) {
+    for (const node of mod.nodes) {
+      for (const depth of ['beginner', 'explorer', 'researcher'] as const) {
+        for (const lesson of node.depths[depth] ?? []) {
+          if (!lessonClaimsEntity(lesson, e)) continue
+          const primary = String(lesson.sceneContext?.primaryEntityId || '').trim() === e
+          rows.push({
+            lessonId: lesson.id,
+            title: lesson.titleVi || lesson.title || lesson.id,
+            href: `/tutorial/${mod.id}/${node.id}/${encodeURIComponent(lesson.id)}`,
+            primary,
+          })
+        }
+      }
+    }
+  }
+  const byId = new Map<string, (typeof rows)[0]>()
+  for (const r of rows) {
+    const prev = byId.get(r.lessonId)
+    if (!prev) {
+      byId.set(r.lessonId, r)
+      continue
+    }
+    if (r.primary && !prev.primary) byId.set(r.lessonId, r)
+  }
+  return [...byId.values()].sort((a, b) => {
+    if (a.primary !== b.primary) return a.primary ? -1 : 1
+    return a.title.localeCompare(b.title, 'vi')
+  })
+}
+
+/** Layer 2 (concept map) + Layer 3 (sceneContext) — gộp và khử trùng lessonId. */
+export function resolveAllLessonsForEntity(
+  modules: LearningModule[],
+  concepts: LearningConcept[],
+  entityId: string,
+): Array<{ lessonId: string; title: string; href: string; source: 'scene' | 'concept' }> {
+  const sceneRows = resolveSceneContextLessons(modules, entityId)
+  const conceptRows = resolveMappedLessons(
+    modules,
+    resolveMappedConcepts(concepts, entityId).map((c) => c.id),
+  )
+  const byId = new Map<string, { lessonId: string; title: string; href: string; source: 'scene' | 'concept' }>()
+  for (const r of sceneRows) {
+    byId.set(r.lessonId, { lessonId: r.lessonId, title: r.title, href: r.href, source: 'scene' })
+  }
+  for (const r of conceptRows) {
+    if (byId.has(r.lessonId)) continue
+    byId.set(r.lessonId, { lessonId: r.lessonId, title: r.title, href: r.href, source: 'concept' })
+  }
+  const primaries = new Set(sceneRows.filter((x) => x.primary).map((x) => x.lessonId))
+  return [...byId.values()].sort((a, b) => {
+    const ap = primaries.has(a.lessonId) ? 1 : 0
+    const bp = primaries.has(b.lessonId) ? 1 : 0
+    if (ap !== bp) return bp - ap
+    if (a.source !== b.source) return a.source === 'scene' ? -1 : 1
+    return a.title.localeCompare(b.title, 'vi')
+  })
 }
 
 export function buildContextualQuizFromLessons(modules: LearningModule[], lessonIds: string[], limit = 2): RecallQuestion[] {

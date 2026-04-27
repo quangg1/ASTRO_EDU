@@ -6,19 +6,22 @@ export type StarMapNode = {
   name: string
   domain: string
   val: number
+  degree: number
+  difficultyLevel: 0 | 1 | 2
   encountered: boolean
+  frontier: boolean
 }
 
 export type StarMapLink = { source: string; target: string }
 
 /** Màu theo domain — tông “star map” tối. */
 export const DOMAIN_NODE_COLORS: Record<string, { bright: string; dim: string }> = {
-  astronomy: { bright: '#38bdf8', dim: 'rgba(56,189,248,0.28)' },
-  geology: { bright: '#a78bfa', dim: 'rgba(167,139,250,0.28)' },
-  biology: { bright: '#34d399', dim: 'rgba(52,211,153,0.28)' },
-  physics: { bright: '#fbbf24', dim: 'rgba(251,191,36,0.28)' },
-  chemistry: { bright: '#fb7185', dim: 'rgba(251,113,133,0.28)' },
-  misc: { bright: '#94a3b8', dim: 'rgba(148,163,184,0.22)' },
+  astronomy: { bright: '#38bdf8', dim: 'rgba(56,189,248,0.56)' },
+  geology: { bright: '#a78bfa', dim: 'rgba(167,139,250,0.56)' },
+  biology: { bright: '#34d399', dim: 'rgba(52,211,153,0.56)' },
+  physics: { bright: '#fbbf24', dim: 'rgba(251,191,36,0.56)' },
+  chemistry: { bright: '#fb7185', dim: 'rgba(251,113,133,0.56)' },
+  misc: { bright: '#94a3b8', dim: 'rgba(148,163,184,0.5)' },
 }
 
 export function domainColorPair(domain: string) {
@@ -54,14 +57,30 @@ export function buildStarMapGraph(
   seen: Set<string>,
 ): { nodes: StarMapNode[]; links: StarMapLink[] } {
   const idSet = new Set(concepts.map((c) => c.id))
+  const dependents = buildDependentsMap(concepts)
   const nodes: StarMapNode[] = concepts.map((c) => {
     const nPr = (c.prerequisites ?? []).filter((p) => idSet.has(p)).length
+    const nDep = dependents.get(c.id)?.size ?? 0
+    const degree = nPr + nDep
+    const prerequisiteIds = (c.prerequisites ?? []).filter((p) => idSet.has(p))
+    const frontier = !seen.has(c.id) && prerequisiteIds.length > 0 && prerequisiteIds.every((pid) => seen.has(pid))
+    const rawDifficulty = Number(c.difficulty_level)
+    let difficultyLevel: 0 | 1 | 2 = 1
+    // Support both 0/1/2 and 1/2/3 conventions from data pipelines.
+    if (rawDifficulty === 0 || rawDifficulty === 1 || rawDifficulty === 2) {
+      difficultyLevel = rawDifficulty as 0 | 1 | 2
+    } else if (rawDifficulty === 3) {
+      difficultyLevel = 2
+    }
     return {
       id: c.id,
       name: (c.title || c.id).slice(0, 48),
       domain: (c.domain || 'misc').toLowerCase() || 'misc',
-      val: Math.max(1, 1 + Math.min(12, Math.sqrt(nPr + 1))),
+      val: Math.max(1, 1 + Math.min(12, Math.sqrt(degree + 1))),
+      degree,
+      difficultyLevel,
       encountered: seen.has(c.id),
+      frontier,
     }
   })
   const links: StarMapLink[] = []

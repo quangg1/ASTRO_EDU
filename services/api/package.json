@@ -14,6 +14,8 @@
     "build:concept-prerequisites:openrouter": "node scripts/build-concept-prerequisites.js --dry-run --provider openrouter",
     "build:concept-prerequisites:openrouter:free-all": "node scripts/build-concept-prerequisites.js --dry-run --provider openrouter --use-all-free-models",
     "apply:concept-prerequisites": "node scripts/build-concept-prerequisites.js --apply",
+    "assign:concept-difficulty-ai": "node scripts/assign-concept-difficulty-ai.js --dry-run",
+    "apply:concept-difficulty-ai": "node scripts/assign-concept-difficulty-ai.js --apply",
     "patch:topic-weights-json": "node scripts/patch-learning-path-topic-weights.js",
     "crawl-news": "node scripts/crawl-news.js",
     "purge-news": "node scripts/purge-news-posts.js"

@@ -42,6 +42,14 @@ export type LessonConceptAnchor = {
   phrase: string
 }
 
+/** Bài học "claim" entity showcase 3D — Layer 3 deep-link (không dùng bridge rule). */
+export type LessonSceneContext = {
+  /** Entity catalog id (vd: planet-saturn) — ưu tiên hiển thị khi khớp. */
+  primaryEntityId?: string
+  /** Các entity bổ sung cùng bài có thể liên quan. */
+  entityIds?: string[]
+}
+
 /** Câu hỏi trắc nghiệm cuối bài (mastery) — biên tập trong Studio. */
 export type LessonRecallQuizItem = {
   id?: string
@@ -66,6 +74,8 @@ export type LessonItem = {
   sections?: LessonSection[]
   /** Legacy: HTML đơn nếu chưa có sections (hoặc ghi đè từ API cũ) */
   body?: string
+  /** Liên kết bài ↔ entity 3D showcase (Learning Bridge layer 3). */
+  sceneContext?: LessonSceneContext
 }
 
 /** Map node → chủ đề landing (Dual mapping). weight: 0–1, tổng không cần = 1. */
@@ -87,6 +97,8 @@ export type LearningConcept = {
   aliases?: string[]
   /** Concept cần biết trước khi học concept này. */
   prerequisites?: string[]
+  /** Mức độ học tập sư phạm (không đồng nhất với topo depth của graph). */
+  difficulty_level?: 0 | 1 | 2
   /** Khi sync từ API Mongo. */
   published?: boolean
 }
@@ -989,6 +1001,10 @@ export function mergeLearningModules(
               conceptAnchors: Array.isArray(ov.conceptAnchors)
                 ? ov.conceptAnchors
                 : lesson.conceptAnchors,
+              sceneContext:
+                ov.sceneContext !== undefined && ov.sceneContext !== null
+                  ? ov.sceneContext
+                  : lesson.sceneContext,
               body: ov.body ?? lesson.body,
               sections:
                 ov.sections !== undefined && ov.sections !== null

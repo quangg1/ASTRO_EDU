@@ -3,26 +3,6 @@ import type { LearningConcept, LearningModule, LessonItem, LessonRecallQuizItem 
 
 const API = `${getApiPathBase()}/learning-path`
 
-export type BridgeRuleEvent =
-  | 'entity_focus_stable'
-  | 'entity_clicked'
-  | 'entity_discovered_first_time'
-  | 'entity_focus_duration'
-export type BridgeRuleAction =
-  | 'show_concept_overlay'
-  | 'mark_lessons_visited3d'
-  | 'trigger_contextual_quiz'
-  | 'unlock_discovery_badge'
-export type LearningPathBridgeRule = {
-  id: string
-  entityId: string
-  event: BridgeRuleEvent
-  action: BridgeRuleAction
-  conceptId?: string
-  thresholdSec?: number | null
-  active?: boolean
-}
-
 /** Đảm bảo mỗi node có topicWeights[] (API/Mongo đôi khi không trả field) */
 function normalizeEditorModules(modules: LearningModule[]): LearningModule[] {
   return modules.map((m) => ({
@@ -53,7 +33,6 @@ export async function fetchPublicLearningPath(): Promise<LearningModule[] | null
 export async function fetchPublicLearningPathData(): Promise<{
   modules: LearningModule[]
   concepts: LearningConcept[]
-  bridgeRules: LearningPathBridgeRule[]
 } | null> {
   try {
     const res = await fetch(API, { cache: 'no-store' })
@@ -62,7 +41,6 @@ export async function fetchPublicLearningPathData(): Promise<{
       return {
         modules: data.data.modules as LearningModule[],
         concepts: Array.isArray(data.data?.concepts) ? (data.data.concepts as LearningConcept[]) : [],
-        bridgeRules: Array.isArray(data.data?.bridgeRules) ? (data.data.bridgeRules as LearningPathBridgeRule[]) : [],
       }
     }
     return null
@@ -74,7 +52,6 @@ export async function fetchPublicLearningPathData(): Promise<{
 export async function fetchEditorLearningPath(token: string): Promise<{
   modules: LearningModule[]
   concepts: LearningConcept[]
-  bridgeRules: LearningPathBridgeRule[]
   published: boolean
 } | null> {
   try {
@@ -86,7 +63,6 @@ export async function fetchEditorLearningPath(token: string): Promise<{
       return {
         modules: normalizeEditorModules(data.data.modules as LearningModule[]),
         concepts: Array.isArray(data.data?.concepts) ? (data.data.concepts as LearningConcept[]) : [],
-        bridgeRules: Array.isArray(data.data?.bridgeRules) ? (data.data.bridgeRules as LearningPathBridgeRule[]) : [],
         published: !!data.data.published,
       }
     }
@@ -99,13 +75,11 @@ export async function fetchEditorLearningPath(token: string): Promise<{
 export async function saveEditorLearningPath(
   token: string,
   modules: LearningModule[],
-  bridgeRules?: LearningPathBridgeRule[],
   published?: boolean,
 ): Promise<{
   ok: boolean
   modules?: LearningModule[]
   concepts?: LearningConcept[]
-  bridgeRules?: LearningPathBridgeRule[]
   published?: boolean
   invalidConceptIds?: string[]
   error?: string
@@ -117,7 +91,7 @@ export async function saveEditorLearningPath(
         Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ modules, bridgeRules, published }),
+      body: JSON.stringify({ modules, published }),
     })
     const data = await res.json()
     if (data.success && Array.isArray(data.data?.modules)) {
@@ -125,7 +99,6 @@ export async function saveEditorLearningPath(
         ok: true,
         modules: normalizeEditorModules(data.data.modules as LearningModule[]),
         concepts: Array.isArray(data.data?.concepts) ? (data.data.concepts as LearningConcept[]) : [],
-        bridgeRules: Array.isArray(data.data?.bridgeRules) ? (data.data.bridgeRules as LearningPathBridgeRule[]) : [],
         published: !!data.data?.published,
         invalidConceptIds: Array.isArray(data.data?.invalidConceptIds) ? data.data.invalidConceptIds : [],
       }
