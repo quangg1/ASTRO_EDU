@@ -17,7 +17,7 @@ import {
 import { OrbitPath } from '@/components/3d/OrbitPath'
 import { ShowcaseEntityMesh } from '@/components/3d/showcase/ShowcaseEntityMesh'
 import { useShowcaseStore } from '@/store/showcaseStore'
-import { useLineProximityFade, type OrbitProximityFade } from '@/components/3d/orbitProximityFade'
+import type { OrbitProximityFade } from '@/components/3d/orbitProximityFade'
 import { hasUsableOrbitalElements } from '@/lib/mergeShowcaseCatalog'
 
 const EARTH_RADIUS_KM = 6371
@@ -26,6 +26,7 @@ const EARTH_BASE_SIZE = 0.2
 const AU_IN_KM = 149_597_870.7
 /** BASE scale: 1 AU = BASE_AU scene units (single source of truth). */
 const BASE_AU = 26
+const TARGET_SCENE_RADIUS = 320
 /** DIST scale: đổi semi-major axis từ AU -> scene units (chỉ cho vị trí quỹ đạo). */
 const ORBIT_DISTANCE_SCALE_AU = BASE_AU
 /**
@@ -39,7 +40,7 @@ const ENTITY_SIZE_SCALE_KM = (BASE_AU * SIZE_DISTANCE_RATIO_KM) / AU_IN_KM
  * `aAu * parentRadius * k` đưa bán kính quỹ đạo vào cùng thang với mesh hành tinh trong scene.
  */
 /** Nén local systems (moon quanh planet) để vừa khung zoom mà vẫn tách rõ khỏi parent. */
-const SATELLITE_DISTANCE_COMPRESS = 0.34
+const SATELLITE_DISTANCE_COMPRESS = 0.3
 const PLANET_RADIUS_KM: Record<string, number> = {
   Mercury: 2439.7,
   Venus: 6051.8,
@@ -82,11 +83,12 @@ function isSatelliteEntity(e: ShowcaseOrbitEntity): boolean {
   )
 }
 
-function radiusToSize(radiusKm: number | undefined, fallback: number): number {
+function radiusToSize(radiusKm: number | undefined, fallback: number, orbitDistanceScaleAu: number): number {
   if (!radiusKm || !Number.isFinite(radiusKm) || radiusKm <= 0) {
     return Math.max(0.08, fallback * 2.1)
   }
-  const base = radiusKm * ENTITY_SIZE_SCALE_KM
+  const sizeScaleKm = (orbitDistanceScaleAu * SIZE_DISTANCE_RATIO_KM) / AU_IN_KM
+  const base = radiusKm * sizeScaleKm
   const ratio = radiusKm / EARTH_RADIUS_KM
   const boost = radiusKm < 2400 ? 2.05 : radiusKm < 12000 ? 1.35 : 1
   return Math.max(0.09, Math.max(base, ratio * EARTH_BASE_SIZE) * boost)
@@ -101,6 +103,7 @@ function parentDisplayRadiusForEntity(entity: ShowcaseOrbitEntity): number {
 
 function satelliteOrbitDisplayRadius(entity: ShowcaseOrbitEntity): number {
   const pr = parentDisplayRadiusForEntity(entity)
+  const bodyR = Math.max(0.12, radiusToSize(entity.radiusKm, entity.size, ORBIT_DISTANCE_SCALE_AU) * 2.55)
   const parentName = resolveShowcaseOrbitParentPlanetName(entity)
   const parentRadiusKm = parentName ? PLANET_RADIUS_KM[parentName] : undefined
   const oe = entity.orbitalElements
@@ -116,21 +119,23 @@ function satelliteOrbitDisplayRadius(entity: ShowcaseOrbitEntity): number {
     // Convert AU -> "planet radii", then project into scene units of the current parent mesh.
     const inParentRadii = (aAu * AU_IN_KM) / parentRadiusKm
     // Keep local systems readable and avoid extreme blow-up in showcase mode.
-    return THREE.MathUtils.clamp(inParentRadii * pr * SATELLITE_DISTANCE_COMPRESS, pr * 1.25, pr * 22)
+    const minOrbit = Math.max(pr + bodyR * 1.8, pr * 1.9)
+    return THREE.MathUtils.clamp(inParentRadii * pr * SATELLITE_DISTANCE_COMPRESS, minOrbit, pr * 26)
   }
   const fallback =
     Number.isFinite(Number(entity.distance)) && Number(entity.distance) > 0
       ? Number(entity.distance)
       : Number(oe?.a || 1)
-  return THREE.MathUtils.clamp(fallback, pr * 1.1, pr * 18)
+  const minOrbit = Math.max(pr + bodyR * 1.8, pr * 1.9)
+  return THREE.MathUtils.clamp(fallback, minOrbit, pr * 24)
 }
 
-function heliocentricOrbitDisplayRadius(entity: ShowcaseOrbitEntity): number {
+function heliocentricOrbitDisplayRadius(entity: ShowcaseOrbitEntity, orbitDistanceScaleAu: number): number {
   const oe = entity.orbitalElements
   if (entity.orbitSource === 'jpl-horizons' && hasUsableOrbitalElements(oe)) {
     const aAu = Number(entity.semiMajorAxisAu ?? oe?.a ?? 0)
     if (Number.isFinite(aAu) && aAu > 0 && aAu < 500) {
-      return Math.max(0.35, aAu * ORBIT_DISTANCE_SCALE_AU)
+      return Math.max(0.35, aAu * orbitDistanceScaleAu)
     }
   }
   return entity.distance
@@ -160,6 +165,7 @@ function normalizedParentId(entity: ShowcaseOrbitEntity): string {
 
 function solveKeplerLocalOrbitPosition(
   entity: ShowcaseOrbitEntity,
+  orbitDistanceScaleAu: number,
   angle: number,
   out: THREE.Vector3,
   axisY: THREE.Vector3,
@@ -183,7 +189,7 @@ function solveKeplerLocalOrbitPosition(
   const parentPlanetName = resolveShowcaseOrbitParentPlanetName(entity)
   const isSatelliteAroundPlanet = Boolean(parentPlanetName)
   let a = useJplAu
-    ? Math.max(0.0001, aAu * ORBIT_DISTANCE_SCALE_AU)
+    ? Math.max(0.0001, aAu * orbitDistanceScaleAu)
     : Math.max(0.0001, Number(oe.a || entity.distance || 1))
   if (isSatelliteAroundPlanet) {
     a = satelliteOrbitDisplayRadius(entity)
@@ -258,6 +264,14 @@ export function ShowcaseEntityLayer({
     () => new Map(orbitEntities.map((e) => [String(e.id || '').trim(), e] as const)),
     [orbitEntities],
   )
+  const orbitDistanceScaleAu = useMemo(() => {
+    const maxSemiMajorAu = orbitEntities.reduce((mx, e) => {
+      const a = Number(e.semiMajorAxisAu ?? e.orbitalElements?.a ?? 0)
+      return Number.isFinite(a) && a > 0 ? Math.max(mx, a) : mx
+    }, 0)
+    if (maxSemiMajorAu <= 0) return ORBIT_DISTANCE_SCALE_AU
+    return THREE.MathUtils.clamp(TARGET_SCENE_RADIUS / maxSemiMajorAu, 8.5, 26)
+  }, [orbitEntities])
 
   useEffect(() => {
     const depth = new Map<string, number>()
@@ -308,6 +322,7 @@ export function ShowcaseEntityLayer({
       if (jplKepler) {
         const local = solveKeplerLocalOrbitPosition(
           entity,
+          orbitDistanceScaleAu,
           nextA,
           localOrbitScratch.current,
           axisYScratch.current,
@@ -346,6 +361,7 @@ export function ShowcaseEntityLayer({
         const parentG = groupsRef.current.get(parentId)
         const local = solveKeplerLocalOrbitPosition(
           entity,
+          orbitDistanceScaleAu,
           nextA,
           localOrbitScratch.current,
           axisYScratch.current,
@@ -386,6 +402,7 @@ export function ShowcaseEntityLayer({
       } else {
         const pos = solveKeplerLocalOrbitPosition(
           entity,
+          orbitDistanceScaleAu,
           nextA,
           localOrbitScratch.current,
           axisYScratch.current,
@@ -438,6 +455,7 @@ export function ShowcaseEntityLayer({
         <Suspense key={entity.id} fallback={null}>
           <ShowcaseEntityRow
             entity={entity}
+            orbitDistanceScaleAu={orbitDistanceScaleAu}
             activeItemId={activeItemId}
             selectedPlanetName={selectedPlanetName ?? null}
             parentIndexByName={parentIndexByName}
@@ -464,6 +482,8 @@ function ShowcaseEntityNametag({
   onSelect,
   meshLift,
   visualOpacity = 1,
+  occluderPosition,
+  occluderRadius = 0,
   collisionStateRef,
   frameRef,
 }: {
@@ -475,6 +495,8 @@ function ShowcaseEntityNametag({
   /** Đặt Html cao hơn tâm mesh (đơn vị scene). */
   meshLift: number
   visualOpacity?: number
+  occluderPosition?: THREE.Vector3 | null
+  occluderRadius?: number
   collisionStateRef: React.MutableRefObject<{ frame: number; points: Array<{ x: number; y: number }> }>
   frameRef: React.MutableRefObject<number>
 }) {
@@ -482,9 +504,31 @@ function ShowcaseEntityNametag({
   const tick = useRef(0)
   const divRef = useRef<HTMLDivElement | null>(null)
   const wrapperRef = useRef<HTMLDivElement | null>(null)
-  const dfRef = useRef(18)
   const wpRef = useRef(new THREE.Vector3())
   const ndcRef = useRef(new THREE.Vector3())
+  const camToLabelRef = useRef(new THREE.Vector3())
+  const camToOccRef = useRef(new THREE.Vector3())
+  const dirRef = useRef(new THREE.Vector3())
+
+  function isOccludedBySphere(
+    cam: THREE.Vector3,
+    labelPos: THREE.Vector3,
+    sphereCenter: THREE.Vector3,
+    sphereRadius: number,
+  ): boolean {
+    const r = Math.max(0, sphereRadius)
+    if (r <= 1e-6) return false
+    const camToLabel = camToLabelRef.current.subVectors(labelPos, cam)
+    const labelDist = camToLabel.length()
+    if (!Number.isFinite(labelDist) || labelDist <= 1e-6) return false
+    const dir = dirRef.current.copy(camToLabel).multiplyScalar(1 / labelDist)
+    const camToOcc = camToOccRef.current.subVectors(sphereCenter, cam)
+    const t = camToOcc.dot(dir)
+    if (t <= 0 || t >= labelDist) return false
+    const closestSq = camToOcc.lengthSq() - t * t
+    return closestSq <= r * r
+  }
+
   useFrame(() => {
     const g = anchorRef.current
     const div = divRef.current
@@ -496,19 +540,16 @@ function ShowcaseEntityNametag({
     g.getWorldPosition(wp)
     const d = camera.position.distanceTo(wp)
     const r = Math.max(0.12, meshLift / 1.58)
-    const fadeInStart = r * 3
-    const fadeInEnd = r * 8
-    const fadeOutStart = r * 95
-    const fadeOutEnd = r * 210
-    const farBoost = THREE.MathUtils.clamp(12 + d * 0.34 + (active ? 8 : 0), 14, 54)
-    dfRef.current = farBoost
-    // NASA-like: khi zoom xa, nhãn to hơn để đọc được; gần lại thì gọn.
-    const fontPx = THREE.MathUtils.clamp(11 + farBoost * 0.22, 11, 24)
+    const nearHideStart = Math.max(0.6, r * 1.15)
+    const nearHideEnd = Math.max(nearHideStart + 0.01, r * 2.4)
+    const farFadeStart = 260
+    const farFadeEnd = 1200
+    const nearK =
+      d <= nearHideStart ? 0 : d >= nearHideEnd ? 1 : THREE.MathUtils.smoothstep(d, nearHideStart, nearHideEnd)
+    const farK =
+      d <= farFadeStart ? 1 : d >= farFadeEnd ? 0 : 1 - THREE.MathUtils.smoothstep(d, farFadeStart, farFadeEnd)
+    const labelK = nearK * farK
     const base = active ? 1 : activeItemId ? 0.76 : 0.9
-    const fadeIn =
-      d <= fadeInStart ? 0 : d >= fadeInEnd ? 1 : THREE.MathUtils.smoothstep(d, fadeInStart, fadeInEnd)
-    const fadeOut =
-      d <= fadeOutStart ? 1 : d >= fadeOutEnd ? 0 : 1 - THREE.MathUtils.smoothstep(d, fadeOutStart, fadeOutEnd)
     const ndc = ndcRef.current.copy(wp).project(camera)
     const sx = (ndc.x * 0.5 + 0.5) * size.width
     const sy = (-ndc.y * 0.5 + 0.5) * size.height
@@ -516,47 +557,53 @@ function ShowcaseEntityNametag({
       collisionStateRef.current.frame = frameRef.current
       collisionStateRef.current.points = []
     }
+    const collisionRadius = 24
+    const applyCollisionCull = true
     const collisionHidden =
       !active &&
+      applyCollisionCull &&
       collisionStateRef.current.points.some((p) => {
         const dx = p.x - sx
         const dy = p.y - sy
-        return dx * dx + dy * dy < 48 * 48
+        return dx * dx + dy * dy < collisionRadius * collisionRadius
       })
     collisionStateRef.current.points.push({ x: sx, y: sy })
-    const opacity = THREE.MathUtils.clamp(base * fadeIn * fadeOut * visualOpacity, 0.18, 1)
-    wrapper.style.opacity = collisionHidden ? '0' : String(opacity)
-    wrapper.style.display = collisionHidden ? 'none' : ''
-    div.style.fontSize = `${fontPx}px`
+    const opacity = THREE.MathUtils.clamp(base * labelK * visualOpacity, 0, 1)
+    const occluded =
+      Boolean(occluderPosition) &&
+      isOccludedBySphere(camera.position, wp, occluderPosition as THREE.Vector3, occluderRadius)
+    const hidden = collisionHidden || occluded
+    wrapper.style.opacity = hidden ? '0' : String(opacity)
+    wrapper.style.display = hidden ? 'none' : ''
+    div.style.fontSize = active ? '12px' : '11px'
+    div.style.setProperty('--dot-display', active ? 'none' : 'inline-flex')
   })
   return (
-    <Html position={[0, meshLift, 0]} distanceFactor={dfRef.current} center occlude>
+    <Html position={[0, meshLift, 0]} center occlude>
       <div ref={wrapperRef}>
       <div
         ref={divRef}
-        className="select-none whitespace-nowrap font-semibold uppercase tracking-[0.14em]"
+        className="select-none whitespace-nowrap font-normal uppercase tracking-[0.12em] pointer-events-none inline-flex items-center gap-1"
         style={{
-          fontSize: 14,
-          letterSpacing: '0.1em',
+          fontSize: 11,
+          letterSpacing: '0.12em',
           color: active ? '#f8fafc' : 'rgba(248,250,252,0.95)',
-          textShadow: '0 0 8px rgba(0,0,0,0.92), 0 0 20px rgba(0,0,0,0.62)',
-          WebkitTextStroke: '0.35px rgba(0,0,0,0.48)',
-        }}
-        role="button"
-        tabIndex={0}
-        onClick={(e) => {
-          e.stopPropagation()
-          onSelect?.()
-        }}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault()
-            e.stopPropagation()
-            onSelect?.()
-          }
+          textShadow:
+            '0 0 6px rgba(0,0,0,1), 0 0 12px rgba(0,0,0,0.8), 0 0 20px rgba(0,0,0,0.5)',
         }}
       >
-        {label}
+        <span
+          aria-hidden
+          style={{
+            display: 'var(--dot-display, inline-flex)',
+            width: 5,
+            height: 5,
+            borderRadius: '9999px',
+            border: '1px solid rgba(255,255,255,0.65)',
+            boxSizing: 'border-box',
+          }}
+        />
+        <span>{label}</span>
       </div>
       </div>
     </Html>
@@ -566,49 +613,66 @@ function ShowcaseEntityNametag({
 function FadedLocalEllipticOrbit({
   entity,
   getAnchor,
+  parentSceneRadius,
+  orbitDistanceScaleAu,
   baseOpacity,
 }: {
   entity: ShowcaseOrbitEntity
   getAnchor: () => THREE.Vector3 | null
+  parentSceneRadius: number
+  orbitDistanceScaleAu: number
   baseOpacity: number
 }) {
+  const { camera } = useThree()
   const matRef = useRef<THREE.LineBasicMaterial>(null)
   const geomRef = useRef<THREE.BufferGeometry>(null)
   const prevAnchorRef = useRef(new THREE.Vector3())
   const anchorScratch = useRef(new THREE.Vector3())
-  const radius = satelliteOrbitDisplayRadius(entity)
-  const segs = Math.max(72, Math.min(240, Math.round(radius * 60)))
+  const localScratch = useRef(new THREE.Vector3())
+  const axisYScratch = useRef(new THREE.Vector3(0, 1, 0))
+  const axisXScratch = useRef(new THREE.Vector3(1, 0, 0))
+  const approxRadius = satelliteOrbitDisplayRadius(entity)
+  const segs = Math.max(96, Math.min(260, Math.round(approxRadius * 60)))
   const pointsBuffer = useMemo(
     () => Array.from({ length: segs + 1 }, () => new THREE.Vector3()),
     [segs],
   )
-  const near = Math.max(0.7, radius * 1.05)
-  const far = Math.max(2.4, radius * 3)
-  const proximityFade: OrbitProximityFade = {
-    getWorldPosition: () => getAnchor()?.clone() ?? null,
-    getCameraDistance: (camera) => {
-      const anchor = getAnchor()
-      if (!anchor) return null
-      anchorScratch.current.copy(anchor)
-      return camera.position.distanceTo(anchorScratch.current)
-    },
-    near,
-    far,
-  }
-  useLineProximityFade(matRef, proximityFade, () => baseOpacity)
+  const parentR = Math.max(0.2, parentSceneRadius)
   useFrame(() => {
+    const mat = matRef.current
     const geom = geomRef.current
     const c = getAnchor()
     if (!geom || !c) return
+    if (mat) {
+      anchorScratch.current.copy(c)
+      const d = camera.position.distanceTo(anchorScratch.current)
+      // Local orbit around parent (moon system):
+      // - fade IN when zooming toward parent
+      // - keep visible around focus range
+      // - fade OUT only when too close and line merges with planet body
+      const fadeInStart = parentR * 80
+      const fadeInEnd = parentR * 10
+      const fadeOutStart = parentR * 2
+      const fadeOutEnd = parentR * 0.5
+      let k = 1
+      if (d > fadeInStart || d < fadeOutEnd) k = 0
+      else if (d < fadeOutStart) k = THREE.MathUtils.smoothstep(d, fadeOutEnd, fadeOutStart)
+      else if (d > fadeInEnd) k = 1 - THREE.MathUtils.smoothstep(d, fadeInEnd, fadeInStart)
+      mat.opacity = baseOpacity * THREE.MathUtils.clamp(k, 0, 1)
+    }
     if (prevAnchorRef.current.distanceToSquared(c) < 1e-6) return
     prevAnchorRef.current.copy(c)
     for (let i = 0; i <= segs; i++) {
       const t = (i / segs) * Math.PI * 2
-      pointsBuffer[i].set(
-        c.x + Math.cos(t) * radius,
-        c.y + Math.sin(t * 0.5) * radius * 0.08,
-        c.z + Math.sin(t) * radius,
+      const lp = solveKeplerLocalOrbitPosition(
+        entity,
+        orbitDistanceScaleAu,
+        t,
+        localScratch.current,
+        axisYScratch.current,
+        axisXScratch.current,
       )
+      pointsBuffer[i].set(c.x + lp.x, c.y + lp.y, c.z + lp.z)
     }
     geom.setFromPoints(pointsBuffer)
     if (geom.attributes.position) geom.attributes.position.needsUpdate = true
@@ -623,6 +687,7 @@ function FadedLocalEllipticOrbit({
 
 function ShowcaseEntityRow({
   entity,
+  orbitDistanceScaleAu,
   activeItemId,
   selectedPlanetName,
   parentIndexByName,
@@ -634,6 +699,7 @@ function ShowcaseEntityRow({
   revealAlpha,
 }: {
   entity: ShowcaseOrbitEntity
+  orbitDistanceScaleAu: number
   activeItemId?: string | null
   selectedPlanetName: string | null
   parentIndexByName: Map<string, number>
@@ -660,7 +726,7 @@ function ShowcaseEntityRow({
   const showCharonOrbit =
     Boolean(showcaseParentPos) && entity.parentShowcaseEntityId != null && activeItemId === entity.id
 
-  const helioOrbitRadius = heliocentricOrbitDisplayRadius(entity)
+  const helioOrbitRadius = heliocentricOrbitDisplayRadius(entity, orbitDistanceScaleAu)
   const helioOrbitPeriod =
     entity.orbitalElements?.periodDays || entity.periodDays || entity.period
   const isHeliocentricBody =
@@ -679,10 +745,14 @@ function ShowcaseEntityRow({
       : undefined
 
   const anchorRef = useRef<THREE.Group | null>(null)
-  const bodySceneSize = radiusToSize(entity.radiusKm, entity.size)
+  const bodySceneSize = radiusToSize(entity.radiusKm, entity.size, orbitDistanceScaleAu)
   const meshR = Math.max(0.14, bodySceneSize * 2.55)
   const nametagLift = meshR * 1.58
   const rowRevealAlpha = !selectedPlanetName && parentPlanetResolved ? revealAlpha : 1
+  const parentSceneRadius =
+    parentIndex != null ? Math.max(0.2, planetsData[parentIndex]?.radius ?? 0.75) : 0.75
+  const nametagOccluderPosition = parentPos ?? null
+  const nametagOccluderRadius = parentPos ? parentSceneRadius : 0
 
   return (
     <group>
@@ -711,12 +781,16 @@ function ShowcaseEntityRow({
         <FadedLocalEllipticOrbit
           entity={entity}
           getAnchor={() => parentPos}
+          parentSceneRadius={parentSceneRadius}
+          orbitDistanceScaleAu={orbitDistanceScaleAu}
           baseOpacity={(active ? 0.95 : 0.35) * rowRevealAlpha}
         />
       ) : showcaseParentPos && showCharonOrbit ? (
         <FadedLocalEllipticOrbit
           entity={entity}
           getAnchor={() => showcaseParentPos ?? null}
+          parentSceneRadius={0.9}
+          orbitDistanceScaleAu={orbitDistanceScaleAu}
           baseOpacity={active ? 0.95 : 0.35}
         />
       ) : null}
@@ -740,6 +814,8 @@ function ShowcaseEntityRow({
           activeItemId={activeItemId}
           meshLift={nametagLift}
           visualOpacity={rowRevealAlpha}
+          occluderPosition={nametagOccluderPosition}
+          occluderRadius={nametagOccluderRadius}
           collisionStateRef={collisionStateRef}
           frameRef={frameRef}
           onSelect={() => onSelectEntity?.(entity.id)}

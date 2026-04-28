@@ -113,26 +113,47 @@ export function getNasaCatalogItemById(id: string): NasaCatalogItem | undefined 
  */
 export function resolveShowcaseOrbitParentPlanetName(entity: ShowcaseOrbitEntity): string | null {
   const direct = String(entity.parentPlanetName || '').trim()
+  const canonicalByName: Record<string, string> = {
+    mercury: 'Mercury',
+    venus: 'Venus',
+    earth: 'Earth',
+    mars: 'Mars',
+    jupiter: 'Jupiter',
+    saturn: 'Saturn',
+    uranus: 'Uranus',
+    neptune: 'Neptune',
+  }
+  const normalizePlanetKey = (s: string): string => s.toLowerCase().replace(/[\s_-]+/g, '')
+  const normalizedDirect = normalizePlanetKey(direct)
+  if (canonicalByName[normalizedDirect]) return canonicalByName[normalizedDirect]
   if (direct) return direct
   const pid = String(entity.parentId || '').trim()
   if (!pid) return null
-  // Ưu tiên suy trực tiếp từ id chuẩn `planet-*` để không phụ thuộc label/name đã localize.
-  if (pid.startsWith('planet-')) {
-    const key = pid.slice('planet-'.length).toLowerCase()
-    const bySlug: Record<string, string> = {
-      mercury: 'Mercury',
-      venus: 'Venus',
-      earth: 'Earth',
-      mars: 'Mars',
-      jupiter: 'Jupiter',
-      saturn: 'Saturn',
-      uranus: 'Uranus',
-      neptune: 'Neptune',
-    }
-    if (bySlug[key]) return bySlug[key]
+  // Ưu tiên suy trực tiếp từ id chuẩn `planet-*`/`planet_*` và alias NAIF ID.
+  const normalizedPid = pid.toLowerCase().replace(/[\s]+/g, '')
+  const keyVariants = [
+    normalizedPid,
+    normalizedPid.replace(/^planet[-_]/, ''),
+    normalizedPid.replace(/^planet/, ''),
+  ].map((x) => normalizePlanetKey(x))
+  const naifAliases: Record<string, string> = {
+    '199': 'Mercury',
+    '299': 'Venus',
+    '399': 'Earth',
+    '499': 'Mars',
+    '599': 'Jupiter',
+    '699': 'Saturn',
+    '799': 'Uranus',
+    '899': 'Neptune',
+  }
+  for (const key of keyVariants) {
+    if (canonicalByName[key]) return canonicalByName[key]
+    if (naifAliases[key]) return naifAliases[key]
   }
   const cat = getNasaCatalogItemById(pid)
   const n = String(cat?.linkedPlanetName || cat?.name || '').trim()
+  const normalizedCatalog = normalizePlanetKey(n)
+  if (canonicalByName[normalizedCatalog]) return canonicalByName[normalizedCatalog]
   if (!n && typeof console !== 'undefined') {
     console.warn(`[showcase-orbit] unresolved parent for ${String(entity.id || 'unknown')} (parentId=${pid})`)
   }

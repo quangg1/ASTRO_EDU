@@ -70,10 +70,14 @@ type Props = {
   showcaseEntityPositionsRef: React.MutableRefObject<Map<string, THREE.Vector3>>
   activeItemId: string | null | undefined
   selectedIndex: number | null
+  focusPlanetName?: string | null
+  focusParentSystem?: boolean
   /** Initial URL-driven camera (optional) */
   initialSpherical?: { distance: number; az: number; el: number } | null
   /** Fires once per focus target when framing reaches FOCUSED (for URL sync). */
   onCameraSettled?: (spherical: ShowcaseCameraSpherical) => void
+  /** Notify controls start guard when camera is being moved by script. */
+  onProgrammaticMoveChange?: (v: boolean) => void
 }
 
 /**
@@ -86,8 +90,11 @@ export function ShowcaseCameraManager({
   showcaseEntityPositionsRef,
   activeItemId,
   selectedIndex,
+  focusPlanetName = null,
+  focusParentSystem = false,
   initialSpherical,
   onCameraSettled,
+  onProgrammaticMoveChange,
 }: Props) {
   const setShowcaseCameraUserOverride = useShowcaseStore((s) => s.setShowcaseCameraUserOverride)
   const prevDistRef = useRef(0)
@@ -95,6 +102,8 @@ export function ShowcaseCameraManager({
   const deltaScratchRef = useRef(new THREE.Vector3())
   const desiredScratchRef = useRef(new THREE.Vector3())
   const dirScratchRef = useRef(new THREE.Vector3())
+  const prevFocusPosRef = useRef(new THREE.Vector3())
+  const hasPrevFocusRef = useRef(false)
 
   const focusKeyRef = useRef<string | null>(null)
   const appliedUrlRef = useRef(false)
@@ -134,6 +143,7 @@ export function ShowcaseCameraManager({
       prevPhaseRef.current = 'transitioning'
       transitionStartRef.current = performance.now()
       setShowcaseCameraUserOverride(false)
+      hasPrevFocusRef.current = false
     }
 
     const userOverride = useShowcaseStore.getState().showcaseCameraUserOverride
@@ -146,7 +156,32 @@ export function ShowcaseCameraManager({
     const catalog = aid ? catalogById.get(aid) : null
     const orbitEnt = aid ? orbitById.get(aid) : null
 
-    if (orbitEnt?.parentPlanetName && aid) {
+    if (focusParentSystem && focusPlanetName) {
+      const pIdx = planetsData.findIndex((p) => p.name === focusPlanetName)
+      if (pIdx >= 0) {
+        const pp = planetPositionsRef.current[pIdx]
+        if (pp && pp.lengthSq() > 1e-6) {
+          focus.copy(pp)
+          hasFocus = true
+          const pr = planetsData[pIdx]?.radius ?? 0.3
+          wantDist = THREE.MathUtils.clamp(pr * 8, 4.8, 18)
+        }
+      }
+    }
+
+    if (!hasFocus && aid) {
+      const p = showcaseEntityPositionsRef.current.get(aid)
+      if (p && p.lengthSq() > 1e-6) {
+        focus.copy(p)
+        hasFocus = true
+        const isPlanet = aid.startsWith('planet-')
+        const isCraft = aid.startsWith('sc-')
+        const isComet = aid.startsWith('comet-')
+        wantDist = isPlanet ? 6.8 : isCraft ? 2.85 : isComet ? 4.0 : 4.8
+      }
+    }
+
+    if (!hasFocus && orbitEnt?.parentPlanetName && aid) {
       const moonPos = showcaseEntityPositionsRef.current.get(aid)
       const pIdx = planetsData.findIndex((p) => p.name === orbitEnt.parentPlanetName)
       if (pIdx >= 0 && moonPos) {
@@ -159,7 +194,7 @@ export function ShowcaseCameraManager({
           wantDist = THREE.MathUtils.clamp(Math.max(1.4, span * 0.75), 1.35, 4.6)
         }
       }
-    } else if (orbitEnt?.parentShowcaseEntityId && aid) {
+    } else if (!hasFocus && orbitEnt?.parentShowcaseEntityId && aid) {
       const self = showcaseEntityPositionsRef.current.get(aid)
       const par = showcaseEntityPositionsRef.current.get(orbitEnt.parentShowcaseEntityId)
       if (self && par && self.lengthSq() > 1e-6 && par.lengthSq() > 1e-6) {
@@ -168,7 +203,7 @@ export function ShowcaseCameraManager({
         const span = par.distanceTo(self)
         wantDist = THREE.MathUtils.clamp(Math.max(1.1, span * 0.7), 1.1, 3.8)
       }
-    } else if (catalog?.linkedPlanetName || aid?.startsWith('planet-')) {
+    } else if (!hasFocus && (catalog?.linkedPlanetName || aid?.startsWith('planet-'))) {
       const linkedName =
         catalog?.linkedPlanetName ||
         (aid?.startsWith('planet-')
@@ -184,7 +219,7 @@ export function ShowcaseCameraManager({
           wantDist = THREE.MathUtils.clamp(5.0 + pr * 4.2, 4.2, 14)
         }
       }
-    } else if (aid) {
+    } else if (!hasFocus && aid) {
       const p = showcaseEntityPositionsRef.current.get(aid)
       if (p && p.lengthSq() > 1e-6) {
         focus.copy(p)
@@ -202,6 +237,7 @@ export function ShowcaseCameraManager({
       sanitizeControlsCamera(c)
       c.update()
       prevPhaseRef.current = phaseRef.current
+      onProgrammaticMoveChange?.(false)
       return
     }
 
@@ -220,13 +256,18 @@ export function ShowcaseCameraManager({
 
     // Keep OrbitControls pivot locked to selected moving target (planet/entity),
     // so user rotation always orbits around that body instead of drifting away.
+    if (!hasPrevFocusRef.current) {
+      prevFocusPosRef.current.copy(focus)
+      hasPrevFocusRef.current = true
+    }
     if (phaseRef.current === 'focused' || phaseRef.current === 'free') {
-      const delta = deltaScratchRef.current.subVectors(focus, c.target)
+      const delta = deltaScratchRef.current.subVectors(focus, prevFocusPosRef.current)
       // Deadzone avoids micro-jitter while still keeping target locked to selected body.
       if (delta.lengthSq() > 1e-6) {
         c.target.add(delta)
         c.object.position.add(delta)
       }
+      prevFocusPosRef.current.copy(focus)
     }
     // Avoid per-frame auto-recovery while focused; this can cause oscillation/jitter.
     // Reframing is already handled on target changes and transition completion.
@@ -243,6 +284,7 @@ export function ShowcaseCameraManager({
 
     const safeInitial = validateInitialSpherical(initialSpherical)
     if (!appliedUrlRef.current && safeInitial && phaseRef.current === 'transitioning') {
+      onProgrammaticMoveChange?.(true)
       appliedUrlRef.current = true
       const { distance, az, el } = safeInitial
       const azR = THREE.MathUtils.degToRad(az)
@@ -258,6 +300,7 @@ export function ShowcaseCameraManager({
       phaseRef.current = 'focused'
       sanitizeControlsCamera(c)
     } else if (phaseRef.current === 'transitioning') {
+      onProgrammaticMoveChange?.(true)
       c.target.lerp(focus, Math.min(1, dt * 3.2))
       let dist = c.object.position.distanceTo(c.target)
       if (Math.abs(dist - wantDist) > 0.08) {
@@ -276,6 +319,7 @@ export function ShowcaseCameraManager({
         phaseRef.current = 'focused'
       }
     } else if (phaseRef.current === 'recovering') {
+      onProgrammaticMoveChange?.(true)
       c.target.lerp(focus, Math.min(1, dt * 4.6))
       const dir = safeCameraRadialDir(c.object.position, c.target, dirScratchRef.current)
       const desired = desiredScratchRef.current.copy(c.target).add(dir.multiplyScalar(wantDist))
@@ -302,6 +346,7 @@ export function ShowcaseCameraManager({
 
     sanitizeControlsCamera(c)
     c.update()
+    onProgrammaticMoveChange?.(false)
   })
 
   return null

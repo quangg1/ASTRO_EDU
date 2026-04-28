@@ -18,12 +18,25 @@ const EXPLORE_ICON_ANGULAR_SCALE = 0.024
 const EXPLORE_ICON_SCALE_MIN = 0.4
 const EXPLORE_ICON_SCALE_MAX = 2.6
 
+type PlanetLabelCollisionEntry = {
+  x: number
+  y: number
+  priority: number
+  wrapper: HTMLDivElement
+}
+const PLANET_LABEL_COLLISION_STATE: { frame: number; placed: PlanetLabelCollisionEntry[] } = {
+  frame: -1,
+  placed: [],
+}
+
 function labelFadeFromCameraZoom(sunDist: number, isSelected: boolean): number {
   if (isSelected) return 1
   if (!Number.isFinite(sunDist) || sunDist < 2) return 1
-  if (sunDist < 48) return 1
-  if (sunDist > 220) return 0.38
-  return THREE.MathUtils.clamp(1 - (sunDist - 48) / 165, 0.38, 1)
+  // NASA Eyes-like: keep label fully readable across normal zoom range,
+  // only fade when camera is extremely far from solar center.
+  if (sunDist <= 260) return 1
+  if (sunDist >= 1200) return 0
+  return 1 - THREE.MathUtils.smoothstep(sunDist, 260, 1200)
 }
 
 export function useMeshRaycastEnabled(meshRef: React.RefObject<THREE.Mesh | null>, enabled: boolean) {
@@ -134,64 +147,128 @@ export function PlanetLabel({
   onSelect?: () => void
 }) {
   if (!visible) return null
-  const df =
-    distanceFactor ??
-    (nasaHud ? (compact ? 11 : 16) : compact ? 5.5 : 20)
+  // NASA HUD labels must stay screen-size constant (no zoom scaling).
+  const df = nasaHud ? undefined : distanceFactor ?? (compact ? 5.5 : 20)
   const pos: [number, number, number] = labelPosition ?? [radius * 1.55, radius * 0.14, 0]
   const display = nasaHud ? name.toUpperCase() : name
   const defaultCls = compact
     ? 'select-none whitespace-nowrap rounded-md px-1.5 py-0.5 text-[12px] font-semibold uppercase tracking-[0.12em] text-white'
     : 'select-none whitespace-nowrap rounded-md px-2 py-1 text-[34px] font-extrabold uppercase tracking-[0.14em] text-white'
-  const nasaCls = compact
-    ? 'select-none whitespace-nowrap rounded-sm px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.26em] text-white/95'
-    : 'select-none whitespace-nowrap rounded-sm px-3 py-1.5 text-[17px] font-bold uppercase tracking-[0.2em] text-white/95'
+  const nasaCls =
+    'select-none whitespace-nowrap text-[16px] font-medium uppercase tracking-[0.16em] text-white'
+  const { camera, size } = useThree()
+  const anchorRef = useRef<THREE.Group>(null)
+  const wrapperRef = useRef<HTMLDivElement | null>(null)
+  const wpRef = useRef(new THREE.Vector3())
+  const ndcRef = useRef(new THREE.Vector3())
+  const stableVisibleRef = useRef(true)
+  const blockedFramesRef = useRef(0)
+  const freeFramesRef = useRef(0)
+  useFrame(({ clock }) => {
+    if (!nasaHud) return
+    const wrapper = wrapperRef.current
+    const anchor = anchorRef.current
+    if (!wrapper || !anchor) return
+    const frame = Math.floor(clock.elapsedTime * 60)
+    if (PLANET_LABEL_COLLISION_STATE.frame !== frame) {
+      PLANET_LABEL_COLLISION_STATE.frame = frame
+      PLANET_LABEL_COLLISION_STATE.placed = []
+    }
+    const wp = wpRef.current
+    anchor.getWorldPosition(wp)
+    const ndc = ndcRef.current.copy(wp).project(camera)
+    const sx = (ndc.x * 0.5 + 0.5) * size.width
+    const sy = (-ndc.y * 0.5 + 0.5) * size.height
+    const minGapX = 28
+    const minGapY = 17
+    const priority = Math.max(1, radius)
+    const colliding = PLANET_LABEL_COLLISION_STATE.placed.find(
+      (p) => Math.abs(p.x - sx) < minGapX && Math.abs(p.y - sy) < minGapY,
+    )
+    let shouldShow = true
+    if (!colliding) {
+      PLANET_LABEL_COLLISION_STATE.placed.push({ x: sx, y: sy, priority, wrapper })
+    } else if (priority > colliding.priority) {
+      colliding.wrapper.style.opacity = '0'
+      colliding.wrapper.style.display = 'none'
+      colliding.x = sx
+      colliding.y = sy
+      colliding.priority = priority
+      colliding.wrapper = wrapper
+    } else {
+      shouldShow = false
+    }
+
+    // Hysteresis to avoid flicker around overlap thresholds.
+    if (shouldShow) {
+      freeFramesRef.current += 1
+      blockedFramesRef.current = 0
+      if (!stableVisibleRef.current && freeFramesRef.current >= 4) {
+        stableVisibleRef.current = true
+      }
+    } else {
+      blockedFramesRef.current += 1
+      freeFramesRef.current = 0
+      if (stableVisibleRef.current && blockedFramesRef.current >= 3) {
+        stableVisibleRef.current = false
+      }
+    }
+    wrapper.style.opacity = stableVisibleRef.current ? String(opacity) : '0'
+    wrapper.style.display = stableVisibleRef.current ? '' : 'none'
+  })
   return (
-    <Html distanceFactor={df} position={pos} style={{ opacity, pointerEvents: interactive ? 'auto' : 'none' }}>
-      <div
-        className={nasaHud ? nasaCls : defaultCls}
-        style={{
-          opacity: 1,
-          textShadow: nasaHud
-            ? '0 0 14px rgba(0,0,0,0.95), 0 1px 2px rgba(0,0,0,0.85)'
-            : compact
-              ? '0 0 6px rgba(0,0,0,0.65)'
-              : '0 0 14px rgba(255,255,255,0.55), 0 0 28px rgba(255,255,255,0.25)',
-          WebkitTextStroke: nasaHud ? '0.45px rgba(0,0,0,0.55)' : compact ? '0.35px rgba(0,0,0,0.5)' : '0.8px rgba(0,0,0,0.45)',
-          background: nasaHud
-            ? 'linear-gradient(180deg, rgba(14,18,28,0.94) 0%, rgba(8,10,18,0.9) 100%)'
-            : compact
-              ? 'rgba(0,0,0,0.45)'
-              : 'rgba(0,0,0,0.12)',
-          border: nasaHud ? '1px solid rgba(255,255,255,0.22)' : undefined,
-          boxShadow: nasaHud ? '0 2px 14px rgba(0,0,0,0.55)' : undefined,
-        }}
-        role={interactive ? 'button' : undefined}
-        tabIndex={interactive ? 0 : undefined}
-        onClick={
-          interactive
-            ? (e) => {
-                e.stopPropagation()
-                onSelect?.()
-              }
-            : undefined
-        }
-        onKeyDown={
-          interactive
-            ? (e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault()
+    <group ref={anchorRef} position={pos}>
+      <Html
+        distanceFactor={df}
+        style={{ opacity, pointerEvents: nasaHud ? 'none' : interactive ? 'auto' : 'none' }}
+      >
+        <div
+          ref={wrapperRef}
+          className={nasaHud ? nasaCls : defaultCls}
+          style={{
+            opacity: 1,
+            textShadow: nasaHud
+              ? '0 0 10px rgba(0,0,0,1), 0 0 18px rgba(0,0,0,0.92), 0 0 30px rgba(0,0,0,0.7)'
+              : compact
+                ? '0 0 6px rgba(0,0,0,0.65)'
+                : '0 0 14px rgba(255,255,255,0.55), 0 0 28px rgba(255,255,255,0.25)',
+            WebkitTextStroke: nasaHud ? '0.35px rgba(0,0,0,0.65)' : compact ? '0.35px rgba(0,0,0,0.5)' : '0.8px rgba(0,0,0,0.45)',
+            background: nasaHud
+              ? 'none'
+              : compact
+                ? 'rgba(0,0,0,0.45)'
+                : 'rgba(0,0,0,0.12)',
+            border: nasaHud ? 'none' : undefined,
+            boxShadow: nasaHud ? 'none' : undefined,
+          }}
+          role={interactive ? 'button' : undefined}
+          tabIndex={interactive ? 0 : undefined}
+          onClick={
+            interactive
+              ? (e) => {
                   e.stopPropagation()
                   onSelect?.()
                 }
-              }
-            : undefined
-        }
-        onPointerEnter={interactive ? () => { document.body.style.cursor = 'pointer' } : undefined}
-        onPointerLeave={interactive ? () => { document.body.style.cursor = 'auto' } : undefined}
-      >
-        {display}
-      </div>
-    </Html>
+              : undefined
+          }
+          onKeyDown={
+            interactive
+              ? (e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    onSelect?.()
+                  }
+                }
+              : undefined
+          }
+          onPointerEnter={interactive ? () => { document.body.style.cursor = 'pointer' } : undefined}
+          onPointerLeave={interactive ? () => { document.body.style.cursor = 'auto' } : undefined}
+        >
+          {display}
+        </div>
+      </Html>
+    </group>
   )
 }
 
@@ -518,8 +595,8 @@ export function Planet({
           radius={data.radius * bodyScale}
           visible
           nasaHud={exploreStyleLod}
-          compact={exploreStyleLod ? iconMode : compactPlanetLabel}
-          distanceFactor={exploreStyleLod ? (iconMode ? 12 : 22) : undefined}
+          compact={exploreStyleLod ? false : compactPlanetLabel}
+          distanceFactor={undefined}
           opacity={labelOpacity}
           position={exploreStyleLod && iconMode ? [0.85, 0, 0] : undefined}
           interactive={interactive}

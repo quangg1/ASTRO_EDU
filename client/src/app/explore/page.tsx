@@ -483,8 +483,11 @@ function ExplorePageContent() {
                 if (idx === null) return
                 const planetName = planetsData[idx]?.name
                 if (!planetName) return
+                const planetId = `planet-${planetName.toLowerCase()}`
                 const planetItem = NASA_SHOWCASE_ITEMS.find(
-                  (item) => item.group === 'planets_moons' && item.name === planetName,
+                  (item) =>
+                    item.group === 'planets_moons' &&
+                    (item.id === planetId || item.linkedPlanetName === planetName || item.name === planetName),
                 )
                 if (planetItem) handleShowcaseEntityClicked(planetItem.id, 'planet-select')
               }}

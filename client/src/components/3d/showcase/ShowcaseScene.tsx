@@ -1,13 +1,17 @@
 'use client'
 
 import { useRef, useMemo, useState, useEffect } from 'react'
-import { Canvas, useThree } from '@react-three/fiber'
+import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { OrbitControls, Stars, Preload } from '@react-three/drei'
 import { Suspense } from 'react'
 import * as THREE from 'three'
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib'
 import { planetsData } from '@/lib/solarSystemData'
-import { NASA_SHOWCASE_ITEMS, type ShowcaseOrbitEntity } from '@/lib/showcaseEntities'
+import {
+  NASA_SHOWCASE_ITEMS,
+  resolveShowcaseOrbitParentPlanetName,
+  type ShowcaseOrbitEntity,
+} from '@/lib/showcaseEntities'
 import { OrbitPath } from '@/components/3d/OrbitPath'
 import { Planet, Sun } from '@/components/3d/planetBodies'
 import { ExploreEntityFx } from '@/components/3d/ExploreEntityFx'
@@ -31,13 +35,14 @@ function sanitizeControlsCamera(c: OrbitControlsImpl) {
 /** Per-orbit fade scales with semi-major axis (NASA Eyes-like behavior). */
 const PLANET_HELIO_ORBIT_FADE_NEAR_SCALE = 0.75
 const PLANET_HELIO_ORBIT_FADE_FAR_SCALE = 3
-const AU_TO_SCENE_UNITS = 26
-const SHOWCASE_MAX_DISTANCE_FLOOR = 420
-const SHOWCASE_MAX_DISTANCE_CEIL = 2600
+const TARGET_SCENE_RADIUS = 320
+const SHOWCASE_MAX_DISTANCE_FLOOR = 240
+const SHOWCASE_MAX_DISTANCE_CEIL = 2200
 
 function planetEntityId(name: string): string {
   return `planet-${name.toLowerCase()}`
 }
+type ShowcaseContextLevel = 'solar' | 'planet' | 'moon'
 
 function ShowcaseSceneContent({
   showcaseActiveItemId,
@@ -64,6 +69,7 @@ function ShowcaseSceneContent({
 }) {
   const controlsRef = useRef<OrbitControlsImpl | null>(null)
   const controlsTargetRef = useRef<[number, number, number]>([0, 0, 0])
+  const programmaticMoveRef = useRef(false)
   const activeGroupById = useMemo(
     () => new Map(NASA_SHOWCASE_ITEMS.map((i) => [String(i.id || '').trim(), i.group] as const)),
     [],
@@ -75,8 +81,15 @@ function ShowcaseSceneContent({
   const showcaseEntityPositionsRef = useRef<Map<string, THREE.Vector3>>(new Map())
   const [internalIndex, setInternalIndex] = useState<number | null>(null)
   const [hoveredOrbitIndex, setHoveredOrbitIndex] = useState<number | null>(null)
+  const [dynamicContextLevel, setDynamicContextLevel] = useState<ShowcaseContextLevel>('solar')
   const selectedIndex = flightTargetIndex !== undefined ? flightTargetIndex : internalIndex
   const runtimePlanetsData = useMemo(() => {
+    const maxSemiMajorAu = (orbitEntities || []).reduce((mx, e) => {
+      const a = Number(e.semiMajorAxisAu ?? e.orbitalElements?.a ?? 0)
+      return Number.isFinite(a) && a > 0 ? Math.max(mx, a) : mx
+    }, 0)
+    const auToSceneUnits =
+      maxSemiMajorAu > 0 ? THREE.MathUtils.clamp(TARGET_SCENE_RADIUS / maxSemiMajorAu, 8.5, 26) : 26
     const byId = new Map((orbitEntities || []).map((e) => [String(e.id || '').trim(), e] as const))
     return planetsData.map((p) => {
       const o = byId.get(planetEntityId(p.name))
@@ -84,7 +97,7 @@ function ShowcaseSceneContent({
       const periodDays = Number(o.orbitalElements?.periodDays ?? o.periodDays ?? 0)
       const semiMajorAu = Number(o.semiMajorAxisAu ?? o.orbitalElements?.a ?? 0)
       const nextDistance =
-        Number.isFinite(semiMajorAu) && semiMajorAu > 0 ? semiMajorAu * AU_TO_SCENE_UNITS : p.distance
+        Number.isFinite(semiMajorAu) && semiMajorAu > 0 ? semiMajorAu * auToSceneUnits * 1.1 : p.distance
       return {
         ...p,
         distance: nextDistance,
@@ -100,10 +113,46 @@ function ShowcaseSceneContent({
       }
     })
   }, [orbitEntities])
+  const orbitById = useMemo(
+    () => new Map((orbitEntities || []).map((e) => [String(e.id || '').trim(), e] as const)),
+    [orbitEntities],
+  )
+  const catalogById = useMemo(
+    () => new Map(NASA_SHOWCASE_ITEMS.map((i) => [String(i.id || '').trim(), i] as const)),
+    [],
+  )
 
   const activeGroup = showcaseActiveItemId ? activeGroupById.get(showcaseActiveItemId) ?? 'planets_moons' : 'planets_moons'
-  const isPlanetFocus = Boolean(showcaseActiveItemId?.startsWith('planet-'))
-  const isEntityFocus = Boolean(showcaseActiveItemId && !isPlanetFocus)
+  const activeCatalogItem = showcaseActiveItemId ? catalogById.get(showcaseActiveItemId) ?? null : null
+  const activeOrbitEntity = showcaseActiveItemId ? orbitById.get(showcaseActiveItemId) ?? null : null
+  const isMoonSelection = useMemo(() => {
+    if (!showcaseActiveItemId || showcaseActiveItemId.startsWith('planet-')) return false
+    if (showcaseActiveItemId.startsWith('moon-')) return true
+    if (!activeOrbitEntity) return false
+    return Boolean(
+      resolveShowcaseOrbitParentPlanetName(activeOrbitEntity) ||
+        String(activeOrbitEntity.parentShowcaseEntityId || '').trim(),
+    )
+  }, [showcaseActiveItemId, activeOrbitEntity])
+  const contextPlanetName = useMemo(() => {
+    if (!showcaseActiveItemId) return null
+    if (showcaseActiveItemId.startsWith('planet-')) {
+      const slug = showcaseActiveItemId.slice('planet-'.length)
+      const p = planetsData.find((x) => x.name.toLowerCase() === slug)
+      return p?.name ?? null
+    }
+    const byOrbit = activeOrbitEntity ? resolveShowcaseOrbitParentPlanetName(activeOrbitEntity) : null
+    if (byOrbit) return byOrbit
+    const linked = String(activeCatalogItem?.linkedPlanetName || '').trim()
+    return linked || null
+  }, [showcaseActiveItemId, activeOrbitEntity, activeCatalogItem])
+  const contextLevel: ShowcaseContextLevel = !showcaseActiveItemId
+    ? 'solar'
+    : showcaseActiveItemId.startsWith('planet-')
+      ? 'planet'
+      : isMoonSelection && contextPlanetName
+        ? 'moon'
+        : 'planet'
   const setFocusedEntity = useShowcaseStore((s) => s.setFocusedEntity)
   const cameraDistanceToSun = useShowcaseStore((s) => s.cameraDistanceToSun)
 
@@ -116,9 +165,12 @@ function ShowcaseSceneContent({
     onPlanetSelect?.(idx)
   }
 
-  const selectedSemiMajorAxis = selectedIndex !== null ? Math.max(1, runtimePlanetsData[selectedIndex]?.distance ?? 1) : 1
+  const contextPlanetIndex = contextPlanetName ? runtimePlanetsData.findIndex((p) => p.name === contextPlanetName) : -1
+  const effectiveSelectedIndex = selectedIndex ?? (contextPlanetIndex >= 0 ? contextPlanetIndex : null)
+  const selectedSemiMajorAxis =
+    effectiveSelectedIndex !== null ? Math.max(1, runtimePlanetsData[effectiveSelectedIndex]?.distance ?? 1) : 1
   const focusBlend =
-    selectedIndex !== null
+    effectiveSelectedIndex !== null
       ? THREE.MathUtils.clamp(
           1 - cameraDistanceToSun / Math.max(6, selectedSemiMajorAxis * 3),
           0,
@@ -130,7 +182,43 @@ function ShowcaseSceneContent({
     () => runtimePlanetsData.reduce((m, p) => Math.max(m, Number.isFinite(p.distance) ? p.distance : 0), 0),
     [runtimePlanetsData],
   )
-  const dynamicMaxDistance = THREE.MathUtils.clamp(maxOrbitDistance * 1.65 + 70, SHOWCASE_MAX_DISTANCE_FLOOR, SHOWCASE_MAX_DISTANCE_CEIL)
+  const sceneRadius = Math.max(90, maxOrbitDistance)
+  const overviewDistance = THREE.MathUtils.clamp(sceneRadius * 1.85, 110, 1300)
+  const dynamicMaxDistance = THREE.MathUtils.clamp(sceneRadius * 4, SHOWCASE_MAX_DISTANCE_FLOOR, SHOWCASE_MAX_DISTANCE_CEIL)
+
+  useFrame(() => {
+    const solarRatio = cameraDistanceToSun / Math.max(1, sceneRadius)
+    let next: ShowcaseContextLevel = 'solar'
+    if (solarRatio <= 0.6 && showcaseActiveItemId) {
+      if (!isMoonSelection) {
+        next = 'planet'
+      } else if (contextPlanetIndex >= 0) {
+        const parentPos = planetPositionsRef.current[contextPlanetIndex]
+        const parentRadius = Math.max(0.2, runtimePlanetsData[contextPlanetIndex]?.radius ?? 0.75)
+        const camDistToParent = parentPos ? camera.position.distanceTo(parentPos) : Infinity
+        if (camDistToParent > parentRadius * 40) next = 'solar'
+        else if (camDistToParent > parentRadius * 15) next = 'planet'
+        else next = 'moon'
+      } else {
+        next = 'planet'
+      }
+    }
+    setDynamicContextLevel((prev) => (prev === next ? prev : next))
+  })
+
+  useFrame(() => {
+    // Unify focus pipeline: planets are also tracked in entity position map.
+    for (let i = 0; i < runtimePlanetsData.length; i++) {
+      const planetName = runtimePlanetsData[i]?.name
+      if (!planetName) continue
+      const pid = planetEntityId(planetName)
+      const p = planetPositionsRef.current[i]
+      if (!p || p.lengthSq() <= 1e-8) continue
+      const prev = showcaseEntityPositionsRef.current.get(pid)
+      if (prev) prev.copy(p)
+      else showcaseEntityPositionsRef.current.set(pid, p.clone())
+    }
+  })
 
   useEffect(() => {
     scene.fog = null
@@ -139,28 +227,35 @@ function ShowcaseSceneContent({
       cam.clearViewOffset()
       cam.fov = 45
       cam.near = 0.1
-      cam.far = Math.max(2500, dynamicMaxDistance * 1.9)
+      cam.far = Math.max(1500, sceneRadius * 8)
       cam.updateProjectionMatrix()
     }
     camera.up.set(0, 1, 0)
-  }, [scene, camera, dynamicMaxDistance])
+  }, [scene, camera, sceneRadius])
 
   useEffect(() => {
     const c = controlsRef.current
     if (!c) return
     c.target.set(0, 0, 0)
-    c.object.position.set(0, 19, 58)
+    c.object.position.set(0, overviewDistance * 0.4, overviewDistance)
     sanitizeControlsCamera(c)
     c.update()
-  }, [])
+  }, [overviewDistance])
 
   return (
     <>
       <ShowcaseLighting />
 
       {runtimePlanetsData.map((data, i) => {
-        const isSelected = i === selectedIndex
+        const isSelected = i === effectiveSelectedIndex
         const isHovered = i === hoveredOrbitIndex
+        const isContextPlanet = contextPlanetName ? data.name === contextPlanetName : false
+        const orbitVisible =
+          dynamicContextLevel === 'moon'
+            ? isContextPlanet
+            : dynamicContextLevel === 'planet'
+              ? true
+              : true
         const a = Math.max(1, data.distance)
         const proximityFade = {
           getWorldPosition: () => {
@@ -176,8 +271,8 @@ function ShowcaseSceneContent({
           <OrbitPath
             key={data.name}
             data={data}
-            highlighted={isSelected || isHovered}
-            visible
+            highlighted={(isSelected || isHovered) && orbitVisible}
+            visible={orbitVisible}
             interactive={false}
             proximityFade={proximityFade}
             onHoverChange={(hovered) => setHoveredOrbitIndex(hovered ? i : (prev) => (prev === i ? null : prev))}
@@ -187,12 +282,17 @@ function ShowcaseSceneContent({
 
       <Sun
         visible
-        interactive={!isEntityFocus}
+        interactive
         onSelect={() => {
           setSelection(null)
         }}
       />
       {runtimePlanetsData.map((data, i) => (
+        (() => {
+          const isContextPlanet = contextPlanetName ? data.name === contextPlanetName : false
+          const showPlanet = true
+          if (!showPlanet) return null
+          return (
         <Planet
           key={data.name}
           data={data}
@@ -205,22 +305,25 @@ function ShowcaseSceneContent({
           showLabel
           compactPlanetLabel
           exploreStyleLod
-          isSelected={selectedIndex === i}
-          interactive={!isEntityFocus}
+          isSelected={effectiveSelectedIndex === i}
+          interactive
           onHoverChange={(hovered) => setHoveredOrbitIndex(hovered ? i : (prev) => (prev === i ? null : prev))}
           onSelect={() => {
             setSelection(i)
+            onShowcaseItemSelect?.(planetEntityId(data.name))
           }}
           onPlanetSelect={onPlanetSelect}
         />
+          )
+        })()
       ))}
 
       <ExploreEntityFx
         entityId={observerExploreEntityId}
         planetPositionsRef={planetPositionsRef}
-        selectedIndex={selectedIndex}
-        selectedRadius={selectedIndex !== null ? runtimePlanetsData[selectedIndex]?.radius ?? 1 : 1}
-        visible={Boolean(observerExploreEntityId && selectedIndex !== null && focusBlend > 0.3)}
+        selectedIndex={effectiveSelectedIndex}
+        selectedRadius={effectiveSelectedIndex !== null ? runtimePlanetsData[effectiveSelectedIndex]?.radius ?? 1 : 1}
+        visible={Boolean(observerExploreEntityId && effectiveSelectedIndex !== null && focusBlend > 0.3)}
       />
 
       <ShowcaseEntityLayer
@@ -229,7 +332,7 @@ function ShowcaseSceneContent({
         visible
         frozen={selectedIndex !== null}
         activeGroup={activeGroup}
-        selectedPlanetName={selectedIndex !== null ? runtimePlanetsData[selectedIndex]?.name ?? null : null}
+        selectedPlanetName={dynamicContextLevel === 'solar' ? null : contextPlanetName}
         onPositionUpdate={(id, p) => {
           const prev = showcaseEntityPositionsRef.current.get(id)
           if (prev) prev.copy(p)
@@ -244,9 +347,14 @@ function ShowcaseSceneContent({
         planetPositionsRef={planetPositionsRef}
         showcaseEntityPositionsRef={showcaseEntityPositionsRef}
         activeItemId={showcaseActiveItemId}
-        selectedIndex={selectedIndex}
+        selectedIndex={effectiveSelectedIndex}
+        focusPlanetName={contextPlanetName}
+        focusParentSystem={false}
         initialSpherical={initialSpherical ?? undefined}
         onCameraSettled={onCameraSettled}
+        onProgrammaticMoveChange={(v) => {
+          programmaticMoveRef.current = v
+        }}
       />
 
       <Stars radius={260} depth={120} count={9000} factor={3.6} saturation={0.85} fade speed={0.45} />
@@ -264,7 +372,11 @@ function ShowcaseSceneContent({
         panSpeed={0.8}
         zoomSpeed={1.2}
         rotateSpeed={0.6}
-        onStart={() => useShowcaseStore.getState().setShowcaseCameraUserOverride(true)}
+        onStart={() => {
+          if (!programmaticMoveRef.current) {
+            useShowcaseStore.getState().setShowcaseCameraUserOverride(true)
+          }
+        }}
       />
     </>
   )
