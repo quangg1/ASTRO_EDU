@@ -5,7 +5,7 @@ import { StatsSection } from '@/components/landing/StatsSection'
 import { TestimonialsSection } from '@/components/landing/TestimonialsSection'
 import { CTASection } from '@/components/landing/CTASection'
 import { LandingFooter } from '@/components/landing/LandingFooter'
-import { fetchPublicCoursesServer } from '@/lib/server/coursesServer'
+import { fetchPublicCoursesServer } from '@/features/courses/api/server'
 
 export default async function HomePage() {
   const courses = await fetchPublicCoursesServer()

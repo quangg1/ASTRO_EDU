@@ -5,8 +5,8 @@ import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { signInWithPopup, GoogleAuthProvider, FacebookAuthProvider } from 'firebase/auth'
 import { getFirebaseAuth } from '@/lib/firebaseClient'
-import { loginWithFirebaseIdToken } from '@/lib/authApi'
-import { useAuthStore } from '@/store/useAuthStore'
+import { loginWithFirebaseIdToken } from '@/features/auth/api/authApi'
+import { useAuthStore } from '@/features/auth/public'
 
 function GoogleIcon({ className = 'size-6' }: { className?: string }) {
   return (

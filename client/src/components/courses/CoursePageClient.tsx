@@ -4,17 +4,17 @@ import { useEffect, useMemo, useState } from 'react'
 import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useAuthStore } from '@/store/useAuthStore'
-import { useTutorContextStore } from '@/store/useTutorContextStore'
+import { useAuthStore } from '@/features/auth/public'
+import { useTutorContextStore } from '@/features/courses/public'
 import {
   fetchCourse,
   enrollCourse,
   updateLessonProgress,
   type Course,
   type Lesson,
-} from '@/lib/coursesApi'
-import { createPayment } from '@/lib/paymentApi'
-import { getStageByTime } from '@/lib/earthHistoryData'
+} from '@/features/courses/api/coursesApi'
+import { createPayment } from '@/features/payment/api/paymentApi'
+import { useNarrativeSpace } from '@/features/content3d/narrative/public'
 import { FeaturedOrganisms } from '@/components/ui/FeaturedOrganisms'
 import { Loading } from '@/components/ui/Loading'
 import { LessonContentBody } from '@/components/courses/LessonContentBody'
@@ -32,7 +32,7 @@ function ModuleSidebar({
   selectedLesson,
   onSelectLesson,
 }: {
-  courseModules: import('@/lib/coursesApi').CourseModule[]
+  courseModules: import('@/features/courses/api/coursesApi').CourseModule[]
   lessonsByModule: Record<string, Lesson[]>
   progressBySlug: Map<string, boolean>
   selectedLesson: Lesson | null
@@ -170,6 +170,12 @@ export function CoursePageClient({
   const [showMobileLessons, setShowMobileLessons] = useState(false)
   const [reducedMode, setReducedMode] = useState(false)
   const [enableMobile3D, setEnableMobile3D] = useState(false)
+  const { getBeatByRef } = useNarrativeSpace('earth-history')
+
+  const lessons = useMemo(
+    () => (course?.lessons ?? []).filter((l): l is Lesson => 'content' in l),
+    [course?.lessons],
+  )
 
   useEffect(() => {
     setCourse(initialCourse)
@@ -186,24 +192,43 @@ export function CoursePageClient({
 
   useEffect(() => {
     if (!course) return
-    const preferredLessonSlug = initialLessonSlug || course.lessons?.[0]?.slug
-    const lesson = course.lessons?.find((item) => item.slug === preferredLessonSlug) ?? null
+    const preferredLessonSlug = initialLessonSlug || lessons[0]?.slug
+    const lesson = lessons.find((item) => item.slug === preferredLessonSlug) ?? null
     setSelectedLesson(lesson)
-  }, [course, initialLessonSlug])
+  }, [course, initialLessonSlug, lessons])
 
   useEffect(() => {
-    if (!refreshAfterEnroll || !course || course.enrollment) return
+    if (!slug || !checked) return
+    let cancelled = false
+    const needRefresh =
+      refreshAfterEnroll ||
+      !!user ||
+      Boolean(
+        initialCourse?.paywalledLessonBodies && initialCourse.isPaid && (initialCourse.price ?? 0) > 0,
+      )
+    if (!needRefresh) return
     fetchCourse(slug).then((freshCourse) => {
-      if (freshCourse) setCourse(freshCourse)
+      if (!cancelled && freshCourse) setCourse(freshCourse)
     })
-  }, [refreshAfterEnroll, course, slug])
+    return () => {
+      cancelled = true
+    }
+  }, [
+    slug,
+    checked,
+    user?.id,
+    refreshAfterEnroll,
+    initialCourse?.paywalledLessonBodies,
+    initialCourse?.isPaid,
+    initialCourse?.price,
+  ])
 
   useEffect(() => {
     if (!course) return
     setCourseContext({
       courseSlug: course.slug,
       courseTitle: course.title,
-      lessons: (course.lessons ?? []).map((l) => ({
+      lessons: lessons.map((l) => ({
         slug: l.slug,
         title: l.title,
         type: l.type,
@@ -212,22 +237,28 @@ export function CoursePageClient({
       currentLessonSlug: selectedLesson?.slug ?? null,
     })
     return () => setCourseContext(null)
-  }, [course, selectedLesson?.slug, setCourseContext])
+  }, [course, lessons, selectedLesson?.slug, setCourseContext])
 
   useEffect(() => {
     setEnableMobile3D(false)
   }, [selectedLesson?.slug])
 
   useEffect(() => {
-    if (checked && !user && course) {
-      router.replace('/login?redirect=/courses/' + slug)
-    }
-  }, [checked, user, course, slug, router])
+    if (!checked || user || !course) return
+    const fallbackSlug =
+      (initialLessonSlug && lessons.some((l) => l.slug === initialLessonSlug) && initialLessonSlug) ||
+      selectedLesson?.slug ||
+      lessons[0]?.slug
+    if (!fallbackSlug) return
+    router.replace(
+      `/login?redirect=${encodeURIComponent(`/courses/${slug}/learn/${fallbackSlug}`)}`,
+    )
+  }, [checked, user, course, slug, router, initialLessonSlug, lessons, selectedLesson?.slug])
 
   const handleSelectLesson = (lesson: Lesson) => {
     setSelectedLesson(lesson)
     setShowMobileLessons(false)
-    router.replace(`/courses/${slug}?lesson=${encodeURIComponent(lesson.slug)}`, { scroll: false })
+    router.replace(`/courses/${slug}/learn/${encodeURIComponent(lesson.slug)}`, { scroll: false })
   }
 
   const handleEnroll = async () => {
@@ -283,7 +314,6 @@ export function CoursePageClient({
   }
 
   const isEnrolled = course.enrollment != null
-  const lessons = course.lessons ?? []
   const courseModules = (course.modules ?? []).sort((a, b) => a.order - b.order)
   const lessonsByModule = courseModules.length > 0
     ? (() => {
@@ -316,9 +346,15 @@ export function CoursePageClient({
       <main className="pt-14 flex-1 flex flex-col md:flex-row gap-0 md:gap-3">
         <aside className="w-full md:w-80 shrink-0 border-b md:border-b-0 md:border-r border-white/10 bg-[#070c14]">
           <div className="p-4 border-b border-white/10">
-            <Link href="/courses" className="text-sm text-cyan-400 hover:text-cyan-300 mb-4 inline-block">
-              ← Courses
-            </Link>
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm mb-4">
+              <Link href="/courses" className="text-cyan-400 hover:text-cyan-300">
+                ← Courses
+              </Link>
+              <span className="text-gray-600 hidden sm:inline">·</span>
+              <Link href={`/courses/${slug}`} className="text-gray-400 hover:text-cyan-300">
+                Trang khóa học
+              </Link>
+            </div>
             <h1 className="font-bold text-white text-lg mb-2">{course.title}</h1>
             <p className="text-sm text-gray-400 mb-4 line-clamp-3">{course.description}</p>
             <div className="mb-4 rounded-xl border border-white/10 bg-white/5 p-3">
@@ -370,7 +406,9 @@ export function CoursePageClient({
               <div className="px-5 py-3 border-b border-white/10 flex items-center gap-2 text-sm text-gray-400 bg-[#0a1220]">
                 <Link href="/courses" className="hover:text-cyan-400">Courses</Link>
                 <span>/</span>
-                <span className="text-white">{course.title}</span>
+                <Link href={`/courses/${slug}`} className="text-white hover:text-cyan-300 truncate max-w-[40vw]">
+                  {course.title}
+                </Link>
                 <span>/</span>
                 <span className="text-cyan-300 truncate">{selectedLesson.title}</span>
               </div>
@@ -435,7 +473,7 @@ export function CoursePageClient({
                       <>
                         {selectedLesson.visualizationId === 'earth-history' && (() => {
                           const stageTime = selectedLesson.stageTime
-                          const stage = stageTime != null ? getStageByTime(stageTime) : undefined
+                          const stage = stageTime != null ? getBeatByRef.byTime(stageTime) : undefined
                           return (
                             <>
                               {stage && (

@@ -3,8 +3,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { Gem } from 'lucide-react'
-import { useAuthStore } from '@/store/useAuthStore'
-import { loadGemWallet, syncGemWallet, type GemWalletState } from '@/lib/gemWallet'
+import { useAuthStore } from '@/features/auth/public'
+import { loadGemWallet, syncGemWallet, type GemWalletState } from '@/features/rewards/public'
 
 function formatTransactionDate(input: string) {
   const date = new Date(input)

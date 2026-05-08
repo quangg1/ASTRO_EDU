@@ -6,10 +6,14 @@ import { motion } from 'framer-motion'
 import type { LearningModule } from '@/data/learningPathCurriculum'
 import { DEPTH_ORDER } from '@/data/learningPathCurriculum'
 import { ChevronRight, Layers } from 'lucide-react'
-import { loadLessonCompletion, moduleProgressPercent, syncLearningPathCompletion } from '@/lib/learningPathProgress'
-import { useLearningPath } from '@/hooks/useLearningPath'
-import { useAuthStore } from '@/store/useAuthStore'
-import { trackLearningPathBehavior } from '@/lib/learningPathBehavior'
+import {
+  loadLessonCompletion,
+  moduleProgressPercent,
+  syncLearningPathCompletion,
+  trackLearningPathBehavior,
+  useLearningPath,
+} from '@/features/learning-path/public'
+import { useAuthStore } from '@/features/auth/public'
 
 type Props = { module: LearningModule }
 

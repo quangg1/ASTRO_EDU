@@ -1,0 +1,12 @@
+[
+  { "slug": "gems_100", "titleVi": "100 viên", "descriptionVi": "Tích lũy 100 gem từ lộ trình.", "category": "progress", "criteriaType": "total_gems", "criteriaThreshold": 100, "gemBonus": 0 },
+  { "slug": "gems_500", "titleVi": "500 viên", "descriptionVi": "Tích lũy 500 gem.", "category": "progress", "criteriaType": "total_gems", "criteriaThreshold": 500, "gemBonus": 0 },
+  { "slug": "streak_3", "titleVi": "3 ngày liên tiếp", "descriptionVi": "Học 3 ngày liên tiếp.", "category": "streak", "criteriaType": "streak_days", "criteriaThreshold": 3, "gemBonus": 0 },
+  { "slug": "streak_7", "titleVi": "Tuần lửa", "descriptionVi": "7 ngày streak.", "category": "streak", "criteriaType": "streak_days", "criteriaThreshold": 7, "gemBonus": 0 },
+  { "slug": "depth_researcher_1", "titleVi": "Nhà nghiên cứu", "descriptionVi": "Hoàn thành 1 bài ở độ sâu Researcher.", "category": "depth", "criteriaType": "depth_researcher_count", "criteriaThreshold": 1, "gemBonus": 0 },
+  { "slug": "depth_researcher_5", "titleVi": "Siêu sâu", "descriptionVi": "5 bài Researcher.", "category": "depth", "criteriaType": "depth_researcher_count", "criteriaThreshold": 5, "gemBonus": 0 },
+  { "slug": "discover_5", "titleVi": "Nhà thám hiểm", "descriptionVi": "Khám phá 5 thể 3D.", "category": "showcase", "criteriaType": "scene_discovery_count", "criteriaThreshold": 5, "gemBonus": 0 },
+  { "slug": "discover_20", "titleVi": "Bách khoa thiên hà", "descriptionVi": "Khám phá 20 thể 3D.", "category": "showcase", "criteriaType": "scene_discovery_count", "criteriaThreshold": 20, "gemBonus": 0 },
+  { "slug": "complete_10", "titleVi": "10 bài xong", "descriptionVi": "Đánh dấu hoàn thành 10 bài (dwell hợp lệ).", "category": "learning_path", "criteriaType": "lesson_complete_dwell_count", "criteriaThreshold": 10, "gemBonus": 0 },
+  { "slug": "complete_50", "titleVi": "50 bài xong", "descriptionVi": "50 bài hoàn thành có dwell.", "category": "learning_path", "criteriaType": "lesson_complete_dwell_count", "criteriaThreshold": 50, "gemBonus": 0 }
+]

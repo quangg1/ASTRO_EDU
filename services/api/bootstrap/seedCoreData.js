@@ -1,10 +1,11 @@
 const fs = require('fs');
 const path = require('path');
-const LearningPath = require('../features/courses/models/LearningPath');
-const Concept = require('../features/courses/models/Concept');
-const TaxonomyRegistry = require('../features/courses/models/TaxonomyRegistry');
-const ShowcaseCatalogBundle = require('../features/courses/models/ShowcaseCatalogBundle');
-const ShowcaseEntityContent = require('../features/courses/models/ShowcaseEntityContent');
+const LearningPath = require('../features/learning-path/models/LearningPath');
+const Concept = require('../features/concepts/models/Concept');
+const TaxonomyRegistry = require('../features/concepts/models/TaxonomyRegistry');
+const ShowcaseCatalogBundle = require('../features/content3d/models/ShowcaseCatalogBundle');
+const ShowcaseEntityContent = require('../features/content3d/models/ShowcaseEntityContent');
+const Achievement = require('../features/rewards/models/Achievement');
 const HORIZONS_ID_BY_ENTITY = {
   'planet-mercury': '199',
   'planet-venus': '299',
@@ -86,6 +87,16 @@ function readShowcaseCatalogSeed() {
   return JSON.parse(fs.readFileSync(filePath, 'utf8'));
 }
 
+function readAchievementsCatalogSeed() {
+  const filePath = path.join(__dirname, '../data/achievementsCatalog.json');
+  if (!fs.existsSync(filePath)) return [];
+  try {
+    return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+  } catch {
+    return [];
+  }
+}
+
 function normalizeConcepts(concepts) {
   if (!Array.isArray(concepts)) return [];
   const base = concepts
@@ -149,6 +160,14 @@ function enrichOrbitRelations(orbits) {
 
 async function bootstrapCoreData() {
   const seed = readLearningPathSeed();
+
+  const achCount = await Achievement.countDocuments();
+  if (achCount === 0) {
+    const rows = readAchievementsCatalogSeed();
+    if (Array.isArray(rows) && rows.length > 0) {
+      await Achievement.insertMany(rows, { ordered: false }).catch(() => {});
+    }
+  }
 
   const existingPath = await LearningPath.findOne({ slug: 'main' }).lean();
   if (!existingPath) {

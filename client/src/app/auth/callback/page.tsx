@@ -2,8 +2,8 @@
 
 import { useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { setToken, fetchMe } from '@/lib/authApi'
-import { useAuthStore } from '@/store/useAuthStore'
+import { setToken, fetchMe } from '@/features/auth/api/authApi'
+import { useAuthStore } from '@/features/auth/public'
 
 function CallbackContent() {
   const router = useRouter()

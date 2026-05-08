@@ -1,7 +1,7 @@
 'use client'
 
-import { useSimulatorStore } from '@/store/useSimulatorStore'
 import { clsx } from 'clsx'
+import { useNarrativeStore } from '@/features/content3d/narrative/public'
 import { FeaturedOrganisms } from './FeaturedOrganisms'
 import type { MajorEvent } from '@/types'
 
@@ -16,7 +16,8 @@ const EVENT_TYPE_LABELS: Record<string, string> = {
 }
 
 export function InfoPanel() {
-  const { currentStage, showInfoPanel } = useSimulatorStore()
+  const currentStage = useNarrativeStore((s) => s.currentBeat)
+  const showInfoPanel = useNarrativeStore((s) => s.showInfoPanel)
 
   if (!showInfoPanel) return null
 
@@ -29,6 +30,7 @@ export function InfoPanel() {
     currentStage.climate.seaLevel != null ||
     currentStage.climate.iceCoverage != null
   )
+  const accent = currentStage.atmosphereColor || '#22d3ee'
 
   return (
     <div className="fixed right-0 top-16 w-80 h-[min(50vh,calc(100vh-10rem))] min-h-[280px] animate-slide-right flex flex-col">
@@ -38,9 +40,9 @@ export function InfoPanel() {
           <div className="text-sm text-gray-400">TIME =</div>
           <div className={clsx(
             'text-3xl font-bold font-mono',
-            currentStage.isExtinction ? 'text-red-400' : 'text-cyan-400'
+            currentStage.isExtinction ? 'text-red-400' : ''
           )}>
-            {formatTimeDisplay(currentStage.time)}
+            <span style={currentStage.isExtinction ? undefined : { color: accent }}>{formatTimeDisplay(currentStage.time)}</span>
           </div>
         </div>
 
@@ -105,7 +107,7 @@ export function InfoPanel() {
         {/* Major Events (từ API) */}
         {hasMajorEvents && (
           <div className="mb-4">
-            <h3 className="text-cyan-400 text-sm font-semibold mb-2">SỰ KIỆN LỚN</h3>
+            <h3 className="text-sm font-semibold mb-2" style={{ color: accent }}>SỰ KIỆN LỚN</h3>
             <div className="space-y-3">
               {currentStage.majorEvents!.map((event: MajorEvent, i: number) => (
                 <div
@@ -115,7 +117,7 @@ export function InfoPanel() {
                   <div className="flex items-center gap-2 flex-wrap mb-1">
                     <span className="font-medium text-white">{event.name}</span>
                     {event.type && (
-                      <span className="text-xs px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300">
+                      <span className="text-xs px-1.5 py-0.5 rounded border" style={{ borderColor: `${accent}55`, color: accent, backgroundColor: `${accent}22` }}>
                         {EVENT_TYPE_LABELS[event.type] ?? event.type}
                       </span>
                     )}
@@ -169,12 +171,14 @@ export function InfoPanel() {
         )}
 
         {/* Stage info + mô tả thời kỳ (luôn hiển thị, cuộn nếu dài) */}
-        <div className="border-t border-cyan-400/30 pt-4 pb-2">
+        <div className="border-t pt-4 pb-2" style={{ borderColor: `${accent}55` }}>
           <h3 className={clsx(
             'text-lg font-bold mb-1',
-            currentStage.isExtinction ? 'text-red-400' : 'text-cyan-400'
+            currentStage.isExtinction ? 'text-red-400' : ''
           )}>
-            {currentStage.icon} {currentStage.name}
+            <span style={currentStage.isExtinction ? undefined : { color: accent }}>
+              {currentStage.icon} {currentStage.name}
+            </span>
           </h3>
           <p className="text-sm text-gray-400 mb-2">{currentStage.timeDisplay}</p>
           <p className="text-sm text-gray-300 leading-relaxed whitespace-pre-line">
@@ -186,6 +190,7 @@ export function InfoPanel() {
               target="_blank"
               rel="noopener noreferrer"
               className="inline-block mt-2 text-xs text-cyan-400 hover:text-cyan-300"
+              style={{ color: accent }}
             >
               Wikipedia →
             </a>

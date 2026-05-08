@@ -1,54 +1,81 @@
 /**
- * When using the merged API (services/api), set NEXT_PUBLIC_API_BASE_URL
- * to the API root (e.g. http://localhost:3002). All auth, courses, payment,
- * community, media requests will use this base.
+ * Unified API (`services/api`): set `NEXT_PUBLIC_API_BASE_URL` to the API root
+ * (no trailing slash), e.g. `http://localhost:3002`.
+ * Client calls use `${base}/api/...` for REST and `${base}/auth/...` for auth.
  */
-const UNIFIED_BASE = typeof process !== 'undefined' ? process.env.NEXT_PUBLIC_API_BASE_URL : ''
+function trimEndSlash(s: string): string {
+  return s.replace(/\/$/, '')
+}
+
+const UNIFIED_BASE =
+  typeof process !== 'undefined' ? trimEndSlash((process.env.NEXT_PUBLIC_API_BASE_URL || '').trim()) : ''
 
 export function getApiBase(): string {
   return UNIFIED_BASE || ''
 }
 
-/** Base URL for auth routes: /auth/* */
+/** Base URL for auth routes: `/auth/*` */
 export function getAuthBase(): string {
-  return UNIFIED_BASE || process.env.NEXT_PUBLIC_AUTH_URL || 'http://localhost:3002'
+  if (UNIFIED_BASE) return UNIFIED_BASE
+  return trimEndSlash((process.env.NEXT_PUBLIC_AUTH_URL || '').trim()) || 'http://localhost:3002'
 }
 
-/** Base URL gốc (không /api). */
+/** API host root without `/api` — same as `NEXT_PUBLIC_API_BASE_URL` or sensible default. */
 export function getUnifiedBase(): string {
   return UNIFIED_BASE || 'http://localhost:3002'
 }
 
-/** Base URL for API routes (/api/...). Mặc định 3002 (API gộp) khi không set. */
+function resolveLegacyApiUrl(): string | null {
+  const courses = (typeof process !== 'undefined' ? process.env.NEXT_PUBLIC_COURSES_URL : '') || ''
+  const t = trimEndSlash(courses.trim())
+  if (t) return t
+
+  const legacy = (typeof process !== 'undefined' ? process.env.NEXT_PUBLIC_API_URL : '') || ''
+  const l = trimEndSlash(legacy.trim())
+  if (!l) return null
+  return l.endsWith('/api') ? l : `${l}/api`
+}
+
+/**
+ * Base URL for `/api/...` routes (includes `/api` suffix).
+ * Prefer `NEXT_PUBLIC_API_BASE_URL`; else `NEXT_PUBLIC_COURSES_URL` or `NEXT_PUBLIC_API_URL`.
+ */
 export function getApiPathBase(): string {
   if (UNIFIED_BASE) return `${UNIFIED_BASE}/api`
-  return process.env.NEXT_PUBLIC_COURSES_URL || 'http://localhost:3002/api'
+  const resolved = resolveLegacyApiUrl()
+  if (resolved) return resolved
+  return 'http://localhost:3002/api'
 }
 
-/** Base URL for media: /upload, /files (API-served uploads) */
+/**
+ * Fossils / phyla / earth-history JSON under the same unified `/api` prefix.
+ * Optional `NEXT_PUBLIC_EARTH_HISTORY_API_URL` if those routes are hosted elsewhere
+ * (must be the `/api` prefix or full origin that should receive `/fossils`, `/phyla`, `/earth-history`).
+ */
+export function getEarthHistoryApiPathBase(): string {
+  const dedicated =
+    (typeof process !== 'undefined' ? process.env.NEXT_PUBLIC_EARTH_HISTORY_API_URL : '') || ''
+  const d = trimEndSlash(dedicated.trim())
+  if (d) return d.endsWith('/api') ? d : `${d}/api`
+  return getApiPathBase()
+}
+
+/** Base URL for media: `/upload`, `/files` (served by unified API). */
 export function getMediaBase(): string {
-  return UNIFIED_BASE || process.env.NEXT_PUBLIC_MEDIA_URL || 'http://localhost:3002'
+  return UNIFIED_BASE || trimEndSlash((process.env.NEXT_PUBLIC_MEDIA_URL || '').trim()) || 'http://localhost:3002'
 }
 
-/** Base URL for static assets on CDN (models, textures, images, course-media). No trailing slash. */
+/** CDN root for static assets (models, textures). No trailing slash. */
 export function getMediaCdnBase(): string {
   return (typeof process !== 'undefined' && process.env.NEXT_PUBLIC_MEDIA_CDN) || ''
 }
 
-/**
- * Resolve static asset path to full URL when CDN is set.
- * Use for /models/, /textures/, /images/, /course-media/.
- * @param path - e.g. "/models/foo.glb" or "/textures/paleo/paleo_000.jpg"
- */
 export function getStaticAssetUrl(path: string): string {
   if (!path) return path
   const base = getMediaCdnBase()
   return base ? base.replace(/\/$/, '') + path : path
 }
 
-/**
- * Resolve any media URL for display: full URL → as-is; /files/* → API base; else → static CDN.
- */
 export function resolveMediaUrl(url: string | null | undefined): string {
   if (!url) return ''
   if (/^https?:\/\//i.test(url)) return url

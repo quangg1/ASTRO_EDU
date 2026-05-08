@@ -3,7 +3,7 @@
  * Nội dung bài: **sections** (cùng block kit với Course — LessonSection).
  */
 
-import type { LessonSection } from '@/lib/coursesApi'
+import type { LessonSection } from '@/features/courses/api/coursesApi'
 
 export type DepthLevel = 'beginner' | 'explorer' | 'researcher'
 

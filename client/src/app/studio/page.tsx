@@ -3,8 +3,8 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { fetchCoursesForEditor, createCourse, type Course } from '@/lib/coursesApi'
-import { useAuthStore } from '@/store/useAuthStore'
+import { fetchCoursesForEditor, createCourse, type Course } from '@/features/courses/api/coursesApi'
+import { useAuthStore } from '@/features/auth/public'
 
 export default function StudioHomePage() {
   const router = useRouter()

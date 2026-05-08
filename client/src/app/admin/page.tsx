@@ -15,7 +15,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
-import { useAuthStore } from '@/store/useAuthStore'
+import { useAuthStore } from '@/features/auth/public'
 import {
   fetchAdminUsers,
   updateUserRole,
@@ -25,9 +25,9 @@ import {
   type AdminUser,
   type UserRole,
   type TeacherApplicationWithUser,
-} from '@/lib/authApi'
-import { fetchCourses } from '@/lib/coursesApi'
-import { fetchAdminOrderStats, type AdminOrderStats, type Order } from '@/lib/paymentsApi'
+} from '@/features/auth/api/authApi'
+import { fetchCourses } from '@/features/courses/api/coursesApi'
+import { fetchAdminOrderStats, type AdminOrderStats, type Order } from '@/features/payment/api/paymentApi'
 import {
   fetchAdminAnalyticsCohort,
   fetchAdminAnalyticsFunnel,

@@ -1,4 +1,4 @@
-import type { AuthUser } from './authApi'
+import type { AuthUser } from '@/features/auth/public'
 
 export const ROLES = ['student', 'teacher', 'moderator', 'admin'] as const
 export type UserRole = (typeof ROLES)[number]

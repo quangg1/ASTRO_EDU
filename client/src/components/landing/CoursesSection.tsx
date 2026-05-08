@@ -5,7 +5,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { Star, Clock, Users, BookOpen } from 'lucide-react'
 import { resolveMediaUrl } from '@/lib/apiConfig'
-import type { Course } from '@/lib/coursesApi'
+import type { Course } from '@/features/courses/api/coursesApi'
 
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.1 } } }
 const item = { hidden: { opacity: 0, y: 30 }, show: { opacity: 1, y: 0, transition: { duration: 0.6, ease: 'easeOut' as const } } }

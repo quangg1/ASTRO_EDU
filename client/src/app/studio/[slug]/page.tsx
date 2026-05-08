@@ -9,19 +9,20 @@ import {
   saveCourseFromEditor,
   uploadMedia,
   type Course,
+  type CourseEditorPayload,
   type CourseModule,
   type Lesson,
   type LessonSection,
   type QuizQuestion,
-} from '@/lib/coursesApi'
-import { useAuthStore } from '@/store/useAuthStore'
+} from '@/features/courses/api/coursesApi'
+import { useAuthStore } from '@/features/auth/public'
 
 const BlockEditor = dynamic(() => import('@/components/studio/BlockEditor'), { ssr: false })
 const BlockPalette = dynamic(() => import('@/components/studio/BlockPalette'), { ssr: false })
 const LessonPreview = dynamic(() => import('@/components/studio/LessonPreview'), { ssr: false })
 const StageTimePicker = dynamic(() => import('@/components/studio/StageTimePicker'), { ssr: false })
 
-type EditorCourse = Course & { modules: CourseModule[]; lessons: Lesson[] }
+type EditorCourse = CourseEditorPayload
 type Tab = 'blocks' | 'quiz' | 'settings' | 'preview'
 
 function clone<T>(obj: T): T { return JSON.parse(JSON.stringify(obj)) }
@@ -83,7 +84,7 @@ export default function StudioEditorPage() {
       if (c?.lessons) {
         const modules = (c.modules ?? []) as CourseModule[]
         if (modules.length === 0 && c.lessons.length > 0) {
-          const weekSet = new Set(c.lessons.map((l: Lesson) => l.week ?? 1))
+          const weekSet = new Set(c.lessons.map((l) => l.week ?? 1))
           const autoModules: CourseModule[] = Array.from(weekSet).sort((a, b) => a - b).map((w, i) => ({
             _id: `auto-w${w}`,
             title: `Module ${w}`,
@@ -92,12 +93,12 @@ export default function StudioEditorPage() {
             icon: '',
             order: i,
           }))
-          const fixedLessons = (c.lessons as Lesson[]).map((l) => ({ ...l, moduleId: l.moduleId || `auto-w${l.week ?? 1}` }))
-          const nextCourse = { ...(c as Course), modules: autoModules, lessons: fixedLessons }
+          const fixedLessons = c.lessons.map((l) => ({ ...l, moduleId: l.moduleId || `auto-w${l.week ?? 1}` }))
+          const nextCourse = { ...c, modules: autoModules, lessons: fixedLessons }
           setCourse(nextCourse)
           setBaselineSnapshot(JSON.stringify(nextCourse))
         } else {
-          const nextCourse = { ...(c as Course), modules, lessons: c.lessons as Lesson[] }
+          const nextCourse = { ...c, modules, lessons: c.lessons }
           setCourse(nextCourse)
           setBaselineSnapshot(JSON.stringify(nextCourse))
         }
@@ -155,6 +156,9 @@ export default function StudioEditorPage() {
       title: course.title, description: course.description, level: course.level,
       durationWeeks: course.durationWeeks, published: !!course.published,
       price: course.price ?? 0, currency: course.currency ?? 'VND', isPaid: !!course.isPaid,
+      crossSellTutorialHref: course.crossSellTutorialHref ?? '/tutorial',
+      crossSellTutorialLabelVi: course.crossSellTutorialLabelVi ?? '',
+      crossSellTutorialBodyVi: course.crossSellTutorialBodyVi ?? '',
       modules: course.modules.map((m, i) => ({ ...m, order: i })),
       lessons: course.lessons.map((l, i) => ({ ...l, order: i })),
     })
@@ -354,6 +358,41 @@ export default function StudioEditorPage() {
                 </>
               )}
             </div>
+          </div>
+
+          <div className="rounded-2xl border border-white/10 bg-[#0a0f17]/80 backdrop-blur p-4 space-y-3">
+            <p className="text-xs font-semibold text-gray-300">Trang khóa học công khai</p>
+            <p className="text-[10px] text-gray-600 leading-relaxed">
+              CTA gợi ý học lộ trình — hiển thị trên <span className="text-gray-500">/courses/&lt;slug&gt;</span>.
+            </p>
+            <label className="text-xs text-gray-400 block">
+              Liên kết
+              <input
+                value={course.crossSellTutorialHref ?? ''}
+                onChange={(e) => uc((p) => ({ ...p, crossSellTutorialHref: e.target.value || '/tutorial' }))}
+                className={`mt-1 ${inputCls}`}
+                placeholder="/tutorial"
+              />
+            </label>
+            <label className="text-xs text-gray-400 block">
+              Tiêu đề (VI)
+              <input
+                value={course.crossSellTutorialLabelVi ?? ''}
+                onChange={(e) => uc((p) => ({ ...p, crossSellTutorialLabelVi: e.target.value }))}
+                className={`mt-1 ${inputCls}`}
+                placeholder="Học thêm miễn phí · Lộ trình"
+              />
+            </label>
+            <label className="text-xs text-gray-400 block">
+              Mô tả ngắn (VI)
+              <textarea
+                value={course.crossSellTutorialBodyVi ?? ''}
+                onChange={(e) => uc((p) => ({ ...p, crossSellTutorialBodyVi: e.target.value }))}
+                rows={3}
+                className={`mt-1 ${inputCls}`}
+                placeholder="Gợi ý học lộ trình song song..."
+              />
+            </label>
           </div>
 
           {lesson && (

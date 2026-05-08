@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useAuthStore } from '@/store/useAuthStore'
+import { useAuthStore } from '@/features/auth/public'
 import { canModerate } from '@/lib/roles'
 import { navItemsForSurface, navLabel, type NavGroup } from '@/lib/navigationConfig'
 

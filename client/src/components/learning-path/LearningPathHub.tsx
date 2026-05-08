@@ -8,10 +8,10 @@ import {
   loadLessonCompletion,
   moduleProgressPercent,
   syncLearningPathCompletion,
-} from '@/lib/learningPathProgress'
+  useLearningPath,
+} from '@/features/learning-path/public'
 import { Sparkles, Orbit, Network } from 'lucide-react'
-import { useLearningPath } from '@/hooks/useLearningPath'
-import { useAuthStore } from '@/store/useAuthStore'
+import { useAuthStore } from '@/features/auth/public'
 
 export default function LearningPathHub() {
   const { modules } = useLearningPath()

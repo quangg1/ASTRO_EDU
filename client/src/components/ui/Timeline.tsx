@@ -1,10 +1,10 @@
 'use client'
 
-import { useSimulatorStore } from '@/store/useSimulatorStore'
+import { useNarrativeStore } from '@/features/content3d/narrative/public'
 import { clsx } from 'clsx'
 
 export function Timeline() {
-  const { stages, currentStageIndex, setStage, showTimeline } = useSimulatorStore()
+  const { beats: stages, currentBeatIndex, setBeat, showTimeline } = useNarrativeStore()
 
   if (!showTimeline) return null
 
@@ -26,11 +26,11 @@ export function Timeline() {
           {stages.map((stage, index) => (
             <button
               key={stage.id}
-              onClick={() => setStage(index)}
+              onClick={() => setBeat(index)}
               className={clsx(
                 'w-full text-left px-3 py-3 rounded-lg mb-1 transition-all',
                 'hover:bg-cyan-400/20',
-                currentStageIndex === index 
+                currentBeatIndex === index
                   ? 'bg-cyan-400/30 border border-cyan-400/50' 
                   : 'bg-transparent'
               )}

@@ -9,8 +9,8 @@ const TutorialProgress = require('../courses/models/TutorialProgress');
 const Course = require('../courses/models/Course');
 const Order = require('../payment/models/Order');
 const Post = require('../community/models/Post');
-const LearningPathEvent = require('../courses/models/LearningPathEvent');
-const LearningPath = require('../courses/models/LearningPath');
+const LearningPathEvent = require('../learning-path/models/LearningPathEvent');
+const LearningPath = require('../learning-path/models/LearningPath');
 
 const router = express.Router();
 

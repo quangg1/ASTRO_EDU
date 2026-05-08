@@ -3,11 +3,20 @@
 import { useMemo, useState } from 'react'
 import type { ResolvedNasaCatalogItem } from '@/lib/mergeShowcaseCatalog'
 import type { ShowcaseOrbitEntity } from '@/lib/showcaseEntities'
-import type { ShowcasePanelConfigDTO } from '@/lib/showcaseEntitiesApi'
+import type { ShowcasePanelBlockDTO, ShowcasePanelConfigDTO } from '@/features/content3d/showcase/api/showcaseEntitiesApi'
 
 type LessonLink = { lessonId: string; title: string; href: string }
 type ConceptChip = { id: string; title?: string | null }
 type TabId = 'overview' | 'physical' | 'sky'
+
+export type ShowcaseGamificationStrip = {
+  gemBalance: number
+  storyUnlocked: boolean
+  orbitUnlocked: boolean
+  storyCost: number
+  orbitCost: number
+  onUnlock: (contentType: 'story' | 'orbit') => void | Promise<void>
+}
 
 function formatNumber(v: number, digits = 1): string {
   if (!Number.isFinite(v)) return 'N/A'
@@ -35,6 +44,7 @@ export function ShowcaseEntityPanel({
   conceptChips,
   learningLinks,
   panelConfig,
+  gamification,
 }: {
   item: ResolvedNasaCatalogItem | null
   orbit: ShowcaseOrbitEntity | null
@@ -42,6 +52,7 @@ export function ShowcaseEntityPanel({
   conceptChips: ConceptChip[]
   learningLinks: LessonLink[]
   panelConfig?: ShowcasePanelConfigDTO
+  gamification?: ShowcaseGamificationStrip | null
 }) {
   const tabs = useMemo(() => {
     const next: Array<{ id: TabId; label: string }> = []
@@ -141,6 +152,35 @@ export function ShowcaseEntityPanel({
         ) : null}
       </section>
 
+      {gamification && item ? (
+        <div className="shrink-0 border-t border-white/10 px-4 py-2.5 space-y-2">
+          <div className="flex items-center justify-between text-[11px] text-slate-400">
+            <span>Gem của bạn</span>
+            <span className="tabular-nums font-medium text-cyan-200/95">{gamification.gemBalance}</span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {!gamification.storyUnlocked && gamification.storyCost > 0 ? (
+              <button
+                type="button"
+                onClick={() => void gamification.onUnlock('story')}
+                className="rounded-lg border border-amber-400/35 bg-amber-500/10 px-2.5 py-1.5 text-[11px] text-amber-100 hover:bg-amber-500/20"
+              >
+                Mở story · {gamification.storyCost} gem
+              </button>
+            ) : null}
+            {!gamification.orbitUnlocked && gamification.orbitCost > 0 ? (
+              <button
+                type="button"
+                onClick={() => void gamification.onUnlock('orbit')}
+                className="rounded-lg border border-violet-400/35 bg-violet-500/10 px-2.5 py-1.5 text-[11px] text-violet-100 hover:bg-violet-500/20"
+              >
+                Mở orbit · {gamification.orbitCost} gem
+              </button>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
+
       <footer className="shrink-0 border-t border-white/10 px-4 py-2.5 flex items-center justify-between gap-2">
         <p className="text-[10px] text-slate-500">
           {learningLinks.length} lessons in your path
@@ -158,7 +198,7 @@ export function ShowcaseEntityPanel({
   )
 }
 
-function PanelBlock({ block }: { block: NonNullable<ShowcasePanelConfigDTO>['overviewBlocks'][number] }) {
+function PanelBlock({ block }: { block: ShowcasePanelBlockDTO }) {
   if (!block) return null
   const variant = block.style?.variant || 'glass'
   const align = block.style?.align || 'left'
@@ -185,12 +225,12 @@ function PanelBlock({ block }: { block: NonNullable<ShowcasePanelConfigDTO>['ove
     )
   }
   if (block.type === 'chart' && Array.isArray(block.points) && block.points.length > 0) {
-    const max = Math.max(...block.points.map((p) => Number(p.value || 0)), 1)
+    const max = Math.max(...block.points.map((p: { label: string; value: number }) => Number(p.value || 0)), 1)
     return (
       <div className={`${baseClass} ${textAlignClass}`} style={style}>
         {block.title ? <p className="mb-2 text-[11px] text-slate-300">{block.title}</p> : null}
         <div className="space-y-1.5">
-          {block.points.map((p) => (
+          {block.points.map((p: { label: string; value: number }) => (
             <div key={`${p.label}-${p.value}`} className="text-[10px]">
               <div className="flex justify-between text-slate-400">
                 <span>{p.label}</span>

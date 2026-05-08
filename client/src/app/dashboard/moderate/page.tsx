@@ -4,7 +4,7 @@ import { useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Gavel, MessageCircle, Newspaper, Pin, Trash2 } from 'lucide-react'
-import { useAuthStore } from '@/store/useAuthStore'
+import { useAuthStore } from '@/features/auth/public'
 import { canModerate } from '@/lib/roles'
 
 export default function ModerateHubPage() {

@@ -7,8 +7,8 @@
  */
 require('dotenv').config({ path: require('path').join(__dirname, '../.env') })
 const mongoose = require('mongoose')
-const Concept = require('../features/courses/models/Concept')
-const TaxonomyRegistry = require('../features/courses/models/TaxonomyRegistry')
+const Concept = require('../features/concepts/models/Concept')
+const TaxonomyRegistry = require('../features/concepts/models/TaxonomyRegistry')
 
 const uri = process.env.MONGO_URL || process.env.MONGODB_URI || 'mongodb://localhost:27017/galaxies'
 const apply = process.argv.includes('--apply')

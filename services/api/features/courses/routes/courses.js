@@ -7,16 +7,121 @@ const { AppError } = require('../../../shared/errors');
 
 const router = express.Router();
 
+function sortedModules(course) {
+  return [...(course.modules || [])].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+}
+
+function sortedLessons(course) {
+  return [...(course.lessons || [])].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+}
+
+function courseIsPaidLocked(course) {
+  return Boolean(course.isPaid && Number(course.price) > 0);
+}
+
+function lessonOutlinePayload(l) {
+  const desc = typeof l.description === 'string' ? l.description : '';
+  const safeDesc = desc.length > 560 ? `${desc.slice(0, 560)}…` : desc;
+  return {
+    title: l.title,
+    slug: l.slug,
+    description: safeDesc,
+    type: l.type || 'text',
+    order: l.order ?? 0,
+    moduleId: l.moduleId || null,
+    week: l.week ?? null,
+    visualizationId: l.visualizationId || null,
+    quizQuestionCount: Array.isArray(l.quizQuestions) ? l.quizQuestions.length : 0,
+    sectionCount: Array.isArray(l.sections) ? l.sections.length : 0,
+  };
+}
+
+function redactLessonForPaywall(l) {
+  const desc = typeof l.description === 'string' ? l.description : '';
+  return {
+    ...lessonOutlinePayload({ ...l, description: desc.length > 400 ? `${desc.slice(0, 400)}…` : desc }),
+    content: '',
+    sections: [],
+    quizQuestions: [],
+    resourceLinks: [],
+    galleryImages: [],
+    videoUrl: null,
+    coverImage: null,
+    learningGoals: [],
+    sourcePdf: null,
+    sourcePageCount: null,
+    stageTime: null,
+  };
+}
+
+/** @param {object} enrollment - null hoặc doc enrollment */
+function buildCourseDetailPayload(course, enrollment, outlineOnly) {
+  const mods = sortedModules(course);
+  const locksContent = outlineOnly ? false : courseIsPaidLocked(course) && !enrollment;
+  let lessons = sortedLessons(course);
+  if (outlineOnly) {
+    lessons = lessons.map((l) => lessonOutlinePayload(l));
+  } else if (locksContent) {
+    lessons = lessons.map((l) => redactLessonForPaywall(l));
+  }
+  return {
+    id: course._id,
+    title: course.title,
+    slug: course.slug,
+    description: course.description,
+    thumbnail: course.thumbnail,
+    level: course.level,
+    durationWeeks: course.durationWeeks ?? null,
+    price: course.price ?? 0,
+    currency: course.currency ?? 'VND',
+    isPaid: course.isPaid ?? false,
+    modules: mods,
+    lessons,
+    enrollment: enrollment
+      ? {
+          enrolledAt: enrollment.enrolledAt,
+          progress: enrollment.progress || [],
+        }
+      : null,
+    outlineOnly: Boolean(outlineOnly),
+    paywalledLessonBodies: outlineOnly ? true : locksContent,
+    crossSellTutorialHref:
+      typeof course.crossSellTutorialHref === 'string' && course.crossSellTutorialHref.trim()
+        ? course.crossSellTutorialHref.trim()
+        : '/tutorial',
+    crossSellTutorialLabelVi:
+      typeof course.crossSellTutorialLabelVi === 'string' && course.crossSellTutorialLabelVi.trim()
+        ? course.crossSellTutorialLabelVi.trim()
+        : 'Học thêm miễn phí · Lộ trình',
+    crossSellTutorialBodyVi:
+      typeof course.crossSellTutorialBodyVi === 'string' ? course.crossSellTutorialBodyVi : '',
+  };
+}
+
 router.get('/', optionalAuth, async (req, res) => {
   try {
+    const pieces = [{ published: true }];
     const q = (req.query.q || '').toString().trim();
-    const filter = { published: true };
     if (q) {
-      filter.$or = [
-        { title: new RegExp(q, 'i') },
-        { description: new RegExp(q, 'i') },
-      ];
+      pieces.push({
+        $or: [{ title: new RegExp(q, 'i') }, { description: new RegExp(q, 'i') }],
+      });
     }
+    const levelRaw = String(req.query.level || '').trim().toLowerCase();
+    if (['beginner', 'intermediate', 'advanced'].includes(levelRaw)) {
+      pieces.push({ level: levelRaw });
+    }
+    const pricing = String(req.query.pricing || '').trim().toLowerCase();
+    if (pricing === 'free') {
+      pieces.push({
+        $or: [{ isPaid: false }, { price: { $lte: 0 } }],
+      });
+    }
+    if (pricing === 'paid') {
+      pieces.push({ isPaid: true, price: { $gt: 0 } });
+    }
+
+    const filter = pieces.length === 1 ? pieces[0] : { $and: pieces };
     const courses = await Course.find(filter)
       .select('title slug description thumbnail level lessons')
       .sort({ createdAt: -1 })
@@ -160,27 +265,12 @@ router.get('/:slug', optionalAuth, async (req, res) => {
         courseId: course._id,
       }).lean();
     }
+    const outlineOnly = String(req.query.outline || '').trim() === '1';
+    const data = buildCourseDetailPayload(course, enrollment, outlineOnly);
+
     res.json({
       success: true,
-      data: {
-        id: course._id,
-        title: course.title,
-        slug: course.slug,
-        description: course.description,
-        thumbnail: course.thumbnail,
-        level: course.level,
-        price: course.price ?? 0,
-        currency: course.currency ?? 'VND',
-        isPaid: course.isPaid ?? false,
-        modules: (course.modules || []).sort((a, b) => a.order - b.order),
-        lessons: (course.lessons || []).sort((a, b) => a.order - b.order),
-        enrollment: enrollment
-          ? {
-              enrolledAt: enrollment.enrolledAt,
-              progress: enrollment.progress || [],
-            }
-          : null,
-      },
+      data,
     });
   } catch (err) {
     console.error('Get course error:', err);
@@ -302,6 +392,9 @@ router.get('/:slug/editor', authMiddleware, requireRole('teacher', 'admin'), asy
         price: data.price ?? 0,
         currency: data.currency ?? 'VND',
         isPaid: data.isPaid ?? false,
+        crossSellTutorialHref: data.crossSellTutorialHref ?? '/tutorial',
+        crossSellTutorialLabelVi: data.crossSellTutorialLabelVi ?? '',
+        crossSellTutorialBodyVi: data.crossSellTutorialBodyVi ?? '',
         modules: (data.modules || []).sort((a, b) => a.order - b.order),
         lessons: (data.lessons || []).sort((a, b) => a.order - b.order),
       },
@@ -314,7 +407,21 @@ router.get('/:slug/editor', authMiddleware, requireRole('teacher', 'admin'), asy
 
 router.put('/:slug/editor', authMiddleware, requireRole('teacher', 'admin'), async (req, res) => {
   try {
-    const { title, description, level, durationWeeks, published, price, currency, isPaid, modules, lessons } = req.body || {};
+    const {
+      title,
+      description,
+      level,
+      durationWeeks,
+      published,
+      price,
+      currency,
+      isPaid,
+      modules,
+      lessons,
+      crossSellTutorialHref,
+      crossSellTutorialLabelVi,
+      crossSellTutorialBodyVi,
+    } = req.body || {};
     const course = await Course.findOne({ slug: req.params.slug });
     if (!course) {
       return res.status(404).json({ success: false, error: 'Không tìm thấy khóa học' });
@@ -337,6 +444,13 @@ router.put('/:slug/editor', authMiddleware, requireRole('teacher', 'admin'), asy
     if (price != null) course.price = Math.max(0, Math.floor(Number(price)) || 0);
     if (['VND', 'USD'].includes(currency)) course.currency = currency;
     if (typeof isPaid === 'boolean') course.isPaid = isPaid;
+    if (typeof crossSellTutorialHref === 'string' && crossSellTutorialHref.trim()) {
+      course.crossSellTutorialHref = crossSellTutorialHref.trim().slice(0, 512);
+    }
+    if (typeof crossSellTutorialLabelVi === 'string')
+      course.crossSellTutorialLabelVi = crossSellTutorialLabelVi.trim().slice(0, 200);
+    if (typeof crossSellTutorialBodyVi === 'string')
+      course.crossSellTutorialBodyVi = crossSellTutorialBodyVi.trim().slice(0, 2000);
 
     if (Array.isArray(modules)) {
       course.modules = modules.map((m, idx) => ({

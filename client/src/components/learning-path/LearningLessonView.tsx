@@ -13,31 +13,30 @@ import type {
 } from '@/data/learningPathCurriculum'
 import { DEPTH_META, getLessonNeighbors, getLessonById } from '@/data/learningPathCurriculum'
 import {
+  flushLearningPathBehavior,
+  isLessonComplete,
+  isLessonMastered,
   loadLessonCompletion,
   loadLessonMastery,
-  saveLessonCompletion,
-  saveLessonMastery,
-  saveLastLearningPathLessonId,
-  syncLearningPathCompletion,
+  normalizeStudioRecallQuiz,
   pushLearningPathCompletionWithLast,
   pushLessonMasteryMap,
-  toggleLessonComplete,
-  isLessonComplete,
+  saveLastLearningPathLessonId,
+  saveLessonCompletion,
+  saveLessonMastery,
   setLessonMastered,
-  isLessonMastered,
+  syncLearningPathCompletion,
+  toggleLessonComplete,
+  trackLearningPathBehavior,
+  useLearningPath,
   type LessonCompletionMap,
   type LessonMasteryMap,
-} from '@/lib/learningPathProgress'
-import { normalizeStudioRecallQuiz } from '@/lib/lessonRecallQuiz'
+} from '@/features/learning-path/public'
 import { LessonRecallQuiz } from '@/components/learning-path/LessonRecallQuiz'
-import { awardGemsForLearningPathLesson } from '@/lib/gemWallet'
-import { useLearningPath } from '@/hooks/useLearningPath'
-import { useAuthStore } from '@/store/useAuthStore'
+import { useAuthStore } from '@/features/auth/public'
 import { SectionPreview } from '@/components/studio/LessonPreview'
-import { applyConceptAnchorsToHtml } from '@/lib/conceptAnchorsHtml'
+import { applyConceptAnchorsToHtml } from '@/features/concepts/public'
 import { trackEvent } from '@/lib/analytics'
-import { flushLearningPathBehavior, trackLearningPathBehavior } from '@/lib/learningPathBehavior'
-
 type Props = {
   /** Từ server merge API — đồng bộ SSR */
   modules?: LearningModule[]
@@ -94,6 +93,7 @@ export default function LearningLessonView({
   const recallGateActive = recallQuestions.length >= 3
 
   const handleRecallPassed = () => {
+    const wasMastered = isLessonMastered(mastery, lesson.id)
     const next = setLessonMastered(mastery, lesson.id, true)
     setMastery(next)
     saveLessonMastery(next, userId)
@@ -109,7 +109,7 @@ export default function LearningLessonView({
       nodeId: displayNode.id,
       lessonId: lesson.id,
       depth,
-      metadata: { source: 'recall_quiz' },
+      metadata: { source: 'recall_quiz', firstRecallPass: !wasMastered },
     })
     window.dispatchEvent(new Event('lp-progress-changed'))
   }
@@ -120,9 +120,6 @@ export default function LearningLessonView({
     saveLessonCompletion(nextMap, userId)
     if (markingComplete) saveLastLearningPathLessonId(lesson.id, userId)
     void pushLearningPathCompletionWithLast(nextMap, markingComplete ? lesson.id : null, userId)
-    if (markingComplete) {
-      awardGemsForLearningPathLesson(lesson.id, userId)
-    }
     trackEvent('lesson_complete_toggled', {
       lesson_id: lesson.id,
       module_id: displayModule.id,

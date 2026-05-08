@@ -3,8 +3,8 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useAuthStore } from '@/store/useAuthStore'
-import { updateProfile, changePassword, deactivateMyAccount } from '@/lib/authApi'
+import { useAuthStore } from '@/features/auth/public'
+import { updateProfile, changePassword, deactivateMyAccount } from '@/features/auth/api/authApi'
 import { canModerate } from '@/lib/roles'
 
 function isStudentRole(role: string | undefined) {

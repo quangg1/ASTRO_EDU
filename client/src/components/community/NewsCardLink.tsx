@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import type { Post } from '@/lib/communityApi'
+import type { Post } from '@/features/community/api/communityApi'
 import { newsPostHref, newsPostOpensNewTab } from '@/lib/postContent'
 import { recordPostSourceOpen } from '@/lib/postEngagement'
 

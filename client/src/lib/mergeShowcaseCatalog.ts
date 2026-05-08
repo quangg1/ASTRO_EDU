@@ -1,6 +1,6 @@
 import { getStaticAssetUrl, resolveMediaUrl } from '@/lib/apiConfig'
 import { getNasaCatalogItemById, type NasaCatalogItem, type ShowcaseOrbitEntity } from '@/lib/showcaseEntities'
-import type { ShowcaseEntityContentDTO } from '@/lib/showcaseEntitiesApi'
+import type { ShowcaseEntityContentDTO } from '@/features/content3d/showcase/api/showcaseEntitiesApi'
 
 export type ResolvedNasaCatalogItem = NasaCatalogItem & {
   /** Tên hiển thị (ưu tiên Vi từ CMS). */

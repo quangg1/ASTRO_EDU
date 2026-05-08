@@ -6,7 +6,7 @@ import * as THREE from 'three'
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib'
 import { NASA_SHOWCASE_ITEMS, SHOWCASE_ORBIT_ENTITIES } from '@/lib/showcaseEntities'
 import { planetsData } from '@/lib/solarSystemData'
-import { useShowcaseStore } from '@/store/showcaseStore'
+import { useShowcaseStore } from '@/features/content3d/showcase/public'
 
 export type ShowcaseCameraSpherical = { distance: number; az: number; el: number }
 

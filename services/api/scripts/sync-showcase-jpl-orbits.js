@@ -1,7 +1,7 @@
 require('dotenv').config();
 
 const mongoose = require('mongoose');
-const ShowcaseCatalogBundle = require('../features/courses/models/ShowcaseCatalogBundle');
+const ShowcaseCatalogBundle = require('../features/content3d/models/ShowcaseCatalogBundle');
 const connectDB = require('../config/db');
 
 const HORIZONS_BASE = 'https://ssd.jpl.nasa.gov/api/horizons.api';

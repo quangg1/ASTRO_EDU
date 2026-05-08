@@ -4,7 +4,7 @@ import { Suspense, useEffect, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { useAuthStore } from '@/store/useAuthStore'
+import { useAuthStore } from '@/features/auth/public'
 import {
   fetchForum,
   fetchForumPosts,
@@ -12,7 +12,7 @@ import {
   createPost,
   type Forum,
   type Post,
-} from '@/lib/communityApi'
+} from '@/features/community/api/communityApi'
 import { plainTextExcerpt, postThumbnailUrl, isHtmlFragmentEmpty } from '@/lib/postContent'
 
 const RichTextEditor = dynamic(() => import('@/components/studio/RichTextEditor'), {

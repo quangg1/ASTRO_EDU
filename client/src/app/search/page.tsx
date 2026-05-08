@@ -2,10 +2,10 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
-import { fetchCourses } from '@/lib/coursesApi'
-import type { Course } from '@/lib/coursesApi'
+import { fetchCourses } from '@/features/courses/api/coursesApi'
+import type { Course } from '@/features/courses/api/coursesApi'
 import { DEPTH_ORDER, type LearningConcept, type LearningModule } from '@/data/learningPathCurriculum'
-import { useLearningPath } from '@/hooks/useLearningPath'
+import { useLearningPath } from '@/features/learning-path/public'
 
 type Facet = 'all' | 'courses' | 'path_modules' | 'path_nodes' | 'path_lessons' | 'concepts'
 

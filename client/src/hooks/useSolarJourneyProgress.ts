@@ -8,7 +8,7 @@ import {
   syncSolarJourneyProgress,
   pushSolarJourneyProgress,
 } from '@/lib/solarJourneyProgress'
-import { useAuthStore } from '@/store/useAuthStore'
+import { useAuthStore } from '@/features/auth/public'
 
 export function useSolarJourneyProgress() {
   const userId = useAuthStore((s) => s.user?.id ?? null)

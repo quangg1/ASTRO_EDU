@@ -1,7 +1,7 @@
 'use client'
 
 import { useId, useRef, useState } from 'react'
-import { uploadMedia } from '@/lib/coursesApi'
+import { uploadMedia } from '@/features/courses/api/coursesApi'
 
 type Props = {
   label: string

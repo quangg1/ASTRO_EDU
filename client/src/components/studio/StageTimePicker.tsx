@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { earthHistoryData } from '@/lib/earthHistoryData'
+import { EARTH_HISTORY_PRESET } from '@/features/content3d/narrative/public'
 
 interface Props {
   value: number | null
@@ -10,7 +10,8 @@ interface Props {
 
 export default function StageTimePicker({ value, onChange }: Props) {
   const [open, setOpen] = useState(false)
-  const current = value != null ? earthHistoryData.find((s) => s.time === value) : null
+  const beats = EARTH_HISTORY_PRESET.beats
+  const current = value != null ? beats.find((s) => s.time === value) : null
 
   return (
     <div className="space-y-2">
@@ -49,7 +50,7 @@ export default function StageTimePicker({ value, onChange }: Props) {
             <p className="text-[10px] uppercase tracking-wider text-gray-600">Earth History Timeline</p>
           </div>
           <div className="p-1">
-            {earthHistoryData.map((stage) => {
+            {beats.map((stage) => {
               const isActive = value === stage.time
               return (
                 <button

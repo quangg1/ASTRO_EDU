@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, ChevronRight, Layers } from 'lucide-react'
-import { fetchPublicLearningPath } from '@/lib/learningPathApi'
+import { fetchPublicLearningPath } from '@/features/learning-path/public'
 import type { LearningModule } from '@/data/learningPathCurriculum'
 import { getTopicBySlug } from '@/data/learningTopics'
 import { groupNodesByTopic } from '@/lib/topicPathMapping'

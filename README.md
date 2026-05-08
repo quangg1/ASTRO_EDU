@@ -31,10 +31,9 @@ galaxies/
 │   └── package.json
 │
 ├── services/
-│   └── earth-history/    # Earth History API (Express)
-│       ├── models/       # Mongoose schemas
-│       ├── routes/       # API routes
-│       ├── seeds/        # Database seeders
+│   └── api/              # Unified API (Express)
+│       ├── features/     # Feature modules (courses, content3d, ...)
+│       ├── bootstrap/    # Seed/bootstrap scripts
 │       └── server.js
 │
 └── pbdb_data.csv         # Paleobiology data
@@ -56,23 +55,22 @@ npm install
 
 ### 2. Cấu hình
 
-**Backend** (`services/earth-history/.env`):
+**Backend** (`services/api/.env`):
 ```env
-PORT=3001
-MONGODB_URI=mongodb://localhost:27017/earth_history
+PORT=3002
+MONGODB_URI=mongodb://localhost:27017/galaxies
 ```
 
 **Frontend** (`client/.env.local`):
 ```env
-NEXT_PUBLIC_API_URL=http://localhost:3001/api
+NEXT_PUBLIC_API_BASE_URL=http://localhost:3002
 ```
 
 ### 3. Import dữ liệu hóa thạch (chỉ cần làm 1 lần)
 
 ```bash
-cd services/earth-history
-npm run seed        # Seed Earth History stages
-npm run import-pbdb # Import 500k fossils (mất ~5-10 phút)
+cd services/api
+npm run seed:core
 ```
 
 ### 4. Chạy ứng dụng (backend và frontend riêng)
@@ -81,9 +79,9 @@ Chạy **hai terminal**, không start chung:
 
 **Terminal 1 – Backend:**
 ```bash
-cd services/earth-history
+cd services/api
 npm run dev
-# Server: http://localhost:3001
+# Server: http://localhost:3002
 # Hoặc từ root: npm run dev:server
 ```
 

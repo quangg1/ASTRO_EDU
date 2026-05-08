@@ -1,7 +1,7 @@
 'use client'
 
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
-import { fetchPublicShowcaseCatalogBundle } from '@/lib/showcaseCatalogApi'
+import { fetchPublicShowcaseCatalogBundle } from '@/features/content3d/showcase/api/showcaseCatalogApi'
 import { hydrateShowcaseCatalogBundle } from '@/lib/showcaseEntities'
 
 const ShowcaseCatalogGenContext = createContext(0)

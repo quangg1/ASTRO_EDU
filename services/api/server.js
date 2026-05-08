@@ -7,15 +7,20 @@ const { bootstrapCoreData } = require('./bootstrap/seedCoreData');
 const { errorMiddleware } = require('./shared/errors');
 const { requestContextMiddleware } = require('./shared/requestContext');
 const authRouter = require('./features/auth');
+const { coursesRouter, tutorialsRouter } = require('./features/courses');
+const { learningPathRouter } = require('./features/learning-path');
+const { conceptsRouter } = require('./features/concepts');
 const {
-  coursesRouter,
-  tutorialsRouter,
-  learningPathRouter,
-  conceptsRouter,
   showcaseEntitiesRouter,
   showcaseCatalogRouter,
   showcaseOrbitsJplRouter,
-} = require('./features/courses');
+  narrativeSpacesRouter,
+  earthHistoryRouter,
+  fossilsRouter,
+  phylaRouter,
+  spaceContextRouter,
+} = require('./features/content3d');
+const { gemsRouter, showcaseGamificationRouter } = require('./features/rewards');
 const paymentRouter = require('./features/payment');
 const { forumsRouter, postsRouter, newsRouter } = require('./features/community');
 const mediaRouter = require('./features/media');
@@ -38,6 +43,13 @@ app.use('/api/concepts', conceptsRouter);
 app.use('/api/showcase-entities', showcaseEntitiesRouter);
 app.use('/api/showcase-catalog', showcaseCatalogRouter);
 app.use('/api/showcase-orbits', showcaseOrbitsJplRouter);
+app.use('/api/gems', gemsRouter);
+app.use('/api/showcase', showcaseGamificationRouter);
+app.use('/api/narrative-spaces', narrativeSpacesRouter);
+app.use('/api/earth-history', earthHistoryRouter);
+app.use('/api/fossils', fossilsRouter);
+app.use('/api/phyla', phylaRouter);
+app.use('/api/content-3d', spaceContextRouter);
 app.use('/api/payments', paymentRouter);
 app.use('/api/forums', forumsRouter);
 app.use('/api/posts', postsRouter);

@@ -8,7 +8,7 @@ import { applyGlobeTextureQuality } from '@/lib/planetTextureQuality'
 import { getStaticAssetUrl } from '@/lib/apiConfig'
 import { sunData, type PlanetData } from '@/lib/solarSystemData'
 import { computeOrbitalPosition } from '@/lib/solarOrbitMath'
-import { useShowcaseStore } from '@/store/showcaseStore'
+import { useShowcaseStore } from '@/features/content3d/showcase/public'
 
 export const SUN_SPIN_PERIOD = 25
 

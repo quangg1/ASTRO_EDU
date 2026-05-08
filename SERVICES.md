@@ -8,14 +8,13 @@ Project giáo dục thiên văn với đăng nhập (email, Google, Facebook), k
 
 - Chạy API gộp: `npm run dev:api`
 - Client: đặt `NEXT_PUBLIC_API_BASE_URL=http://localhost:3002` trong `.env.local` để trỏ mọi request về API gộp.
-- **Vẫn tách riêng** (scale độc lập): earth-history (3001), embedding (5004), ai (5005).
+- **Vẫn tách riêng** (scale độc lập): embedding (5004), ai (5005).
 
 ## Các service (khi chạy tách từng service)
 
 | Service      | Port | Mô tả |
 |-------------|------|--------|
 | **client**  | 3000 | Next.js – UI, visualization, trang khóa học, đăng nhập/đăng ký |
-| **earth-history** | 3001 | API Earth History (fossils, phyla, paleo) – MongoDB |
 | **api** (gộp) | 3002 | **Unified API**: auth, courses, tutorials, payment, community, media |
 | **auth**    | 3002 | (legacy) Đăng ký/đăng nhập – dùng **api** thay thế |
 | **courses** | 3003 | (legacy) Khóa học, Tutorial – dùng **api** thay thế |
@@ -34,7 +33,6 @@ Project giáo dục thiên văn với đăng nhập (email, Google, Facebook), k
 npm run install:all
 
 # Hoặc từng thư mục:
-cd services/earth-history && npm install
 cd client && npm install
 cd services/auth && npm install
 cd services/courses && npm install
@@ -102,9 +100,9 @@ Xem chi tiết trong [docs/ARCHITECTURE_MERGED.md](docs/ARCHITECTURE_MERGED.md#d
 ### 4. Chạy từng terminal
 
 ```bash
-# Terminal 1 – API Earth History
+# Terminal 1 – Unified API
 npm run dev:server
-# (dev:server runs services/earth-history)
+# (dev:server runs services/api)
 
 # Terminal 2 – Auth
 npm run dev:auth

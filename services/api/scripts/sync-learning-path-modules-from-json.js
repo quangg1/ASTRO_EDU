@@ -7,7 +7,7 @@ require('dotenv').config({ path: require('path').join(__dirname, '../.env') })
 const mongoose = require('mongoose')
 const path = require('path')
 const fs = require('fs')
-const LearningPath = require('../features/courses/models/LearningPath')
+const LearningPath = require('../features/learning-path/models/LearningPath')
 
 const uri = process.env.MONGODB_URI || 'mongodb://localhost:27017/galaxies'
 

@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Home, ListTree, BookOpen, MessageCircle, UserRound } from 'lucide-react'
-import { useAuthStore } from '@/store/useAuthStore'
+import { useAuthStore } from '@/features/auth/public'
 import { viText } from '@/messages/vi'
 import { navItemsForSurface, navLabel } from '@/lib/navigationConfig'
 

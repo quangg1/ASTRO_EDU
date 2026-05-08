@@ -28,15 +28,15 @@ import {
   fetchEditorLearningPath,
   generateRecallQuizForLesson,
   saveEditorLearningPath,
-} from '@/lib/learningPathApi'
+} from '@/features/learning-path/public'
 import {
   FALLBACK_TAXONOMY_REGISTRY,
   fetchEditorConcepts,
   fetchTaxonomyRegistryEditor,
   type TaxonomyRegistry,
-} from '@/lib/conceptsApi'
-import type { Lesson, LessonSection } from '@/lib/coursesApi'
-import { useAuthStore } from '@/store/useAuthStore'
+} from '@/features/concepts/public'
+import type { Lesson, LessonSection } from '@/features/courses/api/coursesApi'
+import { useAuthStore } from '@/features/auth/public'
 import {
   BookOpen,
   ChevronDown,
@@ -57,7 +57,7 @@ import { LearningPathRecallQuizEditor } from '@/components/studio/LearningPathRe
 import { NASA_SHOWCASE_ITEMS } from '@/lib/showcaseEntities'
 import { useShowcaseCatalogGen } from '@/components/showcase/ShowcaseCatalogProvider'
 import { mergeNasaCatalog, type ResolvedNasaCatalogItem } from '@/lib/mergeShowcaseCatalog'
-import { fetchPublicShowcaseEntityContents, type ShowcaseEntityContentDTO } from '@/lib/showcaseEntitiesApi'
+import { fetchPublicShowcaseEntityContents, type ShowcaseEntityContentDTO } from '@/features/content3d/showcase/api/showcaseEntitiesApi'
 
 const BlockEditor = dynamic(() => import('@/components/studio/BlockEditor'), { ssr: false })
 const BlockPalette = dynamic(() => import('@/components/studio/BlockPalette'), { ssr: false })

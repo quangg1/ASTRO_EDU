@@ -40,7 +40,7 @@ function PaymentReturnContent() {
             <p className="text-gray-400 text-sm mb-6">{viText.payment.successSubtitle}</p>
             {slug ? (
               <Link
-                href={`/courses/${slug}`}
+                href={`/courses/${slug}?enrolled=1`}
                 className="inline-block px-6 py-3 rounded-xl bg-cyan-600 text-white font-medium hover:bg-cyan-500"
               >
                 {viText.payment.goToCourse}

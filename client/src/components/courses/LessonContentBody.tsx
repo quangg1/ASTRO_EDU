@@ -1,37 +1,15 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import dynamic from 'next/dynamic'
-import type { Lesson, LessonSection, ResourceLink } from '@/lib/coursesApi'
+import type { Lesson, LessonSection, ResourceLink } from '@/features/courses/api/coursesApi'
 import { resolveMediaUrl } from '@/lib/apiConfig'
-import { getStageByTime } from '@/lib/earthHistoryData'
+import { useNarrativeSpace } from '@/features/content3d/narrative/public'
 import { FeaturedOrganisms } from '@/components/ui/FeaturedOrganisms'
 import { Loading } from '@/components/ui/Loading'
+import { SectionPreview } from '@/components/studio/LessonPreview'
 
-type LessonTab = 'video' | 'readings' | 'resources'
 const EarthScene = dynamic(() => import('@/components/3d/EarthScene'), { ssr: false, loading: () => <Loading /> })
-const ModelViewer = dynamic(() => import('@/components/studio/ModelViewer'), { ssr: false, loading: () => <Loading /> })
-const MathBlock = dynamic(() => import('@/components/studio/blocks/MathBlock'), { ssr: false })
-const ChartBlock = dynamic(() => import('@/components/studio/blocks/ChartBlock'), { ssr: false })
-const SliderBlock = dynamic(() => import('@/components/studio/blocks/SliderBlock'), { ssr: false })
-
-function renderTextWithBold(text: string) {
-  const parts = text.split(/(\*\*[^*]+\*\*)/g)
-  return parts.map((p, idx) => {
-    const key = `${idx}-${p.slice(0, 20)}`
-    if (p.startsWith('**') && p.endsWith('**')) {
-      return <strong key={key}>{p.slice(2, -2)}</strong>
-    }
-    return <span key={key}>{p}</span>
-  })
-}
-
-function formatContent(text: string) {
-  return text
-    .replace(/\s●\s/g, '\n• ')
-    .replace(/\s-\s/g, '\n- ')
-    .replace(/\s([0-9]{1,2}\.)\s/g, '\n$1 ')
-}
 
 function isVideoSection(sec: LessonSection) {
   return sec.type === 'video' && !!sec.videoUrl
@@ -43,12 +21,7 @@ function getResourceLabel(link: ResourceLink, idx: number) {
 }
 
 export function LessonContentBody({ lesson }: { lesson: Lesson }) {
-  const [tab, setTab] = useState<LessonTab>(lesson.videoUrl ? 'video' : 'readings')
-
-  useEffect(() => {
-    setTab(lesson.videoUrl ? 'video' : 'readings')
-  }, [lesson.slug, lesson.videoUrl])
-
+  const { getBeatByRef } = useNarrativeSpace('earth-history')
   const sections = (lesson.sections ?? []) as LessonSection[]
   const videoSections = useMemo(() => sections.filter(isVideoSection), [sections])
   const readingSections = useMemo(() => sections.filter((s) => !isVideoSection(s)), [sections])
@@ -91,7 +64,6 @@ export function LessonContentBody({ lesson }: { lesson: Lesson }) {
         </section>
       )}
 
-      {/* Video section - always visible when present */}
       {showVideoTab && (
         <div className="space-y-4">
           {lesson.videoUrl && (
@@ -130,7 +102,6 @@ export function LessonContentBody({ lesson }: { lesson: Lesson }) {
         </div>
       )}
 
-      {/* Readings - always visible below video */}
       {(
         <>
           {(lesson.sourcePdf || lesson.sourcePageCount != null) && (
@@ -160,13 +131,13 @@ export function LessonContentBody({ lesson }: { lesson: Lesson }) {
                 <h3 className="text-sm font-semibold text-cyan-300">Mô phỏng 3D trong bài học</h3>
                 <p className="text-xs text-gray-400 mt-1">
                   {(() => {
-                    const stage = getStageByTime(lesson.stageTime ?? 0)
+                    const stage = getBeatByRef.byTime(lesson.stageTime ?? 0)
                     return stage ? `${stage.timeDisplay} · ${stage.description}` : `Mốc ${lesson.stageTime} Ma`
                   })()}
                 </p>
               </div>
               {(() => {
-                const stage = getStageByTime(lesson.stageTime ?? 0)
+                const stage = getBeatByRef.byTime(lesson.stageTime ?? 0)
                 return (
                   <>
                     {stage && (
@@ -186,110 +157,11 @@ export function LessonContentBody({ lesson }: { lesson: Lesson }) {
           {readingSections.length > 0 ? (
             <div className="space-y-6">
               {readingSections.map((sec, i) => (
-                <section key={`${sec.title ?? 'sec'}-${i}`} className="space-y-3 rounded-xl border border-white/10 bg-[#0a0f17] p-5">
-                  {sec.title && (
-                    <h3 className="text-base md:text-lg font-semibold text-white border-b border-white/10 pb-2">
-                      {sec.title}
-                    </h3>
-                  )}
-                  {sec.type === 'text' && sec.content && (
-                    <div className="space-y-3">
-                      {sec.summary && (
-                        <p className="text-cyan-100/90 text-sm md:text-[15px] leading-7 font-medium">
-                          {sec.summary}
-                        </p>
-                      )}
-                      {sec.bullets && sec.bullets.length > 0 && (
-                        <ul className="list-disc list-inside text-gray-200 text-sm md:text-[15px] space-y-1 leading-7">
-                          {sec.bullets.map((b, bi) => (
-                            <li key={`${bi}-${b.slice(0, 20)}`}>{b}</li>
-                          ))}
-                        </ul>
-                      )}
-                      <details className="rounded-lg border border-white/10 bg-white/5 p-3">
-                        <summary className="cursor-pointer text-sm text-cyan-300">Xem chi tiết slide</summary>
-                        <div className="mt-3 text-gray-300 text-sm md:text-[15px] leading-7 whitespace-pre-wrap">
-                          {renderTextWithBold(formatContent(sec.content))}
-                        </div>
-                      </details>
-                    </div>
-                  )}
-                  {sec.type === 'image' && sec.imageUrl && (
-                    <figure className="my-3">
-                      <img
-                        src={resolveMediaUrl(sec.imageUrl)}
-                        alt={sec.title || 'Hình minh họa'}
-                        className="block mx-auto rounded-xl w-auto max-w-full max-h-[460px] object-contain border border-white/10"
-                        style={{
-                          maxWidth: `${Math.min(100, Math.max(20, Number.isFinite(sec.imageWidthPct) ? Number(sec.imageWidthPct) : 100))}%`,
-                        }}
-                      />
-                      {sec.content && <figcaption className="text-xs text-gray-500 mt-2">{sec.content}</figcaption>}
-                    </figure>
-                  )}
-                  {sec.type === '3d' && sec.modelUrl && (
-                    <div className="my-3 h-[400px] rounded-xl border border-cyan-500/20 overflow-hidden bg-black/50">
-                      <ModelViewer url={resolveMediaUrl(sec.modelUrl)} />
-                    </div>
-                  )}
-                  {sec.type === 'richtext' && (sec.html || sec.content) && (
-                    <div
-                      className="prose prose-invert prose-sm max-w-none text-gray-200 leading-relaxed [&_p]:my-4 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0 [&_h1]:text-xl [&_h1]:font-bold [&_h2]:text-lg [&_h2]:font-semibold [&_a]:text-cyan-400 [&_blockquote]:border-l-cyan-500/40 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_code]:bg-white/10 [&_code]:px-1 [&_code]:rounded [&_img]:rounded-xl [&_img]:mx-auto [&_img]:block [&_img]:w-auto [&_img]:max-w-full"
-                      dangerouslySetInnerHTML={{ __html: sec.html || sec.content || '' }}
-                    />
-                  )}
-                  {sec.type === 'code' && sec.code && (
-                    <div className="rounded-xl border border-white/10 bg-black/60 overflow-hidden my-3">
-                      <div className="px-3 py-1.5 border-b border-white/10">
-                        <span className="text-[10px] uppercase tracking-wider text-gray-600">{sec.language || 'code'}</span>
-                      </div>
-                      <pre className="p-4 text-sm font-mono text-gray-200 overflow-x-auto leading-relaxed"><code>{sec.code}</code></pre>
-                    </div>
-                  )}
-                  {sec.type === 'callout' && sec.content && (
-                    <div className={`rounded-xl border p-4 my-3 ${
-                      sec.calloutVariant === 'tip' ? 'border-emerald-500/40 bg-emerald-500/10' :
-                      sec.calloutVariant === 'warning' ? 'border-amber-500/40 bg-amber-500/10' :
-                      sec.calloutVariant === 'danger' ? 'border-red-500/40 bg-red-500/10' :
-                      'border-cyan-500/40 bg-cyan-500/10'
-                    }`}>
-                      <p className="text-sm text-gray-200 leading-relaxed whitespace-pre-wrap">{sec.content}</p>
-                    </div>
-                  )}
-                  {sec.type === 'embed' && sec.embedUrl && (
-                    <div className="aspect-video rounded-xl overflow-hidden border border-white/10 my-3">
-                      <iframe src={sec.embedUrl} className="w-full h-full" allowFullScreen sandbox="allow-scripts allow-same-origin allow-popups" />
-                    </div>
-                  )}
-                  {sec.type === 'divider' && (
-                    <div className="flex items-center gap-4 py-2 my-3">
-                      <div className="flex-1 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
-                    </div>
-                  )}
-                  {sec.type === 'math' && sec.latex && (
-                    <div className="my-3 rounded-xl border border-white/10 bg-black/30 p-6 flex justify-center">
-                      <MathBlock latex={sec.latex} displayMode />
-                    </div>
-                  )}
-                  {sec.type === 'chart' && (
-                    <div className="my-3 rounded-xl border border-cyan-500/20 overflow-hidden bg-black/30 p-4">
-                      <ChartBlock section={sec} update={() => {}} />
-                    </div>
-                  )}
-                  {sec.type === 'slider' && (
-                    <div className="my-3">
-                      <SliderBlock section={sec} update={() => {}} />
-                    </div>
-                  )}
-                  {sec.type === 'observable' && sec.notebookUrl && (
-                    <div className="aspect-video rounded-xl overflow-hidden border border-white/10 my-3">
-                      <iframe
-                        src={sec.notebookUrl.replace('observablehq.com/', 'observablehq.com/embed/')}
-                        className="w-full h-full"
-                        allowFullScreen
-                      />
-                    </div>
-                  )}
+                <section
+                  key={`${sec.type}-${sec.title ?? 'sec'}-${i}`}
+                  className="rounded-xl border border-white/10 bg-[#0a0f17] p-5"
+                >
+                  <SectionPreview sec={sec} index={i} />
                 </section>
               ))}
             </div>
@@ -299,7 +171,6 @@ export function LessonContentBody({ lesson }: { lesson: Lesson }) {
         </>
       )}
 
-      {/* Resources - collapsible at bottom */}
       {resources.length > 0 && (
         <details className="rounded-xl border border-white/10 bg-[#0a0f17] overflow-hidden">
           <summary className="px-5 py-3 text-sm font-semibold text-white cursor-pointer hover:bg-white/5 transition-colors">

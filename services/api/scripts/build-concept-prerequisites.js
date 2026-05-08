@@ -23,7 +23,7 @@ const fs = require('fs');
 const path = require('path');
 const fetch = require('node-fetch');
 const mongoose = require('mongoose');
-const Concept = require('../features/courses/models/Concept');
+const Concept = require('../features/concepts/models/Concept');
 
 const MONGO_URI = process.env.MONGO_URL || process.env.MONGODB_URI || 'mongodb://localhost:27017/galaxies';
 const LM_STUDIO_BASE_URL = process.env.LM_STUDIO_BASE_URL || 'http://127.0.0.1:1234/v1';

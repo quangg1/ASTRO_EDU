@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation'
 import { getLessonById } from '@/data/learningPathCurriculum'
-import { getMergedLearningPathData } from '@/lib/learningPathServer'
+import { getMergedLearningPathData } from '@/features/learning-path/public'
 import LearningLessonView from '@/components/learning-path/LearningLessonView'
 
 /** Luôn lấy learning path + concepts mới (conceptAnchors, nội dung bài). */

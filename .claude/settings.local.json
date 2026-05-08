@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx tsc *)",
+      "Bash(npx next *)",
+      "Bash(node -c features/narrative/services/narrativeSpace.service.js)",
+      "Bash(node -c features/narrative/routes/narrativeSpaces.js)"
+    ]
+  }
+}

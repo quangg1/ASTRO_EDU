@@ -19,9 +19,14 @@ const TEXTURE_BASE = '/textures'
 
 interface EarthProps {
   stage: EarthStage
+  effectTags?: {
+    meteorShower?: boolean
+    debrisField?: boolean
+    dustHaze?: boolean
+  }
 }
 
-export function Earth({ stage }: EarthProps) {
+export function Earth({ stage, effectTags }: EarthProps) {
   const earthRef = useRef<THREE.Mesh>(null)
   const atmosphereRef = useRef<THREE.Mesh>(null)
   const cloudsRef = useRef<THREE.Mesh>(null)
@@ -34,6 +39,16 @@ export function Earth({ stage }: EarthProps) {
     () => (stage.atmosphereColor ? new THREE.Color(stage.atmosphereColor) : new THREE.Color('#87CEEB')),
     [stage.atmosphereColor]
   )
+  const activeEffects = effectTags ?? {
+    meteorShower: true,
+    debrisField: true,
+    dustHaze: true,
+  }
+
+  useFrame((_, delta) => {
+    if (cloudsRef.current) cloudsRef.current.rotation.y += delta * 0.017
+    if (atmosphereRef.current) atmosphereRef.current.rotation.y += delta * 0.004
+  })
 
   // Xoay do nhóm cha (EarthWithFossils) trong EarthScene – không xoay riêng để texture và hóa thạch khớp
 
@@ -58,16 +73,9 @@ export function Earth({ stage }: EarthProps) {
       {/* Grid (kinh/vĩ tuyến, xích đạo nổi bật) */}
       <group>{gridLines}</group>
 
-      {/* Khí quyển */}
+      {/* Khí quyển: Fresnel glow nhẹ, dễ phân biệt preset từng planet/stage */}
       {stage.atmosphereColor && (
-        <Sphere ref={atmosphereRef} args={[5.3, 64, 64]}>
-          <meshBasicMaterial
-            color={atmosphereColor}
-            transparent
-            opacity={0.2}
-            side={THREE.BackSide}
-          />
-        </Sphere>
+        <AtmosphereGlow ref={atmosphereRef} color={atmosphereColor} />
       )}
 
       {/* Mây đơn sắc khi không dùng 8k_earth (paleo hoặc màu đơn) */}
@@ -77,8 +85,9 @@ export function Earth({ stage }: EarthProps) {
         </Sphere>
       )}
 
-      {stage.hasDebris && <Debris />}
-      {stage.hasMeteorites && <Meteorites />}
+      {activeEffects.debrisField && stage.hasDebris && <Debris />}
+      {activeEffects.meteorShower && stage.hasMeteorites && <Meteorites />}
+      {activeEffects.dustHaze && stage.time >= 3000 && <DustHaze color={atmosphereColor} />}
     </group>
   )
 }
@@ -130,13 +139,16 @@ const RealisticEarth = React.forwardRef<THREE.Mesh, { stage: EarthStage }>(funct
 
   if (!ready) return <ColoredEarth ref={ref} stage={stage} />
 
+  // Night-side lights chỉ thực sự nổi ở mốc hiện đại/cận đại.
+  const cityLightIntensity = stage.time <= 0.03 ? 0.85 : stage.time <= 2 ? 0.38 : 0.16
+
   return (
     <Sphere ref={ref} args={[5, 128, 128]}>
       <meshStandardMaterial
         map={day}
         emissiveMap={night}
-        emissiveIntensity={0.22}
-        emissive={new THREE.Color(0x0a0a0a)}
+        emissiveIntensity={cityLightIntensity}
+        emissive={new THREE.Color(0x2a2a2a)}
         normalMap={normal}
         normalScale={new THREE.Vector2(0.9, 0.9)}
         metalnessMap={specular}
@@ -210,6 +222,56 @@ const CloudsLayer = React.forwardRef<THREE.Mesh>(function CloudsLayer(_, ref) {
         opacity={0.4}
         depthWrite={false}
         side={THREE.DoubleSide}
+      />
+    </Sphere>
+  )
+})
+
+const AtmosphereGlow = React.forwardRef<THREE.Mesh, { color: THREE.Color }>(function AtmosphereGlow(
+  { color },
+  ref,
+) {
+  const uniforms = useMemo(
+    () => ({
+      atmosphereColor: { value: color.clone() },
+      intensity: { value: 0.78 },
+    }),
+    [color],
+  )
+
+  useEffect(() => {
+    uniforms.atmosphereColor.value.copy(color)
+  }, [color, uniforms])
+
+  return (
+    <Sphere ref={ref} args={[5.35, 64, 64]}>
+      <shaderMaterial
+        uniforms={uniforms}
+        vertexShader={`
+          varying vec3 vWorldNormal;
+          varying vec3 vViewDir;
+          void main() {
+            vec4 viewPosition = modelViewMatrix * vec4(position, 1.0);
+            vViewDir = normalize(-viewPosition.xyz);
+            vWorldNormal = normalize(normalMatrix * normal);
+            gl_Position = projectionMatrix * viewPosition;
+          }
+        `}
+        fragmentShader={`
+          varying vec3 vWorldNormal;
+          varying vec3 vViewDir;
+          uniform vec3 atmosphereColor;
+          uniform float intensity;
+          void main() {
+            float fresnel = pow(1.0 - max(dot(vWorldNormal, vViewDir), 0.0), 2.7);
+            float alpha = fresnel * intensity;
+            gl_FragColor = vec4(atmosphereColor, alpha);
+          }
+        `}
+        transparent
+        depthWrite={false}
+        side={THREE.BackSide}
+        blending={THREE.AdditiveBlending}
       />
     </Sphere>
   )
@@ -364,5 +426,19 @@ function Meteorites() {
         </mesh>
       ))}
     </group>
+  )
+}
+
+function DustHaze({ color }: { color: THREE.Color }) {
+  return (
+    <Sphere args={[5.24, 48, 48]}>
+      <meshBasicMaterial
+        color={color}
+        transparent
+        opacity={0.09}
+        depthWrite={false}
+        side={THREE.DoubleSide}
+      />
+    </Sphere>
   )
 }

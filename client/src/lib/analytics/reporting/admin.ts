@@ -1,5 +1,5 @@
 import { getApiPathBase } from '@/lib/apiConfig'
-import { getToken } from '@/lib/authApi'
+import { getToken } from '@/features/auth/public'
 
 const API_BASE = getApiPathBase()
 

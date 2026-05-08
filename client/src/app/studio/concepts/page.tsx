@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useAuthStore } from '@/store/useAuthStore'
+import { useAuthStore } from '@/features/auth/public'
 import type { LearningConcept, LearningModule, DepthLevel } from '@/data/learningPathCurriculum'
 import { DEPTH_META, DEPTH_ORDER } from '@/data/learningPathCurriculum'
 import {
@@ -13,8 +13,8 @@ import {
   saveEditorConcepts,
   saveTaxonomyRegistryEditor,
   type TaxonomyRegistry,
-} from '@/lib/conceptsApi'
-import { fetchEditorLearningPath } from '@/lib/learningPathApi'
+} from '@/features/concepts/public'
+import { fetchEditorLearningPath } from '@/features/learning-path/public'
 
 const inputCls =
   'w-full rounded-lg bg-black/50 border border-white/15 px-3 py-2 text-white text-sm focus:border-cyan-500/50 focus:outline-none transition-colors'

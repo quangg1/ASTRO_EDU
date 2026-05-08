@@ -6,20 +6,20 @@ import { AnimatePresence, motion } from 'framer-motion'
 import type { DepthLevel, LearningModule, LearningNode } from '@/data/learningPathCurriculum'
 import { DEPTH_META, DEPTH_ORDER } from '@/data/learningPathCurriculum'
 import {
+  isLessonComplete,
+  isLessonMastered,
   loadLessonCompletion,
   loadLessonMastery,
   loadLessonVisited3D,
   syncLearningPathCompletion,
-  isLessonComplete,
-  isLessonMastered,
+  trackLearningPathBehavior,
   type LessonCompletionMap,
   type LessonMasteryMap,
   type LessonVisited3DMap,
-} from '@/lib/learningPathProgress'
-import { trackLearningPathBehavior } from '@/lib/learningPathBehavior'
+} from '@/features/learning-path/public'
 import { Award, CheckCircle2, ChevronRight } from 'lucide-react'
-import { useAuthStore } from '@/store/useAuthStore'
-import { suggestShowcaseTargetForLesson } from '@/lib/showcaseLearningBridge'
+import { useAuthStore } from '@/features/auth/public'
+import { suggestShowcaseTargetForLesson } from '@/features/content3d/showcase/public'
 
 type Props = {
   module: LearningModule

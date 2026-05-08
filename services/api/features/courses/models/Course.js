@@ -83,6 +83,11 @@ const courseSchema = new mongoose.Schema({
   isPaid: { type: Boolean, default: false },
   /** Giáo viên sở hữu khóa học (teacher); null = chưa gán (cũ) */
   teacherId: { type: String, default: null, index: true },
+  /** Link CTA học miễn phí (Learning Path Hub), ví dụ /tutorial */
+  crossSellTutorialHref: { type: String, default: '/tutorial' },
+  crossSellTutorialLabelVi: { type: String, default: 'Học thêm miễn phí · Lộ trình' },
+  /** Mô tả ngắn dưới CTA cross-sell (tùy chọn, markdown không dùng) */
+  crossSellTutorialBodyVi: { type: String, default: '' },
   modules: [moduleSchema],
   lessons: [lessonSchema],
   published: { type: Boolean, default: false },

@@ -16,7 +16,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts'
-import type { LessonSection } from '@/lib/coursesApi'
+import type { LessonSection } from '@/features/courses/api/coursesApi'
 
 const CHART_TYPES = ['line', 'bar', 'area', 'pie'] as const
 

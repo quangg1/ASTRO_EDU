@@ -3,17 +3,17 @@
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { BookOpen, ChevronRight, Flame, Gem, Sparkles, TrendingUp } from 'lucide-react'
-import { useAuthStore } from '@/store/useAuthStore'
-import { useLearningPath } from '@/hooks/useLearningPath'
+import { useAuthStore } from '@/features/auth/public'
 import {
   computeProgressPercent,
-  loadLessonCompletion,
   loadLastLearningPathLessonId,
+  loadLessonCompletion,
   syncLearningPathCompletion,
-} from '@/lib/learningPathProgress'
+  useLearningPath,
+} from '@/features/learning-path/public'
 import { loadCompletedMilestoneIds, syncSolarJourneyProgress } from '@/lib/solarJourneyProgress'
 import { getLessonById } from '@/data/learningPathCurriculum'
-import { loadGemWallet, syncGemWallet } from '@/lib/gemWallet'
+import { loadGemWallet, syncGemWallet } from '@/features/rewards/public'
 
 /** Tổng quan: chỉ số chung + 2 cột Khóa học / Hoạt động (cấu trúc giống ảnh). */
 export default function DashboardOverviewPage() {

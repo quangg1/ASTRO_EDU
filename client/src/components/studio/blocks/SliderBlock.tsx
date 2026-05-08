@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import type { LessonSection } from '@/lib/coursesApi'
+import type { LessonSection } from '@/features/courses/api/coursesApi'
 
 const inputCls = 'w-full rounded-lg bg-black/50 border border-white/15 px-3 py-2 text-white text-sm focus:border-cyan-500/50 focus:outline-none'
 

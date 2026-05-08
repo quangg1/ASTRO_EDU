@@ -2,11 +2,11 @@
 
 import dynamic from 'next/dynamic'
 import { useMemo } from 'react'
-import type { Lesson, LessonSection, QuizQuestion } from '@/lib/coursesApi'
+import type { Lesson, LessonSection, QuizQuestion } from '@/features/courses/api/coursesApi'
 import type { LearningConcept, LessonConceptAnchor } from '@/data/learningPathCurriculum'
-import { applyConceptAnchorsToHtml } from '@/lib/conceptAnchorsHtml'
+import { applyConceptAnchorsToHtml } from '@/features/concepts/public'
 import { resolveMediaUrl } from '@/lib/apiConfig'
-import { getStageByTime } from '@/lib/earthHistoryData'
+import { useNarrativeSpace } from '@/features/content3d/narrative/public'
 
 const EarthScene = dynamic(() => import('@/components/3d/EarthScene'), { ssr: false, loading: () => <div className="h-full flex items-center justify-center text-gray-600 text-sm">Loading 3D scene...</div> })
 const ModelViewer = dynamic(() => import('@/components/studio/ModelViewer'), { ssr: false, loading: () => <div className="h-full flex items-center justify-center text-gray-600 text-sm">Loading 3D model...</div> })
@@ -256,6 +256,7 @@ type LessonPreviewProps = {
 }
 
 export default function LessonPreview({ lesson, conceptAnchors, concepts }: LessonPreviewProps) {
+  const { getBeatByRef } = useNarrativeSpace('earth-history')
   const sections = lesson.sections ?? []
   const quizQuestions = lesson.quizQuestions ?? []
   const goals = lesson.learningGoals ?? []
@@ -306,7 +307,7 @@ export default function LessonPreview({ lesson, conceptAnchors, concepts }: Less
 
       {/* Earth History 3D Simulation */}
       {lesson.stageTime != null && (() => {
-        const stage = getStageByTime(lesson.stageTime ?? 0)
+        const stage = getBeatByRef.byTime(lesson.stageTime ?? 0)
         return (
           <div className="rounded-xl border border-cyan-500/20 bg-[#08111f] overflow-hidden">
             <div className="px-4 py-3 border-b border-white/10">

@@ -1,8 +1,8 @@
 'use client'
 
 import { useEffect } from 'react'
-import { useAuthStore } from '@/store/useAuthStore'
-import { getToken, fetchMe, clearToken, getUserFromStoredToken } from '@/lib/authApi'
+import { useAuthStore } from '@/features/auth/public'
+import { getToken, fetchMe, clearToken, getUserFromStoredToken } from '@/features/auth/api/authApi'
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { setUser, setLoading, setChecked } = useAuthStore()

@@ -4,22 +4,22 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { ChevronDown, ChevronUp, Layers } from 'lucide-react'
-import { useAuthStore } from '@/store/useAuthStore'
-import { fetchMyCourses, type MyCourse } from '@/lib/coursesApi'
+import { useAuthStore } from '@/features/auth/public'
+import { fetchMyCourses, type MyCourse } from '@/features/courses/api/coursesApi'
 import { SkeletonList } from '@/components/ui/Skeleton'
-import { fetchMyOrders, type Order } from '@/lib/paymentsApi'
-import { useLearningPath } from '@/hooks/useLearningPath'
+import { fetchMyOrders, type Order } from '@/features/payment/api/paymentApi'
 import { getLessonById } from '@/data/learningPathCurriculum'
 import {
-  loadLessonCompletion,
-  loadLastLearningPathLessonId,
-  moduleProgressPercent,
-  syncLearningPathCompletion,
-  countLessonsInLearningModule,
+  computeProgressPercent,
   countCompletedLessonsInModule,
   countFullyCompletedModules,
-  computeProgressPercent,
-} from '@/lib/learningPathProgress'
+  countLessonsInLearningModule,
+  loadLastLearningPathLessonId,
+  loadLessonCompletion,
+  moduleProgressPercent,
+  syncLearningPathCompletion,
+  useLearningPath,
+} from '@/features/learning-path/public'
 
 export default function MyCoursesPage() {
   const router = useRouter()
@@ -227,7 +227,7 @@ export default function MyCoursesPage() {
             {courses.map((c) => (
               <Link
                 key={c.id}
-                href={`/courses/${c.slug}`}
+                href={`/courses/${c.slug}/learn`}
                 className="block glass rounded-xl p-5 hover:bg-white/10 transition-colors border border-white/10"
               >
                 <div className="flex items-start justify-between gap-4">
@@ -277,7 +277,7 @@ export default function MyCoursesPage() {
                   {orders.map((o) => (
                     <tr key={o._id} className="border-b border-white/5 last:border-0">
                       <td className="px-4 py-2">
-                        <Link href={`/courses/${o.courseSlug}`} className="text-cyan-400 hover:text-cyan-300">
+                        <Link href={`/courses/${o.courseSlug}/learn`} className="text-cyan-400 hover:text-cyan-300">
                           {o.courseSlug}
                         </Link>
                       </td>

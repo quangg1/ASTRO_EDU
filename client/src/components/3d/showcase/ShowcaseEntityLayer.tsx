@@ -16,7 +16,7 @@ import {
 } from '@/lib/showcaseEntities'
 import { OrbitPath } from '@/components/3d/OrbitPath'
 import { ShowcaseEntityMesh } from '@/components/3d/showcase/ShowcaseEntityMesh'
-import { useShowcaseStore } from '@/store/showcaseStore'
+import { useShowcaseStore } from '@/features/content3d/showcase/public'
 import type { OrbitProximityFade } from '@/components/3d/orbitProximityFade'
 import { hasUsableOrbitalElements } from '@/lib/mergeShowcaseCatalog'
 

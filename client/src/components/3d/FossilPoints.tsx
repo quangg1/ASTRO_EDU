@@ -3,7 +3,7 @@
 import { useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
-import { useSimulatorStore } from '@/store/useSimulatorStore'
+import { useSceneCommandStore } from '@/features/content3d/earth/public'
 import { getPhylumColor } from '@/lib/fossilPhyla'
 import type { Fossil } from '@/types'
 
@@ -26,7 +26,7 @@ interface FossilPointsProps {
 }
 
 export function FossilPoints({ fossilsOverride }: FossilPointsProps = {}) {
-  const { fossils: storeFossils, phylumMetadata } = useSimulatorStore()
+  const { fossils: storeFossils, phylumMetadata } = useSceneCommandStore()
   const fossils = fossilsOverride !== undefined && fossilsOverride !== null ? fossilsOverride : storeFossils
   const pointsRef = useRef<THREE.Points>(null)
 

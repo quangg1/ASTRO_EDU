@@ -10,15 +10,16 @@ import {
   saveShowcaseEntityContents,
   type ShowcasePanelBlockDTO,
   type ShowcaseEntityContentDTO,
-} from '@/lib/showcaseEntitiesApi'
-import { useAuthStore } from '@/store/useAuthStore'
+} from '@/features/content3d/showcase/api/showcaseEntitiesApi'
+import { useAuthStore } from '@/features/auth/public'
 import { useShowcaseCatalogGen } from '@/components/showcase/ShowcaseCatalogProvider'
 import { ShowcaseMediaUrlField } from '@/app/studio/showcase-entities/ShowcaseMediaUrlField'
 import { ShowcaseEntityPreviewCard } from '@/app/studio/showcase-entities/ShowcaseEntityPreviewCard'
+import { NarrativeStudioMode } from '@/app/studio/showcase-entities/NarrativeStudioMode'
 import { resolveMediaUrl } from '@/lib/apiConfig'
-import { syncShowcaseOrbitEntityFromJpl } from '@/lib/showcaseOrbitsApi'
+import { syncShowcaseOrbitEntityFromJpl } from '@/features/content3d/showcase/api/showcaseOrbitsApi'
 import type { ShowcaseOrbitEntity } from '@/lib/showcaseEntities'
-import { useLearningPath } from '@/hooks/useLearningPath'
+import { useLearningPath } from '@/features/learning-path/public'
 
 const ORBIT_COLOR_PRESETS = [
   '#f43f5e', '#fb7185', '#f97316', '#f59e0b', '#eab308', '#84cc16',
@@ -156,6 +157,7 @@ export default function StudioShowcaseEntitiesPage() {
   const [syncingJpl, setSyncingJpl] = useState(false)
   const [message, setMessage] = useState('')
   const [studioTab, setStudioTab] = useState<'media' | 'panel'>('media')
+  const [studioWorkspace, setStudioWorkspace] = useState<'entity' | 'narrative'>('entity')
   const lastLoadedKeyRef = useRef('')
   const { modules, concepts } = useLearningPath()
 
@@ -345,24 +347,54 @@ export default function StudioShowcaseEntitiesPage() {
     return <div className="min-h-screen bg-black pt-20 px-4 text-gray-400">Đang kiểm tra đăng nhập...</div>
   }
 
+  const containerWidthCls = studioWorkspace === 'narrative' ? 'max-w-[1400px]' : 'max-w-3xl'
+
   return (
     <div className="min-h-screen bg-[#050508] pt-14 pb-10 px-3 md:px-6">
-      <div className="max-w-3xl mx-auto space-y-4">
+      <div className={`${containerWidthCls} mx-auto space-y-4`}>
         <nav className="text-sm">
           <Link href="/studio" className="text-cyan-400 hover:text-cyan-300">
             ← Studio
           </Link>
         </nav>
         <div className="rounded-2xl border border-white/10 bg-[#0a0f17] p-5">
-          <h1 className="text-xl font-semibold text-white">Showcase entity — media &amp; copy</h1>
-          <p className="text-sm text-slate-400 mt-2">
-            Upload ảnh / glTF qua API (S3 hoặc <code className="text-cyan-300/90">/files/</code> khi dev). URL lưu
-            trong DB; Explore load qua CDN. Hành tinh dạng cầu: diffuse + tuỳ chọn normal, specular, cloud; tiểu
-            hành tinh / tàu: thêm model glTF/glB.
-          </p>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h1 className="text-xl font-semibold text-white">3D Studio</h1>
+              <p className="text-xs text-slate-400 mt-1">
+                Workspace cho teacher: chỉnh entity 3D (texture, panel) và thiết kế narrative space (beats, world, lesson links).
+              </p>
+            </div>
+            <div className="inline-flex rounded-lg border border-white/10 bg-black/40 p-1">
+              <button
+                type="button"
+                onClick={() => setStudioWorkspace('entity')}
+                className={`rounded-md px-3 py-1.5 text-xs font-medium transition ${
+                  studioWorkspace === 'entity'
+                    ? 'bg-cyan-500/20 text-cyan-100 ring-1 ring-cyan-400/40'
+                    : 'text-slate-300 hover:bg-white/5'
+                }`}
+              >
+                Entity
+              </button>
+              <button
+                type="button"
+                onClick={() => setStudioWorkspace('narrative')}
+                className={`rounded-md px-3 py-1.5 text-xs font-medium transition ${
+                  studioWorkspace === 'narrative'
+                    ? 'bg-cyan-500/20 text-cyan-100 ring-1 ring-cyan-400/40'
+                    : 'text-slate-300 hover:bg-white/5'
+                }`}
+              >
+                Narrative
+              </button>
+            </div>
+          </div>
         </div>
 
-        {loading ? (
+        {studioWorkspace === 'narrative' ? (
+          <NarrativeStudioMode />
+        ) : loading ? (
           <p className="text-slate-500 text-sm">Đang tải…</p>
         ) : (
           <div className="rounded-2xl border border-white/10 bg-[#0a0f17] p-5 space-y-4">

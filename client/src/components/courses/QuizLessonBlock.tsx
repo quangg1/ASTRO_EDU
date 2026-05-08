@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import type { QuizQuestion } from '@/lib/coursesApi'
+import type { QuizQuestion } from '@/features/courses/api/coursesApi'
 
 export function QuizLessonBlock({
   questions,

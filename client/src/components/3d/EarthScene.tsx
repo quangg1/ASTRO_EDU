@@ -9,8 +9,10 @@ import { Earth } from './Earth'
 import { FossilPoints } from './FossilPoints'
 import { GeoLabels } from './GeoLabels'
 import { Moon } from './Moon'
-import { useSimulatorStore } from '@/store/useSimulatorStore'
-import { fetchFossilsForStage } from '@/lib/api'
+import { StageHotspots } from './StageHotspots'
+import { useNarrativeStore } from '@/features/content3d/narrative/public'
+import { useSceneCommandStore } from '@/features/content3d/earth/public'
+import { fetchFossilsForStage } from '@/features/content3d/earth/api/earthApi'
 import { latLngToVector3 } from '@/lib/geo'
 import type { EarthStage } from '@/types'
 import type { Fossil } from '@/types'
@@ -119,16 +121,36 @@ function SingleFossilMarker({ lat, lng }: { lat: number; lng: number }) {
 /** Nhóm Trái Đất + hóa thạch; hỗ trợ override từ khóa học (stage + fossils) */
 const EarthWithFossils = React.forwardRef<
   THREE.Group,
-  { stageOverride?: EarthStage | null; fossilsOverride?: Fossil[] | null }
->(function EarthWithFossils({ stageOverride, fossilsOverride }, ref) {
-  const {
-    currentStage: storeStage,
+  {
+    stage: EarthStage
+    fossilsOverride?: Fossil[] | null
+    showFossils: boolean
+    showPlaceLabels: boolean
+    earthRotationPaused: boolean
+    flyToTarget: {
+      lat: number
+      lng: number
+      mode?: 'phylum' | 'single'
+      phylumFossils?: Fossil[]
+    } | null
+    effectTags: {
+      meteorShower: boolean
+      debrisField: boolean
+      dustHaze: boolean
+    }
+  }
+>(function EarthWithFossils(
+  {
+    stage,
+    fossilsOverride,
     showFossils,
     showPlaceLabels,
     earthRotationPaused,
     flyToTarget,
-  } = useSimulatorStore()
-  const stage = stageOverride ?? storeStage
+    effectTags,
+  },
+  ref,
+) {
   const groupRef = useRef<THREE.Group>(null)
   const setRef = (node: THREE.Group | null) => {
     (groupRef as React.MutableRefObject<THREE.Group | null>).current = node
@@ -141,13 +163,13 @@ const EarthWithFossils = React.forwardRef<
   })
 
   const canShowPlaceLabels = stage.time <= 23
-  const showFossilsForStage = stageOverride != null ? true : showFossils
+  const showFossilsForStage = fossilsOverride != null ? true : showFossils
   const showPhylumLine = flyToTarget?.mode === 'phylum' && (flyToTarget.phylumFossils?.length ?? 0) > 0
   const showSingleMarker = flyToTarget?.mode === 'single'
 
   return (
     <group ref={setRef}>
-      <Earth stage={stage} />
+      <Earth stage={stage} effectTags={effectTags} />
       {showFossilsForStage && <FossilPoints fossilsOverride={fossilsOverride} />}
       {showPhylumLine && flyToTarget.phylumFossils && (
         <PhylumOutlineLine fossils={flyToTarget.phylumFossils} />
@@ -162,20 +184,35 @@ const EarthWithFossils = React.forwardRef<
 
 const SINGLE_MARKER_MIN_DURATION = 2
 
-/** Chỉ move camera, không xoay Trái Đất (giữ đúng trục). Phylum = không zoom; single = zoom cận + marker 2s. */
+/** Zoom satellite nhẹ hơn single một chút để nhìn cả vòng phân bố ngành. */
+const PHYLUM_SURFACE_OFFSET = FLY_CAMERA_DISTANCE * 1.45
+
+/** Chỉ move camera, không xoay Trái Đất. Single = zoom cận + marker rồi auto-clear; phylum = zoom về phía centroid như single nhưng giữ target để xem đường nối. */
 function FlyToController({
   earthGroupRef,
   controlsRef,
+  flyToTarget,
+  setFlyToTarget,
 }: {
   earthGroupRef: React.RefObject<THREE.Group | null>
   controlsRef: React.RefObject<OrbitControlsImpl | null>
+  flyToTarget: {
+    lat: number
+    lng: number
+    mode?: 'phylum' | 'single'
+    phylumFossils?: Fossil[]
+  } | null
+  setFlyToTarget: (target: {
+    lat: number
+    lng: number
+    mode?: 'phylum' | 'single'
+    phylumFossils?: Fossil[]
+  } | null) => void
 }) {
   const { camera } = useThree()
-  const { flyToTarget, setFlyToTarget } = useSimulatorStore()
   const worldTarget = useRef(new THREE.Vector3())
   const desiredCameraPos = useRef(new THREE.Vector3())
   const singleMarkerShownAt = useRef<number | null>(null)
-  const phylumCameraDistance = useRef(0)
   const prevFlyMode = useRef<string | null>(null)
 
   useFrame((state) => {
@@ -187,9 +224,6 @@ function FlyToController({
 
     if (prevFlyMode.current !== flyToTarget.mode) {
       prevFlyMode.current = flyToTarget.mode ?? null
-      if (flyToTarget.mode === 'phylum') {
-        phylumCameraDistance.current = camera.position.length()
-      }
     }
 
     const localUnit = latLngToVector3(flyToTarget.lat, flyToTarget.lng, 1).normalize()
@@ -199,11 +233,8 @@ function FlyToController({
 
     if (flyToTarget.mode === 'phylum') {
       singleMarkerShownAt.current = null
-      const dist = phylumCameraDistance.current > 0 ? phylumCameraDistance.current : camera.position.length()
-      desiredCameraPos.current
-        .copy(worldTarget.current)
-        .normalize()
-        .multiplyScalar(dist)
+      const radial = worldTarget.current.clone().normalize()
+      desiredCameraPos.current.copy(worldTarget.current).add(radial.multiplyScalar(PHYLUM_SURFACE_OFFSET))
       camera.position.lerp(desiredCameraPos.current, FLY_CAMERA_LERP)
       return
     }
@@ -241,21 +272,49 @@ interface SceneProps {
 function Scene({ overrideStage, overrideFossils }: SceneProps = {}) {
   const earthGroupRef = useRef<THREE.Group>(null)
   const controlsRef = useRef<OrbitControlsImpl | null>(null)
-  const { 
-    currentStage, 
+  const currentStage = useNarrativeStore((s) => s.currentBeat)
+  const {
+    showFossils,
+    showPlaceLabels,
+    earthRotationPaused,
+    flyToTarget,
+    effectTags,
     setFossils,
     setFossilStats,
     setFossilsLoading,
+    setFlyToTarget,
     loadPhylumMetadata,
-  } = useSimulatorStore()
+  } = useSceneCommandStore()
 
   const [courseFossils, setCourseFossils] = useState<Fossil[]>([])
   const stage = overrideStage ?? currentStage
   const fossils = overrideStage != null ? courseFossils : null
+  const renderFlyToTarget = overrideStage != null ? null : flyToTarget
+  const moodBackground = useMemo(() => {
+    const atmo = new THREE.Color(stage.atmosphereColor || '#0b1220')
+    return atmo.clone().multiplyScalar(0.17)
+  }, [stage.atmosphereColor])
+  const fillLightColor = useMemo(
+    () => new THREE.Color(stage.atmosphereColor || '#4488ff').multiplyScalar(0.8),
+    [stage.atmosphereColor],
+  )
 
   useEffect(() => {
     loadPhylumMetadata()
   }, [loadPhylumMetadata])
+
+  // Đổi beat / thời kỳ → bỏ fly-to phylum/single cũ để preview không “kẹt” camera & đường nối.
+  useEffect(() => {
+    if (overrideStage != null) return
+    setFlyToTarget(null)
+  }, [
+    overrideStage,
+    currentStage.id,
+    currentStage.time,
+    currentStage.maxMa,
+    currentStage.minMa,
+    setFlyToTarget,
+  ])
 
   // Khi có overrideStage (khóa học): load fossils cho thời kỳ đó
   useEffect(() => {
@@ -294,22 +353,34 @@ function Scene({ overrideStage, overrideFossils }: SceneProps = {}) {
 
   return (
     <>
+      <SmoothBackground targetColor={moodBackground} />
       <ambientLight intensity={0.4} />
       <directionalLight position={[100, 50, 100]} intensity={2.2} color="#FFFFDD" />
-      <pointLight position={[-10, 5, 10]} intensity={0.4} color="#4488ff" />
+      <SmoothFillLight targetColor={fillLightColor} />
 
       <Stars radius={300} depth={60} count={5000} factor={4} saturation={0} fade speed={1} />
 
       <EarthWithFossils
         ref={earthGroupRef}
-        stageOverride={overrideStage}
+        stage={stage}
         fossilsOverride={fossils}
+        showFossils={showFossils}
+        showPlaceLabels={showPlaceLabels}
+        earthRotationPaused={earthRotationPaused}
+        flyToTarget={renderFlyToTarget}
+        effectTags={effectTags}
       />
+      <StageHotspots timeMa={stage.time} />
 
       {stage.moonDistance != null && <Moon distance={stage.moonDistance} />}
 
       {overrideStage == null && (
-        <FlyToController earthGroupRef={earthGroupRef} controlsRef={controlsRef} />
+        <FlyToController
+          earthGroupRef={earthGroupRef}
+          controlsRef={controlsRef}
+          flyToTarget={flyToTarget}
+          setFlyToTarget={setFlyToTarget}
+        />
       )}
 
       <OrbitControls
@@ -323,6 +394,27 @@ function Scene({ overrideStage, overrideFossils }: SceneProps = {}) {
       />
     </>
   )
+}
+
+function SmoothBackground({ targetColor }: { targetColor: THREE.Color }) {
+  const { scene } = useThree()
+  const bgRef = useRef(new THREE.Color(targetColor))
+  useFrame((_, delta) => {
+    bgRef.current.lerp(targetColor, Math.min(1, delta * 2))
+    scene.background = bgRef.current
+  })
+  return null
+}
+
+function SmoothFillLight({ targetColor }: { targetColor: THREE.Color }) {
+  const lightRef = useRef<THREE.PointLight>(null)
+  const colorRef = useRef(new THREE.Color(targetColor))
+  useFrame((_, delta) => {
+    if (!lightRef.current) return
+    colorRef.current.lerp(targetColor, Math.min(1, delta * 2.4))
+    lightRef.current.color.copy(colorRef.current)
+  })
+  return <pointLight ref={lightRef} position={[-10, 5, 10]} intensity={0.4} color={colorRef.current} />
 }
 
 export interface EarthSceneProps {

@@ -2,8 +2,8 @@
 
 import { useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
-import type { LessonSection, SectionType } from '@/lib/coursesApi'
-import { uploadMedia } from '@/lib/coursesApi'
+import type { LessonSection, SectionType } from '@/features/courses/api/coursesApi'
+import { uploadMedia } from '@/features/courses/api/coursesApi'
 import { resolveMediaUrl } from '@/lib/apiConfig'
 import MathBlock from './blocks/MathBlock'
 import ChartBlock from './blocks/ChartBlock'

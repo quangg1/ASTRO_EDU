@@ -5,9 +5,8 @@ import Link from 'next/link'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import ForceGraph2D, { type ForceGraphMethods } from 'react-force-graph-2d'
 import * as d3 from 'd3-force'
-import { useLearningPath } from '@/hooks/useLearningPath'
-import { loadLessonCompletion } from '@/lib/learningPathProgress'
-import { useAuthStore } from '@/store/useAuthStore'
+import { loadLessonCompletion, useLearningPath } from '@/features/learning-path/public'
+import { useAuthStore } from '@/features/auth/public'
 import {
   buildDependentsMap,
   buildSeenConceptIds,
@@ -19,7 +18,7 @@ import {
   uniqDomains,
   type StarMapLink,
   type StarMapNode,
-} from '@/lib/knowledgeGraphData'
+} from '@/features/concepts/public'
 import type { LearningConcept } from '@/data/learningPathCurriculum'
 import { ArrowLeft, Orbit, ScanSearch, Sparkles } from 'lucide-react'
 
@@ -323,13 +322,21 @@ export default function KnowledgeStarMap() {
     )
     fgRef.current.d3Force('center', d3.forceCenter(centerX, centerY))
 
-    const linkForce = fgRef.current.d3Force('link') as d3.ForceLink<StarMapNode, StarMapLink> | undefined
+    type SimLink = { source: unknown; target: unknown }
+    const linkForce = fgRef.current.d3Force('link') as
+      | { distance: (fn: (l: SimLink) => number) => { strength: (n: number) => unknown } }
+      | undefined
     if (linkForce) {
+      const difficultyOf = (end: unknown): number => {
+        if (typeof end === 'object' && end !== null && 'difficultyLevel' in end) {
+          const lv = (end as StarMapNode).difficultyLevel
+          return lv === 0 || lv === 1 || lv === 2 ? lv : 1
+        }
+        return 1
+      }
       linkForce
-        .distance((l) => {
-          const src = l.source as StarMapNode
-          const dst = l.target as StarMapNode
-          const gap = Math.abs((dst?.difficultyLevel ?? 1) - (src?.difficultyLevel ?? 1))
+        .distance((l: SimLink) => {
+          const gap = Math.abs(difficultyOf(l.target) - difficultyOf(l.source))
           return (viewMode === 'focus' ? 42 : 50) + gap * 14
         })
         .strength(viewMode === 'focus' ? 0.2 : 0.16)

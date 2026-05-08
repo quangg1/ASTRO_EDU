@@ -8,7 +8,7 @@ import { InfoPanel } from '@/components/ui/InfoPanel'
 import { FossilPanel } from '@/components/ui/FossilPanel'
 import { Controls } from '@/components/ui/Controls'
 import { Loading } from '@/components/ui/Loading'
-import { useSimulatorStore } from '@/store/useSimulatorStore'
+import { useNarrativeStore } from '@/features/content3d/narrative/public'
 import { planetsData } from '@/lib/solarSystemData'
 import { NASA_SHOWCASE_ITEMS } from '@/lib/nasaShowcaseCatalog'
 import { SHOWCASE_ORBIT_ENTITIES } from '@/lib/showcaseEntities'
@@ -20,10 +20,8 @@ import {
 import {
   fetchPublicShowcaseEntityContents,
   type ShowcaseEntityContentDTO,
-} from '@/lib/showcaseEntitiesApi'
-import { fetchJplShowcaseOrbits, type ShowcaseJplOrbitDTO } from '@/lib/showcaseOrbitsApi'
-import { useLearningPath } from '@/hooks/useLearningPath'
-import { useShowcaseStore } from '@/store/showcaseStore'
+} from '@/features/content3d/showcase/api/showcaseEntitiesApi'
+import { fetchJplShowcaseOrbits, type ShowcaseJplOrbitDTO } from '@/features/content3d/showcase/api/showcaseOrbitsApi'
 import {
   buildContextualQuizFromLessons,
   getShowcaseMuseumLabelVi,
@@ -34,14 +32,26 @@ import {
   resolveMappedConcepts,
   saveBridgeVisitedEntityMap,
   saveDiscoveryMap,
-} from '@/lib/showcaseLearningBridge'
+  useShowcaseStore,
+} from '@/features/content3d/showcase/public'
 import {
   loadLessonVisited3D,
+  pushVisited3DLessonIdsMerge,
   saveLessonVisited3D,
   setLessonVisited3D,
+  syncLearningPathCompletion,
+  trackLearningPathBehavior,
+  useLearningPath,
   type LessonVisited3DMap,
-} from '@/lib/learningPathProgress'
-import { trackLearningPathBehavior } from '@/lib/learningPathBehavior'
+} from '@/features/learning-path/public'
+import {
+  fetchShowcaseGamificationCatalog,
+  postShowcaseUnlock,
+  syncGemWallet,
+  type ShowcaseCatalogEntryWithUnlocks,
+} from '@/features/rewards/public'
+import { useAuthStore } from '@/features/auth/public'
+import type { ShowcaseGamificationStrip } from '@/components/3d/showcase/ShowcaseEntityPanel'
 import type { ShowcaseCameraSpherical } from '@/components/3d/showcase/ShowcaseCameraManager'
 import { useShowcaseCatalogGen } from '@/components/showcase/ShowcaseCatalogProvider'
 import { ShowcaseEntityPanel } from '@/components/3d/showcase/ShowcaseEntityPanel'
@@ -84,6 +94,12 @@ function ExplorePageContent() {
   const [discoveryToast, setDiscoveryToast] = useState<{ entityId: string; rarity: 'common' | 'rare' | 'epic' } | null>(
     null,
   )
+  const [rewardToast, setRewardToast] = useState<string | null>(null)
+  const user = useAuthStore((s) => s.user)
+  const [gemBalance, setGemBalance] = useState(0)
+  const [gamificationCatalog, setGamificationCatalog] = useState<{
+    catalog: ShowcaseCatalogEntryWithUnlocks[]
+  } | null>(null)
   const [visited3DMap, setVisited3DMap] = useState<LessonVisited3DMap>({})
   const bridgeFocusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const bridgeQuizTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -91,10 +107,10 @@ function ExplorePageContent() {
   const lastCameraQueryRef = useRef<string>('')
   const appliedStageRef = useRef<number | null>(null)
 
-  const loadStages = useSimulatorStore((s) => s.loadStages)
-  const stages = useSimulatorStore((s) => s.stages)
-  const stagesLoading = useSimulatorStore((s) => s.stagesLoading)
-  const setStage = useSimulatorStore((s) => s.setStage)
+  const loadStages = useNarrativeStore((s) => s.loadSpace)
+  const stages = useNarrativeStore((s) => s.beats)
+  const stagesLoading = useNarrativeStore((s) => s.loading)
+  const setStage = useNarrativeStore((s) => s.setBeat)
   const { modules, concepts } = useLearningPath()
 
   /** Độ trễ trước khi bật overlay / quiz sau khi entity ổn định (Learning Bridge cố định). */
@@ -161,12 +177,39 @@ function ExplorePageContent() {
   }, [showcaseCatalogGen])
 
   useEffect(() => {
-    setVisited3DMap(loadLessonVisited3D())
-  }, [])
+    setVisited3DMap(loadLessonVisited3D(user?.id ?? null))
+    if (!user?.id) return
+    void syncLearningPathCompletion(user.id).then(() => {
+      setVisited3DMap(loadLessonVisited3D(user.id))
+    })
+  }, [user?.id])
+
+  useEffect(() => {
+    if (!user?.id) {
+      setGemBalance(0)
+      setGamificationCatalog(null)
+      return
+    }
+    void syncGemWallet(user.id).then((w) => setGemBalance(w.balance))
+    void fetchShowcaseGamificationCatalog().then((c) => setGamificationCatalog(c))
+  }, [user?.id])
+
+  useEffect(() => {
+    const onRewards = (ev: Event) => {
+      const ce = ev as CustomEvent<{ gemsEarned?: number; labels?: string[] }>
+      const d = ce.detail
+      if (!d?.gemsEarned) return
+      const tail = Array.isArray(d.labels) && d.labels.length ? ` (${d.labels.join(' · ')})` : ''
+      setRewardToast(`+${d.gemsEarned} gem${tail}`)
+      void syncGemWallet(user?.id).then((w) => setGemBalance(w.balance))
+    }
+    window.addEventListener('learning-path-rewards', onRewards as EventListener)
+    return () => window.removeEventListener('learning-path-rewards', onRewards as EventListener)
+  }, [user?.id])
 
   useEffect(() => {
     if (!earthHistoryOpen) return
-    loadStages()
+    void loadStages('earth-history')
   }, [earthHistoryOpen, loadStages])
 
   useEffect(() => {
@@ -206,6 +249,31 @@ function ExplorePageContent() {
     () => resolvedCatalog.filter((i) => i.group === 'spacecraft'),
     [resolvedCatalog],
   )
+
+  const gamificationStrip = useMemo((): ShowcaseGamificationStrip | null => {
+    if (!user?.id || !gamificationCatalog?.catalog?.length || !showcaseActiveItemId) return null
+    const row = gamificationCatalog.catalog.find((r) => String(r.id) === String(showcaseActiveItemId))
+    if (!row) return null
+    return {
+      gemBalance,
+      storyUnlocked: !!row.storyUnlocked,
+      orbitUnlocked: !!row.orbitUnlocked,
+      storyCost: Number(row.storyCost ?? 40),
+      orbitCost: Number(row.orbitCost ?? 55),
+      onUnlock: async (t) => {
+        const r = await postShowcaseUnlock(showcaseActiveItemId, t)
+        if (r.ok) {
+          if (typeof r.gemBalance === 'number') setGemBalance(r.gemBalance)
+          const next = await fetchShowcaseGamificationCatalog()
+          if (next) setGamificationCatalog(next)
+          setBridgeRuntimeHint(t === 'story' ? 'Đã mở khóa story' : 'Đã mở orbit nâng cao')
+          window.dispatchEvent(new CustomEvent('gem-wallet-changed'))
+        } else {
+          setBridgeRuntimeHint(r.error || 'Không mở được')
+        }
+      },
+    }
+  }, [user?.id, gamificationCatalog, showcaseActiveItemId, gemBalance])
 
   const bridgeConceptCards = useMemo(
     () => resolveMappedConcepts(concepts, showcaseActiveItemId).slice(0, 6),
@@ -289,14 +357,13 @@ function ExplorePageContent() {
     [bridgeDebugOn],
   )
 
-  const openEarthHistoryFromItem = useCallback(
+  const syncSelectedPlanetFromItem = useCallback(
     (entityId: string) => {
       const item = NASA_SHOWCASE_ITEMS.find((x) => x.id === entityId)
       const planetName = item?.linkedPlanetName
       if (!planetName) return
       const idx = planetsData.findIndex((p) => p.name === planetName)
       if (idx >= 0) setSelectedSolarPlanetIndex(idx)
-      if (planetName === 'Earth') setEarthHistoryOpen(true)
     },
     [],
   )
@@ -404,14 +471,14 @@ function ExplorePageContent() {
         },
       })
 
-      const visitedEntities = loadBridgeVisitedEntityMap()
+      const visitedEntities = loadBridgeVisitedEntityMap(user?.id ?? null)
       if (!visitedEntities[showcaseActiveItemId]) {
         const nextVisited = { ...visitedEntities, [showcaseActiveItemId]: true }
-        saveBridgeVisitedEntityMap(nextVisited)
-        const discovered = loadDiscoveryMap()
+        saveBridgeVisitedEntityMap(nextVisited, user?.id ?? null)
+        const discovered = loadDiscoveryMap(user?.id ?? null)
         if (!discovered[showcaseActiveItemId]) {
           const nextDiscovered = { ...discovered, [showcaseActiveItemId]: true }
-          saveDiscoveryMap(nextDiscovered)
+          saveDiscoveryMap(nextDiscovered, user?.id ?? null)
           const rarity = guessEntityRarity(showcaseActiveItemId)
           setDiscoveryToast({ entityId: showcaseActiveItemId, rarity })
           trackLearningPathBehavior({
@@ -422,10 +489,13 @@ function ExplorePageContent() {
       }
 
       if (effectiveLessonLinks.length > 0) {
-        let nextVisited3D = loadLessonVisited3D()
+        const uid = user?.id ?? null
+        let nextVisited3D = loadLessonVisited3D(uid)
         for (const row of effectiveLessonLinks) nextVisited3D = setLessonVisited3D(nextVisited3D, row.lessonId, true)
-        saveLessonVisited3D(nextVisited3D)
+        saveLessonVisited3D(nextVisited3D, uid)
         setVisited3DMap(nextVisited3D)
+        void pushVisited3DLessonIdsMerge(uid)
+        window.dispatchEvent(new Event('lp-progress-changed'))
       }
 
       const contextual = buildContextualQuizFromLessons(modules, effectiveLessonLinks.map((r) => r.lessonId), 2)
@@ -450,13 +520,18 @@ function ExplorePageContent() {
       if (bridgeFocusTimerRef.current) clearTimeout(bridgeFocusTimerRef.current)
       if (bridgeQuizTimerRef.current) clearTimeout(bridgeQuizTimerRef.current)
     }
-  }, [earthHistoryOpen, showcaseActiveItemId, effectiveConceptCards, effectiveLessonLinks, modules])
+  }, [earthHistoryOpen, showcaseActiveItemId, effectiveConceptCards, effectiveLessonLinks, modules, user?.id])
 
   useEffect(() => {
     if (!discoveryToast) return
     const t = setTimeout(() => setDiscoveryToast(null), 3200)
     return () => clearTimeout(t)
   }, [discoveryToast])
+  useEffect(() => {
+    if (!rewardToast) return
+    const t = setTimeout(() => setRewardToast(null), 4200)
+    return () => clearTimeout(t)
+  }, [rewardToast])
   useEffect(() => {
     if (!bridgeRuntimeHint) return
     const t = setTimeout(() => setBridgeRuntimeHint(null), 2600)
@@ -475,7 +550,7 @@ function ExplorePageContent() {
               showcaseActiveItemId={showcaseActiveItemId}
               onShowcaseItemSelect={(id) => {
                 handleShowcaseEntityClicked(id, 'scene')
-                openEarthHistoryFromItem(id)
+                syncSelectedPlanetFromItem(id)
               }}
               flightTargetIndex={selectedSolarPlanetIndex}
               onPlanetSelect={(idx) => {
@@ -524,13 +599,7 @@ function ExplorePageContent() {
         ) : (
           <>
             <div className="fixed top-14 left-0 right-0 z-[22] border-b border-white/10 bg-black/35 backdrop-blur-sm">
-              <div className="mx-auto max-w-[1400px] px-4 py-2 flex items-center justify-between text-[11px]">
-                <div className="flex items-center gap-2 text-slate-200">
-                  <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-white/20 text-[9px] font-semibold">
-                    NASA
-                  </span>
-                  <span className="tracking-[0.14em] uppercase text-slate-200/90">Showcase 3D</span>
-                </div>
+              <div className="mx-auto max-w-[1400px] px-4 py-2 flex items-center justify-end text-[11px]">
                 <div className="flex items-center gap-2">
                   <span
                     className="rounded border border-slate-400/35 px-2 py-1 text-[10px] uppercase tracking-wider text-slate-200 bg-white/5"
@@ -538,6 +607,11 @@ function ExplorePageContent() {
                   >
                     Learning Bridge v2
                   </span>
+                  {user ? (
+                    <span className="rounded border border-cyan-400/35 px-2 py-1 text-[10px] uppercase tracking-wider text-cyan-100 bg-cyan-950/45 tabular-nums">
+                      {gemBalance} gem
+                    </span>
+                  ) : null}
                   {effectiveLessonLinks.length > 0 ? (
                     <span className="rounded border border-emerald-300/35 px-2 py-1 text-[10px] uppercase tracking-wider text-emerald-100 bg-emerald-500/10">
                       Progress {bridgeVisitedLessonsForEntity}/{effectiveLessonLinks.length}
@@ -581,7 +655,7 @@ function ExplorePageContent() {
                           onPointerLeave={() => useShowcaseStore.getState().setPreloadGroup(null)}
                           onClick={() => {
                             handleShowcaseEntityClicked(item.id, 'menu-planets')
-                            openEarthHistoryFromItem(item.id)
+                            syncSelectedPlanetFromItem(item.id)
                             setShowcaseMenuOpen(false)
                           }}
                           className="block w-full text-left rounded px-2 py-1.5 text-slate-200 hover:bg-white/10"
@@ -676,6 +750,7 @@ function ExplorePageContent() {
                 conceptChips={effectiveConceptCards}
                 learningLinks={effectiveLessonLinks}
                 panelConfig={activeContentRow?.panelConfig ?? null}
+                gamification={gamificationStrip}
               />
             ) : null}
 
@@ -741,6 +816,11 @@ function ExplorePageContent() {
             {discoveryToast ? (
               <div className="fixed left-1/2 top-20 z-[25] -translate-x-1/2 rounded-xl border border-violet-400/40 bg-violet-900/85 px-4 py-2 text-sm text-violet-100 shadow-lg">
                 Unlock: {discoveryToast.entityId} • rarity: {discoveryToast.rarity}
+              </div>
+            ) : null}
+            {rewardToast ? (
+              <div className="fixed left-1/2 top-[7.25rem] z-[25] -translate-x-1/2 rounded-xl border border-emerald-400/40 bg-emerald-950/90 px-4 py-2 text-sm text-emerald-100 shadow-lg">
+                {rewardToast}
               </div>
             ) : null}
             {bridgeRuntimeHint ? (

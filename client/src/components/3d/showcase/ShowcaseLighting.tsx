@@ -2,7 +2,7 @@
 
 import * as THREE from 'three'
 import { useEffect, useRef } from 'react'
-import { useShowcaseStore } from '@/store/showcaseStore'
+import { useShowcaseStore } from '@/features/content3d/showcase/public'
 
 /**
  * NASA Eyes–style catalog lighting: strong readable base + subtle fill + optional studio key on focus.

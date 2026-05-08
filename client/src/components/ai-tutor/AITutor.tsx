@@ -6,8 +6,8 @@ import Link from 'next/link'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
-import { useTutorContextStore } from '@/store/useTutorContextStore'
-import { useAuthStore } from '@/store/useAuthStore'
+import { useTutorContextStore } from '@/features/courses/public'
+import { useAuthStore } from '@/features/auth/public'
 import {
   mergeTutorActions,
   parseTutorActions,
@@ -218,7 +218,9 @@ export function AITutor() {
   const executeAction = (action: TutorAction) => {
     setExecuting(true)
     if (action.type === 'open_lesson' && course) {
-      router.push(`/courses/${course.courseSlug}?lesson=${encodeURIComponent(action.lessonSlug)}`)
+      router.push(
+        `/courses/${course.courseSlug}/learn/${encodeURIComponent(action.lessonSlug)}`,
+      )
       setOpen(false)
     } else if (action.type === 'go_to_explore') {
       router.push(`/explore?stage=${action.stageTime}`)

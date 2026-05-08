@@ -1,6 +1,6 @@
-import { notFound } from 'next/navigation'
-import { CoursePageClient } from '@/components/courses/CoursePageClient'
-import { fetchPublicCourseServer } from '@/lib/server/coursesServer'
+import { notFound, redirect } from 'next/navigation'
+import { CourseLandingClient } from '@/components/courses/CourseLandingClient'
+import { fetchCourseOutlineServer } from '@/features/courses/api/server'
 
 export default async function CourseSlugPage({
   params,
@@ -9,18 +9,22 @@ export default async function CourseSlugPage({
   params: { slug: string }
   searchParams?: { lesson?: string; enrolled?: string }
 }) {
-  const course = await fetchPublicCourseServer(params.slug)
+  const { slug } = params
 
-  if (!course) {
+  if (searchParams?.lesson?.trim()) {
+    redirect(`/courses/${slug}/learn/${encodeURIComponent(searchParams.lesson.trim())}`)
+  }
+
+  const outline = await fetchCourseOutlineServer(slug)
+  if (!outline) {
     notFound()
   }
 
   return (
-    <CoursePageClient
-      slug={params.slug}
-      initialCourse={course}
-      initialLessonSlug={searchParams?.lesson}
-      refreshAfterEnroll={searchParams?.enrolled === '1'}
+    <CourseLandingClient
+      slug={slug}
+      initialCourse={outline}
+      enrolledFlash={searchParams?.enrolled === '1'}
     />
   )
 }

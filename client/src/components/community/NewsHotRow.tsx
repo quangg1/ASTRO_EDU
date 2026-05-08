@@ -1,6 +1,6 @@
 'use client'
 
-import type { Post } from '@/lib/communityApi'
+import type { Post } from '@/features/community/api/communityApi'
 import { NewsCardLink } from '@/components/community/NewsCardLink'
 import { plainTextExcerpt, postThumbnailUrl } from '@/lib/postContent'
 import { Flame } from 'lucide-react'

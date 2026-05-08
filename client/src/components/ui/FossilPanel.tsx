@@ -1,18 +1,19 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { useSimulatorStore } from '@/store/useSimulatorStore'
+import { useNarrativeStore } from '@/features/content3d/narrative/public'
+import { useSceneCommandStore } from '@/features/content3d/earth/public'
 import { getPhylumColor, getPhylumInfo } from '@/lib/fossilPhyla'
-import { searchFossils } from '@/lib/api'
+import { searchFossils } from '@/features/content3d/earth/api/earthApi'
 import type { Fossil } from '@/types'
 
 export function FossilPanel() {
   const [showList, setShowList] = useState(false)
+  const currentStage = useNarrativeStore((s) => s.currentBeat)
   const {
     fossils,
     fossilStats,
     phylumMetadata,
-    currentStage,
     showFossils,
     showPlaceLabels,
     showFossilPanel,
@@ -23,7 +24,7 @@ export function FossilPanel() {
     setFlyToTarget,
     setEarthRotationPaused,
     earthRotationPaused,
-  } = useSimulatorStore()
+  } = useSceneCommandStore()
 
   const handlePhylumClick = (phylum: string) => {
     const ofPhylum = fossils.filter((f) => (f.phylum || 'Unknown') === phylum)
@@ -216,7 +217,7 @@ export function FossilPanel() {
 
 interface FossilListModalProps {
   fossils: Fossil[]
-  phylumMetadata: Record<string, import('@/lib/api').PhylumInfoFromApi> | null
+  phylumMetadata: Record<string, import('@/features/content3d/earth/api/earthApi').PhylumInfoFromApi> | null
   /** Chỉ tìm trong kỷ này; nếu không truyền thì tìm toàn DB (legacy). */
   timeRange?: { maxMa: number; minMa: number }
   onClose: () => void
