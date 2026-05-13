@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&family=Poppins:wght@400;500;600;700&family=Sora:wght@600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&family=Poppins:wght@400;500;600;700&family=Sora:wght@600;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap');
 
 :root {
   --background: #000000;
@@ -281,4 +281,188 @@ body.explore-cockpit-fullscreen [data-mobile-bottom-nav] {
 @keyframes enduserNebulaPulse {
   0%, 100% { opacity: 0.25; }
   50% { opacity: 0.42; }
+}
+
+/* =========================================================
+   HUD / CosmoLearn home design system (design-home.md)
+   ========================================================= */
+:root {
+  --hud-plasma: #7ee7ff;
+  --hud-plasma-2: #4dd2ff;
+  --hud-amber: #f5a524;
+  --hud-amber-2: #ffd27a;
+  --hud-magenta: #ff5cd4;
+  --hud-ink: #eaf6ff;
+  --hud-ink-2: #9aa8c4;
+  --hud-ink-3: #5c6886;
+  --hud-line: rgba(126, 231, 255, 0.14);
+  --hud-bg: #03060f;
+  --hud-bg-2: #06091a;
+  --hud-bg-3: #0a1024;
+  --hud-cut: 14px;
+  --font-mono: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+}
+
+/* Chamfered HUD panel (top-left + bottom-right cut) */
+.hud-chamfer-sm  { clip-path: polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px); }
+.hud-chamfer    { clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px); }
+.hud-chamfer-md { clip-path: polygon(14px 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%, 0 14px); }
+.hud-chamfer-lg { clip-path: polygon(22px 0, 100% 0, 100% calc(100% - 22px), calc(100% - 22px) 100%, 0 100%, 0 22px); }
+.hud-chamfer-xl { clip-path: polygon(32px 0, 100% 0, 100% calc(100% - 32px), calc(100% - 32px) 100%, 0 100%, 0 32px); }
+
+/* Mono readout label */
+.hud-mono {
+  font-family: var(--font-mono);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-weight: 400;
+}
+.hud-mono-sm { font-size: 10px; }
+.hud-mono-md { font-size: 11px; }
+
+/* Italic amber emphasis inside headings */
+.hud-em em {
+  font-style: italic;
+  font-weight: 300;
+  color: var(--hud-amber);
+}
+
+/* Cyan glow rings */
+.hud-glow-cyan {
+  box-shadow: 0 0 0 1px rgba(126, 231, 255, 0.4), 0 0 28px rgba(126, 231, 255, 0.22);
+}
+.hud-glow-amber {
+  box-shadow: 0 0 0 1px rgba(245, 165, 36, 0.45), 0 0 28px rgba(245, 165, 36, 0.32);
+}
+
+/* Pulse dot (amber, with ping ring) */
+.hud-pulse-dot {
+  position: relative;
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--hud-amber);
+  box-shadow: 0 0 8px var(--hud-amber);
+}
+.hud-pulse-dot::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 1px solid var(--hud-amber);
+  animation: hud-ping 2s ease-out infinite;
+  opacity: 0;
+}
+.hud-status-dot-cyan {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--hud-plasma);
+  box-shadow: 0 0 8px var(--hud-plasma);
+}
+
+@keyframes hud-ping {
+  0%   { transform: scale(0.5); opacity: 1; }
+  100% { transform: scale(2);   opacity: 0; }
+}
+
+/* Vertical scanline (atmosphere) */
+.hud-scan {
+  position: fixed;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(126, 231, 255, 0.55), transparent);
+  box-shadow: 0 0 14px rgba(126, 231, 255, 0.55);
+  pointer-events: none;
+  z-index: 0;
+  animation: hud-scan 9s linear infinite;
+}
+@keyframes hud-scan {
+  from { transform: translateY(-10px); }
+  to   { transform: translateY(100vh); }
+}
+
+/* Grid overlay (atmosphere) */
+.hud-grid-overlay {
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+  background-size: 80px 80px;
+  -webkit-mask-image: radial-gradient(ellipse at center, rgba(0, 0, 0, 1) 0%, transparent 75%);
+          mask-image: radial-gradient(ellipse at center, rgba(0, 0, 0, 1) 0%, transparent 75%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Edge labels (rotated mono) */
+.hud-edge-label {
+  position: fixed;
+  top: 50%;
+  transform: translateY(-50%) rotate(-90deg);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: rgba(126, 231, 255, 0.32);
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 0;
+}
+.hud-edge-label.left  { left: 8px;  transform-origin: left center; }
+.hud-edge-label.right { right: 8px; transform-origin: right center; transform: translateY(-50%) rotate(90deg); }
+
+/* Star twinkle (used by inline <animate>, but provide fallback class) */
+@keyframes hud-twinkle {
+  0%, 100% { opacity: 0.3; }
+  50%      { opacity: 0.95; }
+}
+
+/* Sun pulse (Hero orbital frame) */
+@keyframes hud-sun-pulse {
+  0%, 100% { transform: scale(1); opacity: 0.85; }
+  50%      { transform: scale(1.08); opacity: 1; }
+}
+.hud-sun-pulse { animation: hud-sun-pulse 4s ease-in-out infinite; transform-origin: center; }
+
+/* L-shape corner brackets — used by CornerBrackets component */
+.hud-corner {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border-color: rgba(126, 231, 255, 0.7);
+  pointer-events: none;
+}
+.hud-corner.tl { top: -1px;    left: -1px;    border-top: 2px solid; border-left: 2px solid; }
+.hud-corner.tr { top: -1px;    right: -1px;   border-top: 2px solid; border-right: 2px solid; }
+.hud-corner.bl { bottom: -1px; left: -1px;    border-bottom: 2px solid; border-left: 2px solid; }
+.hud-corner.br { bottom: -1px; right: -1px;   border-bottom: 2px solid; border-right: 2px solid; }
+
+/* Reveal-on-scroll baseline (consumed by IntersectionObserver) */
+.hud-reveal {
+  opacity: 0;
+  transform: translateY(28px);
+  filter: blur(4px);
+  transition:
+    opacity 0.9s cubic-bezier(0.2, 0.7, 0.2, 1),
+    transform 0.9s cubic-bezier(0.2, 0.7, 0.2, 1),
+    filter 0.9s cubic-bezier(0.2, 0.7, 0.2, 1);
+  transition-delay: var(--reveal-delay, 0ms);
+}
+.hud-reveal.in { opacity: 1; transform: none; filter: none; }
+.hud-reveal-scale { transform: translateY(20px) scale(0.96); }
+.hud-reveal-scale.in { transform: none; }
+.hud-reveal-right { transform: translateX(40px); }
+.hud-reveal-right.in { transform: none; }
+
+/* Honor reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .hud-scan,
+  .hud-pulse-dot::after,
+  .hud-sun-pulse { animation: none !important; }
+  .hud-reveal { opacity: 1; transform: none; filter: none; transition: none; }
 }

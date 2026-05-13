@@ -63,9 +63,46 @@ export function AppHeader() {
   const showModerate = !!user && canModerate(user)
 
   return (
-    <header className="app-header fixed top-0 left-0 right-0 z-40 border-b border-white/[0.07] bg-[#070a10]/85 backdrop-blur-xl supports-[backdrop-filter]:bg-[#070a10]/75 shadow-[0_1px_0_rgba(34,211,238,0.06)]">
-      <div className="h-[3.25rem] sm:h-14 px-3 sm:px-5 flex items-center justify-between gap-3 max-w-[1600px] mx-auto">
-        <SiteLogo className="text-sm sm:text-base shrink-0" href="/" />
+    <header
+      className="app-header fixed top-0 left-0 right-0 z-40 backdrop-blur-[12px]"
+      style={{
+        background:
+          'linear-gradient(180deg, rgba(8,16,38,0.92) 0%, rgba(3,6,15,0.85) 100%)',
+        borderBottom: '1px solid rgba(126,231,255,0.5)',
+        boxShadow:
+          '0 1px 0 rgba(126,231,255,0.2), 0 2px 16px rgba(126,231,255,0.12)',
+      }}
+    >
+      <div className="relative h-[3.25rem] sm:h-14 px-3 sm:px-5 flex items-center justify-between gap-3 max-w-[1600px] mx-auto">
+        <div className="flex items-stretch h-full gap-3 shrink-0">
+          <SiteLogo className="text-sm sm:text-base shrink-0 self-center" href="/" />
+          {/* Sci-fi diagonal stripes — 2 vertical bars full-height + horizontal gradient tail */}
+          <div className="hidden md:flex items-stretch gap-1.5 h-full" aria-hidden>
+            <span
+              className="block w-[6px] h-full"
+              style={{
+                background: '#7ee7ff',
+                transform: 'skewX(-26deg)',
+                boxShadow: '0 0 12px rgba(126,231,255,0.75)',
+              }}
+            />
+            <span
+              className="block w-[5px] h-full"
+              style={{
+                background: 'rgba(126,231,255,0.55)',
+                transform: 'skewX(-26deg)',
+              }}
+            />
+          </div>
+          <div
+            className="hidden md:block self-center h-px w-[140px]"
+            style={{
+              background:
+                'linear-gradient(90deg, rgba(126,231,255,0.8) 0%, transparent 100%)',
+            }}
+            aria-hidden
+          />
+        </div>
 
         {/* Desktop */}
         <div className="hidden md:flex items-center gap-1 min-w-0 flex-1 justify-end">
@@ -75,24 +112,26 @@ export function AppHeader() {
             <>
               <Link
                 href="/dashboard"
-                className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
+                style={{ clipPath: 'polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px)' }}
+                className={`inline-flex items-center gap-2 px-4 py-[7px] text-[11px] font-bold uppercase tracking-widest border transition-colors ${
                   navActive(pathname, '/dashboard')
-                    ? 'bg-cyan-500/15 text-cyan-100 ring-1 ring-cyan-400/35'
-                    : 'text-slate-400 hover:text-white hover:bg-white/[0.06]'
+                    ? 'border-[#7ee7ff]/80 bg-[#7ee7ff]/15 text-[#7ee7ff]'
+                    : 'border-[#7ee7ff]/30 text-slate-300 hover:border-[#7ee7ff]/70 hover:text-[#7ee7ff] hover:bg-[#7ee7ff]/10'
                 }`}
               >
-                <LayoutDashboard className="w-4 h-4 opacity-90" aria-hidden />
+                <LayoutDashboard className="w-3.5 h-3.5" aria-hidden />
                 {viText.nav.dashboard}
               </Link>
               <Link
                 href="/community"
-                className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
+                style={{ clipPath: 'polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px)' }}
+                className={`inline-flex items-center gap-2 px-4 py-[7px] text-[11px] font-bold uppercase tracking-widest border transition-colors ${
                   navActive(pathname, '/community')
-                    ? 'bg-violet-500/15 text-violet-100 ring-1 ring-violet-400/30'
-                    : 'text-slate-400 hover:text-white hover:bg-white/[0.06]'
+                    ? 'border-[#7ee7ff]/80 bg-[#7ee7ff]/15 text-[#7ee7ff]'
+                    : 'border-[#7ee7ff]/30 text-slate-300 hover:border-[#7ee7ff]/70 hover:text-[#7ee7ff] hover:bg-[#7ee7ff]/10'
                 }`}
               >
-                <MessageCircle className="w-4 h-4 opacity-90" aria-hidden />
+                <MessageCircle className="w-3.5 h-3.5" aria-hidden />
                 {viText.nav.community}
               </Link>
 
@@ -100,10 +139,11 @@ export function AppHeader() {
                 <button
                   type="button"
                   onClick={() => setUserMenuOpen((v) => !v)}
-                  className={`flex items-center gap-2 rounded-full pl-1 pr-2 py-1 border transition-colors ${
+                  style={{ clipPath: 'polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px)' }}
+                  className={`inline-flex items-center gap-2 pl-1.5 pr-3 py-[5px] border text-[11px] font-bold uppercase tracking-widest transition-colors ${
                     userMenuOpen
-                      ? 'bg-white/10 border-white/20 text-white'
-                      : 'border-white/10 text-slate-300 hover:bg-white/[0.06] hover:border-white/15'
+                      ? 'border-[#7ee7ff]/80 bg-[#7ee7ff]/15 text-[#7ee7ff]'
+                      : 'border-[#7ee7ff]/30 text-slate-300 hover:border-[#7ee7ff]/70 hover:text-[#7ee7ff] hover:bg-[#7ee7ff]/10'
                   }`}
                   aria-expanded={userMenuOpen}
                   aria-haspopup="menu"
@@ -112,90 +152,99 @@ export function AppHeader() {
                     <img
                       src={user.avatar}
                       alt=""
-                      className="w-8 h-8 rounded-full object-cover ring-2 ring-cyan-500/25"
+                      className="w-5 h-5 rounded-full object-cover ring-1 ring-[#7ee7ff]/40"
                     />
                   ) : (
-                    <span className="w-8 h-8 rounded-full bg-gradient-to-br from-cyan-600 to-violet-700 flex items-center justify-center text-xs font-semibold text-white">
+                    <span
+                      className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-semibold text-white ring-1 ring-[#7ee7ff]/40"
+                      style={{ background: 'linear-gradient(135deg, #4dd2ff 0%, #7c5cff 100%)' }}
+                    >
                       {(user.displayName || user.email || '?').slice(0, 1).toUpperCase()}
                     </span>
                   )}
-                  <span className="max-w-[120px] truncate text-sm hidden lg:inline">{user.displayName || user.email || viText.nav.account}</span>
-                  <ChevronDown className={`w-4 h-4 text-slate-500 transition-transform ${userMenuOpen ? 'rotate-180' : ''}`} />
+                  <span className="max-w-[120px] truncate hidden lg:inline">{user.displayName || user.email || viText.nav.account}</span>
+                  <ChevronDown className={`w-3.5 h-3.5 transition-transform ${userMenuOpen ? 'rotate-180' : ''}`} />
                 </button>
 
                 {userMenuOpen && (
                   <div
-                    className="absolute right-0 top-[calc(100%+6px)] w-56 py-1.5 rounded-xl border border-white/10 bg-[#0d121c]/95 backdrop-blur-xl shadow-[0_16px_50px_rgba(0,0,0,0.45)] z-50"
+                    className="absolute right-0 top-[calc(100%+8px)] w-60 py-2 backdrop-blur-xl z-50"
                     role="menu"
+                    style={{
+                      clipPath: 'polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px)',
+                      background: 'linear-gradient(180deg, rgba(8,16,38,0.96) 0%, rgba(3,6,15,0.96) 100%)',
+                      border: '1px solid rgba(126,231,255,0.35)',
+                      boxShadow: '0 0 0 1px rgba(126,231,255,0.08), 0 12px 40px rgba(0,0,0,0.55), 0 0 24px rgba(126,231,255,0.12)',
+                    }}
                   >
-                    <p className="px-3 py-1.5 text-[10px] uppercase tracking-wider text-slate-500">Tài khoản</p>
+                    <p className="px-3 py-1.5 text-[10px] uppercase tracking-[0.22em] font-bold text-[#7ee7ff]/80">// Tài khoản</p>
                     <Link
                       href="/profile"
                       role="menuitem"
-                      className="flex items-center gap-2 px-3 py-2 text-sm text-slate-200 hover:bg-white/[0.06]"
+                      className="flex items-center gap-2.5 px-3 py-2 text-[13px] text-slate-200 hover:bg-[#7ee7ff]/10 hover:text-[#7ee7ff] transition-colors"
                       onClick={() => setUserMenuOpen(false)}
                     >
-                      <UserRound className="w-4 h-4 text-slate-500" />
+                      <UserRound className="w-4 h-4 text-[#7ee7ff]/70" />
                       {viText.nav.profile}
                     </Link>
-                    <div className="my-1 h-px bg-white/[0.06]" />
-                    <p className="px-3 py-1.5 text-[10px] uppercase tracking-wider text-slate-500">Học tập</p>
+                    <div className="my-1 h-px bg-[#7ee7ff]/15" />
+                    <p className="px-3 py-1.5 text-[10px] uppercase tracking-[0.22em] font-bold text-[#7ee7ff]/80">// Học tập</p>
                     <Link
                       href="/my-courses"
                       role="menuitem"
-                      className="flex items-center gap-2 px-3 py-2 text-sm text-slate-200 hover:bg-white/[0.06]"
+                      className="flex items-center gap-2.5 px-3 py-2 text-[13px] text-slate-200 hover:bg-[#7ee7ff]/10 hover:text-[#7ee7ff] transition-colors"
                       onClick={() => setUserMenuOpen(false)}
                     >
-                      <BookOpen className="w-4 h-4 text-slate-500" />
+                      <BookOpen className="w-4 h-4 text-[#7ee7ff]/70" />
                       {viText.nav.myLearning}
                     </Link>
                     <Link
                       href="/courses"
                       role="menuitem"
-                      className="flex items-center gap-2 px-3 py-2 text-sm text-slate-200 hover:bg-white/[0.06]"
+                      className="flex items-center gap-2.5 px-3 py-2 text-[13px] text-slate-200 hover:bg-[#7ee7ff]/10 hover:text-[#7ee7ff] transition-colors"
                       onClick={() => setUserMenuOpen(false)}
                     >
-                      <Sparkles className="w-4 h-4 text-slate-500" />
+                      <Sparkles className="w-4 h-4 text-[#7ee7ff]/70" />
                       {viText.nav.courses}
                     </Link>
                     <Link
                       href="/tutorial"
                       role="menuitem"
-                      className="flex items-center gap-2 px-3 py-2 text-sm text-slate-200 hover:bg-white/[0.06]"
+                      className="flex items-center gap-2.5 px-3 py-2 text-[13px] text-slate-200 hover:bg-[#7ee7ff]/10 hover:text-[#7ee7ff] transition-colors"
                       onClick={() => setUserMenuOpen(false)}
                     >
-                      <ListTree className="w-4 h-4 text-slate-500" />
+                      <ListTree className="w-4 h-4 text-[#7ee7ff]/70" />
                       {viText.nav.learningPath}
                     </Link>
                     <Link
                       href="/explore"
                       role="menuitem"
-                      className="flex items-center gap-2 px-3 py-2 text-sm text-slate-200 hover:bg-white/[0.06]"
+                      className="flex items-center gap-2.5 px-3 py-2 text-[13px] text-slate-200 hover:bg-[#7ee7ff]/10 hover:text-[#7ee7ff] transition-colors"
                       onClick={() => setUserMenuOpen(false)}
                     >
-                      <Compass className="w-4 h-4 text-slate-500" />
+                      <Compass className="w-4 h-4 text-[#7ee7ff]/70" />
                       {viText.nav.explore}
                     </Link>
                     <Link
                       href="/search"
                       role="menuitem"
-                      className="flex items-center gap-2 px-3 py-2 text-sm text-slate-200 hover:bg-white/[0.06]"
+                      className="flex items-center gap-2.5 px-3 py-2 text-[13px] text-slate-200 hover:bg-[#7ee7ff]/10 hover:text-[#7ee7ff] transition-colors"
                       onClick={() => setUserMenuOpen(false)}
                     >
-                      <Search className="w-4 h-4 text-slate-500" />
+                      <Search className="w-4 h-4 text-[#7ee7ff]/70" />
                       {viText.nav.search}
                     </Link>
                     {isTeacher && (
                       <>
-                        <div className="my-1 h-px bg-white/[0.06]" />
-                        <p className="px-3 py-1.5 text-[10px] uppercase tracking-wider text-slate-500">Giảng viên</p>
+                        <div className="my-1 h-px bg-[#7ee7ff]/15" />
+                        <p className="px-3 py-1.5 text-[10px] uppercase tracking-[0.22em] font-bold text-[#7ee7ff]/80">// Giảng viên</p>
                         <Link
                           href="/studio"
                           role="menuitem"
-                          className="flex items-center gap-2 px-3 py-2 text-sm text-slate-200 hover:bg-white/[0.06]"
+                          className="flex items-center gap-2.5 px-3 py-2 text-[13px] text-slate-200 hover:bg-[#7ee7ff]/10 hover:text-[#7ee7ff] transition-colors"
                           onClick={() => setUserMenuOpen(false)}
                         >
-                          <Clapperboard className="w-4 h-4 text-slate-500" />
+                          <Clapperboard className="w-4 h-4 text-[#7ee7ff]/70" />
                           Studio
                         </Link>
                       </>
@@ -204,7 +253,7 @@ export function AppHeader() {
                       <Link
                         href="/dashboard/moderate"
                         role="menuitem"
-                        className="flex items-center gap-2 px-3 py-2 text-sm text-violet-200/95 hover:bg-violet-500/10"
+                        className="flex items-center gap-2.5 px-3 py-2 text-[13px] text-violet-200/95 hover:bg-violet-500/15 hover:text-violet-100 transition-colors"
                         onClick={() => setUserMenuOpen(false)}
                       >
                         <Gavel className="w-4 h-4 text-violet-400/90" />
@@ -215,18 +264,18 @@ export function AppHeader() {
                       <Link
                         href="/admin"
                         role="menuitem"
-                        className="flex items-center gap-2 px-3 py-2 text-sm text-amber-200/90 hover:bg-amber-500/10"
+                        className="flex items-center gap-2.5 px-3 py-2 text-[13px] text-[#f5a524] hover:bg-[#f5a524]/12 hover:text-[#ffd27a] transition-colors"
                         onClick={() => setUserMenuOpen(false)}
                       >
-                        <Shield className="w-4 h-4 text-amber-400/80" />
+                        <Shield className="w-4 h-4 text-[#f5a524]" />
                         {viText.nav.admin}
                       </Link>
                     )}
-                    <div className="my-1 h-px bg-white/[0.06]" />
+                    <div className="my-1 h-px bg-[#7ee7ff]/15" />
                     <button
                       type="button"
                       role="menuitem"
-                      className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-300/90 hover:bg-red-500/10 text-left"
+                      className="w-full flex items-center gap-2.5 px-3 py-2 text-[13px] text-red-300 hover:bg-red-500/12 hover:text-red-200 text-left transition-colors"
                       onClick={handleLogout}
                     >
                       <LogOut className="w-4 h-4" />
@@ -240,19 +289,27 @@ export function AppHeader() {
             <div className="flex items-center gap-2">
               <Link
                 href="/courses"
-                className="text-sm font-medium text-slate-400 hover:text-white px-3 py-1.5 rounded-full hover:bg-white/[0.06] transition-colors"
+                style={{ clipPath: 'polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px)' }}
+                className="inline-flex items-center gap-2 px-4 py-[7px] text-[11px] font-bold uppercase tracking-widest border border-[#7ee7ff]/30 text-slate-300 hover:border-[#7ee7ff]/70 hover:text-[#7ee7ff] hover:bg-[#7ee7ff]/10 transition-colors"
               >
                 {viText.nav.courses}
               </Link>
               <Link
                 href="/login"
-                className="text-sm font-medium text-slate-300 px-3 py-1.5 rounded-full border border-white/10 hover:border-cyan-500/40 hover:bg-white/[0.04] transition-colors"
+                style={{ clipPath: 'polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px)' }}
+                className="inline-flex items-center gap-2 px-4 py-[7px] text-[11px] font-bold uppercase tracking-widest border border-[#7ee7ff]/30 text-slate-300 hover:border-[#7ee7ff]/70 hover:text-[#7ee7ff] hover:bg-[#7ee7ff]/10 transition-colors"
               >
                 {viText.nav.signIn}
               </Link>
               <Link
                 href="/register"
-                className="text-sm font-semibold text-white px-3.5 py-1.5 rounded-full bg-gradient-to-r from-cyan-600 to-violet-600 hover:from-cyan-500 hover:to-violet-500 shadow-[0_0_20px_rgba(34,211,238,0.2)] transition-colors"
+                style={{
+                  clipPath: 'polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px)',
+                  background: '#f5a524',
+                  color: '#1a0e00',
+                  boxShadow: '0 0 18px rgba(245,165,36,0.4)',
+                }}
+                className="inline-flex items-center gap-2 px-5 py-[7px] text-[11px] font-black uppercase tracking-widest hover:brightness-110 transition-all"
               >
                 {viText.nav.signUp}
               </Link>

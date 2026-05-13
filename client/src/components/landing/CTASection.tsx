@@ -2,65 +2,69 @@
 
 import { motion } from 'framer-motion'
 import Link from 'next/link'
-import { Rocket, ArrowRight, Sparkles } from 'lucide-react'
+import { ArrowRight, Sparkles } from 'lucide-react'
+import { CornerBrackets } from './CornerBrackets'
+import { SectionEyebrow } from './SectionEyebrow'
 
 export function CTASection() {
   return (
-    <section className="py-16 md:py-28 relative overflow-hidden bg-cosmic">
-      <div className="section-divider absolute top-0 left-0 right-0" />
-      <div className="absolute inset-0 star-field opacity-30" />
-
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/5 rounded-full blur-[150px]" />
-      <div className="absolute top-1/3 left-1/3 w-80 h-80 bg-secondary/10 rounded-full blur-[120px]" />
-
-      <div className="container mx-auto px-4 sm:px-6 relative z-10">
+    <section className="py-20 md:py-28 relative overflow-hidden">
+      <div className="container mx-auto px-4 sm:px-6 relative z-10 max-w-[1440px]">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.7 }}
-          className="max-w-3xl mx-auto text-center"
+          className="hud-chamfer-xl relative mx-auto max-w-4xl px-8 py-16 md:px-16 md:py-20 text-center"
+          style={{
+            background:
+              'radial-gradient(ellipse 80% 60% at 50% 50%, rgba(245,165,36,0.08), transparent 70%), rgba(6,9,26,0.85)',
+            border: '1px solid rgba(126,231,255,0.25)',
+            boxShadow: '0 0 60px rgba(126,231,255,0.06), inset 0 0 60px rgba(245,165,36,0.04)',
+          }}
         >
-          <motion.div
-            animate={{ y: [0, -8, 0] }}
-            transition={{ repeat: Infinity, duration: 3, ease: 'easeInOut' }}
-            className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary/10 border border-primary/20 mb-8"
-          >
-            <Rocket className="h-7 w-7 text-primary" />
-          </motion.div>
+          <CornerBrackets corners={['tr', 'bl']} />
 
-          <h2 className="font-heading text-3xl md:text-5xl lg:text-6xl font-bold mb-6 leading-tight text-foreground">
-            Sẵn sàng khám phá <span className="text-gradient-gold">vũ trụ</span>?
-          </h2>
+          <SectionEyebrow text="// ready for launch" align="center" className="mb-5" />
 
-          <p className="text-muted-foreground text-lg mb-10 max-w-lg mx-auto leading-relaxed">
-            Tham gia cộng đồng hơn 50,000 người yêu thiên văn. Bắt đầu hành trình khám phá vũ trụ ngay hôm nay.
+          <h2
+            className="hud-em font-heading text-4xl md:text-6xl lg:text-[clamp(48px,6vw,80px)] font-medium text-white mb-6 leading-[1] tracking-[-0.03em]"
+            dangerouslySetInnerHTML={{ __html: 'Bắt đầu hành trình <em>của bạn</em>' }}
+          />
+
+          <p className="text-white/55 text-[16px] mb-10 max-w-md mx-auto leading-[1.6]">
+            Tham gia cùng 50,000+ người yêu thiên văn. Miễn phí để bắt đầu hành trình khám phá vũ trụ.
           </p>
 
-          <div className="flex flex-col sm:flex-row justify-center gap-4">
-            <Link href="/register">
-              <motion.span
-                whileHover={{ scale: 1.03 }}
-                whileTap={{ scale: 0.97 }}
-                className="group inline-flex items-center justify-center gap-2 bg-primary text-primary-foreground px-10 py-4 rounded-xl font-semibold text-base hover:brightness-110 transition-all glow-gold"
-              >
-                <Sparkles className="h-4 w-4" />
-                Đăng ký miễn phí
-                <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
-              </motion.span>
+          <div className="flex flex-col sm:flex-row justify-center gap-3 mb-8">
+            <Link
+              href="/register"
+              className="hud-chamfer group inline-flex items-center justify-center gap-2 px-8 py-4 text-sm font-semibold transition-all"
+              style={{
+                background: 'var(--hud-amber)',
+                color: '#1a0e00',
+                boxShadow: '0 0 28px rgba(245,165,36,0.4)',
+              }}
+            >
+              <Sparkles className="h-4 w-4" />
+              Đăng ký miễn phí
+              <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
             </Link>
-            <Link href="/courses">
-              <motion.span
-                whileHover={{ scale: 1.03 }}
-                whileTap={{ scale: 0.97 }}
-                className="inline-block border border-border/50 text-foreground px-10 py-4 rounded-xl font-semibold text-base hover:bg-muted/30 transition-all"
-              >
-                Tìm hiểu thêm
-              </motion.span>
+            <Link
+              href="/courses"
+              className="hud-chamfer inline-flex items-center justify-center px-8 py-4 text-sm font-semibold text-white transition-all"
+              style={{
+                background: 'rgba(126,231,255,0.06)',
+                border: '1px solid rgba(126,231,255,0.3)',
+              }}
+            >
+              Tìm hiểu thêm
             </Link>
           </div>
 
-          <p className="text-xs text-muted-foreground/60 mt-6">Không cần thẻ tín dụng • Truy cập 20+ khóa học miễn phí</p>
+          <p className="hud-mono hud-mono-sm text-white/40">
+            không cần thẻ tín dụng · hủy bất kỳ lúc nào · 50,000+ học viên tin tưởng
+          </p>
         </motion.div>
       </div>
     </section>
