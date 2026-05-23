@@ -7,7 +7,6 @@
     "dev:poll": "cross-env WATCHPACK_POLLING=1 next dev",
     "prebuild": "npm run check:guards",
     "build": "next build",
-    "build:static": "npm run check:guards && node scripts/build-static.mjs",
     "start": "next start",
     "lint": "next lint",
     "check:guards": "npm run check:boundaries && npm run check:earth-ssot",

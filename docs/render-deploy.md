@@ -1,75 +1,40 @@
-# Triển khai Galaxies lên Render
+# Deploy lên Render (Dashboard)
 
-Blueprint: API Node + **client Static Site (CDN)**. Biến: [`shared/envNames.js`](../shared/envNames.js).
+App Next.js có **route động** (`/courses/[slug]`, `/community/post/[id]`, …) → dùng **Web Service**, không dùng **Static Site**.
 
-## Sơ đồ
+## 1. API — New Web Service
 
-```mermaid
-flowchart LR
-  subgraph Render["Render"]
-    WEB["galaxies-web\nruntime: static\nout/"]
-    API["galaxies-api\nNode"]
-  end
-  USER((User)) --> WEB
-  WEB -->|NEXT_PUBLIC_API_BASE_URL| API
-  WEB -.->|tùy chọn NEXT_PUBLIC_AI_SERVICE_URL| AI[AI Python]
-  API --> MONGO[(MONGODB_URI)]
-```
+| Ô | Giá trị |
+|---|--------|
+| Root Directory | *(để trống)* |
+| Build Command | `npm run install:all` |
+| Start Command | `cd services/api && npm start` |
 
-| Service | Loại | Build |
-|---------|------|-------|
-| `galaxies-api` | Web Node | `npm run install:all` → `cd services/api && npm start` |
-| `galaxies-web` | **Static Site** | `npm ci && npm run build:static` → publish `client/out/` |
+Env (tối thiểu): `MONGODB_URI`, `JWT_SECRET`, `INTERNAL_API_SECRET`, `CLIENT_URL` (URL frontend sau bước 2), VNPay nếu cần.
 
-File: [`render.yaml`](../render.yaml).
+## 2. Frontend — New Web Service (không phải Static Site)
 
-## Cảnh báo build static (bình thường)
+| Ô | Giá trị |
+|---|--------|
+| Root Directory | `client` |
+| Build Command | `npm ci && npx next build` |
+| Start Command | `npm start` |
 
-Nếu log có dòng kiểu *"rewrites/redirects/headers will not automatically work with output: export"* — sau khi cập nhật `next.config.js` (chỉ bật các rule đó khi **không** export) thì cảnh báo biến mất. Redirect Studio cũ (`/studio/tutorial` → learning-path) cấu hình trên **Render → Redirects** hoặc trong `render.yaml` (`routes`).
+Env lúc build + runtime:
 
-Build vẫn chạy tiếp sau các dòng `Creating an optimized production build` — đợi đến `✓ Export` / deploy xong. `npm audit` không chặn deploy.
+| Key | Value |
+|-----|--------|
+| `NEXT_PUBLIC_API_BASE_URL` | URL API bước 1, **không** có `/api` cuối |
+| `MEDIA_SERVICE_URL` | Cùng URL API |
+| `NEXT_PUBLIC_FIREBASE_*` | Nếu dùng đăng nhập Google/Facebook |
 
-## Static site (`galaxies-web`)
+Sau khi có URL frontend → quay lại API, set `CLIENT_URL` = URL đó → **Redeploy API**.
 
-- Build: `npm run build:static` (`RENDER_STATIC=true`, export ra `out/`).
-- Không chạy `next start` — chỉ file tĩnh + CDN Render.
-- API gọi từ trình duyệt qua `NEXT_PUBLIC_API_BASE_URL` (build-time).
-- Trợ lý AI (tùy chọn): set `NEXT_PUBLIC_AI_SERVICE_URL` trỏ service Python public; nếu không có, tính năng AI tắt trên bản static (không còn proxy `/api/chat`).
+## 3. Blueprint (tùy chọn)
 
-Local thử static:
+[`render.yaml`](../render.yaml) — cùng cấu hình trên.
 
-```bash
-cd client
-npm run build:static
-npx serve out
-```
+## Local
 
-## Liên kết URL (Blueprint)
-
-| Nơi nhận | Biến | Nguồn |
-|----------|------|--------|
-| API | `CLIENT_URL` | `galaxies-web` → `RENDER_EXTERNAL_URL` |
-| API | `API_PUBLIC_URL` | `galaxies-api` → `RENDER_EXTERNAL_URL` |
-| Static client | `NEXT_PUBLIC_API_BASE_URL` | `galaxies-api` → `RENDER_EXTERNAL_URL` |
-| Static client | `NEXT_PUBLIC_AI_SERVICE_URL` | `sync: false` (nếu deploy AI) |
-
-Sau đổi tên service / custom domain: redeploy **cả API và static client** (biến `NEXT_PUBLIC_*` nhúng lúc build).
-
-## Biến bắt buộc
-
-**API:** `MONGODB_URI`, `JWT_SECRET`, `INTERNAL_API_SECRET`, VNPay nếu dùng thanh toán.
-
-**Static client (build):** `NEXT_PUBLIC_API_BASE_URL`, Firebase `NEXT_PUBLIC_FIREBASE_*` nếu dùng đăng nhập Google/Facebook.
-
-## VNPay IPN
-
-`${API_PUBLIC_URL}` + path `/api/payments/ipn` (xem `shared/appPaths.js`).
-
-## Node client (thay static)
-
-Nếu cần `next start` + proxy `/api/chat` dev-style, đổi `galaxies-web` trong `render.yaml` về `runtime: node`, `buildCommand: npm ci && npm run build`, `startCommand: npm start` — không dùng `staticPublishPath`.
-
-## Local env
-
-- [`services/api/.env.example`](../services/api/.env.example)
-- [`client/.env.local.example`](../client/.env.local.example)
+- `services/api/.env` — xem `.env.example`
+- `client/.env.local` — xem `.env.local.example`

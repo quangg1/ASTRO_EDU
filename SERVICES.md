@@ -4,7 +4,7 @@ Project giáo dục thiên văn với đăng nhập (email, Google, Facebook), k
 
 ## Deploy lên Render
 
-Blueprint: [`render.yaml`](render.yaml) — API Node + client **Static Site** (`npm run build:static` → `out/`). Tên biến: [`shared/envNames.js`](shared/envNames.js). Hướng dẫn: [`docs/render-deploy.md`](docs/render-deploy.md).
+Blueprint: [`render.yaml`](render.yaml) — API Node + Next **Web Service** (`npm start`). Hướng dẫn Dashboard: [`docs/render-deploy.md`](docs/render-deploy.md).
 
 ## Khuyến nghị: API gộp (Modular Monolith)
 

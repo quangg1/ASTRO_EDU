@@ -1,5 +1,5 @@
-# Render Blueprint — API (Node) + client (Static Site CDN).
-# Biến: shared/envNames.js — hướng dẫn: docs/render-deploy.md
+# Render: API Node + Next.js (Web Service). Không dùng Static Site — app có route động (/courses/[slug], …).
+# Dashboard: docs/render-deploy.md
 
 services:
   - type: web
@@ -71,30 +71,13 @@ services:
 
   - type: web
     name: galaxies-web
-    runtime: static
+    runtime: node
     region: singapore
     plan: starter
     rootDir: client
-    buildCommand: npm ci && npm run build:static
-    staticPublishPath: out
+    buildCommand: npm ci && npx next build
+    startCommand: npm start
     autoDeploy: true
-    routes:
-      - type: redirect
-        source: /studio/tutorial
-        destination: /studio/learning-path
-      - type: redirect
-        source: /studio/tutorial/*
-        destination: /studio/learning-path
-    headers:
-      - path: /*
-        name: X-Content-Type-Options
-        value: nosniff
-      - path: /*
-        name: Referrer-Policy
-        value: strict-origin-when-cross-origin
-      - path: /*
-        name: X-Frame-Options
-        value: SAMEORIGIN
     envVars:
       - key: NODE_ENV
         value: production
@@ -105,9 +88,12 @@ services:
           type: web
           name: galaxies-api
           envVarKey: RENDER_EXTERNAL_URL
+      - key: MEDIA_SERVICE_URL
+        fromService:
+          type: web
+          name: galaxies-api
+          envVarKey: RENDER_EXTERNAL_URL
       - key: NEXT_PUBLIC_MEDIA_CDN
-        sync: false
-      - key: NEXT_PUBLIC_AI_SERVICE_URL
         sync: false
       - key: NEXT_PUBLIC_FIREBASE_API_KEY
         sync: false

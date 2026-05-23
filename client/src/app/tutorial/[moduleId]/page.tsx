@@ -1,6 +1,5 @@
 import { notFound } from 'next/navigation'
 import { getMergedLearningModules } from '@/features/learning-path/public'
-import { tutorialModuleStaticParams } from '@/features/learning-path/lib/tutorialStaticParams'
 import LearningModuleView from '@/components/learning-path/LearningModuleView'
 
 type Props = { params: { moduleId: string } }
@@ -13,10 +12,6 @@ export async function generateMetadata({ params }: Props) {
     title: `${mod.titleVi} | Learning Path`,
     description: mod.goalVi,
   }
-}
-
-export function generateStaticParams() {
-  return tutorialModuleStaticParams()
 }
 
 export default async function TutorialModulePage({ params }: Props) {

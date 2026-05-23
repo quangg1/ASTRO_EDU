@@ -1,12 +1,7 @@
 import { notFound } from 'next/navigation'
 import { getLessonById } from '@/data/learningPathCurriculum'
 import { getMergedLearningPathData } from '@/features/learning-path/public'
-import { tutorialLessonStaticParams } from '@/features/learning-path/lib/tutorialStaticParams'
 import LearningLessonView from '@/components/learning-path/LearningLessonView'
-
-export function generateStaticParams() {
-  return tutorialLessonStaticParams()
-}
 
 type Props = { params: { moduleId: string; nodeId: string; lessonId: string } }
 
