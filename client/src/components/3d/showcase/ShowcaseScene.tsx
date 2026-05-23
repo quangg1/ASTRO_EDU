@@ -22,6 +22,9 @@ import {
   type ShowcaseCameraSpherical,
 } from '@/components/3d/showcase/ShowcaseCameraManager'
 import { useShowcaseStore } from '@/features/content3d/showcase/public'
+import { useShowcaseCatalogGen } from '@/components/showcase/ShowcaseCatalogProvider'
+import { buildPlanetShowcaseEntity } from '@/lib/mergeShowcaseCatalog'
+import type { ShowcaseEntityContentDTO } from '@/features/content3d/showcase/api/showcaseEntitiesApi'
 
 function sanitizeControlsCamera(c: OrbitControlsImpl) {
   const p = c.object.position
@@ -55,6 +58,7 @@ function ShowcaseSceneContent({
   initialSpherical,
   onCameraSettled,
   orbitEntities,
+  showcaseContent,
 }: {
   showcaseActiveItemId: string | null
   onShowcaseItemSelect?: (id: string) => void
@@ -66,7 +70,10 @@ function ShowcaseSceneContent({
   initialSpherical?: ShowcaseCameraSpherical | null
   onCameraSettled?: (spherical: ShowcaseCameraSpherical) => void
   orbitEntities?: ShowcaseOrbitEntity[]
+  /** Studio entity content — diffuse/normal cho planet-* (catalog id, không có trong `orbits`). */
+  showcaseContent?: ShowcaseEntityContentDTO[]
 }) {
+  const showcaseCatalogGen = useShowcaseCatalogGen()
   const controlsRef = useRef<OrbitControlsImpl | null>(null)
   const controlsTargetRef = useRef<[number, number, number]>([0, 0, 0])
   const programmaticMoveRef = useRef(false)
@@ -117,6 +124,14 @@ function ShowcaseSceneContent({
     () => new Map((orbitEntities || []).map((e) => [String(e.id || '').trim(), e] as const)),
     [orbitEntities],
   )
+  const planetShowcaseByName = useMemo(() => {
+    const m = new Map<string, ShowcaseOrbitEntity>()
+    for (const p of runtimePlanetsData) {
+      const entity = buildPlanetShowcaseEntity(p.name, showcaseContent)
+      if (entity) m.set(p.name, entity)
+    }
+    return m
+  }, [runtimePlanetsData, showcaseContent, showcaseCatalogGen])
   const catalogById = useMemo(
     () => new Map(NASA_SHOWCASE_ITEMS.map((i) => [String(i.id || '').trim(), i] as const)),
     [],
@@ -307,7 +322,7 @@ function ShowcaseSceneContent({
           exploreStyleLod
           isSelected={effectiveSelectedIndex === i}
           interactive
-          showcaseOrbitEntity={orbitById.get(planetEntityId(data.name)) ?? null}
+          showcaseOrbitEntity={planetShowcaseByName.get(data.name) ?? orbitById.get(planetEntityId(data.name)) ?? null}
           onHoverChange={(hovered) => setHoveredOrbitIndex(hovered ? i : (prev) => (prev === i ? null : prev))}
           onSelect={() => {
             setSelection(i)
@@ -394,6 +409,7 @@ export default function ShowcaseScene({
   initialSpherical,
   onCameraSettled,
   orbitEntities,
+  showcaseContent,
 }: {
   showcaseActiveItemId: string | null
   onShowcaseItemSelect?: (id: string) => void
@@ -405,6 +421,7 @@ export default function ShowcaseScene({
   initialSpherical?: ShowcaseCameraSpherical | null
   onCameraSettled?: (spherical: ShowcaseCameraSpherical) => void
   orbitEntities?: ShowcaseOrbitEntity[]
+  showcaseContent?: ShowcaseEntityContentDTO[]
 }) {
   useEffect(() => {
     return () => {
@@ -443,6 +460,7 @@ export default function ShowcaseScene({
           initialSpherical={initialSpherical}
           onCameraSettled={onCameraSettled}
           orbitEntities={orbitEntities}
+          showcaseContent={showcaseContent}
         />
         <Preload all />
       </Suspense>

@@ -1,6 +1,6 @@
 /**
- * Dữ liệu Hệ Mặt Trời – texture có trong public/textures/
- * Kích thước và khoảng cách dùng tỉ lệ hiển thị (không đúng tỉ lệ thật).
+ * Dữ liệu Hệ Mặt Trời — quỹ đạo / kích thước hiển thị.
+ * Texture hành tinh: Studio showcase (`buildPlanetShowcaseEntity`); trường `texture` chỉ fallback khi chưa cấu hình CMS.
  */
 
 export interface PlanetData {
@@ -32,7 +32,8 @@ export interface PlanetData {
 const T = '/textures'
 
 /**
- * Mosaic Sao Hỏa NASA trong `public/textures/nasa/` — showcase (orbit/catalog) và Mars History globe dùng chung URL này.
+ * Fallback khi Explore chưa có diffuse từ Studio/catalog (`buildPlanetShowcaseEntity`).
+ * Texture thật cho planet-* lấy từ showcase catalog + CMS, không từ đây.
  */
 export const MARS_NASA_GLOBE_TEXTURE_PATH = `${T}/nasa/mars_nasa.jpg`
 

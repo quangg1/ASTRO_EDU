@@ -702,6 +702,7 @@ function ExplorePageContent() {
           ) : (
             <ShowcaseScene
               orbitEntities={mergedOrbitEntities}
+              showcaseContent={showcaseContent}
               showcaseActiveItemId={showcaseActiveItemId}
               onShowcaseItemSelect={(id) => {
                 handleShowcaseEntityClicked(id, 'scene')

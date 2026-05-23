@@ -30,14 +30,23 @@ export function resolveShowcaseDiffuseTextureUrl(entity: ShowcaseOrbitEntity): s
   return null
 }
 
-/** CMS diffuse/normal/spec/cloud — `Planet` trong ShowcaseScene dùng ShowcaseDiffuseGlobe (orbit layer vẫn bỏ qua mesh planet-*). */
+function hasShowcaseMapSlot(raw: string | undefined | null): boolean {
+  const u = String(raw || '').trim()
+  return isResolvableShowcaseAssetUrl(u)
+}
+
+/**
+ * `Planet` trong Explore dùng ShowcaseDiffuseGlobe khi có diffuse từ Studio/catalog
+ * (không chỉ `remoteTextureUrl` — `texturePath` catalog cũng tính).
+ */
 export function planetUsesShowcaseCmsTextures(e: ShowcaseOrbitEntity | null | undefined): boolean {
   if (!e) return false
-  const s = (x: unknown) => String(x || '').trim()
+  if (hasShowcaseMapSlot(e.remoteTextureUrl) || hasShowcaseMapSlot(e.texturePath)) return true
   return Boolean(
-    s(e.remoteTextureUrl) ||
-      s(e.remoteNormalMapUrl) ||
-      s(e.remoteSpecularMapUrl) ||
-      s(e.remoteCloudMapUrl),
+    hasShowcaseMapSlot(e.remoteNormalMapUrl) ||
+      hasShowcaseMapSlot(e.remoteSpecularMapUrl) ||
+      hasShowcaseMapSlot(e.remoteCloudMapUrl) ||
+      hasShowcaseMapSlot(e.remoteModelUrl) ||
+      String(e.modelPath || '').trim().length > 1,
   )
 }

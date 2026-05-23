@@ -210,3 +210,16 @@ export function buildPlanetGlobeEntity(
   return buildStudioGlobeEntity(entityId, showcaseContent)
 }
 
+/** `planet-{mercury|mars|...}` — catalog Studio, không nằm trong mảng `orbits`. */
+export function planetShowcaseEntityId(planetName: string): string {
+  return `planet-${String(planetName || '').trim().toLowerCase()}`
+}
+
+/** Quả cầu hành tinh trong quỹ đạo Explore — diffuse/normal từ Studio + catalog. */
+export function buildPlanetShowcaseEntity(
+  planetName: string,
+  showcaseContent: ShowcaseEntityContentDTO[] | undefined,
+): ShowcaseOrbitEntity | null {
+  return buildStudioGlobeEntity(planetShowcaseEntityId(planetName), showcaseContent)
+}
+
