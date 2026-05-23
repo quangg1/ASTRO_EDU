@@ -57,11 +57,6 @@ const nextConfig = {
 
   async rewrites() {
     const mediaUrl = resolveMediaOrigin();
-    if (!mediaUrl && process.env.NODE_ENV === 'production') {
-      throw new Error(
-        `Thiếu ${ENV.MEDIA_SERVICE_URL} hoặc ${ENV.NEXT_PUBLIC_API_BASE_URL} cho rewrite /media`,
-      );
-    }
     const mediaRule = mediaUrl
       ? { source: '/media/:path*', destination: `${mediaUrl}/:path*` }
       : null;
