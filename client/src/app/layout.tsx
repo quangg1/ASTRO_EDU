@@ -12,6 +12,7 @@ import { PwaInstallPrompt } from '@/components/system/PwaInstallPrompt'
 import { PwaStatusBadge } from '@/components/system/PwaStatusBadge'
 import { HybridBootstrap } from '@/components/system/HybridBootstrap'
 import { ChunkLoadRecovery } from '@/components/system/ChunkLoadRecovery'
+import { RuntimePublicConfigScript } from '@/components/system/RuntimePublicConfigScript'
 import { LayoutChromeProvider } from '@/components/layout/LayoutChromeContext'
 import { ShowcaseCatalogProvider } from '@/components/showcase/ShowcaseCatalogProvider'
 import { ToastProvider } from '@/design-system'
@@ -54,6 +55,7 @@ export default function RootLayout({
   return (
     <html lang="vi">
       <body className="antialiased">
+        <RuntimePublicConfigScript />
         <Suspense fallback={null}>
           <Analytics />
         </Suspense>

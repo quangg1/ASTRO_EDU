@@ -1,6 +1,7 @@
 import ENV from '@galaxies/shared/envNames'
 import { devError } from '@/lib/devLog'
 import { readEnv } from '@/lib/readEnv'
+import { readRuntimePublicConfig } from '@/lib/runtimePublicConfig'
 import { userMessages } from '@/lib/userMessages'
 
 /**
@@ -22,6 +23,21 @@ const UNIFIED_BASE =
   typeof process !== 'undefined'
     ? normalizeUnifiedEnvBase(readEnv(ENV.NEXT_PUBLIC_API_BASE_URL))
     : ''
+
+/** Build-time inlined base, or server/runtime env, or inline script on first paint. */
+function resolveUnifiedBase(): string {
+  if (UNIFIED_BASE) return UNIFIED_BASE
+  if (typeof window === 'undefined') {
+    const server =
+      normalizeUnifiedEnvBase(readEnv(ENV.NEXT_PUBLIC_API_BASE_URL)) ||
+      normalizeUnifiedEnvBase(readEnv(ENV.MEDIA_SERVICE_URL))
+    if (server) return server
+  } else {
+    const runtime = readRuntimePublicConfig()?.apiBase
+    if (runtime) return normalizeUnifiedEnvBase(runtime)
+  }
+  return ''
+}
 
 function devProxyApiOrigin(): string {
   return trimEndSlash(readEnv(ENV.API_PROXY_TARGET))
@@ -86,17 +102,18 @@ function missingApiBaseError(): never {
 }
 
 export function getApiBase(): string {
-  return UNIFIED_BASE || ''
+  return resolveUnifiedBase() || ''
 }
 
 export function getAuthBase(): string {
-  if (UNIFIED_BASE) {
-    if (process.env.NODE_ENV === 'development' && isSameBrowserOriginAs(UNIFIED_BASE)) {
+  const base = resolveUnifiedBase()
+  if (base) {
+    if (process.env.NODE_ENV === 'development' && isSameBrowserOriginAs(base)) {
       return ''
     }
     const ssrRedirect = resolveMisconfiguredUnifiedBaseForSSR()
     if (ssrRedirect) return ssrRedirect
-    return UNIFIED_BASE
+    return base
   }
   const legacy = trimEndSlash(readEnv('NEXT_PUBLIC_AUTH_URL'))
   if (legacy) return legacy
@@ -107,13 +124,14 @@ export function getAuthBase(): string {
 }
 
 export function getUnifiedBase(): string {
-  if (UNIFIED_BASE) {
-    if (process.env.NODE_ENV === 'development' && isSameBrowserOriginAs(UNIFIED_BASE)) {
+  const base = resolveUnifiedBase()
+  if (base) {
+    if (process.env.NODE_ENV === 'development' && isSameBrowserOriginAs(base)) {
       return ''
     }
     const ssrRedirect = resolveMisconfiguredUnifiedBaseForSSR()
     if (ssrRedirect) return ssrRedirect
-    return UNIFIED_BASE
+    return base
   }
   if (process.env.NODE_ENV === 'development' && isBrowser()) return ''
   const proxy = devProxyApiOrigin()
@@ -133,13 +151,14 @@ function resolveLegacyApiUrl(): string | null {
 }
 
 export function getApiPathBase(): string {
-  if (UNIFIED_BASE) {
-    if (process.env.NODE_ENV === 'development' && isSameBrowserOriginAs(UNIFIED_BASE)) {
+  const base = resolveUnifiedBase()
+  if (base) {
+    if (process.env.NODE_ENV === 'development' && isSameBrowserOriginAs(base)) {
       return ''
     }
     const ssrRedirect = resolveMisconfiguredUnifiedBaseForSSR()
     if (ssrRedirect) return `${ssrRedirect}/api`
-    return `${UNIFIED_BASE}/api`
+    return `${base}/api`
   }
   const resolved = resolveLegacyApiUrl()
   if (resolved) {
@@ -166,13 +185,14 @@ export function getEarthHistoryApiPathBase(): string {
 }
 
 export function getMediaBase(): string {
-  if (UNIFIED_BASE) {
-    if (process.env.NODE_ENV === 'development' && isSameBrowserOriginAs(UNIFIED_BASE)) {
+  const base = resolveUnifiedBase()
+  if (base) {
+    if (process.env.NODE_ENV === 'development' && isSameBrowserOriginAs(base)) {
       return ''
     }
     const ssrRedirect = resolveMisconfiguredUnifiedBaseForSSR()
     if (ssrRedirect) return ssrRedirect
-    return UNIFIED_BASE
+    return base
   }
   const legacy = trimEndSlash(readEnv('NEXT_PUBLIC_MEDIA_URL'))
   if (legacy) return legacy
@@ -183,6 +203,8 @@ export function getMediaBase(): string {
 }
 
 export function getMediaCdnBase(): string {
+  const runtime = readRuntimePublicConfig()?.mediaCdn
+  if (runtime) return runtime
   return readEnv(ENV.NEXT_PUBLIC_MEDIA_CDN)
 }
 
