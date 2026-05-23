@@ -2,6 +2,9 @@
   "name": "earth-history-simulator",
   "version": "1.0.0",
   "private": true,
+  "engines": {
+    "node": ">=20 <23"
+  },
   "scripts": {
     "dev": "next dev",
     "dev:poll": "cross-env WATCHPACK_POLLING=1 next dev",
@@ -30,6 +33,7 @@
     "@capacitor/network": "^8.0.1",
     "@capacitor/preferences": "^8.0.1",
     "@capacitor/push-notifications": "^8.0.2",
+    "@floating-ui/dom": "^1.7.6",
     "@react-three/drei": "^9.96.0",
     "@react-three/fiber": "^8.15.0",
     "@tiptap/extension-code-block-lowlight": "^3.20.1",
