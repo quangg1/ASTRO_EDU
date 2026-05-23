@@ -107,6 +107,8 @@ const nextConfig = {
   },
 
   images: {
+    // CDN đã phục vụ file tĩnh; bỏ qua /_next/image trên Render (tránh 502 khi fetch S3).
+    unoptimized: Boolean(readEnv(ENV.NEXT_PUBLIC_MEDIA_CDN)),
     remotePatterns: [
       { protocol: 'https', hostname: '**.amazonaws.com', pathname: '/**' },
       { protocol: 'https', hostname: '**.cloudfront.net', pathname: '/**' },

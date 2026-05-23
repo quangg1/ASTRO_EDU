@@ -1,5 +1,5 @@
-# Render: API Node + Next.js (Web Service). Không dùng Static Site — app có route động (/courses/[slug], …).
-# Dashboard: docs/render-deploy.md
+# Render: deploy galaxies-api TRƯỚC, galaxies-web SAU (xem docs/render-deploy.md).
+# API không phụ thuộc frontend lúc build. Frontend cần NEXT_PUBLIC_API_BASE_URL = URL API khi build.
 
 services:
   - type: web
@@ -22,11 +22,9 @@ services:
         generateValue: true
       - key: INTERNAL_API_SECRET
         generateValue: true
+      # Sau khi có frontend: set = URL web (vd. https://astro-edu.onrender.com) rồi redeploy API.
       - key: CLIENT_URL
-        fromService:
-          type: web
-          name: galaxies-web
-          envVarKey: RENDER_EXTERNAL_URL
+        sync: false
       - key: API_PUBLIC_URL
         fromService:
           type: web
