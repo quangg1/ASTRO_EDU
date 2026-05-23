@@ -23,6 +23,12 @@ flowchart LR
 
 File: [`render.yaml`](../render.yaml).
 
+## Cảnh báo build static (bình thường)
+
+Nếu log có dòng kiểu *"rewrites/redirects/headers will not automatically work with output: export"* — sau khi cập nhật `next.config.js` (chỉ bật các rule đó khi **không** export) thì cảnh báo biến mất. Redirect Studio cũ (`/studio/tutorial` → learning-path) cấu hình trên **Render → Redirects** hoặc trong `render.yaml` (`routes`).
+
+Build vẫn chạy tiếp sau các dòng `Creating an optimized production build` — đợi đến `✓ Export` / deploy xong. `npm audit` không chặn deploy.
+
 ## Static site (`galaxies-web`)
 
 - Build: `npm run build:static` (`RENDER_STATIC=true`, export ra `out/`).

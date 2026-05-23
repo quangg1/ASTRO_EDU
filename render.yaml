@@ -78,6 +78,13 @@ services:
     buildCommand: npm ci && npm run build:static
     staticPublishPath: out
     autoDeploy: true
+    routes:
+      - type: redirect
+        source: /studio/tutorial
+        destination: /studio/learning-path
+      - type: redirect
+        source: /studio/tutorial/*
+        destination: /studio/learning-path
     headers:
       - path: /*
         name: X-Content-Type-Options

@@ -25,6 +25,12 @@ const UNIFIED_API_ROUTE_SEGMENTS = [
   'admin',
 ];
 
+const STUDIO_TUTORIAL_REDIRECTS = [
+  { source: '/studio/tutorial', destination: '/studio/learning-path', permanent: false },
+  { source: '/studio/tutorial/new', destination: '/studio/learning-path', permanent: false },
+  { source: '/studio/tutorial/:slug', destination: '/studio/learning-path', permanent: false },
+];
+
 function trimEndSlash(s) {
   return String(s || '').trim().replace(/\/$/, '');
 }
@@ -45,94 +51,85 @@ function resolveApiProxyOrigin() {
   return readEnv(ENV.API_PROXY_TARGET) || readEnv(ENV.NEXT_PUBLIC_API_BASE_URL);
 }
 
-/**
- * @type {import('next').NextConfig}
- */
+/** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  transpilePackages: ['three'],
+
   ...(isStaticExport
     ? {
         output: 'export',
         images: { unoptimized: true },
       }
-    : {}),
+    : {
+        images: {
+          remotePatterns: [
+            { protocol: 'https', hostname: '**.amazonaws.com', pathname: '/**' },
+            { protocol: 'https', hostname: '**.cloudfront.net', pathname: '/**' },
+            { protocol: 'https', hostname: 'images.unsplash.com', pathname: '/**' },
+          ],
+        },
+        async redirects() {
+          return STUDIO_TUTORIAL_REDIRECTS;
+        },
+        async rewrites() {
+          const mediaUrl = resolveMediaOrigin();
+          if (!mediaUrl && process.env.NODE_ENV === 'production') {
+            throw new Error(
+              `Thiếu ${ENV.MEDIA_SERVICE_URL} hoặc ${ENV.NEXT_PUBLIC_API_BASE_URL} cho rewrite /media`,
+            );
+          }
+          const mediaRule = mediaUrl
+            ? { source: '/media/:path*', destination: `${mediaUrl}/:path*` }
+            : null;
 
-  async redirects() {
-    return [
-      { source: '/studio/tutorial', destination: '/studio/learning-path', permanent: false },
-      { source: '/studio/tutorial/new', destination: '/studio/learning-path', permanent: false },
-      { source: '/studio/tutorial/:slug', destination: '/studio/learning-path', permanent: false },
-    ];
-  },
+          if (process.env.NODE_ENV !== 'development') {
+            return mediaRule ? [mediaRule] : [];
+          }
 
-  async rewrites() {
-    if (isStaticExport) {
-      return [];
-    }
-    const mediaUrl = resolveMediaOrigin();
-    if (!mediaUrl && process.env.NODE_ENV === 'production') {
-      throw new Error(
-        `Thiếu ${ENV.MEDIA_SERVICE_URL} hoặc ${ENV.NEXT_PUBLIC_API_BASE_URL} cho rewrite /media`,
-      );
-    }
-    const mediaRule = mediaUrl
-      ? { source: '/media/:path*', destination: `${mediaUrl}/:path*` }
-      : null;
+          const apiOrigin = resolveApiProxyOrigin();
+          if (!apiOrigin) {
+            return mediaRule ? [mediaRule] : [];
+          }
 
-    if (process.env.NODE_ENV !== 'development') {
-      return mediaRule ? [mediaRule] : [];
-    }
-
-    const apiOrigin = resolveApiProxyOrigin();
-    if (!apiOrigin) {
-      return mediaRule ? [mediaRule] : [];
-    }
-
-    const apiRules = UNIFIED_API_ROUTE_SEGMENTS.flatMap((segment) => [
-      {
-        source: `/api/${segment}/:path*`,
-        destination: `${apiOrigin}/api/${segment}/:path*`,
-      },
-      {
-        source: `/api/${segment}`,
-        destination: `${apiOrigin}/api/${segment}`,
-      },
-    ]);
-    const authRules = [
-      { source: '/auth/:path*', destination: `${apiOrigin}/auth/:path*` },
-      { source: '/auth', destination: `${apiOrigin}/auth` },
-      { source: '/upload/:path*', destination: `${apiOrigin}/upload/:path*` },
-      { source: '/upload/avatar', destination: `${apiOrigin}/upload/avatar` },
-      { source: '/upload', destination: `${apiOrigin}/upload` },
-      { source: '/files/:path*', destination: `${apiOrigin}/files/:path*` },
-      { source: '/files', destination: `${apiOrigin}/files` },
-    ];
-    return mediaRule ? [mediaRule, ...apiRules, ...authRules] : [...apiRules, ...authRules];
-  },
-
-  async headers() {
-    return [
-      {
-        source: '/:path*',
-        headers: [
-          { key: 'X-Content-Type-Options', value: 'nosniff' },
-          { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
-          { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
-          { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
-        ],
-      },
-    ];
-  },
-
-  images: {
-    remotePatterns: [
-      { protocol: 'https', hostname: '**.amazonaws.com', pathname: '/**' },
-      { protocol: 'https', hostname: '**.cloudfront.net', pathname: '/**' },
-      { protocol: 'https', hostname: 'images.unsplash.com', pathname: '/**' },
-    ],
-  },
-
-  transpilePackages: ['three'],
+          const apiRules = UNIFIED_API_ROUTE_SEGMENTS.flatMap((segment) => [
+            {
+              source: `/api/${segment}/:path*`,
+              destination: `${apiOrigin}/api/${segment}/:path*`,
+            },
+            {
+              source: `/api/${segment}`,
+              destination: `${apiOrigin}/api/${segment}`,
+            },
+          ]);
+          const authRules = [
+            { source: '/auth/:path*', destination: `${apiOrigin}/auth/:path*` },
+            { source: '/auth', destination: `${apiOrigin}/auth` },
+            { source: '/upload/:path*', destination: `${apiOrigin}/upload/:path*` },
+            { source: '/upload/avatar', destination: `${apiOrigin}/upload/avatar` },
+            { source: '/upload', destination: `${apiOrigin}/upload` },
+            { source: '/files/:path*', destination: `${apiOrigin}/files/:path*` },
+            { source: '/files', destination: `${apiOrigin}/files` },
+          ];
+          return mediaRule ? [mediaRule, ...apiRules, ...authRules] : [...apiRules, ...authRules];
+        },
+        async headers() {
+          return [
+            {
+              source: '/:path*',
+              headers: [
+                { key: 'X-Content-Type-Options', value: 'nosniff' },
+                { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+                { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
+                {
+                  key: 'Permissions-Policy',
+                  value: 'camera=(), microphone=(), geolocation=()',
+                },
+              ],
+            },
+          ];
+        },
+      }),
 
   webpack: (config, { dev, isServer }) => {
     if (dev && !isServer && process.env.WATCHPACK_POLLING === '1') {
