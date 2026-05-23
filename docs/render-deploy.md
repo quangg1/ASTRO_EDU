@@ -1,91 +1,69 @@
 # Triển khai Galaxies lên Render
 
-Blueprint dùng **tên biến** và `fromService` — không hardcode URL trong repo. Danh sách biến: [`shared/envNames.js`](../shared/envNames.js). Đường dẫn app: [`shared/appPaths.js`](../shared/appPaths.js).
+Blueprint: API Node + **client Static Site (CDN)**. Biến: [`shared/envNames.js`](../shared/envNames.js).
 
 ## Sơ đồ
 
 ```mermaid
 flowchart LR
   subgraph Render["Render"]
-    WEB["galaxies-web"]
-    API["galaxies-api"]
+    WEB["galaxies-web\nruntime: static\nout/"]
+    API["galaxies-api\nNode"]
   end
   USER((User)) --> WEB
-  WEB -->|"NEXT_PUBLIC_API_BASE_URL"| API
-  WEB -->|"MEDIA_SERVICE_URL /media"| API
+  WEB -->|NEXT_PUBLIC_API_BASE_URL| API
+  WEB -.->|tùy chọn NEXT_PUBLIC_AI_SERVICE_URL| AI[AI Python]
   API --> MONGO[(MONGODB_URI)]
-  API --> VNPay[VNPay]
 ```
 
-| Service | Build | Start |
-|---------|-------|-------|
-| `galaxies-api` | `npm run install:all` | `cd services/api && npm start` |
-| `galaxies-web` | `npm ci && npm run build` (`client/`) | `npm start` |
+| Service | Loại | Build |
+|---------|------|-------|
+| `galaxies-api` | Web Node | `npm run install:all` → `cd services/api && npm start` |
+| `galaxies-web` | **Static Site** | `npm ci && npm run build:static` → publish `client/out/` |
 
 File: [`render.yaml`](../render.yaml).
 
-## Liên kết URL giữa service (Blueprint)
+## Static site (`galaxies-web`)
 
-Render inject `RENDER_EXTERNAL_URL` trên mỗi web service. Blueprint map:
+- Build: `npm run build:static` (`RENDER_STATIC=true`, export ra `out/`).
+- Không chạy `next start` — chỉ file tĩnh + CDN Render.
+- API gọi từ trình duyệt qua `NEXT_PUBLIC_API_BASE_URL` (build-time).
+- Trợ lý AI (tùy chọn): set `NEXT_PUBLIC_AI_SERVICE_URL` trỏ service Python public; nếu không có, tính năng AI tắt trên bản static (không còn proxy `/api/chat`).
 
-| Service nhận | Biến | Nguồn |
-|--------------|------|--------|
+Local thử static:
+
+```bash
+cd client
+npm run build:static
+npx serve out
+```
+
+## Liên kết URL (Blueprint)
+
+| Nơi nhận | Biến | Nguồn |
+|----------|------|--------|
 | API | `CLIENT_URL` | `galaxies-web` → `RENDER_EXTERNAL_URL` |
 | API | `API_PUBLIC_URL` | `galaxies-api` → `RENDER_EXTERNAL_URL` |
-| Client | `NEXT_PUBLIC_API_BASE_URL` | `galaxies-api` → `RENDER_EXTERNAL_URL` |
-| Client | `MEDIA_SERVICE_URL` | `galaxies-api` → `RENDER_EXTERNAL_URL` |
+| Static client | `NEXT_PUBLIC_API_BASE_URL` | `galaxies-api` → `RENDER_EXTERNAL_URL` |
+| Static client | `NEXT_PUBLIC_AI_SERVICE_URL` | `sync: false` (nếu deploy AI) |
 
-Sau khi đổi tên service hoặc custom domain: cập nhật env trên Dashboard (hoặc `sync: false` + nhập tay), rồi redeploy **client** (biến `NEXT_PUBLIC_*` lúc build).
+Sau đổi tên service / custom domain: redeploy **cả API và static client** (biến `NEXT_PUBLIC_*` nhúng lúc build).
 
-## Biến bắt buộc khi apply Blueprint
+## Biến bắt buộc
 
-**API (`galaxies-api`):**
+**API:** `MONGODB_URI`, `JWT_SECRET`, `INTERNAL_API_SECRET`, VNPay nếu dùng thanh toán.
 
-- `MONGODB_URI` (`sync: false`)
-- `JWT_SECRET`, `INTERNAL_API_SECRET` (generate hoặc tự nhập)
-- `CLIENT_URL`, `API_PUBLIC_URL` — tự gán qua `fromService` nếu Blueprint hỗ trợ `envVarKey`
-- Thanh toán: `VNPAY_TMN_CODE`, `VNPAY_HASH_SECRET`, `VNPAY_HOST`, `VNPAY_TEST_MODE`
-
-**Client (`galaxies-web`):**
-
-- `NEXT_PUBLIC_API_BASE_URL`, `MEDIA_SERVICE_URL` — từ API service (build-time)
-
-Render tự set `PORT` trên mỗi web service.
+**Static client (build):** `NEXT_PUBLIC_API_BASE_URL`, Firebase `NEXT_PUBLIC_FIREBASE_*` nếu dùng đăng nhập Google/Facebook.
 
 ## VNPay IPN
 
-Trên merchant portal, IPN URL:
+`${API_PUBLIC_URL}` + path `/api/payments/ipn` (xem `shared/appPaths.js`).
 
-```text
-${API_PUBLIC_URL}${paymentsIpn}
-```
+## Node client (thay static)
 
-Với path cố định trong code: `shared/appPaths.js` → `paymentsIpn` = `/api/payments/ipn`.
+Nếu cần `next start` + proxy `/api/chat` dev-style, đổi `galaxies-web` trong `render.yaml` về `runtime: node`, `buildCommand: npm ci && npm run build`, `startCommand: npm start` — không dùng `staticPublishPath`.
 
-Return browser: `${CLIENT_URL}${paymentReturn}` (`/payment/return`).
+## Local env
 
-## Local
-
-- API: copy [`services/api/.env.example`](../services/api/.env.example) → `.env`
-- Client: copy [`client/.env.local.example`](../client/.env.local.example) → `.env.local`
-
-Không có fallback `localhost` trong mã — chỉ file `.env*` mẫu.
-
-## Media production
-
-- Khuyến nghị: `S3_MEDIA_BUCKET` + AWS keys
-- Hoặc bật `disks` trong `render.yaml` (comment sẵn trong file)
-
-## Python (tùy chọn)
-
-Deploy `services/embedding` / `services/ai` riêng, rồi set trên client: `EMBEDDING_URL`, `AI_SERVICE_URL`.
-
-## Kiểm tra
-
-| Kiểm tra | Cách |
-|----------|------|
-| API | `GET ${API_PUBLIC_URL}/health` |
-| CORS | `CLIENT_URL` khớp origin web |
-| OAuth | Redirect `${API_PUBLIC_URL}/auth/google/callback` (và Facebook) |
-
-Xem thêm: [`SERVICES.md`](../SERVICES.md).
+- [`services/api/.env.example`](../services/api/.env.example)
+- [`client/.env.local.example`](../client/.env.local.example)

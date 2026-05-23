@@ -1,5 +1,5 @@
-# Render Blueprint — chỉ tham chiếu tên biến / service; URL do Render inject (RENDER_EXTERNAL_URL).
-# Danh sách biến: shared/envNames.js — hướng dẫn: docs/render-deploy.md
+# Render Blueprint — API (Node) + client (Static Site CDN).
+# Biến: shared/envNames.js — hướng dẫn: docs/render-deploy.md
 
 services:
   - type: web
@@ -71,13 +71,23 @@ services:
 
   - type: web
     name: galaxies-web
-    runtime: node
+    runtime: static
     region: singapore
     plan: starter
     rootDir: client
-    buildCommand: npm ci && npm run build
-    startCommand: npm start
+    buildCommand: npm ci && npm run build:static
+    staticPublishPath: out
     autoDeploy: true
+    headers:
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: Referrer-Policy
+        value: strict-origin-when-cross-origin
+      - path: /*
+        name: X-Frame-Options
+        value: SAMEORIGIN
     envVars:
       - key: NODE_ENV
         value: production
@@ -88,14 +98,13 @@ services:
           type: web
           name: galaxies-api
           envVarKey: RENDER_EXTERNAL_URL
-      - key: MEDIA_SERVICE_URL
-        fromService:
-          type: web
-          name: galaxies-api
-          envVarKey: RENDER_EXTERNAL_URL
-      - key: EMBEDDING_URL
-        sync: false
-      - key: AI_SERVICE_URL
-        sync: false
       - key: NEXT_PUBLIC_MEDIA_CDN
+        sync: false
+      - key: NEXT_PUBLIC_AI_SERVICE_URL
+        sync: false
+      - key: NEXT_PUBLIC_FIREBASE_API_KEY
+        sync: false
+      - key: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+        sync: false
+      - key: NEXT_PUBLIC_FIREBASE_PROJECT_ID
         sync: false

@@ -1,6 +1,9 @@
 /** Tiền tố `/api/...` do unified API phục vụ (`services/api`) — không gồm route nội bộ Next như `/api/chat`. */
 const ENV = require('../shared/envNames');
 
+const isStaticExport =
+  process.env.RENDER_STATIC === 'true' || process.env.NEXT_OUTPUT === 'export';
+
 const UNIFIED_API_ROUTE_SEGMENTS = [
   'courses',
   'tutorials',
@@ -47,6 +50,12 @@ function resolveApiProxyOrigin() {
  */
 const nextConfig = {
   reactStrictMode: true,
+  ...(isStaticExport
+    ? {
+        output: 'export',
+        images: { unoptimized: true },
+      }
+    : {}),
 
   async redirects() {
     return [
@@ -57,6 +66,9 @@ const nextConfig = {
   },
 
   async rewrites() {
+    if (isStaticExport) {
+      return [];
+    }
     const mediaUrl = resolveMediaOrigin();
     if (!mediaUrl && process.env.NODE_ENV === 'production') {
       throw new Error(

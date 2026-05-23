@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { getNasaCatalogItemById, NASA_SHOWCASE_ITEMS } from '@/lib/showcaseEntities'
@@ -148,7 +148,7 @@ function newPanelBlock(type: 'text' | 'image' | 'chart'): ShowcasePanelBlockDTO 
   }
 }
 
-export default function StudioShowcaseEntitiesPage() {
+function StudioShowcaseEntitiesPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const showcaseCatalogGen = useShowcaseCatalogGen()
@@ -1100,5 +1100,19 @@ export default function StudioShowcaseEntitiesPage() {
         )}
       </div>
     </div>
+  )
+}
+
+export default function StudioShowcaseEntitiesPageWithSuspense() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center text-ds-muted text-sm">
+          Đang tải…
+        </div>
+      }
+    >
+      <StudioShowcaseEntitiesPage />
+    </Suspense>
   )
 }

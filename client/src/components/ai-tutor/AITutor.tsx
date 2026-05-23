@@ -8,6 +8,8 @@ import remarkGfm from 'remark-gfm'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useTutorContextStore } from '@/features/courses/public'
 import { useAuthStore } from '@/features/auth/public'
+import { getAiChatUrl } from '@/lib/aiChatUrl'
+import { SearchParamsSuspense } from '@/components/layout/SearchParamsSuspense'
 import {
   mergeTutorActions,
   parseTutorActions,
@@ -145,7 +147,7 @@ function saveMessagesToStorage(key: string, messages: Message[]) {
   }
 }
 
-export function AITutor() {
+function AITutorInner() {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -332,7 +334,7 @@ export function AITutor() {
         body.image_media_type = attachmentImage.type
         setAttachmentImage(null)
       }
-      const res = await fetch('/api/chat', {
+      const res = await fetch(getAiChatUrl(), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
@@ -733,5 +735,13 @@ export function AITutor() {
         </div>
       )}
     </>
+  )
+}
+
+export function AITutor() {
+  return (
+    <SearchParamsSuspense fallback={null}>
+      <AITutorInner />
+    </SearchParamsSuspense>
   )
 }
