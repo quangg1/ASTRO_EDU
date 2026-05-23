@@ -1,0 +1,28 @@
+/**
+ * Studio surface — content authoring tools.
+ *
+ * Compact density (editor needs more room for content), teal accent to
+ * differentiate authoring from consumption surfaces. Backgrounds shift
+ * slightly cooler/darker to reduce visual fatigue during long edit sessions.
+ *
+ * Apply via `<div className="surface-studio">…</div>` at the layout level.
+ */
+
+.surface-studio {
+  --color-bg-base: #08080f;
+  --color-bg-surface: #0c0c18;
+  --color-bg-elevated: #14142a;
+
+  --color-accent: #2dd4bf;                          /* teal-400 */
+  --color-accent-soft: rgba(45, 212, 191, 0.10);
+  --color-accent-strong: rgba(45, 212, 191, 0.30);
+  --color-accent-fg: #042f2e;
+
+  --density-pad-x: 10px;
+  --density-pad-y: 6px;
+  --density-content: 12px;
+  --density-gap: 8px;
+
+  --radius-card: 8px;
+  --radius-control: 8px;
+}

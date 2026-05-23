@@ -3,9 +3,11 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useAuthStore } from '@/features/auth/public'
-import { updateProfile, changePassword, deactivateMyAccount } from '@/features/auth/api/authApi'
+import { useAuthStore, updateProfile, changePassword, deactivateMyAccount } from '@/features/auth/public'
 import { canModerate } from '@/lib/roles'
+import { ProfileAvatarEditor } from '@/components/profile/ProfileAvatarEditor'
+import { AvatarDecorationPicker } from '@/components/profile/AvatarDecorationPicker'
+import { Button, Input } from '@/design-system'
 
 function isStudentRole(role: string | undefined) {
   return role === 'student'
@@ -27,7 +29,6 @@ export default function ProfilePage() {
   const [loadingPassword, setLoadingPassword] = useState(false)
   const [loadingDeactivate, setLoadingDeactivate] = useState(false)
   const [deactivateError, setDeactivateError] = useState('')
-
   useEffect(() => {
     if (checked && !user) {
       router.replace('/login?redirect=/profile')
@@ -44,14 +45,17 @@ export default function ProfilePage() {
     setProfileMessage(null)
     setProfileError('')
     setLoadingProfile(true)
-    const res = await updateProfile({ displayName: displayName.trim() || undefined, avatar: avatar.trim() || undefined })
+    const res = await updateProfile({
+      displayName: displayName.trim() || undefined,
+      avatar: avatar.trim() || undefined,
+    })
     setLoadingProfile(false)
     if (res.success && res.user) {
       useAuthStore.getState().setUser(res.user)
       setProfileMessage('success')
     } else {
       setProfileMessage('error')
-      setProfileError(res.error || 'Update failed')
+      setProfileError(res.error || 'Cập nhật thất bại')
     }
   }
 
@@ -60,12 +64,12 @@ export default function ProfilePage() {
     setPasswordMessage(null)
     setPasswordError('')
     if (newPassword !== confirmPassword) {
-      setPasswordError('New password and confirmation do not match')
+      setPasswordError('Mật khẩu mới và xác nhận không khớp')
       setPasswordMessage('error')
       return
     }
     if (newPassword.length < 6) {
-      setPasswordError('New password must be at least 6 characters')
+      setPasswordError('Mật khẩu mới tối thiểu 6 ký tự')
       setPasswordMessage('error')
       return
     }
@@ -79,12 +83,14 @@ export default function ProfilePage() {
       setConfirmPassword('')
     } else {
       setPasswordMessage('error')
-      setPasswordError(res.error || 'Password change failed')
+      setPasswordError(res.error || 'Đổi mật khẩu thất bại')
     }
   }
 
   const handleDeactivateAccount = async () => {
-    const confirmed = window.confirm('Tài khoản sẽ được đánh dấu ngừng hoạt động thay vì xóa hẳn. Bạn có chắc chắn muốn tiếp tục?')
+    const confirmed = window.confirm(
+      'Tài khoản sẽ được đánh dấu ngừng hoạt động thay vì xóa hẳn. Bạn có chắc chắn muốn tiếp tục?',
+    )
     if (!confirmed) return
     setDeactivateError('')
     setLoadingDeactivate(true)
@@ -101,7 +107,7 @@ export default function ProfilePage() {
   if (!checked || !user) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
-        <p className="text-gray-500">Loading...</p>
+        <p className="text-gray-500">Đang tải…</p>
       </div>
     )
   }
@@ -110,16 +116,23 @@ export default function ProfilePage() {
     <div className="min-h-screen bg-black">
       <main className="pt-20 px-4 pb-12 max-w-lg mx-auto">
         <Link href="/" className="text-sm text-cyan-400 hover:text-cyan-300 mb-6 inline-block">
-          ← Back to home
+          ← Về trang chủ
         </Link>
-        <h1 className="text-2xl font-bold text-white mb-6">Profile</h1>
+        <h1 className="text-2xl font-bold text-white mb-2">Hồ sơ</h1>
+        <p className="text-sm text-slate-500 mb-6">Tên hiển thị và ảnh đại diện dùng trên header và các khu vực có tài khoản.</p>
 
         <div className="flex flex-wrap gap-3 mb-8">
           <Link
             href="/my-courses"
             className="px-4 py-2 rounded-lg bg-cyan-600/20 border border-cyan-500/30 text-cyan-300 text-sm hover:bg-cyan-600/30"
           >
-            My Learning
+            Học của tôi
+          </Link>
+          <Link
+            href="/gem"
+            className="px-4 py-2 rounded-lg bg-violet-500/15 border border-violet-500/35 text-violet-200 text-sm hover:bg-violet-500/25"
+          >
+            Ví Gem
           </Link>
           {isStudentRole(user.role) && (
             <Link
@@ -144,124 +157,129 @@ export default function ProfilePage() {
           )}
           {user.role === 'admin' && (
             <Link href="/admin" className="px-4 py-2 rounded-lg bg-amber-500/20 border border-amber-500/30 text-amber-300 text-sm hover:bg-amber-500/30">
-              Admin
+              Quản trị
             </Link>
           )}
         </div>
 
-        {/* Basic info */}
         <section className="glass rounded-2xl p-6 mb-8">
-          <h2 className="text-lg font-semibold text-cyan-300 mb-4">Details</h2>
-          <form onSubmit={handleSaveProfile} className="space-y-4">
+          <h2 className="text-lg font-semibold text-cyan-300 mb-4">Ảnh đại diện & tên</h2>
+          <form onSubmit={handleSaveProfile} className="space-y-6">
+            <ProfileAvatarEditor
+              avatarUrl={avatar}
+              displayName={displayName}
+              email={user.email}
+              onAvatarChange={setAvatar}
+              disabled={loadingProfile}
+              onUploadSuccess={async (url) => {
+                setProfileMessage(null)
+                setProfileError('')
+                setLoadingProfile(true)
+                const res = await updateProfile({ avatar: url })
+                setLoadingProfile(false)
+                if (res.success && res.user) {
+                  useAuthStore.getState().setUser(res.user)
+                  setProfileMessage('success')
+                } else {
+                  setProfileMessage('error')
+                  setProfileError(res.error || 'Ảnh đã tải lên nhưng lưu hồ sơ thất bại.')
+                }
+              }}
+            />
             <div>
-              <label className="block text-sm text-gray-400 mb-1">Display name</label>
-              <input
+              <label className="block text-sm text-gray-400 mb-1">Tên hiển thị</label>
+              <Input
                 type="text"
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
-                className="w-full px-4 py-2.5 rounded-lg bg-white/10 border border-white/20 text-white placeholder-gray-500 focus:border-cyan-500 focus:outline-none"
-                placeholder="Your name"
+                placeholder="Tên của bạn"
               />
             </div>
-            <div>
-              <label className="block text-sm text-gray-400 mb-1">Avatar (URL)</label>
-              <input
-                type="url"
-                value={avatar}
-                onChange={(e) => setAvatar(e.target.value)}
-                className="w-full px-4 py-2.5 rounded-lg bg-white/10 border border-white/20 text-white placeholder-gray-500 focus:border-cyan-500 focus:outline-none"
-                placeholder="https://..."
-              />
-            </div>
-            <p className="text-xs text-gray-500">Email: {user.email || '—'} (signed in with {user.provider})</p>
-            {profileMessage === 'success' && (
-              <p className="text-sm text-green-400">Profile updated.</p>
-            )}
-            {profileMessage === 'error' && (
-              <p className="text-sm text-red-400">{profileError}</p>
-            )}
-            <button
-              type="submit"
-              disabled={loadingProfile}
-              className="w-full py-2.5 rounded-lg bg-cyan-600 text-white font-medium hover:bg-cyan-500 disabled:opacity-50"
-            >
-              {loadingProfile ? 'Saving...' : 'Save changes'}
-            </button>
+            <p className="text-xs text-gray-500">
+              Email: {user.email || '—'} · Đăng nhập qua {user.provider}
+            </p>
+            {profileMessage === 'success' && <p className="text-sm text-green-400">Đã lưu hồ sơ.</p>}
+            {profileMessage === 'error' && <p className="text-sm text-red-400">{profileError}</p>}
+            <Button type="submit" disabled={loadingProfile} className="w-full">
+              {loadingProfile ? 'Đang lưu…' : 'Lưu thay đổi'}
+            </Button>
+            <p className="text-xs text-slate-500">
+              Ảnh tải lên được lưu tự động sau khi CDN trả link. Đổi tên hiển thị thì nhấn «Lưu thay đổi».
+            </p>
           </form>
         </section>
 
-        {/* Change password (local accounts only) */}
+        <section className="glass rounded-2xl p-6 mb-8">
+          <h2 className="text-lg font-semibold text-violet-300 mb-2">Trang trí avatar</h2>
+          <p className="text-sm text-slate-500 mb-4">
+            Chọn một trang trí để xem trước trên avatar — sau khi nhận/mua, bấm «Đeo» để hiện trên hồ sơ và header.
+            Ảnh đại diện ở mục trên không đổi.
+          </p>
+          <AvatarDecorationPicker avatarUrl={avatar} displayName={displayName} email={user.email} />
+        </section>
+
         {user.provider === 'local' && (
-          <section className="glass rounded-2xl p-6">
-            <h2 className="text-lg font-semibold text-cyan-300 mb-4">Change password</h2>
+          <section className="glass rounded-2xl p-6 mb-8">
+            <h2 className="text-lg font-semibold text-cyan-300 mb-4">Đổi mật khẩu</h2>
             <form onSubmit={handleChangePassword} className="space-y-4">
               <div>
-                <label className="block text-sm text-gray-400 mb-1">Current password</label>
-                <input
+                <label className="block text-sm text-gray-400 mb-1">Mật khẩu hiện tại</label>
+                <Input
                   type="password"
                   value={currentPassword}
                   onChange={(e) => setCurrentPassword(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-lg bg-white/10 border border-white/20 text-white placeholder-gray-500 focus:border-cyan-500 focus:outline-none"
                   placeholder="••••••••"
                 />
               </div>
               <div>
-                <label className="block text-sm text-gray-400 mb-1">New password</label>
-                <input
+                <label className="block text-sm text-gray-400 mb-1">Mật khẩu mới</label>
+                <Input
                   type="password"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-lg bg-white/10 border border-white/20 text-white placeholder-gray-500 focus:border-cyan-500 focus:outline-none"
                   placeholder="••••••••"
                   minLength={6}
                 />
               </div>
               <div>
-                <label className="block text-sm text-gray-400 mb-1">Confirm new password</label>
-                <input
+                <label className="block text-sm text-gray-400 mb-1">Xác nhận mật khẩu mới</label>
+                <Input
                   type="password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-lg bg-white/10 border border-white/20 text-white placeholder-gray-500 focus:border-cyan-500 focus:outline-none"
                   placeholder="••••••••"
                 />
               </div>
-              {passwordMessage === 'success' && (
-                <p className="text-sm text-green-400">Password changed.</p>
-              )}
-              {passwordMessage === 'error' && (
-                <p className="text-sm text-red-400">{passwordError}</p>
-              )}
-              <button
-                type="submit"
-                disabled={loadingPassword}
-                className="w-full py-2.5 rounded-lg bg-white/15 border border-white/20 text-white font-medium hover:bg-white/25 disabled:opacity-50"
-              >
-                {loadingPassword ? 'Processing...' : 'Change password'}
-              </button>
+              {passwordMessage === 'success' && <p className="text-sm text-green-400">Đã đổi mật khẩu.</p>}
+              {passwordMessage === 'error' && <p className="text-sm text-red-400">{passwordError}</p>}
+              <Button type="submit" variant="secondary" disabled={loadingPassword} className="w-full">
+                {loadingPassword ? 'Đang xử lý…' : 'Đổi mật khẩu'}
+              </Button>
             </form>
           </section>
         )}
 
-        <p className="mt-6 text-center">
+        <p className="text-center">
           <Link href="/forgot-password" className="text-sm text-cyan-400 hover:text-cyan-300">
-            Forgot password?
+            Quên mật khẩu?
           </Link>
         </p>
+
         <section className="glass rounded-2xl p-6 mt-8 border border-red-500/20">
           <h2 className="text-lg font-semibold text-red-300 mb-2">Ngừng hoạt động tài khoản</h2>
           <p className="text-sm text-gray-400 mb-4">
             Tài khoản sẽ không bị xóa vĩnh viễn. Hệ thống chỉ đánh dấu ngừng hoạt động để có thể khôi phục hoặc kiểm tra khi cần.
           </p>
           {deactivateError ? <p className="text-sm text-red-400 mb-3">{deactivateError}</p> : null}
-          <button
+          <Button
             type="button"
+            variant="secondary"
             onClick={handleDeactivateAccount}
             disabled={loadingDeactivate}
-            className="w-full py-2.5 rounded-lg bg-red-600/20 border border-red-500/30 text-red-200 font-medium hover:bg-red-600/30 disabled:opacity-50"
+            className="w-full border-red-500/30 text-red-200 hover:bg-red-600/20"
           >
-            {loadingDeactivate ? 'Đang xử lý...' : 'Ngừng hoạt động tài khoản'}
-          </button>
+            {loadingDeactivate ? 'Đang xử lý…' : 'Ngừng hoạt động tài khoản'}
+          </Button>
         </section>
       </main>
     </div>

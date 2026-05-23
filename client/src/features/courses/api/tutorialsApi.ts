@@ -10,6 +10,10 @@ export interface TutorialCategory {
   order: number
 }
 
+/**
+ * @legacy Layer 3 — không thêm block type mới. Nội dung mới dùng `LessonSection` (Course/LP).
+ * Migration: convert tutorial → LP lesson khi cần BlockEditor.
+ */
 export interface TutorialSection {
   type: string
   title?: string

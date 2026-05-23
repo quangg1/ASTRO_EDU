@@ -7,7 +7,7 @@ import { ChevronDown, ChevronUp, Layers } from 'lucide-react'
 import { useAuthStore } from '@/features/auth/public'
 import { fetchMyCourses, type MyCourse } from '@/features/courses/api/coursesApi'
 import { SkeletonList } from '@/components/ui/Skeleton'
-import { fetchMyOrders, type Order } from '@/features/payment/api/paymentApi'
+import { fetchMyOrders, type Order } from '@/features/payment/public'
 import { getLessonById } from '@/data/learningPathCurriculum'
 import {
   computeProgressPercent,

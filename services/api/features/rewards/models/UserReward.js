@@ -12,6 +12,10 @@ const userRewardSchema = new mongoose.Schema(
     streakShields: { type: Number, default: 0, min: 0 },
     /** UTC calendar day string YYYY-MM-DD of last streak bump */
     lastStreakDay: { type: String, default: '' },
+    /** SKU `avatar_decoration` đã mua (sở hữu vĩnh viễn). */
+    ownedDecorationSkus: { type: [String], default: [] },
+    /** SKU trang trí đang đeo quanh avatar (null = không đeo). */
+    equippedDecorationSkuId: { type: String, default: null },
   },
   { timestamps: true, minimize: false },
 );

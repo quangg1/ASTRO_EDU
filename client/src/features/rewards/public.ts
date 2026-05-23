@@ -11,3 +11,46 @@ export {
 } from './lib/gemWallet'
 export type { GemTransaction, GemWalletState } from './lib/gemWallet'
 export * from './api/showcaseGamificationApi'
+export {
+  fetchGemShopBootstrap,
+  fetchGemShopCatalogPublic,
+} from './api/gemShopPublicApi'
+export type { GemShopBootstrapDTO, GemShopCatalogItemDTO } from './api/gemShopPublicApi'
+export {
+  AVATAR_DECORATION_CATEGORY,
+  DECORATION_CATEGORY_FALLBACK_ALL,
+  DECORATION_CATEGORY_UNCATEGORIZED,
+  DECORATION_ADMIN_UNASSIGNED,
+  DECORATION_UPDATED_EVENT,
+  DEFAULT_DECORATION_BULK_GEM,
+  isDecorCategoryBannerSlug,
+} from './constants/avatarDecoration'
+export {
+  sectionsFromDecorationResponse,
+  flatItemsFromSections,
+  formatDecorationPrice,
+} from './lib/decorationCatalog'
+export {
+  fetchDecorationCatalog,
+  fetchMyDecorationState,
+  purchaseAvatarDecoration,
+  equipAvatarDecoration,
+  bulkUploadDecorationOverlaysAdmin,
+  uploadDecorationCategoryBannerAdmin,
+} from './api/avatarDecorationApi'
+export type {
+  AvatarDecorationCatalogItem,
+  AvatarDecorationCategorySection,
+  AvatarDecorationState,
+  DecorationBulkImportResult,
+} from './api/avatarDecorationApi'
+export { useEquippedDecoration } from './hooks/useEquippedDecoration'
+
+// Solar journey milestone cache + sync (dashboard / gamification) — PR10
+export {
+  getSolarJourneyStorageKey,
+  loadCompletedMilestoneIds,
+  saveCompletedMilestoneIds,
+  syncSolarJourneyProgress,
+  pushSolarJourneyProgress,
+} from './lib/solarJourneyProgress'

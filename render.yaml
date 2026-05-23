@@ -1,0 +1,101 @@
+# Render Blueprint — chỉ tham chiếu tên biến / service; URL do Render inject (RENDER_EXTERNAL_URL).
+# Danh sách biến: shared/envNames.js — hướng dẫn: docs/render-deploy.md
+
+services:
+  - type: web
+    name: galaxies-api
+    runtime: node
+    region: singapore
+    plan: starter
+    buildCommand: npm run install:all
+    startCommand: cd services/api && npm start
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: "22"
+      - key: MONGODB_URI
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: INTERNAL_API_SECRET
+        generateValue: true
+      - key: CLIENT_URL
+        fromService:
+          type: web
+          name: galaxies-web
+          envVarKey: RENDER_EXTERNAL_URL
+      - key: API_PUBLIC_URL
+        fromService:
+          type: web
+          name: galaxies-api
+          envVarKey: RENDER_EXTERNAL_URL
+      - key: VNPAY_TMN_CODE
+        sync: false
+      - key: VNPAY_HASH_SECRET
+        sync: false
+      - key: VNPAY_HOST
+        sync: false
+      - key: VNPAY_TEST_MODE
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: FACEBOOK_APP_ID
+        sync: false
+      - key: FACEBOOK_APP_SECRET
+        sync: false
+      - key: FIREBASE_SERVICE_ACCOUNT_JSON
+        sync: false
+      - key: S3_MEDIA_BUCKET
+        sync: false
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+      - key: AWS_REGION
+        sync: false
+      - key: MEDIA_CDN_URL
+        sync: false
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: MAIL_FROM
+        sync: false
+
+  - type: web
+    name: galaxies-web
+    runtime: node
+    region: singapore
+    plan: starter
+    rootDir: client
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: "22"
+      - key: NEXT_PUBLIC_API_BASE_URL
+        fromService:
+          type: web
+          name: galaxies-api
+          envVarKey: RENDER_EXTERNAL_URL
+      - key: MEDIA_SERVICE_URL
+        fromService:
+          type: web
+          name: galaxies-api
+          envVarKey: RENDER_EXTERNAL_URL
+      - key: EMBEDDING_URL
+        sync: false
+      - key: AI_SERVICE_URL
+        sync: false
+      - key: NEXT_PUBLIC_MEDIA_CDN
+        sync: false

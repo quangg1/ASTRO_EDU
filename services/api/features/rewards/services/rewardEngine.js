@@ -4,9 +4,10 @@ const UserReward = require('../models/UserReward');
 const GemTransaction = require('../models/GemTransaction');
 const Achievement = require('../models/Achievement');
 const UserAchievement = require('../models/UserAchievement');
+const { DWELL_SEC_MIN, GEM_EARN, depthGemsMap } = require('../constants/gemEarn');
+const { getCachedSeasonalMultiplier, scaleEarn } = require('./gemRuntimeConfigService');
 
-const DWELL_SEC_MIN = 60;
-const DEPTH_GEMS = { beginner: 8, explorer: 14, researcher: 20 };
+const DEPTH_GEMS = depthGemsMap();
 
 function computeLevel(totalGemsEarned) {
   const t = Math.max(0, Number(totalGemsEarned) || 0);
@@ -164,6 +165,8 @@ async function sceneDiscoveryRewarded(userId, entityId) {
 async function processLearningPathRewardEvent(userId, ev) {
   if (!userId || !ev) return null;
 
+  const seasonalMult = await getCachedSeasonalMultiplier();
+
   if (ev.eventName === 'lp_lesson_completed_toggled' && ev.completed === true && ev.lessonId) {
     const lessonId = String(ev.lessonId);
     const sessionId = String(ev.sessionId || '');
@@ -179,7 +182,7 @@ async function processLearningPathRewardEvent(userId, ev) {
     if (dwellSec >= DWELL_SEC_MIN) {
       const already = await lessonDwellRewardedToday(userId, lessonId);
       if (!already) {
-        total += 5;
+        total += GEM_EARN.lp_complete_dwell;
         parts.push('complete_lesson');
         labels.push('Hoàn thành bài (đủ thời gian đọc)');
       }
@@ -196,27 +199,33 @@ async function processLearningPathRewardEvent(userId, ev) {
 
     if (total <= 0) return null;
 
+    let gemsEarned = 0;
     let agg = null;
     let levelUpAny = false;
     if (parts.includes('complete_lesson')) {
-      agg = await applyGemEarn(userId, 5, {
+      const amt = scaleEarn(GEM_EARN.lp_complete_dwell, seasonalMult);
+      gemsEarned += amt;
+      agg = await applyGemEarn(userId, amt, {
         reason: 'lp_complete_dwell',
         lessonId,
         nodeId: ev.nodeId || null,
         depth,
         sessionId: sessionId || null,
-        metadata: { dwellSec },
+        metadata: { dwellSec, seasonalMultiplier: seasonalMult },
       });
       if (agg?.levelUp) levelUpAny = true;
     }
     if (depth && parts.includes(`depth_${depth}`)) {
-      const r2 = await applyGemEarn(userId, DEPTH_GEMS[depth], {
+      const baseDepth = DEPTH_GEMS[depth];
+      const amt = scaleEarn(baseDepth, seasonalMult);
+      gemsEarned += amt;
+      const r2 = await applyGemEarn(userId, amt, {
         reason: 'depth_complete',
         lessonId,
         nodeId: ev.nodeId || null,
         depth,
         sessionId: sessionId || null,
-        metadata: {},
+        metadata: { seasonalMultiplier: seasonalMult },
       });
       if (r2) {
         agg = r2;
@@ -228,7 +237,7 @@ async function processLearningPathRewardEvent(userId, ev) {
     const streakResult = await updateStreak(userId, urAfter);
     const newAchievements = await checkAchievements(userId);
     return {
-      gemsEarned: total,
+      gemsEarned,
       newBalance: urAfter?.gemBalance ?? agg?.updated?.gemBalance ?? 0,
       levelUp: levelUpAny,
       newAchievements,
@@ -241,19 +250,20 @@ async function processLearningPathRewardEvent(userId, ev) {
     const lessonId = String(ev.lessonId);
     const meta = ev.metadata && typeof ev.metadata === 'object' ? ev.metadata : {};
     const firstRecall = meta.firstRecallPass !== false;
-    let gems = firstRecall ? 8 : 3;
+    let base = firstRecall ? GEM_EARN.recall_quiz_first : GEM_EARN.recall_quiz_retry;
     if (firstRecall) {
       const existed = await GemTransaction.exists({ userId, lessonId, reason: 'recall_quiz_first' });
-      if (existed) gems = 3;
+      if (existed) base = GEM_EARN.recall_quiz_retry;
     }
-    const reason = gems === 8 ? 'recall_quiz_first' : 'recall_quiz_retry';
+    const gems = scaleEarn(base, seasonalMult);
+    const reason = base === GEM_EARN.recall_quiz_first ? 'recall_quiz_first' : 'recall_quiz_retry';
     const agg = await applyGemEarn(userId, gems, {
       reason,
       lessonId,
       nodeId: ev.nodeId || null,
       depth: ev.depth || null,
       sessionId: ev.sessionId || null,
-      metadata: { firstRecall },
+      metadata: { firstRecall, seasonalMultiplier: seasonalMult },
     });
     if (!agg) return null;
     const urAfter = await UserReward.findOne({ userId }).lean();
@@ -265,7 +275,7 @@ async function processLearningPathRewardEvent(userId, ev) {
       levelUp: agg.levelUp,
       newAchievements,
       streakResult,
-      label: gems === 8 ? 'Quiz nhớ — lần đầu đạt' : 'Quiz nhớ — ôn lại đạt',
+      label: reason === 'recall_quiz_first' ? 'Quiz nhớ — lần đầu đạt' : 'Quiz nhớ — ôn lại đạt',
     };
   }
 
@@ -281,18 +291,19 @@ async function processLearningPathRewardEvent(userId, ev) {
     const rewarded = await sceneDiscoveryRewarded(userId, entityId);
     if (rewarded) return null;
 
-    const agg = await applyGemEarn(userId, 5, {
+    const amt = scaleEarn(GEM_EARN.scene_entity_discovered, seasonalMult);
+    const agg = await applyGemEarn(userId, amt, {
       reason: 'scene_entity_discovered',
       entityId,
       sessionId: ev.sessionId || null,
-      metadata: { rarity: meta.rarity || null },
+      metadata: { rarity: meta.rarity || null, seasonalMultiplier: seasonalMult },
     });
     if (!agg) return null;
     const urAfter = await UserReward.findOne({ userId }).lean();
     const streakResult = await updateStreak(userId, urAfter);
     const newAchievements = await checkAchievements(userId);
     return {
-      gemsEarned: 5,
+      gemsEarned: amt,
       newBalance: agg.updated.gemBalance,
       levelUp: agg.levelUp,
       newAchievements,

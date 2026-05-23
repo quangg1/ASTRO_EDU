@@ -33,19 +33,19 @@ export function ShowcaseMediaUrlField({ label, description, value, onChange, acc
   return (
     <div className="space-y-1">
       <div className="flex items-baseline justify-between gap-2">
-        <label htmlFor={urlInputId} className="block text-xs text-slate-400">
+        <label htmlFor={urlInputId} className="block text-xs text-ds-muted">
           {label}
         </label>
         <button
           type="button"
           disabled={uploading}
           onClick={() => fileRef.current?.click()}
-          className="text-xs text-cyan-400 hover:text-cyan-300 cursor-pointer shrink-0 disabled:opacity-50"
+          className="text-xs text-ds-accent hover:text-ds-accent cursor-pointer shrink-0 disabled:opacity-50"
         >
           {uploading ? 'Đang tải…' : 'Upload → CDN'}
         </button>
       </div>
-      {description ? <p className="text-[11px] text-slate-500 leading-snug">{description}</p> : null}
+      {description ? <p className="text-[11px] text-ds-subtle leading-snug">{description}</p> : null}
       <input ref={fileRef} type="file" accept={accept} className="sr-only" onChange={(e) => void onPick(e)} />
       <input
         id={urlInputId}
@@ -53,7 +53,7 @@ export function ShowcaseMediaUrlField({ label, description, value, onChange, acc
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder="https://… hoặc /files/… sau upload"
-        className="w-full mt-0.5 rounded-lg bg-black/50 border border-white/15 px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-cyan-500/50 focus:outline-none font-mono text-[12px]"
+        className="w-full mt-0.5 rounded-lg bg-black/50 border border-ds-border-strong px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-ds-accent focus:outline-none font-mono text-[12px]"
       />
       {err ? <p className="text-[11px] text-rose-400">{err}</p> : null}
     </div>

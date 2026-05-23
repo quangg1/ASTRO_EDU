@@ -3,12 +3,12 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useAuthStore } from '@/features/auth/public'
 import {
+  useAuthStore,
   fetchMyTeacherApplicationStatus,
   submitTeacherApplication,
   type TeacherApplication,
-} from '@/features/auth/api/authApi'
+} from '@/features/auth/public'
 
 const BIO_MIN = 30
 

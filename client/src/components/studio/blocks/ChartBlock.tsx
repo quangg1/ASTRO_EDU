@@ -83,8 +83,6 @@ function ChartRenderer({ chartType, chartData }: { chartType: string; chartData:
   )
 }
 
-const inputCls = 'w-full rounded-lg bg-black/50 border border-white/15 px-3 py-2 text-white text-sm focus:border-cyan-500/50 focus:outline-none'
-
 interface Props {
   section: LessonSection
   update: (p: Partial<LessonSection>) => void
@@ -115,7 +113,7 @@ export default function ChartBlock({ section, update, editMode }: Props) {
               type="button"
               onClick={() => update({ chartType: t })}
               className={`px-3 py-1.5 rounded-lg text-xs font-medium capitalize transition-colors ${
-                chartType === t ? 'bg-cyan-600 text-white' : 'bg-white/5 text-gray-400 hover:bg-white/10'
+                chartType === t ? 'bg-cyan-600 text-white' : 'bg-white/5 text-ds-muted hover:bg-white/10'
               }`}
             >
               {t}
@@ -127,10 +125,10 @@ export default function ChartBlock({ section, update, editMode }: Props) {
           onChange={(e) => setDataFromStr(e.target.value)}
           rows={6}
           placeholder='[{"x": 0, "y": 0}, {"x": 1, "y": 2}] or [{"name": "A", "value": 10}] for pie'
-          className={`${inputCls} font-mono text-xs`}
+          className={`studio-field font-mono text-xs`}
           spellCheck={false}
         />
-        <div className="rounded-xl border border-cyan-500/20 bg-black/30 p-4">
+        <div className="rounded-xl border border-ds-accent-strong bg-black/30 p-4">
           <ChartRenderer chartType={chartType} chartData={chartData} />
         </div>
       </div>
@@ -138,7 +136,7 @@ export default function ChartBlock({ section, update, editMode }: Props) {
   }
 
   return (
-    <div className="rounded-xl border border-white/10 bg-black/30 p-4">
+    <div className="rounded-xl border border-ds-border bg-black/30 p-4">
       <ChartRenderer chartType={chartType} chartData={chartData} />
     </div>
   )

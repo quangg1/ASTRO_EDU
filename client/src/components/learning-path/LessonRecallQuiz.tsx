@@ -4,14 +4,24 @@ import { useMemo, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { CheckCircle2, ChevronLeft, ChevronRight, Sparkles, XCircle } from 'lucide-react'
 import type { RecallQuestion } from '@/features/learning-path/public'
+import { mcqAnswerIndex, mcqOptionTexts } from '@/shared/types/quizQuestion'
 
 type Props = {
   questions: RecallQuestion[]
   passed: boolean
   onPassed: () => void
+  variant?: 'card' | 'overlay'
+  onContinue?: () => void
 }
 
-export function LessonRecallQuiz({ questions, passed, onPassed }: Props) {
+export function LessonRecallQuiz({
+  questions,
+  passed,
+  onPassed,
+  variant = 'card',
+  onContinue,
+}: Props) {
+  const isOverlay = variant === 'overlay'
   const [step, setStep] = useState(0)
   const [answers, setAnswers] = useState<Record<string, number>>({})
   const [phase, setPhase] = useState<'idle' | 'wrong' | 'checking'>('idle')
@@ -21,7 +31,7 @@ export function LessonRecallQuiz({ questions, passed, onPassed }: Props) {
   const answeredAll = useMemo(() => questions.every((q) => answers[q.id] !== undefined), [questions, answers])
   const currentAnswered = current ? answers[current.id] !== undefined : false
   const selectedIdx = current ? answers[current.id] : undefined
-  const isSelectedCorrect = current && selectedIdx !== undefined ? selectedIdx === current.correctIndex : false
+  const isSelectedCorrect = current && selectedIdx !== undefined ? selectedIdx === mcqAnswerIndex(current) : false
 
   if (questions.length === 0) return null
 
@@ -30,10 +40,16 @@ export function LessonRecallQuiz({ questions, passed, onPassed }: Props) {
       <motion.div
         initial={{ opacity: 0, scale: 0.96 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="relative overflow-hidden rounded-2xl border border-violet-400/35 bg-gradient-to-br from-violet-950/80 via-[#0a1020] to-cyan-950/50 p-6 md:p-8 shadow-[0_0_48px_rgba(139,92,246,0.15)]"
+        className={`relative overflow-hidden p-6 md:p-8 ${
+          isOverlay
+            ? ''
+            : 'rounded-ds-card border border-violet-400/35 bg-gradient-to-br from-violet-950/80 via-[#0a1020] to-cyan-950/50 shadow-[0_0_48px_rgba(139,92,246,0.15)]'
+        }`}
       >
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,rgba(167,139,250,0.25),transparent)]" />
-        <div className="relative flex flex-col items-center text-center">
+        {!isOverlay ? (
+          <motion.div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,rgba(167,139,250,0.25),transparent)]" />
+        ) : null}
+        <motion.div className="relative flex flex-col items-center text-center">
           <motion.div
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
@@ -42,12 +58,21 @@ export function LessonRecallQuiz({ questions, passed, onPassed }: Props) {
           >
             <CheckCircle2 className="h-8 w-8 text-emerald-300" />
           </motion.div>
-          <h2 className="text-lg font-semibold text-white">Đã nắm nội dung</h2>
+          <h2 className="text-lg font-semibold text-ds-text">Đã nắm nội dung</h2>
           <p className="mt-2 max-w-md text-sm text-violet-100/90">
-            Bạn đã vượt kiểm tra nhanh do giảng viên soạn. Trạng thái <strong className="text-white">Đã nắm (mastery)</strong> đã được
-            ghi nhận — tách biệt với &quot;Đã đọc&quot;.
+            Bạn đã vượt kiểm tra nhanh. Trạng thái <strong className="text-ds-text">Đã nắm (mastery)</strong> đã được ghi nhận — tách
+            biệt với &quot;Đã đọc&quot;.
           </p>
-        </div>
+          {onContinue ? (
+            <button
+              type="button"
+              onClick={onContinue}
+              className="mt-6 rounded-2xl border border-violet-400/40 bg-gradient-to-r from-violet-600/90 to-fuchsia-600/70 px-8 py-3 text-sm font-semibold text-white shadow-[0_0_24px_rgba(139,92,246,0.25)] hover:from-violet-500 hover:to-fuchsia-500"
+            >
+              Tiếp tục
+            </button>
+          ) : null}
+        </motion.div>
       </motion.div>
     )
   }
@@ -55,7 +80,7 @@ export function LessonRecallQuiz({ questions, passed, onPassed }: Props) {
   const goCheck = () => {
     if (!answeredAll) return
     setPhase('checking')
-    const ok = questions.every((q) => answers[q.id] === q.correctIndex)
+    const ok = questions.every((q) => answers[q.id] === mcqAnswerIndex(q))
     window.setTimeout(() => {
       if (ok) {
         onPassed()
@@ -75,22 +100,34 @@ export function LessonRecallQuiz({ questions, passed, onPassed }: Props) {
   return (
     <div
       id="lesson-recall-quiz"
-      className="relative overflow-hidden rounded-2xl border border-cyan-500/25 bg-[#050a12] shadow-[0_0_40px_rgba(34,211,238,0.08)]"
+      className={`relative flex flex-col ${
+        isOverlay
+          ? 'min-h-0 flex-1'
+          : 'overflow-hidden rounded-ds-card border border-ds-accent-strong bg-ds-base shadow-[0_0_40px_rgba(34,211,238,0.08)]'
+      }`}
     >
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_70%_45%_at_100%_0%,rgba(34,211,238,0.12),transparent),radial-gradient(ellipse_50%_40%_at_0%_100%,rgba(139,92,246,0.1),transparent)]" />
+      {!isOverlay ? (
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_70%_45%_at_100%_0%,rgba(34,211,238,0.12),transparent),radial-gradient(ellipse_50%_40%_at_0%_100%,rgba(139,92,246,0.1),transparent)]" />
+      ) : null}
 
-      <div className="relative border-b border-white/10 px-5 py-4 md:px-6">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl border border-cyan-500/30 bg-cyan-500/10">
-              <Sparkles className="h-4 w-4 text-cyan-200" />
-            </span>
-            <div>
-              <h2 className="text-base font-semibold tracking-tight text-white">Kiểm tra nhanh</h2>
-              <p className="text-[11px] text-slate-500">Studio · {total} câu · làm tuần tự</p>
+      <div className={`relative shrink-0 ${isOverlay ? 'px-5 pt-2 pb-3 md:px-6' : 'border-b border-ds-border px-5 py-4 md:px-6'}`}>
+        <motion.div className={`flex flex-wrap items-center gap-3 ${isOverlay ? 'justify-center' : 'justify-between'}`}>
+          {!isOverlay ? (
+            <div className="flex items-center gap-2">
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl border border-ds-accent-strong bg-ds-accent-soft">
+                <Sparkles className="h-4 w-4 text-cyan-200" />
+              </span>
+              <div>
+                <h2 className="text-base font-semibold tracking-tight text-ds-text">Kiểm tra nhanh</h2>
+                <p className="text-[11px] text-ds-subtle">Studio · {total} câu · làm tuần tự</p>
+              </div>
             </div>
-          </div>
-          <div className="flex gap-1.5">
+          ) : (
+            <p className="w-full text-center text-[11px] font-medium uppercase tracking-[0.14em] text-ds-accent">
+              {total} câu · làm tuần tự
+            </p>
+          )}
+          <div className={`flex gap-1.5 ${isOverlay ? 'w-full justify-center' : ''}`}>
             {questions.map((q, i) => {
               const filled = answers[q.id] !== undefined
               const active = i === step
@@ -104,17 +141,17 @@ export function LessonRecallQuiz({ questions, passed, onPassed }: Props) {
                     setPhase('idle')
                   }}
                   className={`h-2.5 w-2.5 rounded-full transition-all ${
-                    active ? 'w-7 bg-cyan-400 shadow-[0_0_10px_rgba(34,211,238,0.5)]' : filled ? 'bg-emerald-500/70' : 'bg-white/15 hover:bg-white/25'
+                    active ? 'w-7 bg-ds-accent shadow-[0_0_10px_rgba(34,211,238,0.5)]' : filled ? 'bg-emerald-500/70' : 'bg-white/15 hover:bg-white/25'
                   }`}
                   aria-label={`Câu ${i + 1}`}
                 />
               )
             })}
           </div>
-        </div>
+        </motion.div>
       </div>
 
-      <div className="relative px-5 py-6 md:px-8 md:py-8 min-h-[280px]">
+      <div className={`relative flex-1 px-5 py-5 md:px-8 md:py-6 ${isOverlay ? 'min-h-[240px]' : 'min-h-[280px]'}`}>
         <AnimatePresence mode="wait">
           {phase === 'wrong' ? (
             <motion.div
@@ -125,11 +162,11 @@ export function LessonRecallQuiz({ questions, passed, onPassed }: Props) {
               className="flex flex-col items-center justify-center py-8 text-center"
             >
               <p className="text-rose-300 text-sm font-medium">Chưa đúng hết các câu</p>
-              <p className="mt-2 max-w-sm text-xs text-slate-400">Xem lại từng ý rồi thử lại — đáp án đúng phải khớp toàn bộ.</p>
+              <p className="mt-2 max-w-sm text-xs text-ds-muted">Xem lại từng ý rồi thử lại — đáp án đúng phải khớp toàn bộ.</p>
               <button
                 type="button"
                 onClick={retry}
-                className="mt-5 rounded-xl border border-white/15 bg-white/5 px-5 py-2.5 text-sm font-medium text-white hover:bg-white/10"
+                className="mt-5 rounded-xl border border-ds-border-strong bg-white/5 px-5 py-2.5 text-sm font-medium text-ds-text hover:bg-white/10"
               >
                 Làm lại từ đầu
               </button>
@@ -143,15 +180,16 @@ export function LessonRecallQuiz({ questions, passed, onPassed }: Props) {
               transition={{ duration: 0.22, ease: 'easeOut' }}
               className="max-w-xl mx-auto"
             >
-              <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-cyan-500/90 mb-2">
+              <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-ds-accent mb-2">
                 Câu {step + 1} / {total}
               </p>
               <h3 className="text-lg md:text-xl font-medium text-slate-100 leading-snug">{current.question}</h3>
               <div className="mt-6 grid gap-3">
-                {current.options.map((opt, i) => {
+                {mcqOptionTexts(current).map((opt, i) => {
+                  const correctIdx = mcqAnswerIndex(current)
                   const selected = answers[current.id] === i
-                  const showEvaluation = selectedIdx !== undefined && (selected || i === current.correctIndex)
-                  const isCorrectOption = i === current.correctIndex
+                  const showEvaluation = selectedIdx !== undefined && (selected || i === correctIdx)
+                  const isCorrectOption = i === correctIdx
                   return (
                     <motion.button
                       key={`${current.id}-o-${i}`}
@@ -167,10 +205,10 @@ export function LessonRecallQuiz({ questions, passed, onPassed }: Props) {
                             ? 'border-emerald-400/55 bg-emerald-500/10 text-emerald-50 ring-2 ring-emerald-500/25'
                             : selected
                               ? 'border-rose-400/55 bg-rose-500/10 text-rose-50 ring-2 ring-rose-500/20'
-                              : 'border-white/10 bg-white/[0.03] text-slate-200'
+                              : 'border-ds-border bg-white/[0.03] text-slate-200'
                           : selected
-                            ? 'border-cyan-400/55 bg-cyan-500/15 text-cyan-50 ring-2 ring-cyan-500/30'
-                            : 'border-white/10 bg-white/[0.03] text-slate-200 hover:border-cyan-500/35 hover:bg-cyan-500/5'
+                            ? 'border-ds-accent-strong bg-ds-accent-soft text-cyan-50 ring-2 ring-ds-accent-strong'
+                            : 'border-ds-border bg-white/[0.03] text-slate-200 hover:border-ds-accent-strong hover:bg-ds-accent-soft'
                       }`}
                     >
                       <span
@@ -180,10 +218,10 @@ export function LessonRecallQuiz({ questions, passed, onPassed }: Props) {
                               ? 'bg-emerald-500/25 text-emerald-100'
                               : selected
                                 ? 'bg-rose-500/20 text-rose-100'
-                                : 'bg-white/10 text-slate-400'
+                                : 'bg-white/10 text-ds-muted'
                             : selected
-                              ? 'bg-cyan-500/30 text-cyan-100'
-                              : 'bg-white/10 text-slate-400'
+                              ? 'bg-ds-accent-strong text-cyan-100'
+                              : 'bg-white/10 text-ds-muted'
                         }`}
                       >
                         {String.fromCharCode(65 + i)}
@@ -197,7 +235,7 @@ export function LessonRecallQuiz({ questions, passed, onPassed }: Props) {
                                 ? 'border-emerald-400/40 bg-emerald-500/10 text-emerald-100'
                                 : selected
                                   ? 'border-rose-400/40 bg-rose-500/10 text-rose-100'
-                                  : 'border-white/10 bg-white/5 text-slate-400'
+                                  : 'border-ds-border bg-white/5 text-ds-muted'
                             }`}
                           >
                             <span className="mb-1 inline-flex items-center gap-1 font-semibold">
@@ -222,12 +260,16 @@ export function LessonRecallQuiz({ questions, passed, onPassed }: Props) {
         </AnimatePresence>
       </div>
 
-      <div className="relative flex flex-wrap items-center justify-between gap-3 border-t border-white/10 bg-black/25 px-5 py-4 md:px-6">
+      <div
+        className={`relative flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-ds-border px-5 py-4 md:px-6 ${
+          isOverlay ? 'bg-black/20' : 'bg-black/25'
+        }`}
+      >
         <button
           type="button"
           disabled={step === 0 || phase === 'checking'}
           onClick={() => setStep((s) => Math.max(0, s - 1))}
-          className="inline-flex items-center gap-1.5 rounded-xl border border-white/10 px-4 py-2 text-sm text-slate-300 hover:bg-white/5 disabled:opacity-30"
+          className="inline-flex items-center gap-1.5 rounded-xl border border-ds-border px-4 py-2 text-sm text-slate-300 hover:bg-white/5 disabled:opacity-30"
         >
           <ChevronLeft className="h-4 w-4" />
           Trước
@@ -237,7 +279,7 @@ export function LessonRecallQuiz({ questions, passed, onPassed }: Props) {
             type="button"
             disabled={!currentAnswered || phase === 'checking'}
             onClick={() => setStep((s) => Math.min(total - 1, s + 1))}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-cyan-500/40 bg-gradient-to-r from-cyan-600/80 to-cyan-500/60 px-5 py-2 text-sm font-semibold text-white shadow-[0_0_20px_rgba(34,211,238,0.2)] hover:from-cyan-500 hover:to-cyan-400 disabled:cursor-not-allowed disabled:opacity-35"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-ds-accent-strong bg-gradient-to-r from-cyan-600/80 to-cyan-500/60 px-5 py-2 text-sm font-semibold text-white shadow-[0_0_20px_rgba(34,211,238,0.2)] hover:from-cyan-500 hover:to-cyan-400 disabled:cursor-not-allowed disabled:opacity-35"
           >
             Tiếp
             <ChevronRight className="h-4 w-4" />

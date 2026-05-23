@@ -101,7 +101,7 @@ function ToolBtn({ active, onClick, children, title }: { active?: boolean; onCli
       type="button"
       onMouseDown={(e) => { e.preventDefault(); onClick() }}
       title={title}
-      className={`w-7 h-7 flex items-center justify-center rounded text-xs transition-colors ${active ? 'bg-cyan-600 text-white' : 'text-gray-400 hover:bg-white/10 hover:text-white'}`}
+      className={`w-7 h-7 flex items-center justify-center rounded text-xs transition-colors ${active ? 'bg-cyan-600 text-white' : 'text-ds-muted hover:bg-white/10 hover:text-white'}`}
     >
       {children}
     </button>
@@ -230,9 +230,9 @@ export default function RichTextEditor({ value, onChange, placeholder }: Props) 
   if (!editor) return null
 
   return (
-    <div className="rounded-xl border border-white/15 bg-black/40 overflow-hidden">
+    <div className="rounded-xl border border-ds-border-strong bg-black/40 overflow-hidden">
       {/* Toolbar */}
-      <div className="flex flex-wrap items-center gap-0.5 px-2 py-1.5 border-b border-white/10 bg-white/5">
+      <div className="flex flex-wrap items-center gap-0.5 px-2 py-1.5 border-b border-ds-border bg-white/5">
         {/* Text format */}
         <ToolBtn active={editor.isActive('bold')} onClick={() => editor.chain().focus().toggleBold().run()} title="Bold"><b>B</b></ToolBtn>
         <ToolBtn active={editor.isActive('italic')} onClick={() => editor.chain().focus().toggleItalic().run()} title="Italic"><i>I</i></ToolBtn>
@@ -251,7 +251,7 @@ export default function RichTextEditor({ value, onChange, placeholder }: Props) 
             if (!val) editor.chain().focus().setMark('textStyle', { fontFamily: null }).run()
             else editor.chain().focus().setMark('textStyle', { fontFamily: val }).run()
           }}
-          className="h-7 rounded border border-white/15 bg-black/40 px-2 text-[11px] text-slate-200 focus:border-cyan-500/50 focus:outline-none"
+          className="h-7 rounded border border-ds-border-strong bg-black/40 px-2 text-[11px] text-slate-200 focus:border-ds-accent focus:outline-none"
           title="Font family"
         >
           {FONT_FAMILIES.map((f) => (
@@ -267,7 +267,7 @@ export default function RichTextEditor({ value, onChange, placeholder }: Props) 
             if (!val) editor.chain().focus().setMark('textStyle', { fontSize: null }).run()
             else editor.chain().focus().setMark('textStyle', { fontSize: val }).run()
           }}
-          className="h-7 w-[74px] rounded border border-white/15 bg-black/40 px-2 text-[11px] text-slate-200 focus:border-cyan-500/50 focus:outline-none"
+          className="h-7 w-[74px] rounded border border-ds-border-strong bg-black/40 px-2 text-[11px] text-slate-200 focus:border-ds-accent focus:outline-none"
           title="Font size"
         >
           <option value="">Size</option>
@@ -308,7 +308,7 @@ export default function RichTextEditor({ value, onChange, placeholder }: Props) 
               key={c}
               type="button"
               onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().setColor(c).run() }}
-              className="w-4 h-4 rounded-full border border-white/20 hover:scale-125 transition-transform"
+              className="w-4 h-4 rounded-full border border-ds-border-strong hover:scale-125 transition-transform"
               style={{ backgroundColor: c }}
               title={`Text color ${c}`}
             />

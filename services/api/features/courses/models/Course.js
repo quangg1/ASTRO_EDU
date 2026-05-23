@@ -1,38 +1,8 @@
 const mongoose = require('mongoose');
+const { lessonSectionSchema } = require('../../../shared/schemas/lessonSectionSchema');
+const { quizQuestionMongooseSchema } = require('../../../shared/quizQuestion');
 
-const sectionSchema = new mongoose.Schema({
-  type: { type: String, enum: ['richtext', 'text', 'image', 'video', 'code', 'embed', '3d', 'callout', 'divider', 'gif', 'math', 'chart', 'slider', 'observable'], default: 'text' },
-  title: { type: String, default: '' },
-  summary: { type: String, default: '' },
-  bullets: [{ type: String }],
-  content: { type: String, default: '' },
-  html: { type: String, default: '' },
-  imageUrl: { type: String, default: null },
-  videoUrl: { type: String, default: null },
-  code: { type: String, default: '' },
-  language: { type: String, default: 'javascript' },
-  embedUrl: { type: String, default: null },
-  embedType: { type: String, enum: ['iframe', 'canva', 'gslides', 'figma', 'other'], default: 'iframe' },
-  modelUrl: { type: String, default: null },
-  calloutVariant: { type: String, enum: ['info', 'warning', 'tip', 'danger'], default: 'info' },
-  caption: { type: String, default: '' },
-  latex: { type: String, default: '' },
-  chartType: { type: String, enum: ['line', 'bar', 'area', 'pie'], default: 'line' },
-  chartData: { type: mongoose.Schema.Types.Mixed, default: [] },
-  sliderMin: { type: Number, default: 0 },
-  sliderMax: { type: Number, default: 100 },
-  sliderStep: { type: Number, default: 1 },
-  sliderFormula: { type: String, default: '' },
-  sliderLabel: { type: String, default: '' },
-  sliderUnit: { type: String, default: '' },
-  notebookUrl: { type: String, default: null },
-}, { _id: false });
-
-const quizQuestionSchema = new mongoose.Schema({
-  question: { type: String, required: true },
-  options: [{ type: String }],
-  correctIndex: { type: Number, required: true },
-}, { _id: false });
+const quizQuestionSchema = new mongoose.Schema(quizQuestionMongooseSchema, { _id: false });
 
 const resourceLinkSchema = new mongoose.Schema({
   label: { type: String, default: '' },
@@ -54,7 +24,7 @@ const lessonSchema = new mongoose.Schema({
   moduleId: { type: String, default: null },
   content: { type: String, default: '' },
   learningGoals: [{ type: String }],
-  sections: [sectionSchema],
+  sections: [lessonSectionSchema],
   quizQuestions: [quizQuestionSchema],
   resourceLinks: [resourceLinkSchema],
   sourcePdf: { type: String, default: null },

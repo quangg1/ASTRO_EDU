@@ -72,7 +72,7 @@ export default function BlockPalette({ onAdd }: Props) {
     return (
       <button
         onClick={() => setOpen(true)}
-        className="w-full py-3 rounded-xl border-2 border-dashed border-white/15 text-gray-500 hover:border-cyan-500/40 hover:text-cyan-300 transition-all text-sm flex items-center justify-center gap-2"
+        className="w-full py-3 rounded-xl border-2 border-dashed border-ds-border-strong text-ds-subtle hover:border-ds-accent-strong hover:text-ds-accent transition-all text-sm flex items-center justify-center gap-2"
       >
         <span className="text-lg">+</span> Add Block
       </button>
@@ -80,28 +80,28 @@ export default function BlockPalette({ onAdd }: Props) {
   }
 
   return (
-    <div className="rounded-xl border border-cyan-500/30 bg-[#060b14] p-4 space-y-4 shadow-2xl shadow-cyan-500/5">
+    <div className="rounded-xl border border-ds-accent-strong bg-ds-surface p-4 space-y-4 shadow-2xl shadow-cyan-500/5">
       <div className="flex items-center justify-between">
         <h4 className="text-sm font-semibold text-white">Insert Block</h4>
-        <button onClick={() => setOpen(false)} className="text-xs text-gray-500 hover:text-white">&times; Close</button>
+        <button onClick={() => setOpen(false)} className="text-xs text-ds-subtle hover:text-white">&times; Close</button>
       </div>
       {CATEGORIES.map((cat) => {
         const items = BLOCKS.filter((b) => b.category === cat.key)
         if (!items.length) return null
         return (
           <div key={cat.key}>
-            <p className="text-[10px] uppercase tracking-wider text-gray-600 mb-1.5">{cat.label}</p>
+            <p className="text-[10px] uppercase tracking-wider text-ds-subtle mb-1.5">{cat.label}</p>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-1.5">
               {items.map((b) => (
                 <button
                   key={b.type}
                   onClick={() => { onAdd(makeDefaultSection(b.type)); setOpen(false) }}
-                  className="flex items-start gap-2 p-2.5 rounded-lg border border-white/10 bg-white/5 hover:bg-cyan-500/10 hover:border-cyan-500/30 transition-all text-left group"
+                  className="flex items-start gap-2 p-2.5 rounded-lg border border-ds-border bg-white/5 hover:bg-ds-accent-soft hover:border-ds-accent-strong transition-all text-left group"
                 >
                   <span className="text-lg mt-0.5 group-hover:scale-110 transition-transform">{b.icon}</span>
                   <div>
                     <p className="text-xs font-medium text-white">{b.label}</p>
-                    <p className="text-[10px] text-gray-500 leading-tight mt-0.5">{b.description}</p>
+                    <p className="text-[10px] text-ds-subtle leading-tight mt-0.5">{b.description}</p>
                   </div>
                 </button>
               ))}

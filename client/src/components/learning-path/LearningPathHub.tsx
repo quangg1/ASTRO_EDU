@@ -57,7 +57,7 @@ export default function LearningPathHub() {
   }, [mounted, progressTick, modules, userId, pct])
 
   return (
-    <div className="min-h-screen bg-[#02040a] relative overflow-hidden">
+    <div className="min-h-screen bg-ds-base relative overflow-hidden">
       {/* ambient */}
       <div
         className="pointer-events-none fixed inset-0 opacity-[0.35]"
@@ -75,18 +75,18 @@ export default function LearningPathHub() {
           transition={{ duration: 0.45 }}
           className="text-center mb-12 md:mb-16"
         >
-          <div className="inline-flex items-center gap-2 rounded-full border border-cyan-500/30 bg-cyan-500/10 px-4 py-1.5 text-xs font-medium text-cyan-200/90 mb-4">
+          <div className="inline-flex items-center gap-2 rounded-full border border-ds-accent-strong bg-ds-accent-soft px-4 py-1.5 text-xs font-medium text-cyan-200/90 mb-4">
             <Sparkles className="w-3.5 h-3.5" />
             Lộ trình 6 module
             <Orbit className="w-3.5 h-3.5 opacity-80" />
           </div>
           <h1
-            className="text-3xl md:text-5xl font-bold text-white mb-3 tracking-tight"
+            className="text-3xl md:text-5xl font-bold text-ds-text mb-3 tracking-tight"
             style={{ fontFamily: 'var(--font-heading), Space Grotesk, sans-serif' }}
           >
             Learning Path
           </h1>
-          <p className="text-slate-400 text-sm md:text-base max-w-2xl mx-auto leading-relaxed">
+          <p className="text-ds-muted text-sm md:text-base max-w-2xl mx-auto leading-relaxed">
             Mỗi chủ đề có ba tầng (Beginner → Explorer → Researcher); trong mỗi tầng, từng ý nhỏ là một{' '}
             <strong className="text-slate-300">bài học riêng</strong>. Tiến độ theo từng bài, lưu trên trình duyệt.
           </p>
@@ -97,11 +97,11 @@ export default function LearningPathHub() {
             transition={{ delay: 0.15, duration: 0.4 }}
             className="mt-8 flex flex-col items-center gap-3"
           >
-            <div className="flex items-center gap-4 text-sm text-slate-400">
+            <div className="flex items-center gap-4 text-sm text-ds-muted">
               <span>Tổng tiến độ</span>
-              <span className="text-cyan-300 font-semibold tabular-nums">{mounted ? pct : '—'}%</span>
+              <span className="text-ds-accent font-semibold tabular-nums">{mounted ? pct : '—'}%</span>
             </div>
-            <div className="w-full max-w-md h-2.5 rounded-full bg-white/5 border border-white/10 overflow-hidden">
+            <div className="w-full max-w-md h-2.5 rounded-full bg-white/5 border border-ds-border overflow-hidden">
               <motion.div
                 className="h-full rounded-full bg-gradient-to-r from-cyan-500 via-sky-400 to-violet-500"
                 initial={{ width: 0 }}
@@ -125,8 +125,8 @@ export default function LearningPathHub() {
                 <Network className="h-5 w-5" aria-hidden />
               </span>
               <span>
-                <span className="block text-sm font-semibold text-white">Bản đồ tri thức (star map)</span>
-                <span className="mt-0.5 block text-xs leading-relaxed text-slate-400">
+                <span className="block text-sm font-semibold text-ds-text">Bản đồ tri thức (star map)</span>
+                <span className="mt-0.5 block text-xs leading-relaxed text-ds-muted">
                   Xem toàn bộ graph concept — prerequisite như các vì sao nối nhau; tiến độ bài học làm sáng các điểm đã
                   gặp.
                 </span>
@@ -156,7 +156,7 @@ export default function LearningPathHub() {
               >
                 <Link
                   href={`/tutorial/${m.id}`}
-                  className="group block h-full rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.03] to-transparent p-6 md:p-7 shadow-[0_0_0_1px_rgba(255,255,255,0.04)] hover:border-cyan-500/35 hover:shadow-[0_20px_50px_-20px_rgba(34,211,238,0.25)] transition-all duration-300"
+                  className="group block h-full rounded-ds-card border border-ds-border bg-gradient-to-br from-white/[0.03] to-transparent p-6 md:p-7 shadow-[0_0_0_1px_rgba(255,255,255,0.04)] hover:border-ds-accent-strong hover:shadow-[0_20px_50px_-20px_rgba(34,211,238,0.25)] transition-all duration-300"
                 >
                   <div className="flex items-start justify-between gap-4 mb-4">
                     <div className="flex items-center gap-3">
@@ -164,20 +164,20 @@ export default function LearningPathHub() {
                         {m.emoji}
                       </span>
                       <div>
-                        <p className="text-[10px] uppercase tracking-widest text-slate-500 font-medium">
+                        <p className="text-[10px] uppercase tracking-widest text-ds-subtle font-medium">
                           Module {m.order}
                         </p>
-                        <h2 className="text-lg md:text-xl font-semibold text-white group-hover:text-cyan-100 transition-colors">
+                        <h2 className="text-lg md:text-xl font-semibold text-ds-text group-hover:text-cyan-100 transition-colors">
                           {m.titleVi}
                         </h2>
-                        <p className="text-xs text-slate-500 mt-0.5">{m.title}</p>
+                        <p className="text-xs text-ds-subtle mt-0.5">{m.title}</p>
                       </div>
                     </div>
-                    <span className="shrink-0 rounded-lg bg-cyan-500/10 border border-cyan-500/25 px-2.5 py-1 text-xs font-medium text-cyan-200/90 tabular-nums">
+                    <span className="shrink-0 rounded-lg bg-ds-accent-soft border border-ds-accent-strong px-2.5 py-1 text-xs font-medium text-cyan-200/90 tabular-nums">
                       {mp}%
                     </span>
                   </div>
-                  <p className="text-sm text-slate-400 leading-relaxed mb-4 line-clamp-2">{m.goalVi}</p>
+                  <p className="text-sm text-ds-muted leading-relaxed mb-4 line-clamp-2">{m.goalVi}</p>
                   <div className="h-1.5 rounded-full bg-white/5 overflow-hidden mb-4">
                     <div
                       className="h-full rounded-full bg-gradient-to-r from-emerald-500/80 to-cyan-400/90 transition-all duration-500"
@@ -185,8 +185,8 @@ export default function LearningPathHub() {
                     />
                   </div>
                   <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
-                    <span className="text-slate-500">{m.nodes.length} chủ đề</span>
-                    <span className="text-cyan-400/90 group-hover:translate-x-0.5 transition-transform inline-flex items-center gap-1">
+                    <span className="text-ds-subtle">{m.nodes.length} chủ đề</span>
+                    <span className="text-ds-accent group-hover:translate-x-0.5 transition-transform inline-flex items-center gap-1">
                       Mở module
                       <span aria-hidden>→</span>
                     </span>

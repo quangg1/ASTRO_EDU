@@ -307,6 +307,7 @@ function ShowcaseSceneContent({
           exploreStyleLod
           isSelected={effectiveSelectedIndex === i}
           interactive
+          showcaseOrbitEntity={orbitById.get(planetEntityId(data.name)) ?? null}
           onHoverChange={(hovered) => setHoveredOrbitIndex(hovered ? i : (prev) => (prev === i ? null : prev))}
           onSelect={() => {
             setSelection(i)

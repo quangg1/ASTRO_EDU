@@ -11,6 +11,7 @@ const HOTSPOT_OFFSET = 0.09
 export function StageHotspots({ timeMa }: { timeMa: number }) {
   const showHotspots = useSceneCommandStore((s) => s.showHotspots)
   const setFlyToTarget = useSceneCommandStore((s) => s.setFlyToTarget)
+  const clearAllGlobeFossilUi = useSceneCommandStore((s) => s.clearAllGlobeFossilUi)
   if (!showHotspots) return null
   const hotspots = getHotspotsForTime(timeMa)
   if (!hotspots.length) return null
@@ -24,6 +25,7 @@ export function StageHotspots({ timeMa }: { timeMa: number }) {
             <mesh
               onClick={(e) => {
                 e.stopPropagation()
+                clearAllGlobeFossilUi()
                 setFlyToTarget({ lat: h.lat, lng: h.lng, mode: 'single' })
               }}
             >

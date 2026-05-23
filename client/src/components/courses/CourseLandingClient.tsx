@@ -95,7 +95,7 @@ export function CourseLandingClient({
           : course.level
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#05070c] via-black to-[#04090f]">
+    <div className="min-h-screen bg-ds-base">
       {enrolledFlash && (
         <div className="pt-14 px-4">
           <div className="max-w-3xl mx-auto rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">
@@ -104,21 +104,21 @@ export function CourseLandingClient({
         </div>
       )}
       <main className={`px-4 pb-16 max-w-3xl mx-auto ${enrolledFlash ? 'pt-4' : 'pt-20'}`}>
-        <Link href="/courses" className="text-sm text-cyan-400 hover:text-cyan-300 mb-6 inline-block">
+        <Link href="/courses" className="text-sm text-ds-accent hover:text-cyan-100 mb-6 inline-block">
           ← Danh sách khóa học
         </Link>
 
-        <div className="rounded-2xl border border-white/10 bg-[#0a0f17]/90 overflow-hidden mb-8">
+        <div className="rounded-2xl border border-ds-border bg-ds-overlay overflow-hidden mb-8">
           {course.thumbnail && (
             <div className="relative h-44 w-full overflow-hidden">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={course.thumbnail} alt="" className="absolute inset-0 h-full w-full object-cover opacity-85" />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#0a0f17] to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-t from-ds-surface to-transparent" />
             </div>
           )}
           <div className="p-6 -mt-6 relative">
-            <div className="flex flex-wrap items-center gap-2 text-[11px] text-gray-500 mb-2">
-              <span className="px-2 py-0.5 rounded-full bg-white/5 border border-white/10 text-gray-300">{levelLabel}</span>
+            <div className="flex flex-wrap items-center gap-2 text-[11px] text-ds-subtle mb-2">
+              <span className="px-2 py-0.5 rounded-full bg-white/5 border border-ds-border text-gray-300">{levelLabel}</span>
               {course.durationWeeks != null && <span>{course.durationWeeks} tuần</span>}
               <span>·</span>
               <span>{lessons.length} bài</span>
@@ -145,22 +145,22 @@ export function CourseLandingClient({
               )}
               <Link
                 href="/tutorial"
-                className="inline-flex items-center justify-center px-5 py-2.5 rounded-xl border border-white/15 text-gray-200 text-sm hover:bg-white/5 transition-colors"
+                className="inline-flex items-center justify-center px-5 py-2.5 rounded-xl border border-ds-border-strong text-gray-200 text-sm hover:bg-white/5 transition-colors"
               >
                 Lộ trình miễn phí
               </Link>
             </div>
             {!isEnrolled && course.isPaid && (course.price ?? 0) > 0 && (
-              <p className="mt-4 text-xs text-gray-500">
+              <p className="mt-4 text-xs text-ds-subtle">
                 Nội dung chi tiết từng bài có thể bị ẩn cho tới khi bạn mua khóa. Đăng nhập trên trang học để thanh toán và mở khóa.
               </p>
             )}
           </div>
         </div>
 
-        <section className="rounded-2xl border border-white/10 bg-[#070c14] p-6 mb-8">
+        <section className="rounded-2xl border border-ds-border bg-ds-surface p-6 mb-8">
           <h2 className="text-lg font-semibold text-white mb-1">Chương trình (syllabus)</h2>
-          <p className="text-xs text-gray-500 mb-5">Xem trước cấu trúc bài học trước khi ghi danh.</p>
+          <p className="text-xs text-ds-subtle mb-5">Xem trước cấu trúc bài học trước khi ghi danh.</p>
           <div className="space-y-4">
             {groups.map((g) => (
               <div key={g.key} className="rounded-xl border border-white/5 bg-black/20 overflow-hidden">
@@ -184,16 +184,16 @@ export function CourseLandingClient({
                             : 'Đọc'
                     return (
                       <li key={lesson.slug} className="px-4 py-3 flex items-start gap-3">
-                        <span className="text-[10px] text-gray-600 w-6 shrink-0 pt-0.5">{lesson.order + 1}</span>
+                        <span className="text-[10px] text-ds-subtle w-6 shrink-0 pt-0.5">{lesson.order + 1}</span>
                         <div className="min-w-0 flex-1">
                           <p className="text-sm text-gray-200">{lesson.title}</p>
-                          {lesson.description && <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{lesson.description}</p>}
-                          <p className="text-[10px] text-gray-600 mt-1">{meta}</p>
+                          {lesson.description && <p className="text-xs text-ds-subtle mt-0.5 line-clamp-2">{lesson.description}</p>}
+                          <p className="text-[10px] text-ds-subtle mt-1">{meta}</p>
                         </div>
                         {learnHref && (
                           <Link
                             href={`/courses/${slug}/learn/${encodeURIComponent(lesson.slug)}`}
-                            className="text-[11px] text-cyan-400 hover:text-cyan-300 shrink-0"
+                            className="text-[11px] text-ds-accent hover:text-cyan-100 shrink-0"
                           >
                             Mở →
                           </Link>
@@ -207,12 +207,12 @@ export function CourseLandingClient({
           </div>
         </section>
 
-        <section className="rounded-2xl border border-cyan-500/20 bg-cyan-950/10 p-6">
+        <section className="rounded-2xl border border-ds-accent-strong bg-cyan-950/10 p-6">
           <h2 className="text-sm font-semibold text-cyan-200 mb-2">{course.crossSellTutorialLabelVi || 'Học thêm miễn phí · Lộ trình'}</h2>
-          {course.crossSellTutorialBodyVi && <p className="text-sm text-gray-400 mb-4 leading-relaxed">{course.crossSellTutorialBodyVi}</p>}
+          {course.crossSellTutorialBodyVi && <p className="text-sm text-ds-muted mb-4 leading-relaxed">{course.crossSellTutorialBodyVi}</p>}
           <Link
             href={crossHref}
-            className="inline-flex px-4 py-2 rounded-lg bg-white/10 text-sm text-white hover:bg-cyan-600/40 border border-white/10 transition-colors"
+            className="inline-flex px-4 py-2 rounded-lg bg-white/10 text-sm text-white hover:bg-cyan-600/40 border border-ds-border transition-colors"
           >
             Mở lộ trình →
           </Link>

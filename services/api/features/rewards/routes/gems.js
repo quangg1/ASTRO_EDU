@@ -1,9 +1,100 @@
 const express = require('express');
-const GemTransaction = require('../models/GemTransaction');
+const Course = require('../../courses/models/Course');
 const UserReward = require('../models/UserReward');
+const GemTransaction = require('../models/GemTransaction');
 const { authMiddleware } = require('../../../shared/jwtAuth');
+const { getPublicRuntimeSummary } = require('../services/gemRuntimeConfigService');
+const { listVisiblePublic } = require('../services/shopCatalogService');
+const {
+  listDecorationCatalogGroupedPublic,
+  getDecorationState,
+  purchaseDecoration,
+  equipDecoration,
+} = require('../services/avatarDecorationService');
 
 const router = express.Router();
+
+/** Public — client tab Khóa học / voucher + seasonal hiển thị */
+router.get('/shop/bootstrap', async (req, res) => {
+  try {
+    const paidCoursesCount = await Course.countDocuments({
+      published: true,
+      $or: [{ isPaid: true }, { price: { $gt: 0 } }],
+    });
+    const runtime = await getPublicRuntimeSummary();
+    res.json({
+      success: true,
+      data: {
+        paidCoursesCount,
+        voucherTabVisible: paidCoursesCount >= 1,
+        ...runtime,
+      },
+    });
+  } catch (err) {
+    console.error('GET /gems/shop/bootstrap error:', err);
+    res.status(500).json({ success: false, error: 'Lỗi máy chủ' });
+  }
+});
+
+/** Public — catalog shop items (visible + seasonal window) */
+router.get('/shop/catalog', async (req, res) => {
+  try {
+    const items = await listVisiblePublic();
+    res.json({ success: true, data: { items } });
+  } catch (err) {
+    console.error('GET /gems/shop/catalog error:', err);
+    res.status(500).json({ success: false, error: 'Lỗi máy chủ' });
+  }
+});
+
+/** Danh mục trang trí avatar (public, có overlay CDN). */
+router.get('/decorations/catalog', async (req, res) => {
+  try {
+    const data = await listDecorationCatalogGroupedPublic();
+    res.json({ success: true, data });
+  } catch (err) {
+    console.error('GET /gems/decorations/catalog error:', err);
+    res.status(500).json({ success: false, error: 'Lỗi máy chủ' });
+  }
+});
+
+router.get('/decorations/me', authMiddleware, async (req, res) => {
+  try {
+    const data = await getDecorationState(req.userId);
+    res.json({ success: true, data });
+  } catch (err) {
+    console.error('GET /gems/decorations/me error:', err);
+    res.status(500).json({ success: false, error: 'Lỗi máy chủ' });
+  }
+});
+
+router.post('/decorations/purchase', authMiddleware, async (req, res) => {
+  try {
+    const data = await purchaseDecoration(req.userId, req.body?.skuId);
+    res.json({ success: true, data });
+  } catch (err) {
+    console.error('POST /gems/decorations/purchase error:', err);
+    res.status(err.status || 500).json({
+      success: false,
+      code: err.code,
+      error: err.message || 'Không mua được trang trí',
+    });
+  }
+});
+
+router.patch('/decorations/equip', authMiddleware, async (req, res) => {
+  try {
+    const data = await equipDecoration(req.userId, req.body?.skuId ?? null);
+    res.json({ success: true, data });
+  } catch (err) {
+    console.error('PATCH /gems/decorations/equip error:', err);
+    res.status(err.status || 500).json({
+      success: false,
+      code: err.code,
+      error: err.message || 'Không đổi trang trí được',
+    });
+  }
+});
 
 router.get('/wallet', authMiddleware, async (req, res) => {
   try {

@@ -19,6 +19,7 @@ import { ShowcaseEntityMesh } from '@/components/3d/showcase/ShowcaseEntityMesh'
 import { useShowcaseStore } from '@/features/content3d/showcase/public'
 import type { OrbitProximityFade } from '@/components/3d/orbitProximityFade'
 import { hasUsableOrbitalElements } from '@/lib/mergeShowcaseCatalog'
+import { isResolvableShowcaseAssetUrl } from '@/lib/showcaseMediaUrl'
 
 const EARTH_RADIUS_KM = 6371
 /** Đơn vị scene cho bán kính vật thể showcase (đủ lớn so với `planetsData.radius`). */
@@ -65,11 +66,11 @@ function showcaseIdForSolarPlanetName(name: string | null | undefined): string |
 /** Có diffuse CDN / texture tĩnh hoặc model — tránh vẽ “chấm rỗng” không có media. */
 function hasRenderableShowcaseMedia(e: ShowcaseOrbitEntity): boolean {
   const r = String(e.remoteTextureUrl || '').trim()
-  if (r && (/^https?:\/\//i.test(r) || r.startsWith('/files/'))) return true
+  if (isResolvableShowcaseAssetUrl(r)) return true
   const t = String(e.texturePath || '').trim()
   if (t.length > 1) return true
   const rm = String(e.remoteModelUrl || '').trim()
-  if (rm && (/^https?:\/\//i.test(rm) || rm.startsWith('/files/'))) return true
+  if (isResolvableShowcaseAssetUrl(rm)) return true
   const mp = String(e.modelPath || '').trim()
   if (mp.length > 1) return true
   return false

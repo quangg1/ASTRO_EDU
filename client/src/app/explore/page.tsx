@@ -2,17 +2,25 @@
 
 import dynamic from 'next/dynamic'
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import Link from 'next/link'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
-import { Timeline } from '@/components/ui/Timeline'
-import { InfoPanel } from '@/components/ui/InfoPanel'
-import { FossilPanel } from '@/components/ui/FossilPanel'
-import { Controls } from '@/components/ui/Controls'
+import { Timeline } from '@/features/content3d/earth/ui/Timeline'
+import { InfoPanel } from '@/features/content3d/earth/ui/InfoPanel'
+import { FossilPanel } from '@/features/content3d/earth/ui/FossilPanel'
+import { FossilDetailDock } from '@/features/content3d/earth/ui/FossilDetailOverlay'
+import { Controls } from '@/features/content3d/earth/ui/Controls'
 import { Loading } from '@/components/ui/Loading'
-import { useNarrativeStore } from '@/features/content3d/narrative/public'
-import { planetsData } from '@/lib/solarSystemData'
-import { NASA_SHOWCASE_ITEMS } from '@/lib/nasaShowcaseCatalog'
-import { SHOWCASE_ORBIT_ENTITIES } from '@/lib/showcaseEntities'
+import { useEarthHistoryStore, usePlaybackStore, useSceneCommandStore } from '@/features/content3d/earth/public'
 import {
+  NarrativeControls,
+  NarrativeInfoPanel,
+  NarrativeTimeline,
+  usePlanetNarrativeStore,
+} from '@/features/content3d/narrative/public'
+import { planetsData } from '@/lib/solarSystemData'
+import { getNasaCatalogItemById, NASA_SHOWCASE_ITEMS, SHOWCASE_ORBIT_ENTITIES } from '@/lib/showcaseEntities'
+import {
+  buildPlanetGlobeEntity,
   mergeNasaCatalog,
   mergeOrbitEntities,
   mergeOrbitalElementsPreferUsable,
@@ -21,6 +29,7 @@ import {
   fetchPublicShowcaseEntityContents,
   type ShowcaseEntityContentDTO,
 } from '@/features/content3d/showcase/api/showcaseEntitiesApi'
+import { SHOWCASE_CATALOG_CHANGED_EVENT } from '@/lib/showcaseCatalogRefresh'
 import { fetchJplShowcaseOrbits, type ShowcaseJplOrbitDTO } from '@/features/content3d/showcase/api/showcaseOrbitsApi'
 import {
   buildContextualQuizFromLessons,
@@ -29,7 +38,9 @@ import {
   loadBridgeVisitedEntityMap,
   loadDiscoveryMap,
   resolveAllLessonsForEntity,
+  resolveLessonsForNarrativeEntity,
   resolveMappedConcepts,
+  resolvePlanetAccent,
   saveBridgeVisitedEntityMap,
   saveDiscoveryMap,
   useShowcaseStore,
@@ -51,12 +62,23 @@ import {
   type ShowcaseCatalogEntryWithUnlocks,
 } from '@/features/rewards/public'
 import { useAuthStore } from '@/features/auth/public'
+import {
+  entityHasExploreHistoryViewer,
+  entityHasFossilsTab,
+} from '@/app/studio/showcase-entities/entityHistoryCapability'
+import { Tooltip, useToast } from '@/design-system'
 import type { ShowcaseGamificationStrip } from '@/components/3d/showcase/ShowcaseEntityPanel'
 import type { ShowcaseCameraSpherical } from '@/components/3d/showcase/ShowcaseCameraManager'
 import { useShowcaseCatalogGen } from '@/components/showcase/ShowcaseCatalogProvider'
 import { ShowcaseEntityPanel } from '@/components/3d/showcase/ShowcaseEntityPanel'
+import type { QuizQuestion } from '@/shared/types/quizQuestion'
+import { mcqAnswerIndex, mcqOptionTexts } from '@/shared/types/quizQuestion'
 
 const EarthScene = dynamic(() => import('@/components/3d/EarthScene'), {
+  ssr: false,
+  loading: () => <Loading />,
+})
+const PlanetHistoryScene = dynamic(() => import('@/components/3d/PlanetHistoryScene'), {
   ssr: false,
   loading: () => <Loading />,
 })
@@ -64,13 +86,6 @@ const ShowcaseScene = dynamic(() => import('@/components/3d/showcase/ShowcaseSce
   ssr: false,
   loading: () => <Loading />,
 })
-
-type QuickQuizQuestion = {
-  id: string
-  question: string
-  options: string[]
-  correctIndex: number
-}
 
 function ExplorePageContent() {
   const router = useRouter()
@@ -81,20 +96,23 @@ function ExplorePageContent() {
   const bridgeDebugOn = searchParams.get('bridgeDebug') === '1'
 
   const [earthHistoryOpen, setEarthHistoryOpen] = useState(!!stageTime)
+  const historyEntityFromUrl = useMemo(() => {
+    const e = searchParams.get('entity')?.trim()
+    if (searchParams.get('history') === '1' && e) return e
+    return null
+  }, [searchParams])
+  const [planetHistoryEntityId, setPlanetHistoryEntityId] = useState<string | null>(historyEntityFromUrl)
+  const [planetHistoryOpen, setPlanetHistoryOpen] = useState(!!historyEntityFromUrl)
   const [showcaseMenuOpen, setShowcaseMenuOpen] = useState(false)
   const [showcaseActiveItemId, setShowcaseActiveItemId] = useState('planet-earth')
   const [selectedSolarPlanetIndex, setSelectedSolarPlanetIndex] = useState<number | null>(2)
   const [bridgeOverlayOpen, setBridgeOverlayOpen] = useState(false)
   const [bridgeOverlayEntityId, setBridgeOverlayEntityId] = useState<string | null>(null)
   const [bridgeQuizPromptOpen, setBridgeQuizPromptOpen] = useState(false)
-  const [bridgeQuizQuestions, setBridgeQuizQuestions] = useState<QuickQuizQuestion[]>([])
+  const [bridgeQuizQuestions, setBridgeQuizQuestions] = useState<QuizQuestion[]>([])
   const [bridgeQuizAnswers, setBridgeQuizAnswers] = useState<Record<string, number>>({})
   const [bridgeDebugEntries, setBridgeDebugEntries] = useState<string[]>([])
-  const [bridgeRuntimeHint, setBridgeRuntimeHint] = useState<string | null>(null)
-  const [discoveryToast, setDiscoveryToast] = useState<{ entityId: string; rarity: 'common' | 'rare' | 'epic' } | null>(
-    null,
-  )
-  const [rewardToast, setRewardToast] = useState<string | null>(null)
+  const toast = useToast()
   const user = useAuthStore((s) => s.user)
   const [gemBalance, setGemBalance] = useState(0)
   const [gamificationCatalog, setGamificationCatalog] = useState<{
@@ -106,11 +124,19 @@ function ExplorePageContent() {
   const showcaseCameraUrlTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const lastCameraQueryRef = useRef<string>('')
   const appliedStageRef = useRef<number | null>(null)
+  const appliedHistoryFocusRef = useRef<string | null>(null)
 
-  const loadStages = useNarrativeStore((s) => s.loadSpace)
-  const stages = useNarrativeStore((s) => s.beats)
-  const stagesLoading = useNarrativeStore((s) => s.loading)
-  const setStage = useNarrativeStore((s) => s.setBeat)
+  const loadStages = useEarthHistoryStore((s) => s.loadStages)
+  const loadPlanetNarrative = usePlanetNarrativeStore((s) => s.loadForEntity)
+  const narrativeLoading = usePlanetNarrativeStore((s) => s.loading)
+  const narrativeBeats = usePlanetNarrativeStore((s) => s.beats)
+  const linkedLessonIds = usePlanetNarrativeStore((s) => s.linkedLessonIds)
+  const currentBeatId = usePlanetNarrativeStore((s) => s.currentBeat.id)
+  const focusBeatAndSite = usePlanetNarrativeStore((s) => s.focusBeatAndSite)
+  const planetBeatAccent = usePlanetNarrativeStore((s) => s.currentBeat.accentColor)
+  const stages = useEarthHistoryStore((s) => s.stages)
+  const stagesLoading = useEarthHistoryStore((s) => s.loading)
+  const setStage = useEarthHistoryStore((s) => s.setStageIndex)
   const { modules, concepts } = useLearningPath()
 
   /** Độ trễ trước khi bật overlay / quiz sau khi entity ổn định (Learning Bridge cố định). */
@@ -121,11 +147,35 @@ function ExplorePageContent() {
   const [jplOrbits, setJplOrbits] = useState<ShowcaseJplOrbitDTO[]>([])
   useEffect(() => {
     let cancelled = false
-    fetchPublicShowcaseEntityContents().then((rows) => {
-      if (!cancelled) setShowcaseContent(rows)
-    })
+    const debounceRef = { current: null as ReturnType<typeof setTimeout> | null }
+
+    const load = () => {
+      fetchPublicShowcaseEntityContents().then((rows) => {
+        if (!cancelled) setShowcaseContent(rows)
+      })
+    }
+
+    load()
+
+    const schedule = () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current)
+      debounceRef.current = setTimeout(() => {
+        debounceRef.current = null
+        load()
+      }, 350)
+    }
+
+    window.addEventListener(SHOWCASE_CATALOG_CHANGED_EVENT, schedule)
+    const onVis = () => {
+      if (document.visibilityState === 'visible') schedule()
+    }
+    document.addEventListener('visibilitychange', onVis)
+
     return () => {
       cancelled = true
+      if (debounceRef.current) clearTimeout(debounceRef.current)
+      window.removeEventListener(SHOWCASE_CATALOG_CHANGED_EVENT, schedule)
+      document.removeEventListener('visibilitychange', onVis)
     }
   }, [])
 
@@ -166,6 +216,49 @@ function ExplorePageContent() {
     [showcaseContent, showcaseCatalogGen, jplOrbits],
   )
 
+  const planetGlobeEntity = useMemo(() => {
+    if (!planetHistoryEntityId) return null
+    return buildPlanetGlobeEntity(planetHistoryEntityId, mergedOrbitEntities, showcaseContent)
+  }, [planetHistoryEntityId, mergedOrbitEntities, showcaseContent])
+
+  const planetHistoryLabel = useMemo(() => {
+    if (!planetHistoryEntityId) return 'Deep History'
+    const cat = getNasaCatalogItemById(planetHistoryEntityId)
+    return cat?.name || planetHistoryEntityId
+  }, [planetHistoryEntityId])
+
+  const openPlanetHistory = useCallback(
+    (entityId: string, focus?: { beatId?: number; pinId?: string }) => {
+      setPlanetHistoryEntityId(entityId)
+      setPlanetHistoryOpen(true)
+      setEarthHistoryOpen(false)
+      setShowcaseActiveItemId(entityId)
+      const next = new URLSearchParams(searchParams.toString())
+      next.set('mode', 'showcase')
+      next.set('entity', entityId)
+      next.set('history', '1')
+      next.delete('stage')
+      if (focus?.beatId != null && Number.isFinite(focus.beatId)) {
+        next.set('beat', String(Math.round(focus.beatId)))
+      } else {
+        next.delete('beat')
+      }
+      if (focus?.pinId?.trim()) next.set('pin', focus.pinId.trim())
+      else next.delete('pin')
+      router.replace(`${pathname}?${next.toString()}`, { scroll: false })
+    },
+    [pathname, router, searchParams],
+  )
+
+  const closePlanetHistory = useCallback(() => {
+    setPlanetHistoryOpen(false)
+    const next = new URLSearchParams(searchParams.toString())
+    next.delete('history')
+    next.delete('beat')
+    next.delete('pin')
+    router.replace(`${pathname}?${next.toString()}`, { scroll: false })
+  }, [pathname, router, searchParams])
+
   useEffect(() => {
     let cancelled = false
     fetchJplShowcaseOrbits().then((items) => {
@@ -200,7 +293,7 @@ function ExplorePageContent() {
       const d = ce.detail
       if (!d?.gemsEarned) return
       const tail = Array.isArray(d.labels) && d.labels.length ? ` (${d.labels.join(' · ')})` : ''
-      setRewardToast(`+${d.gemsEarned} gem${tail}`)
+      toast.show(`+${d.gemsEarned} gem${tail}`, { tone: 'success' })
       void syncGemWallet(user?.id).then((w) => setGemBalance(w.balance))
     }
     window.addEventListener('learning-path-rewards', onRewards as EventListener)
@@ -209,8 +302,53 @@ function ExplorePageContent() {
 
   useEffect(() => {
     if (!earthHistoryOpen) return
-    void loadStages('earth-history')
+    void loadStages()
   }, [earthHistoryOpen, loadStages])
+
+  useEffect(() => {
+    if (!planetHistoryOpen || !planetHistoryEntityId) return
+    appliedHistoryFocusRef.current = null
+    void loadPlanetNarrative(planetHistoryEntityId)
+  }, [planetHistoryOpen, planetHistoryEntityId, loadPlanetNarrative])
+
+  useEffect(() => {
+    if (!planetHistoryOpen || narrativeLoading || narrativeBeats.length === 0) return
+    const beatRaw = searchParams.get('beat')
+    const pinRaw = searchParams.get('pin')?.trim() || null
+    const key = `${planetHistoryEntityId}:${beatRaw ?? ''}:${pinRaw ?? ''}`
+    if (appliedHistoryFocusRef.current === key) return
+    if (beatRaw == null) {
+      appliedHistoryFocusRef.current = key
+      return
+    }
+    const beatId = parseInt(beatRaw, 10)
+    if (!Number.isFinite(beatId)) return
+    focusBeatAndSite(beatId, pinRaw)
+    appliedHistoryFocusRef.current = key
+  }, [
+    planetHistoryOpen,
+    planetHistoryEntityId,
+    narrativeLoading,
+    narrativeBeats.length,
+    searchParams,
+    focusBeatAndSite,
+  ])
+
+  /** Tránh autoplay timeline dính sang Deep History từ lần mở Trái Đất trước đó. */
+  useEffect(() => {
+    if (!planetHistoryOpen) return
+    usePlaybackStore.setState({ isPlaying: false })
+  }, [planetHistoryOpen])
+
+  useEffect(() => {
+    if (earthHistoryOpen) return
+    useSceneCommandStore.getState().clearAllGlobeFossilUi()
+  }, [earthHistoryOpen])
+
+  useEffect(() => {
+    if (!planetHistoryOpen) return
+    useSceneCommandStore.getState().clearAllGlobeFossilUi()
+  }, [planetHistoryOpen])
 
   useEffect(() => {
     if (stageTime == null) {
@@ -266,10 +404,12 @@ function ExplorePageContent() {
           if (typeof r.gemBalance === 'number') setGemBalance(r.gemBalance)
           const next = await fetchShowcaseGamificationCatalog()
           if (next) setGamificationCatalog(next)
-          setBridgeRuntimeHint(t === 'story' ? 'Đã mở khóa story' : 'Đã mở orbit nâng cao')
+          toast.show(t === 'story' ? 'Đã mở khóa story' : 'Đã mở orbit nâng cao', {
+            tone: 'info',
+          })
           window.dispatchEvent(new CustomEvent('gem-wallet-changed'))
         } else {
-          setBridgeRuntimeHint(r.error || 'Không mở được')
+          toast.show(r.error || 'Không mở được', { tone: 'danger' })
         }
       },
     }
@@ -333,6 +473,13 @@ function ExplorePageContent() {
     () => effectiveLessonLinks.filter((row) => visited3DMap[row.lessonId]).length,
     [effectiveLessonLinks, visited3DMap],
   )
+  const planetHistoryLessonLinks = useMemo(() => {
+    if (!planetHistoryEntityId) return []
+    return resolveLessonsForNarrativeEntity(modules, concepts, planetHistoryEntityId, {
+      linkedLessonIds,
+      beatId: currentBeatId,
+    })
+  }, [planetHistoryEntityId, modules, concepts, linkedLessonIds, currentBeatId])
   const museumLabelVi = useMemo(
     () =>
       getShowcaseMuseumLabelVi(
@@ -344,7 +491,7 @@ function ExplorePageContent() {
   )
   const bridgeQuizScore = useMemo(() => {
     const answered = bridgeQuizQuestions.filter((q) => bridgeQuizAnswers[q.id] !== undefined).length
-    const correct = bridgeQuizQuestions.filter((q) => bridgeQuizAnswers[q.id] === q.correctIndex).length
+    const correct = bridgeQuizQuestions.filter((q) => bridgeQuizAnswers[q.id] === mcqAnswerIndex(q)).length
     return { answered, correct, total: bridgeQuizQuestions.length }
   }, [bridgeQuizQuestions, bridgeQuizAnswers])
 
@@ -367,6 +514,17 @@ function ExplorePageContent() {
     },
     [],
   )
+
+  // Drive `--planet-accent` for the surface-scene wrapper. When a planet is
+  // focused via solar selection we use that name; otherwise fall back to the
+  // active showcase entity's linked planet so e.g. focusing a moon still
+  // tints the HUD with its parent planet's accent. Default is showcase gold.
+  const planetAccent = useMemo(() => {
+    if (planetHistoryOpen) return planetBeatAccent
+    const focusedPlanet =
+      selectedSolarPlanetIndex != null ? planetsData[selectedSolarPlanetIndex]?.name : null
+    return resolvePlanetAccent(focusedPlanet ?? activeResolved?.linkedPlanetName ?? null)
+  }, [planetHistoryOpen, planetBeatAccent, selectedSolarPlanetIndex, activeResolved?.linkedPlanetName])
 
   const handleShowcaseEntityClicked = useCallback(
     (entityId: string, source: string) => {
@@ -448,7 +606,7 @@ function ExplorePageContent() {
     if (bridgeQuizTimerRef.current) clearTimeout(bridgeQuizTimerRef.current)
     setBridgeOverlayOpen(false)
     setBridgeQuizPromptOpen(false)
-    if (earthHistoryOpen || !showcaseActiveItemId) return
+    if (earthHistoryOpen || planetHistoryOpen || !showcaseActiveItemId) return
 
     bridgeFocusTimerRef.current = setTimeout(() => {
       setBridgeOverlayEntityId(showcaseActiveItemId)
@@ -480,7 +638,7 @@ function ExplorePageContent() {
           const nextDiscovered = { ...discovered, [showcaseActiveItemId]: true }
           saveDiscoveryMap(nextDiscovered, user?.id ?? null)
           const rarity = guessEntityRarity(showcaseActiveItemId)
-          setDiscoveryToast({ entityId: showcaseActiveItemId, rarity })
+          toast.show(`Unlock: ${showcaseActiveItemId} • rarity: ${rarity}`, { tone: 'info' })
           trackLearningPathBehavior({
             eventName: 'scene_entity_discovered',
             metadata: { schemaVersion: 'scene_event_v2', entityId: showcaseActiveItemId, rarity },
@@ -520,30 +678,27 @@ function ExplorePageContent() {
       if (bridgeFocusTimerRef.current) clearTimeout(bridgeFocusTimerRef.current)
       if (bridgeQuizTimerRef.current) clearTimeout(bridgeQuizTimerRef.current)
     }
-  }, [earthHistoryOpen, showcaseActiveItemId, effectiveConceptCards, effectiveLessonLinks, modules, user?.id])
-
-  useEffect(() => {
-    if (!discoveryToast) return
-    const t = setTimeout(() => setDiscoveryToast(null), 3200)
-    return () => clearTimeout(t)
-  }, [discoveryToast])
-  useEffect(() => {
-    if (!rewardToast) return
-    const t = setTimeout(() => setRewardToast(null), 4200)
-    return () => clearTimeout(t)
-  }, [rewardToast])
-  useEffect(() => {
-    if (!bridgeRuntimeHint) return
-    const t = setTimeout(() => setBridgeRuntimeHint(null), 2600)
-    return () => clearTimeout(t)
-  }, [bridgeRuntimeHint])
+  }, [
+    earthHistoryOpen,
+    planetHistoryOpen,
+    showcaseActiveItemId,
+    effectiveConceptCards,
+    effectiveLessonLinks,
+    modules,
+    user?.id,
+  ])
 
   return (
-    <main className="relative w-screen h-screen overflow-hidden bg-black min-h-screen min-w-[320px]">
+    <main
+      className="surface-scene relative w-screen h-screen overflow-hidden bg-black min-h-screen min-w-[320px]"
+      style={{ ['--planet-accent' as string]: planetAccent }}
+    >
       <div className="canvas-container">
         <Suspense fallback={<Loading />}>
           {earthHistoryOpen ? (
             <EarthScene />
+          ) : planetHistoryOpen && planetGlobeEntity ? (
+            <PlanetHistoryScene globeEntity={planetGlobeEntity} />
           ) : (
             <ShowcaseScene
               orbitEntities={mergedOrbitEntities}
@@ -581,7 +736,7 @@ function ExplorePageContent() {
           <>
             <div className="fixed top-14 left-0 right-0 z-[22] border-b border-white/10 bg-black/35 backdrop-blur-sm">
               <div className="mx-auto max-w-[1400px] px-4 py-2 flex items-center justify-between text-[11px]">
-                <span className="tracking-[0.14em] uppercase text-slate-200/90">Earth History</span>
+                <span className="tracking-[0.14em] uppercase text-slate-200/90">Hóa thạch · Trái Đất</span>
                 <button
                   type="button"
                   onClick={() => setEarthHistoryOpen(false)}
@@ -592,21 +747,72 @@ function ExplorePageContent() {
               </div>
             </div>
             <Timeline />
-            <InfoPanel />
-            <FossilPanel />
+            {/* Một cột phải: Info + Hóa thạch xếp dọc — tránh hai panel fixed chồng lên nhau */}
+            <div className="pointer-events-auto fixed right-3 top-24 bottom-28 z-30 flex w-[min(22rem,calc(100vw-1.25rem))] min-h-0 flex-col gap-2">
+              <div className="flex min-h-0 min-w-0 flex-[1.15] basis-0 flex-col overflow-hidden">
+                <InfoPanel layout="dock" />
+              </div>
+              <FossilDetailDock />
+              <div className="flex min-h-0 min-w-0 flex-1 basis-0 flex-col overflow-hidden">
+                <FossilPanel layout="dock" />
+              </div>
+            </div>
             <Controls />
+          </>
+        ) : planetHistoryOpen ? (
+          <>
+            <div className="fixed top-14 left-0 right-0 z-[22] border-b border-violet-400/25 bg-black/40 backdrop-blur-sm">
+              <div className="mx-auto flex max-w-[1400px] flex-wrap items-center justify-between gap-2 px-4 py-2 text-[11px]">
+                <span className="tracking-[0.14em] uppercase text-violet-100/95 shrink-0">
+                  Deep History · {planetHistoryLabel}
+                </span>
+                {planetHistoryLessonLinks.length > 0 ? (
+                  <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
+                    <span className="text-[10px] text-violet-200/80 shrink-0">Bài LP:</span>
+                    {planetHistoryLessonLinks.slice(0, 4).map((row) => (
+                      <Link
+                        key={row.lessonId}
+                        href={row.href}
+                        className="max-w-[10rem] truncate rounded border border-violet-400/35 bg-violet-950/50 px-2 py-0.5 text-[10px] text-violet-50 hover:bg-violet-600/30"
+                      >
+                        {row.title}
+                      </Link>
+                    ))}
+                    {planetHistoryLessonLinks.length > 4 ? (
+                      <span className="text-[10px] text-violet-300/70">+{planetHistoryLessonLinks.length - 4}</span>
+                    ) : null}
+                  </div>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={closePlanetHistory}
+                  className="rounded border border-violet-300/45 px-2 py-1 text-[10px] uppercase tracking-wider text-violet-50 hover:bg-violet-600/25 shrink-0"
+                >
+                  Quay lại Showcase
+                </button>
+              </div>
+            </div>
+            <NarrativeTimeline entityLabel={planetHistoryLabel} />
+            <div className="pointer-events-auto fixed right-3 top-24 bottom-28 z-30 flex w-[min(22rem,calc(100vw-1.25rem))] min-h-0 flex-col gap-2">
+              <div className="flex min-h-0 min-w-0 flex-1 basis-0 flex-col overflow-hidden">
+                <NarrativeInfoPanel layout="dock" entityLabel={planetHistoryLabel} />
+              </div>
+            </div>
+            <NarrativeControls />
           </>
         ) : (
           <>
             <div className="fixed top-14 left-0 right-0 z-[22] border-b border-white/10 bg-black/35 backdrop-blur-sm">
               <div className="mx-auto max-w-[1400px] px-4 py-2 flex items-center justify-end text-[11px]">
                 <div className="flex items-center gap-2">
-                  <span
-                    className="rounded border border-slate-400/35 px-2 py-1 text-[10px] uppercase tracking-wider text-slate-200 bg-white/5"
-                    title="Layer 1: nhãn museum. Layer 2: map entity→concept. Layer 3: sceneContext trên bài."
+                  <Tooltip
+                    label="Layer 1: nhãn museum. Layer 2: map entity→concept. Layer 3: sceneContext trên bài."
+                    side="bottom"
                   >
-                    Learning Bridge v2
-                  </span>
+                    <span className="rounded border border-slate-400/35 px-2 py-1 text-[10px] uppercase tracking-wider text-slate-200 bg-white/5">
+                      Learning Bridge v2
+                    </span>
+                  </Tooltip>
                   {user ? (
                     <span className="rounded border border-cyan-400/35 px-2 py-1 text-[10px] uppercase tracking-wider text-cyan-100 bg-cyan-950/45 tabular-nums">
                       {gemBalance} gem
@@ -617,13 +823,25 @@ function ExplorePageContent() {
                       Progress {bridgeVisitedLessonsForEntity}/{effectiveLessonLinks.length}
                     </span>
                   ) : null}
-                  {activeResolved?.linkedPlanetName === 'Earth' ? (
+                  {activeResolved && entityHasExploreHistoryViewer(activeResolved.id) ? (
                     <button
                       type="button"
-                      onClick={() => setEarthHistoryOpen(true)}
+                      onClick={() => openPlanetHistory(activeResolved.id)}
+                      className="rounded border border-violet-400/45 px-2 py-1 text-[10px] uppercase tracking-wider text-violet-50 hover:bg-violet-600/25"
+                    >
+                      Deep History
+                    </button>
+                  ) : null}
+                  {activeResolved && entityHasFossilsTab(activeResolved.id) ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEarthHistoryOpen(true)
+                        setPlanetHistoryOpen(false)
+                      }}
                       className="rounded border border-emerald-300/40 px-2 py-1 text-[10px] uppercase tracking-wider text-emerald-100 hover:bg-emerald-500/15"
                     >
-                      Earth History
+                      Hóa thạch
                     </button>
                   ) : null}
                   <button
@@ -778,10 +996,10 @@ function ExplorePageContent() {
                     <div key={q.id} className="rounded border border-white/10 bg-black/25 p-2">
                       <p className="text-[11px] text-slate-100">{qIdx + 1}. {q.question}</p>
                       <div className="mt-1.5 grid gap-1">
-                        {q.options.map((opt, oi) => {
+                        {mcqOptionTexts(q).map((opt, oi) => {
                           const picked = bridgeQuizAnswers[q.id] === oi
                           const reveal = bridgeQuizAnswers[q.id] !== undefined
-                          const correct = oi === q.correctIndex
+                          const correct = oi === mcqAnswerIndex(q)
                           return (
                             <button
                               key={`${q.id}-${oi}`}
@@ -813,21 +1031,8 @@ function ExplorePageContent() {
               </aside>
             ) : null}
 
-            {discoveryToast ? (
-              <div className="fixed left-1/2 top-20 z-[25] -translate-x-1/2 rounded-xl border border-violet-400/40 bg-violet-900/85 px-4 py-2 text-sm text-violet-100 shadow-lg">
-                Unlock: {discoveryToast.entityId} • rarity: {discoveryToast.rarity}
-              </div>
-            ) : null}
-            {rewardToast ? (
-              <div className="fixed left-1/2 top-[7.25rem] z-[25] -translate-x-1/2 rounded-xl border border-emerald-400/40 bg-emerald-950/90 px-4 py-2 text-sm text-emerald-100 shadow-lg">
-                {rewardToast}
-              </div>
-            ) : null}
-            {bridgeRuntimeHint ? (
-              <div className="fixed left-1/2 top-32 z-[25] -translate-x-1/2 rounded-xl border border-cyan-400/35 bg-cyan-950/80 px-4 py-2 text-xs text-cyan-100 shadow-lg">
-                {bridgeRuntimeHint}
-              </div>
-            ) : null}
+            {/* discovery / reward / unlock-hint notifications now flow through
+                the global ToastProvider — see toast.show(...) above. */}
           </>
         )}
       </div>

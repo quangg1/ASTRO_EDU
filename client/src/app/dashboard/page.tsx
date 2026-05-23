@@ -11,7 +11,7 @@ import {
   syncLearningPathCompletion,
   useLearningPath,
 } from '@/features/learning-path/public'
-import { loadCompletedMilestoneIds, syncSolarJourneyProgress } from '@/lib/solarJourneyProgress'
+import { loadCompletedMilestoneIds, syncSolarJourneyProgress } from '@/features/rewards/public'
 import { getLessonById } from '@/data/learningPathCurriculum'
 import { loadGemWallet, syncGemWallet } from '@/features/rewards/public'
 

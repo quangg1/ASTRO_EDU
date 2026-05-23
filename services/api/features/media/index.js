@@ -3,20 +3,13 @@ const path = require('path');
 const fs = require('fs');
 const multer = require('multer');
 const { authMiddleware, requireRole } = require('../../shared/jwtAuth');
-
-const S3_BUCKET = process.env.S3_MEDIA_BUCKET;
-const AWS_REGION = process.env.AWS_REGION || 'ap-southeast-1';
-const MEDIA_CDN_URL = process.env.MEDIA_CDN_URL || (S3_BUCKET ? `https://${S3_BUCKET}.s3.${AWS_REGION}.amazonaws.com` : null);
+const { persistUploadedFile, getMulterStorage, safeFilename } = require('./uploadStorage');
+const { slugifyCategory } = require('../rewards/lib/decorationSlugs');
+const { bulkImportOverlays } = require('../rewards/services/avatarDecorationBulkService');
 
 const UPLOAD_DIR = path.join(__dirname, '../../../uploads');
 if (!fs.existsSync(UPLOAD_DIR)) {
   fs.mkdirSync(UPLOAD_DIR, { recursive: true });
-}
-
-function safeFilename(originalName) {
-  const ext = path.extname(originalName) || '';
-  const base = path.basename(originalName, ext).replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 60);
-  return `${Date.now()}-${base}${ext}`;
 }
 
 const fileFilter = (_req, file, cb) => {
@@ -24,74 +17,152 @@ const fileFilter = (_req, file, cb) => {
   cb(null, allowed.test(path.extname(file.originalname)));
 };
 
-const multerOpts = {
-  limits: { fileSize: 20 * 1024 * 1024 },
-  fileFilter,
+const avatarFileFilter = (_req, file, cb) => {
+  const allowed = /\.(jpg|jpeg|png|gif|webp)$/i;
+  cb(null, allowed.test(path.extname(file.originalname)));
 };
 
-let s3Client = null;
-if (S3_BUCKET) {
-  try {
-    const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
-    s3Client = new S3Client({
-      region: AWS_REGION,
-      ...(process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY
-        ? {
-            credentials: {
-              accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-              secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-            },
-          }
-        : {}),
-    });
-  } catch (e) {
-    console.warn('[media] S3_MEDIA_BUCKET set but @aws-sdk/client-s3 failed:', e.message);
-  }
-}
+const decorationOverlayFilter = (_req, file, cb) => {
+  const allowed = /\.(png|webp|gif)$/i;
+  cb(null, allowed.test(path.extname(file.originalname)));
+};
 
-if (s3Client) {
-  multerOpts.storage = multer.memoryStorage();
-} else {
-  multerOpts.storage = multer.diskStorage({
-    destination: (_req, _file, cb) => cb(null, UPLOAD_DIR),
-    filename: (_req, file, cb) => cb(null, safeFilename(file.originalname)),
-  });
-}
+const upload = multer({
+  storage: getMulterStorage(),
+  limits: { fileSize: 20 * 1024 * 1024 },
+  fileFilter,
+});
 
-const upload = multer(multerOpts);
+const avatarUpload = multer({
+  storage: getMulterStorage(),
+  fileFilter: avatarFileFilter,
+});
+
+const decorationBulkUpload = multer({
+  storage: getMulterStorage(),
+  limits: { fileSize: 25 * 1024 * 1024 },
+  fileFilter: decorationOverlayFilter,
+});
 
 const router = express.Router();
 
 router.post('/upload', authMiddleware, requireRole('teacher', 'admin'), upload.single('file'), async (req, res) => {
-  if (!req.file) {
-    return res.status(400).json({ success: false, code: 'MEDIA_INVALID_FILE', error: 'Chưa tải tệp lên hoặc định dạng tệp không hợp lệ' });
-  }
-  const filename = req.file.filename || safeFilename(req.file.originalname);
-
-  if (s3Client && S3_BUCKET) {
-    try {
-      const { PutObjectCommand } = require('@aws-sdk/client-s3');
-      const key = `files/${filename}`;
-      await s3Client.send(
-        new PutObjectCommand({
-          Bucket: S3_BUCKET,
-          Key: key,
-          Body: req.file.buffer,
-          ContentType: req.file.mimetype || 'application/octet-stream',
-        })
-      );
-      const base = (MEDIA_CDN_URL || '').replace(/\/$/, '');
-      const url = `${base}/${key}`;
-      return res.json({ success: true, url, filename });
-    } catch (err) {
-      console.error('[media] S3 upload failed:', err);
-      return res.status(500).json({ success: false, code: 'MEDIA_UPLOAD_FAILED', error: 'Tải tệp lên kho lưu trữ thất bại' });
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        code: 'MEDIA_INVALID_FILE',
+        error: 'Chưa tải tệp lên hoặc định dạng tệp không hợp lệ',
+      });
     }
+    const filename = req.file.filename || safeFilename(req.file.originalname);
+    const { url, filename: storedName } = await persistUploadedFile(req.file, `files/${filename}`);
+    res.json({ success: true, url, filename: storedName });
+  } catch (err) {
+    console.error('[media] upload error:', err);
+    res.status(err.status || 500).json({
+      success: false,
+      code: err.code || 'MEDIA_UPLOAD_FAILED',
+      error: err.message || 'Tải tệp lên thất bại',
+    });
   }
-
-  const url = `/files/${filename}`;
-  res.json({ success: true, url, filename });
 });
+
+/** Ảnh đại diện — mọi user đã đăng nhập; lưu S3/CDN `avatars/{userId}/...` khi có bucket. */
+router.post('/upload/avatar', authMiddleware, avatarUpload.single('file'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        code: 'MEDIA_INVALID_FILE',
+        error: 'Chọn ảnh JPG, PNG, GIF hoặc WebP.',
+      });
+    }
+    const userId = String(req.userId || '').replace(/[^a-zA-Z0-9_-]/g, '');
+    if (!userId) {
+      return res.status(401).json({ success: false, error: 'Phiên đăng nhập không hợp lệ' });
+    }
+    const filename = safeFilename(req.file.originalname);
+    const storageKey = `avatars/${userId}/${filename}`;
+    const { url, cdn } = await persistUploadedFile(req.file, storageKey);
+    res.json({ success: true, url, cdn: Boolean(cdn) });
+  } catch (err) {
+    console.error('[media] avatar upload error:', err);
+    res.status(err.status || 500).json({
+      success: false,
+      code: err.code || 'MEDIA_UPLOAD_FAILED',
+      error: err.message || 'Tải ảnh đại diện thất bại',
+    });
+  }
+});
+
+/** Nhiều overlay cùng lúc → CDN `decorations/categories/{slug}/overlays/*` + ShopItem 0 gem. */
+router.post(
+  '/upload/decoration-bulk',
+  authMiddleware,
+  requireRole('admin'),
+  decorationBulkUpload.array('files', 48),
+  async (req, res) => {
+    try {
+      const categorySlug = String(req.body?.categorySlug || '').trim();
+      if (!categorySlug) {
+        return res.status(400).json({ success: false, error: 'Thiếu categorySlug (nhóm trang trí)' });
+      }
+      const files = req.files || [];
+      if (!files.length) {
+        return res.status(400).json({ success: false, error: 'Chọn ít nhất một file PNG/WebP/GIF.' });
+      }
+      const data = await bulkImportOverlays(categorySlug, files, req.userId);
+      res.status(201).json({ success: true, data });
+    } catch (err) {
+      console.error('[media] decoration bulk upload error:', err);
+      res.status(err.status || 500).json({
+        success: false,
+        code: err.code || 'MEDIA_UPLOAD_FAILED',
+        error: err.message || 'Import hàng loạt thất bại',
+      });
+    }
+  },
+);
+
+const categoryBannerFilter = (_req, file, cb) => {
+  const allowed = /\.(jpg|jpeg|png|webp)$/i;
+  cb(null, allowed.test(path.extname(file.originalname)));
+};
+
+const categoryBannerUpload = multer({
+  storage: getMulterStorage(),
+  fileFilter: categoryBannerFilter,
+});
+
+/** Banner ngang cho nhóm trang trí — `decorations/categories/{slug}/banner.{ext}` */
+router.post(
+  '/upload/decoration-category-banner',
+  authMiddleware,
+  requireRole('admin'),
+  categoryBannerUpload.single('file'),
+  async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ success: false, error: 'Chọn ảnh banner (JPG/PNG/WebP).' });
+      }
+      const categorySlug = slugifyCategory(req.body?.categorySlug || '');
+      if (!categorySlug) {
+        return res.status(400).json({ success: false, error: 'Thiếu categorySlug' });
+      }
+      const ext = path.extname(req.file.originalname) || '.jpg';
+      const storageKey = `decorations/categories/${categorySlug}/banner${ext}`;
+      const { url, cdn } = await persistUploadedFile(req.file, storageKey);
+      res.json({ success: true, url, bannerUrl: url, cdn: Boolean(cdn), categorySlug });
+    } catch (err) {
+      console.error('[media] category banner upload error:', err);
+      res.status(err.status || 500).json({
+        success: false,
+        error: err.message || 'Tải banner thất bại',
+      });
+    }
+  },
+);
 
 router.use('/files', express.static(UPLOAD_DIR));
 

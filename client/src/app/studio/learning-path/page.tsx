@@ -35,7 +35,7 @@ import {
   fetchTaxonomyRegistryEditor,
   type TaxonomyRegistry,
 } from '@/features/concepts/public'
-import type { Lesson, LessonSection } from '@/features/courses/api/coursesApi'
+import type { Lesson } from '@/features/courses/api/coursesApi'
 import { useAuthStore } from '@/features/auth/public'
 import {
   BookOpen,
@@ -58,15 +58,14 @@ import { NASA_SHOWCASE_ITEMS } from '@/lib/showcaseEntities'
 import { useShowcaseCatalogGen } from '@/components/showcase/ShowcaseCatalogProvider'
 import { mergeNasaCatalog, type ResolvedNasaCatalogItem } from '@/lib/mergeShowcaseCatalog'
 import { fetchPublicShowcaseEntityContents, type ShowcaseEntityContentDTO } from '@/features/content3d/showcase/api/showcaseEntitiesApi'
+import { entityHasExploreHistoryViewer } from '@/app/studio/showcase-entities/entityHistoryCapability'
+import { studioFallbackBundle } from '@/features/content3d/narrative/lib/legacyPresets'
+import { narrativeSitesForBeat } from '@/features/content3d/narrative/lib/siteVisibility'
+import { cloneLessonSection, useBlockEditorActions } from '@/components/studio/hooks/useBlockEditorActions'
 
 const BlockEditor = dynamic(() => import('@/components/studio/BlockEditor'), { ssr: false })
 const BlockPalette = dynamic(() => import('@/components/studio/BlockPalette'), { ssr: false })
 const LessonPreview = dynamic(() => import('@/components/studio/LessonPreview'), { ssr: false })
-const BLOCK_CLIPBOARD_STORAGE_KEY = 'lp_studio_block_clipboard_v1'
-
-function cloneJson<T>(obj: T): T {
-  return JSON.parse(JSON.stringify(obj))
-}
 
 function safeLower(value: unknown): string {
   return typeof value === 'string' ? value.toLowerCase() : ''
@@ -128,9 +127,6 @@ function buildConceptUsage(modules: LearningModule[]): ConceptUsageItem[] {
   }
   return out
 }
-
-const inputCls =
-  'w-full rounded-lg bg-black/50 border border-white/15 px-3 py-2 text-white text-sm focus:border-cyan-500/50 focus:outline-none transition-colors'
 
 function collectLearningPathIssues(modules: LearningModule[]): string[] {
   const issues: string[] = []
@@ -247,9 +243,6 @@ function LearningPathLessonEditor({
   setEditorTab,
   updateLesson: applyPatch,
   setModules,
-  blockClipboard,
-  setBlockClipboard,
-  inputCls,
   resolvedShowcaseCatalog,
 }: {
   activeLesson: LessonItem
@@ -262,9 +255,6 @@ function LearningPathLessonEditor({
   setEditorTab: (t: 'blocks' | 'preview' | 'lesson-page' | 'quiz') => void
   updateLesson: typeof updateLesson
   setModules: Dispatch<SetStateAction<LearningModule[]>>
-  blockClipboard: LessonSection | null
-  setBlockClipboard: Dispatch<SetStateAction<LessonSection | null>>
-  inputCls: string
   resolvedShowcaseCatalog: ResolvedNasaCatalogItem[]
 }) {
   const sections = activeLesson.sections ?? []
@@ -330,6 +320,18 @@ function LearningPathLessonEditor({
     [filteredConceptCandidates, selectedConceptIds],
   )
   const conceptById = useMemo(() => new Map(concepts.map((c) => [c.id, c])), [concepts])
+  const primaryEntityId = (activeLesson.sceneContext?.primaryEntityId || '').trim()
+  const narrativePreset = useMemo(
+    () => (primaryEntityId ? studioFallbackBundle(primaryEntityId) : null),
+    [primaryEntityId],
+  )
+  const historyBeatOptions = narrativePreset?.beats ?? []
+  const historyFocus = activeLesson.sceneContext?.historyFocus
+  const historyPinOptions = useMemo(() => {
+    if (!historyFocus?.beatId || !narrativePreset) return []
+    const beatIds = historyBeatOptions.map((b) => b.id)
+    return narrativeSitesForBeat(primaryEntityId, historyFocus.beatId, narrativePreset.sites, beatIds)
+  }, [historyFocus?.beatId, narrativePreset, primaryEntityId, historyBeatOptions])
   const anchoredConceptIds = useMemo(
     () =>
       new Set(
@@ -389,6 +391,8 @@ function LearningPathLessonEditor({
   const patchLesson = (patch: Partial<LessonItem>) => {
     setModules((prev) => applyPatch(prev, moduleId, nodeId, depth, activeLesson.id, patch))
   }
+
+  const blockActions = useBlockEditorActions(sections, (next) => patchLesson({ sections: next }))
 
   const generateQuizByAi = async () => {
     if (quizGenerating) return
@@ -470,54 +474,47 @@ function LearningPathLessonEditor({
     return groups
   }, [sectionOutline])
 
-  const moveSection = (from: number, to: number) => {
-    if (to < 0 || to >= sections.length || from === to) return
-    const next = [...sections]
-    const [picked] = next.splice(from, 1)
-    next.splice(to, 0, picked)
-    patchLesson({ sections: next })
-  }
-
   return (
     <div className="w-full max-w-none space-y-4">
       <div>
         <p className="text-[10px] text-slate-600 font-mono break-all mb-2">{activeLesson.id}</p>
         <h2 className="text-lg font-semibold text-white">Soạn bài học</h2>
-        <p className="text-xs text-slate-500 mt-1">
+        <p className="text-xs text-ds-subtle mt-1">
           Cùng block kit với Course Studio — &quot;Lưu toàn bộ&quot; sau khi sửa xong (có thể nhiều bài).
         </p>
       </div>
 
-      <label className="block text-xs text-slate-400">
+      <label className="block text-xs text-ds-muted">
         Tiêu đề (VI)
         <input
           value={activeLesson.titleVi}
           onChange={(e) => patchLesson({ titleVi: e.target.value })}
-          className={`mt-1 ${inputCls}`}
+          className={`mt-1 studio-field`}
         />
       </label>
-      <label className="block text-xs text-slate-400">
+      <label className="block text-xs text-ds-muted">
         Title (EN)
         <input
           value={activeLesson.title}
           onChange={(e) => patchLesson({ title: e.target.value })}
-          className={`mt-1 ${inputCls}`}
+          className={`mt-1 studio-field`}
         />
       </label>
 
       <div className="rounded-xl border border-violet-500/25 bg-violet-500/5 p-3 space-y-2">
         <p className="text-xs font-medium text-violet-200">Showcase 3D — sceneContext (Layer 3)</p>
-        <p className="text-[11px] text-slate-500">
+        <p className="text-[11px] text-ds-subtle">
           Gắn bài với entity trong Explore; gộp với lesson tìm được qua concept (Layer 2). Để trống nếu bài không nhắm showcase.
         </p>
-        <label className="block text-xs text-slate-400">
+        <label className="block text-xs text-ds-muted">
           Entity chính (catalog)
           <select
             value={activeLesson.sceneContext?.primaryEntityId ?? ''}
             onChange={(e) => {
               const v = e.target.value.trim()
               const extras = (activeLesson.sceneContext?.entityIds || []).filter(Boolean)
-              if (!v && extras.length === 0) {
+              const hf = activeLesson.sceneContext?.historyFocus
+              if (!v && extras.length === 0 && !hf) {
                 patchLesson({ sceneContext: undefined })
                 return
               }
@@ -525,10 +522,11 @@ function LearningPathLessonEditor({
                 sceneContext: {
                   ...(v ? { primaryEntityId: v } : {}),
                   ...(extras.length ? { entityIds: extras } : {}),
+                  ...(v && hf ? { historyFocus: hf } : {}),
                 },
               })
             }}
-            className={`mt-1 ${inputCls}`}
+            className={`mt-1 studio-field`}
           >
             <option value="">— Không chọn —</option>
             {resolvedShowcaseCatalog.map((it) => (
@@ -538,7 +536,7 @@ function LearningPathLessonEditor({
             ))}
           </select>
         </label>
-        <label className="block text-xs text-slate-400">
+        <label className="block text-xs text-ds-muted">
           Entity phụ (id, cách nhau bằng dấu phẩy)
           <input
             value={(activeLesson.sceneContext?.entityIds || []).join(', ')}
@@ -549,7 +547,8 @@ function LearningPathLessonEditor({
                 .filter(Boolean)
               const primary = (activeLesson.sceneContext?.primaryEntityId || '').trim()
               const unique = [...new Set(parts)].filter((id) => id !== primary)
-              if (!primary && unique.length === 0) {
+              const hf = activeLesson.sceneContext?.historyFocus
+              if (!primary && unique.length === 0 && !hf) {
                 patchLesson({ sceneContext: undefined })
                 return
               }
@@ -557,19 +556,127 @@ function LearningPathLessonEditor({
                 sceneContext: {
                   ...(primary ? { primaryEntityId: primary } : {}),
                   ...(unique.length ? { entityIds: unique } : {}),
+                  ...(primary && hf ? { historyFocus: hf } : {}),
                 },
               })
             }}
             placeholder="vd: moon-europa, sc-cassini"
-            className={`mt-1 ${inputCls}`}
+            className={`mt-1 studio-field`}
           />
         </label>
+        {primaryEntityId && entityHasExploreHistoryViewer(primaryEntityId) && historyBeatOptions.length > 0 ? (
+          <div className="mt-3 space-y-2 rounded-lg border border-violet-500/30 bg-violet-950/20 p-2.5">
+            <p className="text-[11px] font-medium text-violet-200">Deep History (Layer 4)</p>
+            <p className="text-[10px] text-ds-subtle">
+              Cùng entity — mở Explore timeline + beat (tùy chọn pin). Beat lấy từ preset/CMS entity.
+            </p>
+            <label className="block text-xs text-ds-muted">
+              Thời kỳ (beat)
+              <select
+                value={historyFocus?.beatId ?? ''}
+                onChange={(e) => {
+                  const raw = e.target.value
+                  const extras = (activeLesson.sceneContext?.entityIds || []).filter(Boolean)
+                  if (!raw) {
+                    if (!primaryEntityId && extras.length === 0) {
+                      patchLesson({ sceneContext: undefined })
+                      return
+                    }
+                    patchLesson({
+                      sceneContext: {
+                        primaryEntityId,
+                        ...(extras.length ? { entityIds: extras } : {}),
+                      },
+                    })
+                    return
+                  }
+                  const beatId = Number(raw)
+                  patchLesson({
+                    sceneContext: {
+                      primaryEntityId,
+                      ...(extras.length ? { entityIds: extras } : {}),
+                      historyFocus: {
+                        beatId,
+                        ...(historyFocus?.labelVi ? { labelVi: historyFocus.labelVi } : {}),
+                        ...(historyFocus?.pinId ? { pinId: historyFocus.pinId } : {}),
+                      },
+                    },
+                  })
+                }}
+                className="mt-1 studio-field"
+              >
+                <option value="">— Không deep-link —</option>
+                {historyBeatOptions.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.icon} {b.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            {historyFocus?.beatId ? (
+              <>
+                <label className="block text-xs text-ds-muted">
+                  Pin (tuỳ chọn)
+                  <select
+                    value={historyFocus.pinId ?? ''}
+                    onChange={(e) => {
+                      const pinId = e.target.value.trim()
+                      const extras = activeLesson.sceneContext?.entityIds || []
+                      patchLesson({
+                        sceneContext: {
+                          primaryEntityId,
+                          ...(extras.length ? { entityIds: extras } : {}),
+                          historyFocus: {
+                            beatId: historyFocus.beatId,
+                            ...(pinId ? { pinId } : {}),
+                            ...(historyFocus.labelVi ? { labelVi: historyFocus.labelVi } : {}),
+                          },
+                        },
+                      })
+                    }}
+                    className="mt-1 studio-field"
+                  >
+                    <option value="">— Không chọn pin —</option>
+                    {historyPinOptions.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.nameVi}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="block text-xs text-ds-muted">
+                  Nhãn nút LP
+                  <input
+                    value={historyFocus.labelVi ?? ''}
+                    onChange={(e) => {
+                      const labelVi = e.target.value.trim()
+                      const extras = activeLesson.sceneContext?.entityIds || []
+                      patchLesson({
+                        sceneContext: {
+                          primaryEntityId,
+                          ...(extras.length ? { entityIds: extras } : {}),
+                          historyFocus: {
+                            beatId: historyFocus.beatId,
+                            ...(historyFocus.pinId ? { pinId: historyFocus.pinId } : {}),
+                            ...(labelVi ? { labelVi } : {}),
+                          },
+                        },
+                      })
+                    }}
+                    placeholder="vd: Xem Noachian trên 3D"
+                    className="mt-1 studio-field"
+                  />
+                </label>
+              </>
+            ) : null}
+          </div>
+        ) : null}
       </div>
 
-      <div className="rounded-xl border border-cyan-500/25 bg-cyan-500/5 p-3">
+      <div className="rounded-xl border border-ds-accent-strong bg-ds-accent-soft p-3">
         <p className="text-xs font-medium text-cyan-200 mb-2">Concept mapping + highlight</p>
         {concepts.length === 0 ? (
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-ds-subtle">
             Chưa có concept. Tạo concept ở panel bên trái rồi quay lại map cho bài này.
           </p>
         ) : (
@@ -579,12 +686,12 @@ function LearningPathLessonEditor({
                 value={conceptQuery}
                 onChange={(e) => setConceptQuery(e.target.value)}
                 placeholder="Tìm concept theo id/title/aliases..."
-                className={inputCls}
+                className="studio-field"
               />
               <select
                 value={conceptDomain}
                 onChange={(e) => setConceptDomain(e.target.value)}
-                className={inputCls}
+                className="studio-field"
               >
                 <option value="all">Tất cả domain</option>
                 {conceptDomains.map((d) => (
@@ -596,7 +703,7 @@ function LearningPathLessonEditor({
               <select
                 value={conceptSubdomain}
                 onChange={(e) => setConceptSubdomain(e.target.value)}
-                className={inputCls}
+                className="studio-field"
               >
                 <option value="all">Tất cả subdomain</option>
                 {conceptSubdomains.map((d) => (
@@ -606,16 +713,16 @@ function LearningPathLessonEditor({
                 ))}
               </select>
             </div>
-            <p className="text-[11px] text-slate-500 mb-2">
+            <p className="text-[11px] text-ds-subtle mb-2">
               Đang chọn {selectedConcepts.length}/{concepts.length} concept
             </p>
-            <div className="rounded-lg border border-white/10 bg-black/25 p-2.5 mb-2">
-              <p className="text-[11px] text-slate-400 mb-2">Concept đã gắn vào bài</p>
+            <div className="rounded-lg border border-ds-border bg-black/25 p-2.5 mb-2">
+              <p className="text-[11px] text-ds-muted mb-2">Concept đã gắn vào bài</p>
               {selectedConcepts.length > 0 ? (
                 <div className="flex flex-wrap gap-2">
                   {selectedConcepts.map((c) => (
                     <div key={`selected-${c.id}`} className="inline-flex items-center gap-1">
-                      <span className="inline-flex items-center gap-2 rounded-full border border-cyan-500/40 bg-cyan-500/15 px-3 py-1 text-xs text-cyan-100">
+                      <span className="inline-flex items-center gap-2 rounded-full border border-ds-accent-strong bg-ds-accent-soft px-3 py-1 text-xs text-cyan-100">
                         #{c.id}
                       </span>
                       <button
@@ -623,7 +730,7 @@ function LearningPathLessonEditor({
                         onClick={() =>
                           patchLesson({ conceptIds: selectedConceptIds.filter((id) => id !== c.id) })
                         }
-                        className="rounded-full border border-white/15 px-2 py-1 text-[11px] text-slate-300 hover:bg-white/10"
+                        className="rounded-full border border-ds-border-strong px-2 py-1 text-[11px] text-slate-300 hover:bg-white/10"
                         title="Bỏ concept khỏi bài"
                       >
                         ×
@@ -632,17 +739,17 @@ function LearningPathLessonEditor({
                   ))}
                 </div>
               ) : (
-                <p className="text-[11px] text-slate-500">Chưa gắn concept nào cho bài này.</p>
+                <p className="text-[11px] text-ds-subtle">Chưa gắn concept nào cho bài này.</p>
               )}
             </div>
             {previewConcept ? (
-              <div className="rounded-lg border border-cyan-500/25 bg-cyan-500/5 p-3 mb-2">
+              <div className="rounded-lg border border-ds-accent-strong bg-ds-accent-soft p-3 mb-2">
                 <div className="flex items-start justify-between gap-2">
-                  <p className="text-[11px] text-slate-400">Preview concept trước khi thêm</p>
+                  <p className="text-[11px] text-ds-muted">Preview concept trước khi thêm</p>
                   <button
                     type="button"
                     onClick={() => setPreviewConceptId(null)}
-                    className="text-[11px] rounded border border-white/15 px-2 py-0.5 text-slate-300 hover:bg-white/10"
+                    className="text-[11px] rounded border border-ds-border-strong px-2 py-0.5 text-slate-300 hover:bg-white/10"
                   >
                     Đóng preview
                   </button>
@@ -673,7 +780,7 @@ function LearningPathLessonEditor({
                 </div>
               </div>
             ) : null}
-            <p className="text-[11px] text-slate-400 mb-2">
+            <p className="text-[11px] text-ds-muted mb-2">
               Thêm nhanh từ danh sách ({unselectedFilteredConcepts.length} concept phù hợp bộ lọc)
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1">
@@ -684,29 +791,29 @@ function LearningPathLessonEditor({
                   onClick={() => setPreviewConceptId(c.id)}
                   className={`text-left rounded-lg border px-2.5 py-2 text-xs transition-colors ${
                     previewConceptId === c.id
-                      ? 'border-cyan-400/70 bg-cyan-500/15'
-                      : 'border-white/10 bg-black/30 hover:border-cyan-500/40 hover:bg-cyan-500/10'
+                      ? 'border-ds-accent-strong bg-ds-accent-soft'
+                      : 'border-ds-border bg-black/30 hover:border-ds-accent-strong hover:bg-ds-accent-soft'
                   }`}
                   title={c.short_description || c.explanation}
                 >
                   <span className="text-cyan-200 block">+ #{c.id}</span>
                   <span className="text-slate-200 block">{c.title || c.id}</span>
-                  <span className="text-[10px] text-slate-500 block">
+                  <span className="text-[10px] text-ds-subtle block">
                     {c.domain || 'no-domain'}
                     {c.subdomain ? ` / ${c.subdomain}` : ''}
                   </span>
                 </button>
               ))}
             </div>
-            <div className="mt-3 pt-3 border-t border-cyan-500/20">
+            <div className="mt-3 pt-3 border-t border-ds-accent-strong">
               <p className="text-xs font-medium text-violet-200 mb-1">Highlight trong nội dung (cụm văn bản → concept)</p>
-              <p className="text-[11px] text-slate-500 mb-3">
+              <p className="text-[11px] text-ds-subtle mb-3">
                 Gõ đúng cụm xuất hiện trong nội dung bài (khớp ngữ nghĩa do bạn chọn, không auto theo title concept). Cụm dài được ưu tiên nếu trùng phần.
               </p>
               <div className="space-y-2">
                 {(activeLesson.conceptAnchors ?? []).map((row, idx) => (
                   <div key={idx} className="flex flex-wrap gap-2 items-end">
-                    <label className="flex-1 min-w-[140px] text-[10px] text-slate-400">
+                    <label className="flex-1 min-w-[140px] text-[10px] text-ds-muted">
                       Cụm trong bài
                       <input
                         value={row.phrase}
@@ -715,11 +822,11 @@ function LearningPathLessonEditor({
                           next[idx] = { ...next[idx], phrase: e.target.value }
                           patchLesson({ conceptAnchors: next })
                         }}
-                        className={`mt-1 ${inputCls}`}
+                        className={`mt-1 studio-field`}
                         placeholder="Đúng đoạn văn cần gắn (vd: quỹ đạo elip)"
                       />
                     </label>
-                    <label className="flex-1 min-w-[120px] text-[10px] text-slate-400">
+                    <label className="flex-1 min-w-[120px] text-[10px] text-ds-muted">
                       Concept
                       <select
                         value={row.conceptId}
@@ -728,7 +835,7 @@ function LearningPathLessonEditor({
                           next[idx] = { ...next[idx], conceptId: e.target.value }
                           patchLesson({ conceptAnchors: next })
                         }}
-                        className={`mt-1 ${inputCls}`}
+                        className={`mt-1 studio-field`}
                       >
                         <option value="">— Chọn —</option>
                         {selectedConcepts.map((c) => (
@@ -818,7 +925,7 @@ function LearningPathLessonEditor({
             <p className="text-emerald-300">Prerequisite nhất quán.</p>
           )}
           {conceptChecklist.overBudget > 0 && conceptChecklist.removalCandidates.length > 0 && (
-            <div className="rounded border border-white/15 bg-black/25 px-2 py-1.5">
+            <div className="rounded border border-ds-border-strong bg-black/25 px-2 py-1.5">
               <p className="text-slate-300 mb-1">Gợi ý bỏ trước (ít liên kết/anchor):</p>
               <div className="flex flex-wrap gap-1.5">
                 {conceptChecklist.removalCandidates.map((id) => (
@@ -839,8 +946,8 @@ function LearningPathLessonEditor({
         </div>
       </div>
 
-      <div className="rounded-xl border border-white/10 bg-black/20 overflow-hidden">
-        <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-white/10">
+      <div className="rounded-xl border border-ds-border bg-black/20 overflow-hidden">
+        <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-ds-border">
           <div className="flex gap-0.5">
           <button
             type="button"
@@ -848,7 +955,7 @@ function LearningPathLessonEditor({
             className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
               editorTab === 'blocks'
                 ? 'bg-cyan-600/90 text-white'
-                : 'text-slate-500 hover:text-white hover:bg-white/5'
+                : 'text-ds-subtle hover:text-white hover:bg-white/5'
             }`}
           >
             Blocks ({sections.length})
@@ -859,7 +966,7 @@ function LearningPathLessonEditor({
             className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
               editorTab === 'preview'
                 ? 'bg-emerald-600/90 text-white'
-                : 'text-slate-500 hover:text-white hover:bg-white/5'
+                : 'text-ds-subtle hover:text-white hover:bg-white/5'
             }`}
           >
             Preview
@@ -870,7 +977,7 @@ function LearningPathLessonEditor({
             className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
               editorTab === 'lesson-page'
                 ? 'bg-violet-600/90 text-white'
-                : 'text-slate-500 hover:text-white hover:bg-white/5'
+                : 'text-ds-subtle hover:text-white hover:bg-white/5'
             }`}
           >
             Full Lesson Page
@@ -881,7 +988,7 @@ function LearningPathLessonEditor({
             className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
               editorTab === 'quiz'
                 ? 'bg-amber-600/90 text-white'
-                : 'text-slate-500 hover:text-white hover:bg-white/5'
+                : 'text-ds-subtle hover:text-white hover:bg-white/5'
             }`}
           >
             <span className="inline-flex items-center gap-1.5">
@@ -900,7 +1007,6 @@ function LearningPathLessonEditor({
             onAutoGenerate={generateQuizByAi}
             generating={quizGenerating}
             generateError={quizGenerateError}
-            inputCls={inputCls}
           />
         )}
 
@@ -909,27 +1015,16 @@ function LearningPathLessonEditor({
           <div className="mb-3 flex items-center justify-end">
             <button
               type="button"
+              disabled={!blockActions.hasClipboard}
               onClick={() => {
-                let source = blockClipboard
-                if (typeof window !== 'undefined') {
-                  try {
-                    const raw = window.localStorage.getItem(BLOCK_CLIPBOARD_STORAGE_KEY)
-                    if (raw) source = JSON.parse(raw) as LessonSection
-                  } catch {
-                    // ignore storage parse errors and fallback to in-memory clipboard
-                  }
-                }
-                if (!source) {
+                const insertAt = blockActions.pasteAfter(selectedBlockIndex)
+                if (insertAt == null) {
                   window.alert('Chưa có block nào được copy.')
                   return
                 }
-                const next = [...sections]
-                const insertAt = selectedBlockIndex == null ? next.length : Math.min(next.length, selectedBlockIndex + 1)
-                next.splice(insertAt, 0, cloneJson(source))
-                patchLesson({ sections: next })
                 setSelectedBlockIndex(insertAt)
               }}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-cyan-500/30 bg-cyan-500/10 px-3 py-1.5 text-xs text-cyan-200 hover:bg-cyan-500/20"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-ds-accent-strong bg-ds-accent-soft px-3 py-1.5 text-xs text-cyan-200 hover:bg-ds-accent-strong disabled:opacity-40"
             >
               <Copy className="w-3.5 h-3.5" />
               Dán block đã copy
@@ -941,10 +1036,10 @@ function LearningPathLessonEditor({
                   key={bi}
                   id={`lp-studio-block-${bi}`}
                   onClick={() => setSelectedBlockIndex(bi)}
-                  className={`rounded-2xl bg-[#0a0f17]/80 p-4 space-y-3 group/block relative scroll-mt-24 cursor-pointer ${
+                  className={`rounded-2xl bg-ds-overlay p-4 space-y-3 group/block relative scroll-mt-24 cursor-pointer ${
                     selectedBlockIndex === bi
-                      ? 'border border-cyan-500/40 shadow-[0_0_0_1px_rgba(34,211,238,0.18)]'
-                      : 'border border-white/10'
+                      ? 'border border-ds-accent-strong shadow-[0_0_0_1px_rgba(34,211,238,0.18)]'
+                      : 'border border-ds-border'
                   }`}
                 >
                   <div className="flex items-center justify-between">
@@ -955,7 +1050,7 @@ function LearningPathLessonEditor({
                     <div className="flex items-center gap-1 opacity-0 group-hover/block:opacity-100 transition-opacity">
                       <button
                         type="button"
-                        onClick={() => moveSection(bi, bi - 1)}
+                        onClick={() => blockActions.moveUp(bi)}
                         disabled={bi === 0}
                         className="text-[10px] text-slate-600 hover:text-white disabled:opacity-20 px-1"
                       >
@@ -963,7 +1058,7 @@ function LearningPathLessonEditor({
                       </button>
                       <button
                         type="button"
-                        onClick={() => moveSection(bi, bi + 1)}
+                        onClick={() => blockActions.moveDown(bi)}
                         disabled={bi === sections.length - 1}
                         className="text-[10px] text-slate-600 hover:text-white disabled:opacity-20 px-1"
                       >
@@ -971,18 +1066,8 @@ function LearningPathLessonEditor({
                       </button>
                       <button
                         type="button"
-                        onClick={() => {
-                          const copied = cloneJson(sections[bi])
-                          setBlockClipboard(copied)
-                          if (typeof window !== 'undefined') {
-                            try {
-                              window.localStorage.setItem(BLOCK_CLIPBOARD_STORAGE_KEY, JSON.stringify(copied))
-                            } catch {
-                              // ignore storage write errors
-                            }
-                          }
-                        }}
-                        className="text-[10px] text-slate-600 hover:text-cyan-300 px-1"
+                        onClick={() => blockActions.copyAt(bi)}
+                        className="text-[10px] text-slate-600 hover:text-ds-accent px-1"
                         title="Copy block"
                         aria-label="Copy block"
                       >
@@ -990,44 +1075,29 @@ function LearningPathLessonEditor({
                       </button>
                       <button
                         type="button"
-                        onClick={() => {
-                          const s = [...sections]
-                          s.splice(bi + 1, 0, cloneJson(s[bi]))
-                          patchLesson({ sections: s })
-                        }}
-                        className="text-[10px] text-slate-600 hover:text-cyan-300 px-1"
+                        onClick={() => blockActions.duplicateAt(bi)}
+                        className="text-[10px] text-slate-600 hover:text-ds-accent px-1"
                         title="Nhân đôi block"
                       >
                         ⧉
                       </button>
                       <button
                         type="button"
-                        onClick={() => {
-                          const s = [...sections]
-                          s.splice(bi, 1)
-                          patchLesson({ sections: s })
-                        }}
+                        onClick={() => blockActions.removeAt(bi)}
                         className="text-[10px] text-red-500/50 hover:text-red-400 px-1"
                       >
                         ×
                       </button>
                     </div>
                   </div>
-                  <BlockEditor
-                    section={sec}
-                    onChange={(updated) => {
-                      const s = [...sections]
-                      s[bi] = updated
-                      patchLesson({ sections: s })
-                    }}
-                  />
+                  <BlockEditor section={sec} onChange={(updated) => blockActions.updateAt(bi, updated)} />
                 </div>
               ))}
-              <BlockPalette onAdd={(sec) => patchLesson({ sections: [...sections, sec] })} />
+              <BlockPalette onAdd={(sec) => blockActions.append(sec)} />
             </div>
             <aside className="hidden xl:block fixed right-4 top-24 w-[300px] z-30">
-                <div className="rounded-xl border border-white/10 bg-[#060b14]/95 p-3 shadow-xl">
-                  <p className="text-[11px] uppercase tracking-wider text-slate-500 mb-2">TOC (theo lesson view)</p>
+                <div className="rounded-xl border border-ds-border bg-ds-overlay p-3 shadow-xl">
+                  <p className="text-[11px] uppercase tracking-wider text-ds-subtle mb-2">TOC (theo lesson view)</p>
                   <div className="space-y-1.5 max-h-[65vh] overflow-y-auto pr-1">
                     {tocGroups.map((group) => {
                       return (
@@ -1037,12 +1107,12 @@ function LearningPathLessonEditor({
                             onClick={() =>
                               document.getElementById(group.parent.id)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
                             }
-                            className="w-full text-left rounded-md px-2.5 py-2 text-xs transition-colors border border-transparent text-slate-300 hover:bg-white/5 hover:border-cyan-500/30"
+                            className="w-full text-left rounded-md px-2.5 py-2 text-xs transition-colors border border-transparent text-slate-300 hover:bg-white/5 hover:border-ds-accent-strong"
                           >
                             {group.parent.title}
                           </button>
                           {group.children.length > 0 ? (
-                            <div className="ml-2 pl-2 border-l border-white/10 space-y-1">
+                            <div className="ml-2 pl-2 border-l border-ds-border space-y-1">
                               {group.children.map((child) => (
                                 <button
                                   key={child.id}
@@ -1050,7 +1120,7 @@ function LearningPathLessonEditor({
                                   onClick={() =>
                                     document.getElementById(child.id)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
                                   }
-                                  className="w-full text-left rounded-md px-2 py-1 text-[11px] transition-colors text-slate-500 hover:text-slate-300 hover:bg-white/5 border border-transparent hover:border-cyan-500/20"
+                                  className="w-full text-left rounded-md px-2 py-1 text-[11px] transition-colors text-ds-subtle hover:text-slate-300 hover:bg-white/5 border border-transparent hover:border-ds-accent-strong"
                                 >
                                   {child.title}
                                 </button>
@@ -1067,7 +1137,7 @@ function LearningPathLessonEditor({
         )}
 
         {editorTab === 'preview' && (
-          <div className="border-t border-emerald-500/10 bg-[#060b14]">
+          <div className="border-t border-emerald-500/10 bg-ds-surface">
             <div className="px-4 py-2 border-b border-emerald-500/10 bg-emerald-500/5 flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
               <span className="text-[11px] font-medium text-emerald-300">Preview (như học viên thấy)</span>
@@ -1083,7 +1153,7 @@ function LearningPathLessonEditor({
         )}
 
         {editorTab === 'lesson-page' && (
-          <div className="border-t border-violet-500/10 bg-[#060b14]">
+          <div className="border-t border-violet-500/10 bg-ds-surface">
             <div className="px-4 py-2 border-b border-violet-500/10 bg-violet-500/5 flex items-center gap-2">
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-violet-400 animate-pulse" />
@@ -1092,14 +1162,14 @@ function LearningPathLessonEditor({
                 </span>
               </div>
             </div>
-            <div className="p-4 md:p-6 bg-[#02040a]">
+            <div className="p-4 md:p-6 bg-ds-base">
               <div className="max-w-3xl mx-auto space-y-4">
-                <div className="rounded-2xl border border-white/10 bg-[#070b14]/90 p-4 md:p-5">
-                  <p className="text-[10px] uppercase tracking-wider text-slate-500 mb-2">
+                <div className="rounded-2xl border border-ds-border bg-ds-overlay p-4 md:p-5">
+                  <p className="text-[10px] uppercase tracking-wider text-ds-subtle mb-2">
                     Learning Path / Studio Preview
                   </p>
                   <h2 className="text-xl md:text-2xl font-bold text-white">{activeLesson.titleVi}</h2>
-                  {activeLesson.title ? <p className="text-slate-500 text-sm mt-1">{activeLesson.title}</p> : null}
+                  {activeLesson.title ? <p className="text-ds-subtle text-sm mt-1">{activeLesson.title}</p> : null}
                 </div>
                 <LessonPreview
                   lesson={previewLesson}
@@ -1128,7 +1198,6 @@ export default function StudioLearningPathPage() {
   const [saveIssues, setSaveIssues] = useState<string[]>([])
   const [undoDelete, setUndoDelete] = useState<{ label: string; modules: LearningModule[] } | null>(null)
   const [editorTab, setEditorTab] = useState<'blocks' | 'preview' | 'lesson-page' | 'quiz'>('blocks')
-  const [blockClipboard, setBlockClipboard] = useState<LessonSection | null>(null)
   const [baselineSnapshot, setBaselineSnapshot] = useState('')
   const [showcaseContent, setShowcaseContent] = useState<ShowcaseEntityContentDTO[]>([])
   const showcaseCatalogGen = useShowcaseCatalogGen()
@@ -1140,17 +1209,6 @@ export default function StudioLearningPathPage() {
 
   useEffect(() => {
     void fetchPublicShowcaseEntityContents().then(setShowcaseContent)
-  }, [])
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-    try {
-      const raw = window.localStorage.getItem(BLOCK_CLIPBOARD_STORAGE_KEY)
-      if (!raw) return
-      setBlockClipboard(JSON.parse(raw) as LessonSection)
-    } catch {
-      // ignore storage parse errors
-    }
   }, [])
 
   /** Điều hướng phân cấp */
@@ -1382,7 +1440,7 @@ export default function StudioLearningPathPage() {
     if (!currentModule) return
     if (!confirm(`Xóa module "${currentModule.titleVi}" và toàn bộ chủ đề / bài bên trong?`)) return
     const mid = currentModule.id
-    setUndoDelete({ label: `Đã xóa module "${currentModule.titleVi}"`, modules: cloneJson(modules) })
+    setUndoDelete({ label: `Đã xóa module "${currentModule.titleVi}"`, modules: cloneLessonSection(modules) })
     setModules((prev) => {
       const next = renumberModuleOrders(prev.filter((x) => x.id !== mid))
       queueMicrotask(() => {
@@ -1433,7 +1491,7 @@ export default function StudioLearningPathPage() {
       return
     }
     if (!confirm(`Xóa chủ đề "${currentNode.titleVi}" và mọi bài trong 3 tầng?`)) return
-    setUndoDelete({ label: `Đã xóa chủ đề "${currentNode.titleVi}"`, modules: cloneJson(modules) })
+    setUndoDelete({ label: `Đã xóa chủ đề "${currentNode.titleVi}"`, modules: cloneLessonSection(modules) })
     const mid = currentModule.id
     const nid = currentNode.id
     const remaining = currentModule.nodes.filter((n) => n.id !== nid)
@@ -1461,7 +1519,7 @@ export default function StudioLearningPathPage() {
   const removeCurrentLesson = () => {
     if (!currentModule || !currentNode || !depth || !activeLesson) return
     if (!confirm(`Xóa bài "${activeLesson.titleVi}"?`)) return
-    setUndoDelete({ label: `Đã xóa bài "${activeLesson.titleVi}"`, modules: cloneJson(modules) })
+    setUndoDelete({ label: `Đã xóa bài "${activeLesson.titleVi}"`, modules: cloneLessonSection(modules) })
     const lid = activeLesson.id
     setModules((prev) =>
       updateLessonList(prev, currentModule.id, currentNode.id, depth, (list) => list.filter((l) => l.id !== lid)),
@@ -1553,11 +1611,11 @@ export default function StudioLearningPathPage() {
   }, [loading, save, saving])
 
   if (!checked || !user) {
-    return <div className="min-h-screen bg-black pt-20 px-4 text-gray-400">Đang kiểm tra đăng nhập...</div>
+    return <div className="min-h-screen bg-black pt-20 px-4 text-ds-muted">Đang kiểm tra đăng nhập...</div>
   }
 
   return (
-    <div className="min-h-screen bg-[#050508] pt-14 pb-10 px-3 md:px-6">
+    <div className="min-h-screen bg-ds-base pt-14 pb-10 px-3 md:px-6">
       <div className="max-w-7xl mx-auto flex flex-col gap-4">
         <nav className="text-sm shrink-0">
           <Link
@@ -1566,20 +1624,20 @@ export default function StudioLearningPathPage() {
               if (confirmLeaveIfDirty()) return
               e.preventDefault()
             }}
-            className="text-cyan-400 hover:text-cyan-300"
+            className="text-ds-accent hover:text-ds-accent"
           >
             ← Studio
           </Link>
         </nav>
 
         {/* Thanh công cụ cố định */}
-        <header className="rounded-2xl border border-white/10 bg-gradient-to-r from-violet-950/50 to-cyan-950/30 px-4 py-4 md:px-6 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <header className="rounded-2xl border border-ds-border bg-gradient-to-r from-violet-950/50 to-cyan-950/30 px-4 py-4 md:px-6 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div>
             <h1 className="text-xl md:text-2xl font-bold text-white flex items-center gap-2">
               <ListTree className="w-6 h-6 text-violet-400" />
               Learning Path Studio
             </h1>
-            <p className="text-xs text-slate-400 mt-1 max-w-xl">
+            <p className="text-xs text-ds-muted mt-1 max-w-xl">
               <strong className="text-slate-300">Tạo mới</strong> module / chủ đề / bài, hoặc chọn{' '}
               <strong className="text-slate-300">Module → Chủ đề → Tầng → Bài</strong> để soạn. Nội dung bài dùng{' '}
               <strong className="text-cyan-200/90">cùng block kit với khóa học</strong> — không nhập HTML một ô.
@@ -1600,7 +1658,7 @@ export default function StudioLearningPathPage() {
                 type="checkbox"
                 checked={published}
                 onChange={(e) => setPublished(e.target.checked)}
-                className="rounded border-white/20"
+                className="rounded border-ds-border-strong"
               />
               Published
             </label>
@@ -1613,12 +1671,12 @@ export default function StudioLearningPathPage() {
               <Save className="w-4 h-4" />
               {saving ? 'Đang lưu...' : 'Lưu toàn bộ'}
             </button>
-            <span className="text-[11px] text-slate-400">Ctrl+S / Cmd+S</span>
+            <span className="text-[11px] text-ds-muted">Ctrl+S / Cmd+S</span>
             <Link
               href="/tutorial"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-xs text-cyan-300 hover:underline"
+              className="text-xs text-ds-accent hover:underline"
             >
               Xem học viên →
             </Link>
@@ -1631,7 +1689,7 @@ export default function StudioLearningPathPage() {
             <button
               type="button"
               onClick={() => {
-                setModules(cloneJson(undoDelete.modules))
+                setModules(cloneLessonSection(undoDelete.modules))
                 setUndoDelete(null)
                 setMessage('Đã hoàn tác thao tác xóa.')
               }}
@@ -1661,11 +1719,11 @@ export default function StudioLearningPathPage() {
         ) : null}
 
         {loading ? (
-          <p className="text-slate-500 py-12 text-center">Đang tải...</p>
+          <p className="text-ds-subtle py-12 text-center">Đang tải...</p>
         ) : modules.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-white/20 bg-white/[0.03] p-10 text-center max-w-lg mx-auto">
+          <div className="rounded-2xl border border-dashed border-ds-border-strong bg-white/[0.03] p-10 text-center max-w-lg mx-auto">
             <p className="text-slate-300 font-medium">Chưa có module nào trong Learning Path.</p>
-            <p className="text-xs text-slate-500 mt-2 mb-6">
+            <p className="text-xs text-ds-subtle mt-2 mb-6">
               Tạo module đầu tiên (có sẵn một chủ đề và một bài Cơ bản để bạn soạn), sau đó bấm &quot;Lưu toàn bộ&quot; để
               ghi lên server.
             </p>
@@ -1678,7 +1736,7 @@ export default function StudioLearningPathPage() {
               Tạo module đầu tiên
             </button>
             <p className="text-[11px] text-slate-600 mt-6">
-              Hoặc chạy API và seed từ <code className="text-slate-400">learningPathDefault.json</code> rồi tải lại
+              Hoặc chạy API và seed từ <code className="text-ds-muted">learningPathDefault.json</code> rồi tải lại
               trang.
             </p>
           </div>
@@ -1686,8 +1744,8 @@ export default function StudioLearningPathPage() {
           <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 lg:items-stretch min-h-[calc(100vh-12rem)]">
             {/* Cột trái: 3 bước điều hướng */}
             <aside className="w-full lg:w-[300px] shrink-0 flex flex-col gap-4">
-              <section className="rounded-2xl border border-white/10 bg-[#0c1018] p-4">
-                <p className="text-[10px] uppercase tracking-wider text-slate-500 font-semibold mb-1 flex items-center gap-1">
+              <section className="rounded-2xl border border-ds-border bg-ds-surface p-4">
+                <p className="text-[10px] uppercase tracking-wider text-ds-subtle font-semibold mb-1 flex items-center gap-1">
                   <Layers className="w-3.5 h-3.5" /> 1. Module
                 </p>
                 <p className="text-[10px] text-slate-600 mb-2 leading-snug">
@@ -1699,10 +1757,10 @@ export default function StudioLearningPathPage() {
                       key={m.id}
                       className={`flex items-stretch gap-0.5 rounded-xl border transition-colors ${
                         moduleId === m.id
-                          ? 'bg-cyan-500/15 border-cyan-500/40'
+                          ? 'bg-ds-accent-soft border-ds-accent-strong'
                           : dragOverModuleId === m.id
-                            ? 'border-cyan-400/50 bg-cyan-500/10'
-                            : 'border-white/10 bg-black/20 hover:border-white/15'
+                            ? 'border-ds-accent-strong bg-ds-accent-soft'
+                            : 'border-ds-border bg-black/20 hover:border-ds-border-strong'
                       }`}
                       onDragOver={(e) => {
                         e.preventDefault()
@@ -1732,7 +1790,7 @@ export default function StudioLearningPathPage() {
                           setDragOverModuleId(null)
                         }}
                         onDragEnd={() => setDragOverModuleId(null)}
-                        className="shrink-0 flex items-center px-1 text-slate-500 hover:text-slate-300 cursor-grab active:cursor-grabbing rounded-lg hover:bg-white/5 border-0 bg-transparent"
+                        className="shrink-0 flex items-center px-1 text-ds-subtle hover:text-slate-300 cursor-grab active:cursor-grabbing rounded-lg hover:bg-white/5 border-0 bg-transparent"
                       >
                         <GripVertical className="w-4 h-4" />
                       </button>
@@ -1740,12 +1798,12 @@ export default function StudioLearningPathPage() {
                         type="button"
                         onClick={() => onSelectModule(m.id)}
                         className={`flex-1 min-w-0 text-left rounded-lg px-2 py-2 text-sm transition-colors ${
-                          moduleId === m.id ? 'text-white' : 'text-slate-400 hover:text-slate-200'
+                          moduleId === m.id ? 'text-white' : 'text-ds-muted hover:text-slate-200'
                         }`}
                       >
                         <span className="mr-1">{m.emoji}</span>
                         <span className="font-medium line-clamp-2">{m.titleVi}</span>
-                        <span className="block text-[10px] text-slate-500 mt-0.5">
+                        <span className="block text-[10px] text-ds-subtle mt-0.5">
                           #{m.order} · {m.id}
                         </span>
                       </button>
@@ -1758,7 +1816,7 @@ export default function StudioLearningPathPage() {
                             e.stopPropagation()
                             moveModuleUp(m.id)
                           }}
-                          className="rounded p-0.5 text-slate-500 hover:text-white hover:bg-white/10 disabled:opacity-25 disabled:pointer-events-none"
+                          className="rounded p-0.5 text-ds-subtle hover:text-white hover:bg-white/10 disabled:opacity-25 disabled:pointer-events-none"
                         >
                           <ChevronUp className="w-4 h-4" />
                         </button>
@@ -1770,7 +1828,7 @@ export default function StudioLearningPathPage() {
                             e.stopPropagation()
                             moveModuleDown(m.id)
                           }}
-                          className="rounded p-0.5 text-slate-500 hover:text-white hover:bg-white/10 disabled:opacity-25 disabled:pointer-events-none"
+                          className="rounded p-0.5 text-ds-subtle hover:text-white hover:bg-white/10 disabled:opacity-25 disabled:pointer-events-none"
                         >
                           <ChevronDown className="w-4 h-4" />
                         </button>
@@ -1781,7 +1839,7 @@ export default function StudioLearningPathPage() {
                             e.stopPropagation()
                             duplicateModuleAt(m.id)
                           }}
-                          className="rounded p-0.5 text-slate-500 hover:text-cyan-300 hover:bg-cyan-500/15"
+                          className="rounded p-0.5 text-ds-subtle hover:text-ds-accent hover:bg-ds-accent-soft"
                           title="Nhân đôi (id & nội dung mới)"
                         >
                           <Copy className="w-4 h-4" />
@@ -1793,15 +1851,15 @@ export default function StudioLearningPathPage() {
                 <button
                   type="button"
                   onClick={appendModule}
-                  className="mt-3 w-full inline-flex items-center justify-center gap-1.5 rounded-xl border border-cyan-500/35 bg-cyan-500/10 text-cyan-200 text-xs font-medium py-2 hover:bg-cyan-500/20"
+                  className="mt-3 w-full inline-flex items-center justify-center gap-1.5 rounded-xl border border-ds-accent-strong bg-ds-accent-soft text-cyan-200 text-xs font-medium py-2 hover:bg-ds-accent-strong"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   Thêm module
                 </button>
                 {currentModule && (
-                  <div className="mt-3 pt-3 border-t border-white/10 space-y-2">
-                    <p className="text-[10px] text-slate-500 uppercase font-semibold">Chỉnh module đang chọn</p>
-                    <label className="block text-[11px] text-slate-400">
+                  <div className="mt-3 pt-3 border-t border-ds-border space-y-2">
+                    <p className="text-[10px] text-ds-subtle uppercase font-semibold">Chỉnh module đang chọn</p>
+                    <label className="block text-[11px] text-ds-muted">
                       Tiêu đề (VI)
                       <input
                         value={currentModule.titleVi}
@@ -1810,10 +1868,10 @@ export default function StudioLearningPathPage() {
                             updateModuleFields(prev, currentModule.id, { titleVi: e.target.value }),
                           )
                         }
-                        className={`mt-0.5 ${inputCls}`}
+                        className={`mt-0.5 studio-field`}
                       />
                     </label>
-                    <label className="block text-[11px] text-slate-400">
+                    <label className="block text-[11px] text-ds-muted">
                       Emoji
                       <input
                         value={currentModule.emoji}
@@ -1822,11 +1880,11 @@ export default function StudioLearningPathPage() {
                             updateModuleFields(prev, currentModule.id, { emoji: e.target.value }),
                           )
                         }
-                        className={`mt-0.5 ${inputCls}`}
+                        className={`mt-0.5 studio-field`}
                         maxLength={8}
                       />
                     </label>
-                    <label className="block text-[11px] text-slate-400">
+                    <label className="block text-[11px] text-ds-muted">
                       Mục tiêu (VI)
                       <textarea
                         value={currentModule.goalVi}
@@ -1836,7 +1894,7 @@ export default function StudioLearningPathPage() {
                           )
                         }
                         rows={2}
-                        className={`mt-0.5 ${inputCls} resize-y min-h-[48px]`}
+                        className={`mt-0.5 studio-field resize-y min-h-[48px]`}
                       />
                     </label>
                     <button
@@ -1851,8 +1909,8 @@ export default function StudioLearningPathPage() {
                 )}
               </section>
 
-              <section className="rounded-2xl border border-white/10 bg-[#0c1018] p-4">
-                <p className="text-[10px] uppercase tracking-wider text-slate-500 font-semibold mb-2 flex items-center gap-1">
+              <section className="rounded-2xl border border-ds-border bg-ds-surface p-4">
+                <p className="text-[10px] uppercase tracking-wider text-ds-subtle font-semibold mb-2 flex items-center gap-1">
                   <BookOpen className="w-3.5 h-3.5" /> 2. Chủ đề (node)
                 </p>
                 {!currentModule ? (
@@ -1867,10 +1925,10 @@ export default function StudioLearningPathPage() {
                         className={`w-full text-left rounded-xl px-3 py-2 text-sm transition-colors ${
                           nodeId === n.id
                             ? 'bg-violet-500/20 border border-violet-500/40 text-white'
-                            : 'border border-transparent text-slate-400 hover:bg-white/5'
+                            : 'border border-transparent text-ds-muted hover:bg-white/5'
                         }`}
                       >
-                        <span className="text-slate-500 text-xs mr-1">{i + 1}.</span>
+                        <span className="text-ds-subtle text-xs mr-1">{i + 1}.</span>
                         {n.titleVi}
                       </button>
                     ))}
@@ -1883,9 +1941,9 @@ export default function StudioLearningPathPage() {
                       Thêm chủ đề
                     </button>
                     {currentNode && (
-                      <div className="mt-3 pt-3 border-t border-white/10 space-y-2">
-                        <p className="text-[10px] text-slate-500 uppercase font-semibold">Chỉnh chủ đề</p>
-                        <label className="block text-[11px] text-slate-400">
+                      <div className="mt-3 pt-3 border-t border-ds-border space-y-2">
+                        <p className="text-[10px] text-ds-subtle uppercase font-semibold">Chỉnh chủ đề</p>
+                        <label className="block text-[11px] text-ds-muted">
                           Tiêu đề (VI)
                           <input
                             value={currentNode.titleVi}
@@ -1896,10 +1954,10 @@ export default function StudioLearningPathPage() {
                                 }),
                               )
                             }
-                            className={`mt-0.5 ${inputCls}`}
+                            className={`mt-0.5 studio-field`}
                           />
                         </label>
-                        <label className="block text-[11px] text-slate-400">
+                        <label className="block text-[11px] text-ds-muted">
                           Title (EN)
                           <input
                             value={currentNode.title}
@@ -1910,7 +1968,7 @@ export default function StudioLearningPathPage() {
                                 }),
                               )
                             }
-                            className={`mt-0.5 ${inputCls}`}
+                            className={`mt-0.5 studio-field`}
                           />
                         </label>
                         <button
@@ -1938,11 +1996,11 @@ export default function StudioLearningPathPage() {
                 />
               )}
 
-              <section className="rounded-2xl border border-white/10 bg-[#0c1018] p-4">
-                <p className="text-[10px] uppercase tracking-wider text-slate-500 font-semibold mb-2">
+              <section className="rounded-2xl border border-ds-border bg-ds-surface p-4">
+                <p className="text-[10px] uppercase tracking-wider text-ds-subtle font-semibold mb-2">
                   Concept Library
                 </p>
-                <p className="text-xs text-slate-400 mb-3">
+                <p className="text-xs text-ds-muted mb-3">
                   Concept được quản lý ở Studio riêng. Ở đây chỉ dùng để map vào lesson.
                 </p>
                 <Link
@@ -1957,8 +2015,8 @@ export default function StudioLearningPathPage() {
                 </Link>
               </section>
 
-              <details className="rounded-2xl border border-white/10 bg-[#0c1018] p-4" open={false}>
-                <summary className="cursor-pointer text-[10px] uppercase tracking-wider text-slate-500 font-semibold">
+              <details className="rounded-2xl border border-ds-border bg-ds-surface p-4" open={false}>
+                <summary className="cursor-pointer text-[10px] uppercase tracking-wider text-ds-subtle font-semibold">
                   Concept Usage Report (nâng cao)
                 </summary>
                 <div className="mt-3">
@@ -1971,19 +2029,19 @@ export default function StudioLearningPathPage() {
                         return (
                           <details
                             key={`usage-${c.id}`}
-                            className="rounded-lg border border-white/10 bg-black/30 px-2.5 py-2"
+                            className="rounded-lg border border-ds-border bg-black/30 px-2.5 py-2"
                           >
                             <summary className="cursor-pointer text-xs text-cyan-200">
                               #{c.id} · {c.title || c.id} ({rows.length})
                             </summary>
                             <div className="mt-2 space-y-1">
                               {rows.length === 0 ? (
-                                <p className="text-[11px] text-slate-500">Chưa được gắn vào lesson nào.</p>
+                                <p className="text-[11px] text-ds-subtle">Chưa được gắn vào lesson nào.</p>
                               ) : (
                                 rows.map((r) => (
                                   <p key={`${r.lessonId}-${r.depth}`} className="text-[11px] text-slate-300 leading-snug">
-                                    <span className="text-slate-500">{r.moduleTitle}</span> → {r.nodeTitle} →{' '}
-                                    <span className="text-cyan-300">{DEPTH_META[r.depth].labelVi}</span> → {r.lessonTitle}
+                                    <span className="text-ds-subtle">{r.moduleTitle}</span> → {r.nodeTitle} →{' '}
+                                    <span className="text-ds-accent">{DEPTH_META[r.depth].labelVi}</span> → {r.lessonTitle}
                                   </p>
                                 ))
                               )}
@@ -1996,11 +2054,11 @@ export default function StudioLearningPathPage() {
                 </div>
               </details>
 
-              <details className="rounded-2xl border border-white/10 bg-[#0c1018] p-4">
-                <summary className="cursor-pointer text-[10px] uppercase tracking-wider text-slate-500 font-semibold">
+              <details className="rounded-2xl border border-ds-border bg-ds-surface p-4">
+                <summary className="cursor-pointer text-[10px] uppercase tracking-wider text-ds-subtle font-semibold">
                   Learning Bridge (Layer 1–3)
                 </summary>
-                <div className="mt-3 text-[11px] text-slate-400 space-y-2 leading-relaxed">
+                <div className="mt-3 text-[11px] text-ds-muted space-y-2 leading-relaxed">
                   <p>
                     <span className="text-slate-200">Layer 1</span> — nhãn museum trên Explore theo catalog entity (không cần cấu hình
                     thêm).
@@ -2015,8 +2073,8 @@ export default function StudioLearningPathPage() {
                 </div>
               </details>
 
-              <section className="rounded-2xl border border-white/10 bg-[#0c1018] p-4">
-                <p className="text-[10px] uppercase tracking-wider text-slate-500 font-semibold mb-2 flex items-center gap-1">
+              <section className="rounded-2xl border border-ds-border bg-ds-surface p-4">
+                <p className="text-[10px] uppercase tracking-wider text-ds-subtle font-semibold mb-2 flex items-center gap-1">
                   <Sparkles className="w-3.5 h-3.5" /> 3. Tầng độ sâu
                 </p>
                 {!currentNode ? (
@@ -2033,8 +2091,8 @@ export default function StudioLearningPathPage() {
                           onClick={() => onSelectDepth(d)}
                           className={`rounded-xl px-3 py-2.5 text-left text-sm border transition-all ${
                             depth === d
-                              ? `bg-gradient-to-r ${meta.gradient} border-white/20 text-white shadow-lg`
-                              : 'border-white/10 text-slate-400 hover:border-white/20 hover:bg-white/5'
+                              ? `bg-gradient-to-r ${meta.gradient} border-ds-border-strong text-white shadow-lg`
+                              : 'border-ds-border text-ds-muted hover:border-ds-border-strong hover:bg-white/5'
                           }`}
                         >
                           <span className="mr-1">{meta.short}</span>
@@ -2051,9 +2109,9 @@ export default function StudioLearningPathPage() {
             </aside>
 
             {/* Cột phải: danh sách bài trong tầng + form một bài */}
-            <div className="flex-1 min-w-0 flex flex-col rounded-2xl border border-white/10 bg-[#0a0f17] overflow-hidden">
+            <div className="flex-1 min-w-0 flex flex-col rounded-2xl border border-ds-border bg-ds-surface overflow-hidden">
               {/* Breadcrumb */}
-              <div className="px-4 py-3 border-b border-white/10 bg-black/20 flex flex-wrap items-center gap-2 text-xs text-slate-400">
+              <div className="px-4 py-3 border-b border-ds-border bg-black/20 flex flex-wrap items-center gap-2 text-xs text-ds-muted">
                 <span>Đang sửa:</span>
                 <span className="text-cyan-300/90">{currentModule?.titleVi ?? '—'}</span>
                 <ChevronRight className="w-3 h-3 opacity-50" />
@@ -2066,8 +2124,8 @@ export default function StudioLearningPathPage() {
 
               <div className="flex flex-col xl:flex-row flex-1 min-h-0">
                 {/* Danh sách bài (chỉ tiêu đề) */}
-                <div className="w-full xl:w-[200px] 2xl:w-[220px] shrink-0 border-b xl:border-b-0 xl:border-r border-white/10 p-3 max-h-[40vh] xl:max-h-none overflow-y-auto">
-                  <p className="text-[10px] uppercase text-slate-500 font-semibold mb-2 px-1">4. Chọn bài</p>
+                <div className="w-full xl:w-[200px] 2xl:w-[220px] shrink-0 border-b xl:border-b-0 xl:border-r border-ds-border p-3 max-h-[40vh] xl:max-h-none overflow-y-auto">
+                  <p className="text-[10px] uppercase text-ds-subtle font-semibold mb-2 px-1">4. Chọn bài</p>
                   {lessonsAtDepth.length === 0 ? (
                     <div className="px-2 space-y-2">
                       <p className="text-xs text-slate-600">Chưa có bài ở tầng này.</p>
@@ -2075,7 +2133,7 @@ export default function StudioLearningPathPage() {
                         <button
                           type="button"
                           onClick={appendLesson}
-                          className="w-full inline-flex items-center justify-center gap-1.5 rounded-lg border border-cyan-500/35 bg-cyan-500/10 text-cyan-200 text-xs py-2 hover:bg-cyan-500/20"
+                          className="w-full inline-flex items-center justify-center gap-1.5 rounded-lg border border-ds-accent-strong bg-ds-accent-soft text-cyan-200 text-xs py-2 hover:bg-ds-accent-strong"
                         >
                           <Plus className="w-3.5 h-3.5" />
                           Thêm bài đầu tiên
@@ -2092,8 +2150,8 @@ export default function StudioLearningPathPage() {
                               onClick={() => setActiveLessonId(le.id)}
                               className={`min-w-0 flex-1 text-left rounded-lg px-3 py-2 text-sm transition-colors ${
                                 activeLessonId === le.id
-                                  ? 'bg-white/10 text-white border border-cyan-500/30'
-                                  : 'text-slate-400 hover:bg-white/5 border border-transparent'
+                                  ? 'bg-white/10 text-white border border-ds-accent-strong'
+                                  : 'text-ds-muted hover:bg-white/5 border border-transparent'
                               }`}
                             >
                               <span className="text-slate-600 text-xs mr-1">{idx + 1}.</span>
@@ -2104,7 +2162,7 @@ export default function StudioLearningPathPage() {
                                 type="button"
                                 onClick={() => moveLessonBy(le.id, -1)}
                                 disabled={idx === 0}
-                                className="h-6 w-6 inline-flex items-center justify-center rounded border border-white/10 text-slate-400 hover:text-white hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed"
+                                className="h-6 w-6 inline-flex items-center justify-center rounded border border-ds-border text-ds-muted hover:text-white hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed"
                                 title="Đưa lên"
                                 aria-label="Đưa bài lên"
                               >
@@ -2114,7 +2172,7 @@ export default function StudioLearningPathPage() {
                                 type="button"
                                 onClick={() => moveLessonBy(le.id, 1)}
                                 disabled={idx === lessonsAtDepth.length - 1}
-                                className="h-6 w-6 inline-flex items-center justify-center rounded border border-white/10 text-slate-400 hover:text-white hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed"
+                                className="h-6 w-6 inline-flex items-center justify-center rounded border border-ds-border text-ds-muted hover:text-white hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed"
                                 title="Đưa xuống"
                                 aria-label="Đưa bài xuống"
                               >
@@ -2127,7 +2185,7 @@ export default function StudioLearningPathPage() {
                       <button
                         type="button"
                         onClick={appendLesson}
-                        className="mt-2 w-full inline-flex items-center justify-center gap-1.5 rounded-lg border border-white/15 text-slate-300 text-xs py-2 hover:bg-white/5"
+                        className="mt-2 w-full inline-flex items-center justify-center gap-1.5 rounded-lg border border-ds-border-strong text-slate-300 text-xs py-2 hover:bg-white/5"
                       >
                         <Plus className="w-3.5 h-3.5" />
                         Thêm bài
@@ -2149,7 +2207,7 @@ export default function StudioLearningPathPage() {
                 {/* Form chi tiết — một bài (block kit như Course) */}
                 <div className="flex-1 p-4 md:p-6 overflow-y-auto min-h-[320px]">
                   {!currentModule || !currentNode || !depth || !activeLesson ? (
-                    <p className="text-slate-500 text-sm">Chọn đủ Module → Chủ đề → Tầng → Bài để soạn nội dung.</p>
+                    <p className="text-ds-subtle text-sm">Chọn đủ Module → Chủ đề → Tầng → Bài để soạn nội dung.</p>
                   ) : (
                     <LearningPathLessonEditor
                       activeLesson={activeLesson}
@@ -2162,9 +2220,6 @@ export default function StudioLearningPathPage() {
                       setEditorTab={setEditorTab}
                       updateLesson={updateLesson}
                       setModules={setModules}
-                      blockClipboard={blockClipboard}
-                      setBlockClipboard={setBlockClipboard}
-                      inputCls={inputCls}
                       resolvedShowcaseCatalog={resolvedShowcaseCatalog}
                     />
                   )}

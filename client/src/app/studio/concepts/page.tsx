@@ -16,9 +16,6 @@ import {
 } from '@/features/concepts/public'
 import { fetchEditorLearningPath } from '@/features/learning-path/public'
 
-const inputCls =
-  'w-full rounded-lg bg-black/50 border border-white/15 px-3 py-2 text-white text-sm focus:border-cyan-500/50 focus:outline-none transition-colors'
-
 function slugifyConceptId(raw: string): string {
   return raw
     .trim()
@@ -433,11 +430,11 @@ export default function StudioConceptsPage() {
   }, [isDirty, saving])
 
   if (!checked || !user) {
-    return <div className="min-h-screen bg-black pt-20 px-4 text-gray-400">Đang kiểm tra đăng nhập...</div>
+    return <div className="min-h-screen bg-black pt-20 px-4 text-ds-muted">Đang kiểm tra đăng nhập...</div>
   }
 
   return (
-    <div className="min-h-screen bg-[#050508] pt-14 pb-10 px-3 md:px-6">
+    <div className="min-h-screen bg-ds-base pt-14 pb-10 px-3 md:px-6">
       <div className="max-w-6xl mx-auto space-y-4">
         <nav className="text-sm">
           <Link
@@ -446,16 +443,16 @@ export default function StudioConceptsPage() {
               if (confirmLeaveIfDirty()) return
               e.preventDefault()
             }}
-            className="text-cyan-400 hover:text-cyan-300"
+            className="text-ds-accent hover:text-ds-accent"
           >
             ← Studio
           </Link>
         </nav>
 
-        <header className="rounded-2xl border border-white/10 bg-gradient-to-r from-cyan-950/40 to-violet-950/30 px-4 py-4 md:px-6 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <header className="rounded-2xl border border-ds-border bg-gradient-to-r from-cyan-950/40 to-violet-950/30 px-4 py-4 md:px-6 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div>
             <h1 className="text-xl md:text-2xl font-bold text-white">Concept Studio</h1>
-            <p className="text-xs text-slate-400 mt-1">
+            <p className="text-xs text-ds-muted mt-1">
               Tạo và quản lý thư viện concept dùng chung toàn hệ thống. Lesson chỉ map bằng concept id.
             </p>
           </div>
@@ -475,7 +472,7 @@ export default function StudioConceptsPage() {
                 if (confirmLeaveIfDirty()) return
                 e.preventDefault()
               }}
-              className="text-xs min-h-10 px-3 inline-flex items-center rounded-lg border border-white/15 text-slate-200 hover:bg-white/10"
+              className="text-xs min-h-10 px-3 inline-flex items-center rounded-lg border border-ds-border-strong text-slate-200 hover:bg-white/10"
             >
               Đi tới Learning Path mapping
             </Link>
@@ -525,25 +522,25 @@ export default function StudioConceptsPage() {
             </ul>
           </div>
         ) : null}
-        <section className="rounded-2xl border border-white/10 bg-[#0b1220]/70 p-4 space-y-3">
+        <section className="rounded-2xl border border-ds-border bg-ds-overlay p-4 space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="text-sm font-semibold text-cyan-100">Taxonomy Registry</h2>
-            <p className="text-[11px] text-slate-400">Domain/Subdomain chỉ tạo tại đây</p>
+            <p className="text-[11px] text-ds-muted">Domain/Subdomain chỉ tạo tại đây</p>
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-            <div className="rounded-lg border border-white/10 bg-black/25 p-3 space-y-2">
+            <div className="rounded-lg border border-ds-border bg-black/25 p-3 space-y-2">
               <p className="text-xs text-slate-300">Thêm domain</p>
               <div className="flex gap-2">
                 <input
                   value={registryDomainName}
                   onChange={(e) => setRegistryDomainName(e.target.value)}
                   placeholder="vd: space-missions"
-                  className={`${inputCls} flex-1`}
+                  className={`studio-field flex-1`}
                 />
                 <button
                   type="button"
                   onClick={addRegistryDomain}
-                  className="rounded-lg border border-cyan-500/40 px-3 text-xs text-cyan-200 hover:bg-cyan-500/10"
+                  className="rounded-lg border border-ds-accent-strong px-3 text-xs text-cyan-200 hover:bg-ds-accent-soft"
                 >
                   Thêm
                 </button>
@@ -571,12 +568,12 @@ export default function StudioConceptsPage() {
                 ))}
               </div>
             </div>
-            <div className="rounded-lg border border-white/10 bg-black/25 p-3 space-y-2">
+            <div className="rounded-lg border border-ds-border bg-black/25 p-3 space-y-2">
               <p className="text-xs text-slate-300">Thêm subdomain</p>
               <select
                 value={registryDomainTarget}
                 onChange={(e) => setRegistryDomainTarget(e.target.value)}
-                className={inputCls}
+                className="studio-field"
               >
                 {domainOptions.map((domain) => (
                   <option key={`registry-domain-opt-${domain}`} value={domain}>
@@ -589,12 +586,12 @@ export default function StudioConceptsPage() {
                   value={registrySubdomainName}
                   onChange={(e) => setRegistrySubdomainName(e.target.value)}
                   placeholder="vd: telescope-observation"
-                  className={`${inputCls} flex-1`}
+                  className={`studio-field flex-1`}
                 />
                 <button
                   type="button"
                   onClick={addRegistrySubdomain}
-                  className="rounded-lg border border-cyan-500/40 px-3 text-xs text-cyan-200 hover:bg-cyan-500/10"
+                  className="rounded-lg border border-ds-accent-strong px-3 text-xs text-cyan-200 hover:bg-ds-accent-soft"
                 >
                   Thêm
                 </button>
@@ -635,7 +632,7 @@ export default function StudioConceptsPage() {
                 <select
                   value={activeQueueConcept.id}
                   onChange={(e) => setQueueConceptId(e.target.value)}
-                  className={inputCls}
+                  className="studio-field"
                 >
                   {unclassifiedConcepts.map((c) => (
                     <option key={c.id} value={c.id}>
@@ -643,13 +640,13 @@ export default function StudioConceptsPage() {
                     </option>
                   ))}
                 </select>
-                <div className="rounded-lg border border-white/10 bg-black/25 p-2">
+                <div className="rounded-lg border border-ds-border bg-black/25 p-2">
                   <div className="flex items-center justify-between mb-2">
-                    <p className="text-[11px] text-slate-400">Chọn concept áp dụng cùng lúc</p>
+                    <p className="text-[11px] text-ds-muted">Chọn concept áp dụng cùng lúc</p>
                     <button
                       type="button"
                       onClick={() => setQueueSelectedIds(unclassifiedConcepts.map((c) => c.id))}
-                      className="text-[10px] text-cyan-300 hover:text-cyan-100"
+                      className="text-[10px] text-ds-accent hover:text-cyan-100"
                     >
                       Chọn tất cả
                     </button>
@@ -676,15 +673,15 @@ export default function StudioConceptsPage() {
                     })}
                   </div>
                 </div>
-                <div className="rounded-xl border border-white/10 bg-black/30 p-3">
+                <div className="rounded-xl border border-ds-border bg-black/30 p-3">
                   <p className="text-xs text-cyan-200">#{activeQueueConcept.id}</p>
                   <p className="text-sm text-white font-medium">{activeQueueConcept.title || activeQueueConcept.id}</p>
-                  <p className="text-[11px] text-slate-400 mt-1">
+                  <p className="text-[11px] text-ds-muted mt-1">
                     {activeQueueConcept.short_description || activeQueueConcept.explanation || 'Không có mô tả'}
                   </p>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                  <select value={queueDomain} onChange={(e) => setQueueDomain(e.target.value)} className={inputCls}>
+                  <select value={queueDomain} onChange={(e) => setQueueDomain(e.target.value)} className="studio-field">
                     {domainOptions.map((d) => (
                       <option key={d} value={d}>
                         {d}
@@ -694,7 +691,7 @@ export default function StudioConceptsPage() {
                   <select
                     value={queueSubdomain}
                     onChange={(e) => setQueueSubdomain(e.target.value)}
-                    className={inputCls}
+                    className="studio-field"
                   >
                     {queueSubdomainOptions.length === 0 && <option value="">(không có subdomain)</option>}
                     {queueSubdomainOptions.map((d) => (
@@ -726,48 +723,48 @@ export default function StudioConceptsPage() {
         )}
 
         {loading ? (
-          <p className="text-slate-500 py-12 text-center">Đang tải...</p>
+          <p className="text-ds-subtle py-12 text-center">Đang tải...</p>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-[340px,1fr] gap-4">
-            <section className="rounded-2xl border border-white/10 bg-[#0c1018] p-4 space-y-3">
+            <section className="rounded-2xl border border-ds-border bg-ds-surface p-4 space-y-3">
               <h2 className="text-sm font-semibold text-white">Tạo concept mới</h2>
               <input
                 value={newConceptId}
                 onChange={(e) => setNewConceptId(slugifyConceptId(e.target.value))}
                 placeholder="concept_id (vd: scientific_method)"
-                className={inputCls}
+                className="studio-field"
               />
               <input
                 value={newConceptTitle}
                 onChange={(e) => setNewConceptTitle(e.target.value)}
                 placeholder="title (vd: Quỹ đạo)"
-                className={inputCls}
+                className="studio-field"
               />
               <input
                 value={newConceptShortDescription}
                 onChange={(e) => setNewConceptShortDescription(e.target.value)}
                 placeholder="short_description"
-                className={inputCls}
+                className="studio-field"
               />
               <textarea
                 value={newConceptExplanation}
                 onChange={(e) => setNewConceptExplanation(e.target.value)}
                 placeholder="explanation"
-                className={`${inputCls} min-h-[100px]`}
+                className={`studio-field min-h-[100px]`}
               />
               <input
                 value={newConceptExamples}
                 onChange={(e) => setNewConceptExamples(e.target.value)}
                 placeholder='examples (phân tách bởi "|")'
-                className={inputCls}
+                className="studio-field"
               />
               <input
                 value={newConceptRelated}
                 onChange={(e) => setNewConceptRelated(e.target.value)}
                 placeholder='related ids (vd: gravity|velocity)'
-                className={inputCls}
+                className="studio-field"
               />
-              <select value={newConceptDomain} onChange={(e) => setNewConceptDomain(e.target.value)} className={inputCls}>
+              <select value={newConceptDomain} onChange={(e) => setNewConceptDomain(e.target.value)} className="studio-field">
                 <option value="">domain (chọn)</option>
                 {domainOptions.map((d) => (
                   <option key={d} value={d}>
@@ -778,7 +775,7 @@ export default function StudioConceptsPage() {
               <select
                 value={newConceptSubdomain}
                 onChange={(e) => setNewConceptSubdomain(e.target.value)}
-                className={inputCls}
+                className="studio-field"
                 disabled={!newConceptDomain}
               >
                 <option value="">subdomain (chọn)</option>
@@ -792,20 +789,20 @@ export default function StudioConceptsPage() {
                 value={newConceptAliases}
                 onChange={(e) => setNewConceptAliases(e.target.value)}
                 placeholder='aliases (vd: quỹ đạo elip|elliptical orbit)'
-                className={inputCls}
+                className="studio-field"
               />
               <select
                 value={String(newConceptDifficulty)}
                 onChange={(e) => setNewConceptDifficulty(Number(e.target.value) as 0 | 1 | 2)}
-                className={inputCls}
+                className="studio-field"
               >
                 <option value="0">Difficulty: Beginner</option>
                 <option value="1">Difficulty: Explorer</option>
                 <option value="2">Difficulty: Researcher</option>
               </select>
-              <label className="block text-xs text-slate-400">
+              <label className="block text-xs text-ds-muted">
                 Prerequisites mapping
-                <div className="mt-1 max-h-[140px] overflow-y-auto rounded-lg border border-white/15 bg-black/40 p-2 space-y-1">
+                <div className="mt-1 max-h-[140px] overflow-y-auto rounded-lg border border-ds-border-strong bg-black/40 p-2 space-y-1">
                   {concepts
                     .filter((c) => c.id !== slugifyConceptId(newConceptId || newConceptTitle))
                     .map((c) => {
@@ -876,13 +873,13 @@ export default function StudioConceptsPage() {
               </button>
             </section>
 
-            <section className="rounded-2xl border border-white/10 bg-[#0a0f17] p-4">
+            <section className="rounded-2xl border border-ds-border bg-ds-surface p-4">
               <div className="mb-3 space-y-2">
                 <h2 className="text-sm font-semibold text-white">Concept usage report</h2>
                 <input
                   value={conceptSearch}
                   onChange={(e) => setConceptSearch(e.target.value)}
-                  className={inputCls}
+                  className="studio-field"
                   placeholder="Tìm theo concept id/title/nội dung hoặc lesson/module..."
                 />
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
@@ -892,7 +889,7 @@ export default function StudioConceptsPage() {
                       setDomainFilter(e.target.value)
                       setSubdomainFilter('all')
                     }}
-                    className={inputCls}
+                    className="studio-field"
                   >
                     <option value="all">Tất cả domain</option>
                     {domainOptions.map((d) => (
@@ -904,7 +901,7 @@ export default function StudioConceptsPage() {
                   <select
                     value={subdomainFilter}
                     onChange={(e) => setSubdomainFilter(e.target.value)}
-                    className={inputCls}
+                    className="studio-field"
                   >
                     <option value="all">Tất cả subdomain</option>
                     {subdomainOptions.map((d) => (
@@ -914,7 +911,7 @@ export default function StudioConceptsPage() {
                     ))}
                   </select>
                 </div>
-                <p className="text-[11px] text-slate-500">
+                <p className="text-[11px] text-ds-subtle">
                   Hiển thị {filteredConcepts.length}/{concepts.length} concept
                 </p>
               </div>
@@ -925,21 +922,21 @@ export default function StudioConceptsPage() {
                   filteredConcepts.map((c) => {
                     const rows = usageByConcept.get(c.id) || []
                     return (
-                      <details key={c.id} className="rounded-lg border border-white/10 bg-black/30 px-3 py-2">
+                      <details key={c.id} className="rounded-lg border border-ds-border bg-black/30 px-3 py-2">
                         <summary className="cursor-pointer flex items-center justify-between gap-2">
                           <span className="text-xs text-cyan-200">
                             #{c.id} · {c.title || c.id}
                           </span>
-                          <span className="text-[11px] text-slate-400">{rows.length} lesson(s)</span>
+                          <span className="text-[11px] text-ds-muted">{rows.length} lesson(s)</span>
                         </summary>
                         <div className="mt-2">
-                          <p className="text-[11px] text-slate-400">{c.short_description}</p>
+                          <p className="text-[11px] text-ds-muted">{c.short_description}</p>
                           <p className="text-[11px] text-slate-300 mt-1">{c.explanation}</p>
                         </div>
-                        <details className="mt-2 rounded-lg border border-white/10 bg-black/20 p-2">
+                        <details className="mt-2 rounded-lg border border-ds-border bg-black/20 p-2">
                           <summary className="cursor-pointer text-[11px] text-slate-300">Thông tin chính (full fields)</summary>
                           <div className="mt-2 space-y-2">
-                            <label className="block text-[10px] text-slate-500">
+                            <label className="block text-[10px] text-ds-subtle">
                               Title
                               <input
                                 value={c.title || ''}
@@ -948,10 +945,10 @@ export default function StudioConceptsPage() {
                                     prev.map((x) => (x.id === c.id ? { ...x, title: e.target.value } : x)),
                                   )
                                 }
-                                className={`mt-1 ${inputCls}`}
+                                className={`mt-1 studio-field`}
                               />
                             </label>
-                            <label className="block text-[10px] text-slate-500">
+                            <label className="block text-[10px] text-ds-subtle">
                               Short description
                               <input
                                 value={c.short_description || ''}
@@ -962,10 +959,10 @@ export default function StudioConceptsPage() {
                                     ),
                                   )
                                 }
-                                className={`mt-1 ${inputCls}`}
+                                className={`mt-1 studio-field`}
                               />
                             </label>
-                            <label className="block text-[10px] text-slate-500">
+                            <label className="block text-[10px] text-ds-subtle">
                               Explanation
                               <textarea
                                 value={c.explanation || ''}
@@ -974,10 +971,10 @@ export default function StudioConceptsPage() {
                                     prev.map((x) => (x.id === c.id ? { ...x, explanation: e.target.value } : x)),
                                   )
                                 }
-                                className={`mt-1 ${inputCls} min-h-[90px]`}
+                                className={`mt-1 studio-field min-h-[90px]`}
                               />
                             </label>
-                            <label className="block text-[10px] text-slate-500">
+                            <label className="block text-[10px] text-ds-subtle">
                               Examples (phân tách bởi "|")
                               <input
                                 value={(c.examples || []).join('|')}
@@ -988,11 +985,11 @@ export default function StudioConceptsPage() {
                                     ),
                                   )
                                 }
-                                className={`mt-1 ${inputCls}`}
+                                className={`mt-1 studio-field`}
                                 placeholder="ví dụ 1|ví dụ 2|ví dụ 3"
                               />
                             </label>
-                            <label className="block text-[10px] text-slate-500">
+                            <label className="block text-[10px] text-ds-subtle">
                               Related (ids, phân tách bởi "|")
                               <input
                                 value={(c.related || []).join('|')}
@@ -1008,7 +1005,7 @@ export default function StudioConceptsPage() {
                                     ),
                                   )
                                 }
-                                className={`mt-1 ${inputCls}`}
+                                className={`mt-1 studio-field`}
                                 placeholder="gravity|velocity|orbital_period"
                               />
                             </label>
@@ -1026,7 +1023,7 @@ export default function StudioConceptsPage() {
                               />
                               Published
                             </label>
-                            <label className="block text-[10px] text-slate-500">
+                            <label className="block text-[10px] text-ds-subtle">
                               Difficulty level
                               <select
                                 value={String(c.difficulty_level ?? 1)}
@@ -1045,7 +1042,7 @@ export default function StudioConceptsPage() {
                                     ),
                                   )
                                 }
-                                className={`mt-1 ${inputCls}`}
+                                className={`mt-1 studio-field`}
                               >
                                 <option value="0">Beginner</option>
                                 <option value="1">Explorer</option>
@@ -1063,10 +1060,10 @@ export default function StudioConceptsPage() {
                             ))}
                           </ul>
                         )}
-                        <details className="mt-2 rounded-lg border border-white/10 bg-black/20 p-2">
+                        <details className="mt-2 rounded-lg border border-ds-border bg-black/20 p-2">
                           <summary className="cursor-pointer text-[11px] text-slate-300">Taxonomy & mapping</summary>
                           <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-2">
-                          <label className="text-[10px] text-slate-500">
+                          <label className="text-[10px] text-ds-subtle">
                             Domain
                             <select
                               value={c.domain || ''}
@@ -1087,7 +1084,7 @@ export default function StudioConceptsPage() {
                                   ),
                                 )
                               }}
-                              className={`mt-1 ${inputCls}`}
+                              className={`mt-1 studio-field`}
                             >
                               <option value="">Không gán</option>
                               {domainOptions.map((d) => (
@@ -1097,7 +1094,7 @@ export default function StudioConceptsPage() {
                               ))}
                             </select>
                           </label>
-                          <label className="text-[10px] text-slate-500">
+                          <label className="text-[10px] text-ds-subtle">
                             Subdomain
                             <select
                               value={c.subdomain || ''}
@@ -1107,7 +1104,7 @@ export default function StudioConceptsPage() {
                                   prev.map((x) => (x.id === c.id ? { ...x, subdomain: v || undefined } : x)),
                                 )
                               }}
-                              className={`mt-1 ${inputCls}`}
+                              className={`mt-1 studio-field`}
                               disabled={!c.domain}
                             >
                               <option value="">Không gán</option>
@@ -1120,11 +1117,11 @@ export default function StudioConceptsPage() {
                           </label>
                           </div>
                         </details>
-                        <details className="mt-2 rounded-lg border border-white/10 bg-black/20 p-2">
+                        <details className="mt-2 rounded-lg border border-ds-border bg-black/20 p-2">
                           <summary className="cursor-pointer text-[11px] text-slate-300">
                             Metadata nâng cao
                           </summary>
-                        <details className="mt-2 rounded-lg border border-white/10 bg-black/20 p-2">
+                        <details className="mt-2 rounded-lg border border-ds-border bg-black/20 p-2">
                           <summary className="cursor-pointer text-[11px] text-slate-300">
                             Aliases ({(c.aliases || []).length})
                           </summary>
@@ -1137,15 +1134,15 @@ export default function StudioConceptsPage() {
                                 ),
                               )
                             }
-                            className={`mt-2 ${inputCls}`}
+                            className={`mt-2 studio-field`}
                             placeholder="alias1|alias2|alias3"
                           />
                         </details>
-                        <details className="mt-2 rounded-lg border border-white/10 bg-black/20 p-2">
+                        <details className="mt-2 rounded-lg border border-ds-border bg-black/20 p-2">
                           <summary className="cursor-pointer text-[11px] text-slate-300">
                             Prerequisites mapping ({(c.prerequisites || []).length})
                           </summary>
-                          <div className="mt-2 max-h-[140px] overflow-y-auto rounded-lg border border-white/15 bg-black/40 p-2 space-y-1">
+                          <div className="mt-2 max-h-[140px] overflow-y-auto rounded-lg border border-ds-border-strong bg-black/40 p-2 space-y-1">
                             {concepts
                               .filter((cc) => cc.id !== c.id)
                               .map((cc) => {
@@ -1177,18 +1174,18 @@ export default function StudioConceptsPage() {
                           </div>
                         </details>
                         </details>
-                        <details className="mt-2 rounded-lg border border-white/10 bg-black/20 p-2">
+                        <details className="mt-2 rounded-lg border border-ds-border bg-black/20 p-2">
                           <summary className="cursor-pointer text-[11px] text-slate-300">
                             Lesson usage ({rows.length})
                           </summary>
                           <div className="mt-2 space-y-1">
                           {rows.length === 0 ? (
-                            <p className="text-[11px] text-slate-500">Chưa được map vào lesson nào.</p>
+                            <p className="text-[11px] text-ds-subtle">Chưa được map vào lesson nào.</p>
                           ) : (
                             rows.map((r, idx) => (
                               <p key={`${c.id}-${idx}`} className="text-[11px] text-slate-300">
-                                <span className="text-slate-500">{r.moduleTitle}</span> → {r.nodeTitle} →{' '}
-                                <span className="text-cyan-300">{DEPTH_META[r.depth].labelVi}</span> → {r.lessonTitle}
+                                <span className="text-ds-subtle">{r.moduleTitle}</span> → {r.nodeTitle} →{' '}
+                                <span className="text-ds-accent">{DEPTH_META[r.depth].labelVi}</span> → {r.lessonTitle}
                               </p>
                             ))
                           )}

@@ -1,4 +1,4 @@
-export * from '@/features/content3d/narrative/earthHistoryTypes'
+export * from '@/features/content3d/earth/lib/earthHistoryTypes'
 
 // API Response (generic shared primitive)
 export interface ApiResponse<T> {

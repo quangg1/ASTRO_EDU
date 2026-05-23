@@ -2,12 +2,16 @@
 
 Project giáo dục thiên văn với đăng nhập (email, Google, Facebook), khóa học và mô phỏng 3D.
 
+## Deploy lên Render
+
+Blueprint: [`render.yaml`](render.yaml) — URL qua `fromService` / `RENDER_EXTERNAL_URL`, không hardcode host. Tên biến SSOT: [`shared/envNames.js`](shared/envNames.js). Hướng dẫn: [`docs/render-deploy.md`](docs/render-deploy.md).
+
 ## Khuyến nghị: API gộp (Modular Monolith)
 
 **Một backend gộp** `services/api` (port **3002**) thay cho auth, courses, media, community, payment. Kiến trúc theo **feature** để dễ branch/PR từng tính năng trên GitHub. Chi tiết: [docs/ARCHITECTURE_MERGED.md](docs/ARCHITECTURE_MERGED.md).
 
 - Chạy API gộp: `npm run dev:api`
-- Client: đặt `NEXT_PUBLIC_API_BASE_URL=http://localhost:3002` trong `.env.local` để trỏ mọi request về API gộp.
+- Client: copy `client/.env.local.example` → `.env.local`, điền `NEXT_PUBLIC_API_BASE_URL` và `API_PROXY_TARGET` (cùng gốc unified API).
 - **Vẫn tách riêng** (scale độc lập): embedding (5004), ai (5005).
 
 ## Các service (khi chạy tách từng service)
@@ -72,10 +76,19 @@ Xem chi tiết trong [docs/ARCHITECTURE_MERGED.md](docs/ARCHITECTURE_MERGED.md#d
 - **services/community**: copy `services/community/.env.example` → `.env`  
   - `JWT_SECRET`: trùng với auth
 
-- **services/payment**: copy `services/payment/.env.example` → `.env`  
-  - `INTERNAL_API_SECRET`: trùng với courses (để confirm-enroll)
-  - `VNPAY_TMN_CODE`, `VNPAY_HASH_SECRET`: từ VNPay sandbox/production
-  - `COURSES_SERVICE_URL`: http://localhost:3003/api
+- **VNPay (in-app QR + IPN)** — biến môi trường thêm vào `services/api/.env`:
+  - `VNPAY_TMN_CODE`: lấy từ sandbox merchant portal (https://sandbox.vnpayment.vn).
+  - `VNPAY_HASH_SECRET`: Secret key cho HMAC-SHA512.
+  - `VNPAY_HOST` (optional, mặc định `https://sandbox.vnpayment.vn`).
+  - `VNPAY_TEST_MODE` (optional, mặc định `true`; đổi `false` cho production).
+  - **Cấu hình URL IPN trên VNPay merchant portal**:
+    https://sandbox.vnpayment.vn/merchantv2/Account/TerminalEdit.htm
+    → IPN URL: `https://YOUR_PUBLIC_API_HOST/api/payments/ipn`
+  - Flow: client mở `PaymentQRModal` → backend gọi `vnpay.generateQr` → render
+    `qrcontent` bằng `qrcode.react`. Khi user trả tiền, VNPay GET sang
+    `/api/payments/ipn`; modal poll `/api/payments/status/:txnRef` để biết.
+    Nếu merchant chưa bật Merchant-hosted QR, modal rớt về redirect URL
+    (`buildPaymentUrl`) và dùng trang `/payment/return` để confirm.
 
 - **services/courses**: thêm `INTERNAL_API_SECRET` (trùng payment) vào `.env` nếu dùng payment.
 

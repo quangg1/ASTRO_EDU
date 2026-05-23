@@ -1,0 +1,24 @@
+/**
+ * Edu surface — Learning Path & Course consumer pages.
+ *
+ * Currently identical to the default :root baseline; declared explicitly so
+ * future Edu-specific tweaks (switch to indigo, density bump, etc.) live in
+ * one place and don't touch component code.
+ *
+ * Apply via `<div className="surface-edu">…</div>` at the layout level.
+ */
+
+.surface-edu {
+  --color-accent: #22d3ee;
+  --color-accent-soft: rgba(34, 211, 238, 0.10);
+  --color-accent-strong: rgba(34, 211, 238, 0.30);
+  --color-accent-fg: #042e36;
+
+  --density-pad-x: 14px;
+  --density-pad-y: 8px;
+  --density-content: 24px;
+  --density-gap: 16px;
+
+  --radius-card: 16px;
+  --radius-control: 12px;
+}

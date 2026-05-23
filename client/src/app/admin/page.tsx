@@ -22,29 +22,26 @@ import {
   updateUserStatus,
   fetchAdminTeacherApplications,
   reviewTeacherApplication,
-  type AdminUser,
-  type UserRole,
-  type TeacherApplicationWithUser,
-} from '@/features/auth/api/authApi'
-import { fetchCourses } from '@/features/courses/api/coursesApi'
-import { fetchAdminOrderStats, type AdminOrderStats, type Order } from '@/features/payment/api/paymentApi'
-import {
   fetchAdminAnalyticsCohort,
   fetchAdminAnalyticsFunnel,
   fetchAdminLearningPathAnalytics,
   fetchAdminAnalyticsOverview,
   fetchAdminAnalyticsRetention,
+  type AdminUser,
+  type UserRole,
+  type TeacherApplicationWithUser,
   type AdminAnalyticsCohort,
   type AdminAnalyticsFunnelItem,
   type AdminLearningPathAnalytics,
   type AdminAnalyticsOverview,
   type AdminAnalyticsRetention,
   type AnalyticsRange,
-} from '@/lib/analytics/reporting/admin'
+} from '@/features/admin/public'
+import { fetchCourses } from '@/features/courses/api/coursesApi'
+import { fetchAdminOrderStats, type AdminOrderStats, type Order } from '@/features/payment/public'
 import { trackEvent } from '@/lib/analytics/tracking'
 import { viText } from '@/messages/vi'
-import { Card } from '@/components/ui/Card'
-import { Badge } from '@/components/ui/Badge'
+import { Badge, Card, Tabs, Tab, TabList, Select } from '@/design-system'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Spinner } from '@/components/ui/Spinner'
@@ -268,26 +265,29 @@ export default function AdminPage() {
             </div>
             <p className="text-white font-medium mt-1">Mở Studio →</p>
           </Link>
+          <Link href="/admin/gem-economy" className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 hover:bg-emerald-500/20 transition-colors">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-xs text-emerald-300 uppercase tracking-wider">Kinh tế Gem</p>
+              <Badge>Cấu hình</Badge>
+            </div>
+            <p className="text-white font-medium mt-1">Chỉ số và cửa hàng →</p>
+          </Link>
         </div>
 
         <section className="rounded-2xl border border-white/10 bg-[#0a0f17] overflow-hidden mb-8">
           <div className="px-4 py-3 border-b border-white/10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div className="flex flex-wrap items-center gap-2">
-              <h2 className="font-semibold text-white mr-2">Phân tích dữ liệu</h2>
-              {(['overview', 'funnel', 'retention', 'cohort', 'learning-path'] as const).map((tab) => (
-                <button
-                  key={tab}
-                  type="button"
-                  onClick={() => setAnalyticsTab(tab)}
-                  className={`px-3 py-1.5 text-xs rounded-lg border transition-colors ${
-                    analyticsTab === tab
-                      ? 'border-cyan-400/60 bg-cyan-500/20 text-cyan-100'
-                      : 'border-white/10 bg-white/5 text-gray-300 hover:border-cyan-500/40'
-                  }`}
-                >
-                  {analyticsTabLabel[tab]}
-                </button>
-              ))}
+            <div className="flex flex-wrap items-center gap-2 min-w-0">
+              <h2 className="font-semibold text-white mr-2 shrink-0">Phân tích dữ liệu</h2>
+              {/* Analytics sections — keyboard nav (← →) and a11y come from Tabs primitive */}
+              <Tabs value={analyticsTab} onValueChange={(v) => setAnalyticsTab(v as typeof analyticsTab)}>
+                <TabList aria-label="Phân tích dữ liệu" className="border-b-0">
+                  {(['overview', 'funnel', 'retention', 'cohort', 'learning-path'] as const).map((tab) => (
+                    <Tab key={tab} value={tab}>
+                      {analyticsTabLabel[tab]}
+                    </Tab>
+                  ))}
+                </TabList>
+              </Tabs>
             </div>
             <div className="flex items-center gap-2">
               {(['7d', '30d', '90d'] as const).map((range) => (
@@ -298,10 +298,10 @@ export default function AdminPage() {
                     setAnalyticsRange(range)
                     trackEvent('admin_range_changed', { range })
                   }}
-                  className={`px-3 py-1.5 text-xs rounded-lg border transition-colors ${
+                  className={`px-3 py-1.5 text-xs rounded-ds-control border transition-colors ${
                     analyticsRange === range
-                      ? 'border-cyan-400/60 bg-cyan-500/20 text-cyan-100'
-                      : 'border-white/10 bg-white/5 text-gray-300 hover:border-cyan-500/40'
+                      ? 'border-ds-accent-strong bg-ds-accent-soft text-ds-accent'
+                      : 'border-ds-border bg-ds-surface text-ds-muted hover:border-ds-accent-strong'
                   }`}
                 >
                   {range}
@@ -440,10 +440,9 @@ export default function AdminPage() {
               {analyticsTab === 'learning-path' && (
                 <div className="space-y-4">
                   <div className="flex flex-col md:flex-row gap-3">
-                    <select
+                    <Select
                       value={learningPathFilter.moduleId}
                       onChange={(e) => setLearningPathFilter((prev) => ({ ...prev, moduleId: e.target.value }))}
-                      className="rounded-lg bg-black/50 border border-white/15 text-white px-3 py-2 text-sm"
                     >
                       <option value="">Tất cả module</option>
                       {(learningPathAnalytics?.filterOptions.modules ?? []).map((module) => (
@@ -451,8 +450,8 @@ export default function AdminPage() {
                           {(module.moduleOrder ? `M${module.moduleOrder}. ` : '') + module.moduleTitle}
                         </option>
                       ))}
-                    </select>
-                    <select
+                    </Select>
+                    <Select
                       value={learningPathFilter.depth}
                       onChange={(e) =>
                         setLearningPathFilter((prev) => ({
@@ -460,7 +459,6 @@ export default function AdminPage() {
                           depth: e.target.value as '' | 'beginner' | 'explorer' | 'researcher',
                         }))
                       }
-                      className="rounded-lg bg-black/50 border border-white/15 text-white px-3 py-2 text-sm"
                     >
                       <option value="">Tất cả độ sâu</option>
                       {(learningPathAnalytics?.filterOptions.depths ?? []).map((depth) => (
@@ -468,7 +466,7 @@ export default function AdminPage() {
                           {depth.label}
                         </option>
                       ))}
-                    </select>
+                    </Select>
                   </div>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                     <div className="rounded-xl border border-white/10 bg-black/20 p-3">
@@ -634,16 +632,16 @@ export default function AdminPage() {
         <section className="rounded-2xl border border-white/10 bg-[#0a0f17] overflow-hidden mb-8">
           <div className="px-4 py-3 border-b border-white/10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
             <h2 className="font-semibold text-white">Đơn xin quyền giảng viên</h2>
-            <select
+            <Select
               value={teacherAppFilter}
               onChange={(e) => setTeacherAppFilter(e.target.value as typeof teacherAppFilter)}
-              className="text-xs rounded-lg bg-black/50 border border-white/15 text-white px-2 py-1.5 focus:border-cyan-500/50 focus:outline-none"
+              className="text-xs w-auto"
             >
               <option value="pending">Chờ duyệt</option>
               <option value="approved">Đã duyệt</option>
               <option value="rejected">Đã từ chối</option>
               <option value="all">Tất cả</option>
-            </select>
+            </Select>
           </div>
           {teacherAppLoading ? (
             <div className="p-8 text-center text-gray-500">
@@ -730,15 +728,15 @@ export default function AdminPage() {
           <div className="px-4 py-3 border-b border-white/10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
             <h2 className="font-semibold text-white">{viText.admin.users}</h2>
             <div className="flex flex-wrap items-center gap-2">
-              <select
+              <Select
                 value={userStatusFilter}
                 onChange={(e) => setUserStatusFilter(e.target.value as 'all' | 'active' | 'deactivated')}
-                className="text-xs rounded-lg bg-black/50 border border-white/15 text-white px-2 py-1.5 focus:border-cyan-500/50 focus:outline-none"
+                className="text-xs w-auto"
               >
                 <option value="all">Tất cả trạng thái</option>
                 <option value="active">Đang hoạt động</option>
                 <option value="deactivated">Ngừng hoạt động</option>
-              </select>
+              </Select>
               {message === 'success' && <span className="text-sm text-green-400">{viText.admin.roleUpdated}</span>}
               {message === 'error' && error && <span className="text-sm text-red-400">{error}</span>}
             </div>
@@ -785,17 +783,17 @@ export default function AdminPage() {
                         </span>
                       </td>
                       <td className="px-4 py-3">
-                        <select
+                        <Select
                           value={u.role}
                           onChange={(e) => handleRoleChange(u, e.target.value as UserRole)}
                           disabled={updatingId === u.id || u.id === user?.id}
-                          className="text-xs rounded-lg bg-black/50 border border-white/15 text-white px-2 py-1.5 focus:border-cyan-500/50 focus:outline-none disabled:opacity-50"
+                          className="text-xs w-auto"
                         >
                           <option value="student">student</option>
                           <option value="teacher">teacher</option>
                           <option value="moderator">moderator</option>
                           <option value="admin">admin</option>
-                        </select>
+                        </Select>
                         {u.id === user?.id && <span className="ml-1 text-xs text-gray-500">(bạn)</span>}
                       </td>
                       <td className="px-4 py-3">

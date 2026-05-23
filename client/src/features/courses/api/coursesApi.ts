@@ -1,5 +1,8 @@
 import { getToken } from '@/features/auth/public'
 import { getApiPathBase, getMediaBase } from '@/lib/apiConfig'
+import type { QuizQuestion } from '@/shared/types/quizQuestion'
+
+export type { QuizQuestion }
 
 const COURSES_BASE = getApiPathBase()
 const MEDIA_BASE = getMediaBase()
@@ -41,12 +44,6 @@ export interface LessonSection {
   sliderLabel?: string
   sliderUnit?: string
   notebookUrl?: string | null
-}
-
-export interface QuizQuestion {
-  question: string
-  options: string[]
-  correctIndex: number
 }
 
 export interface ResourceLink {

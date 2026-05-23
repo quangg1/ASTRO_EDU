@@ -13,17 +13,15 @@ import {
   type Course,
   type Lesson,
 } from '@/features/courses/api/coursesApi'
-import { createPayment } from '@/features/payment/api/paymentApi'
-import { useNarrativeSpace } from '@/features/content3d/narrative/public'
-import { FeaturedOrganisms } from '@/components/ui/FeaturedOrganisms'
+import { PaymentQRModal } from '@/features/payment/public'
+import { earthHistoryData, findStageByTime } from '@/features/content3d/earth/public'
+import { FeaturedOrganisms } from '@/features/content3d/earth/ui/FeaturedOrganisms'
 import { Loading } from '@/components/ui/Loading'
 import { LessonContentBody } from '@/components/courses/LessonContentBody'
 import { QuizLessonBlock } from '@/components/courses/QuizLessonBlock'
 import { trackEvent } from '@/lib/analytics'
 
 const EarthScene = dynamic(() => import('@/components/3d/EarthScene'), { ssr: false, loading: () => <Loading /> })
-const SolarSystemScene = dynamic(() => import('@/components/3d/SolarSystemScene'), { ssr: false, loading: () => <Loading /> })
-const MilkyWayScene = dynamic(() => import('@/components/3d/MilkyWayScene'), { ssr: false, loading: () => <Loading /> })
 
 function ModuleSidebar({
   courseModules,
@@ -83,7 +81,7 @@ function ModuleSidebar({
         const hasActive = g.lessons.some((l) => l.slug === selectedLesson?.slug)
 
         return (
-          <div key={g.key} className="rounded-xl border border-white/10 overflow-hidden">
+          <div key={g.key} className="rounded-xl border border-ds-border overflow-hidden">
             <button
               type="button"
               onClick={() => toggle(g.key)}
@@ -93,19 +91,19 @@ function ModuleSidebar({
             >
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1.5">
-                  <span className="text-[10px] text-cyan-400 font-semibold">Module {g.index + 1}</span>
+                  <span className="text-[10px] text-ds-accent font-semibold">Module {g.index + 1}</span>
                   {doneCount === g.lessons.length && g.lessons.length > 0 && (
                     <span className="text-[10px] text-emerald-400">&#x2713;</span>
                   )}
                 </div>
                 <p className="text-sm font-medium text-white mt-0.5 truncate">{g.label}</p>
                 {g.description && !isOpen && (
-                  <p className="text-[11px] text-gray-600 mt-0.5 truncate">{g.description}</p>
+                  <p className="text-[11px] text-ds-subtle mt-0.5 truncate">{g.description}</p>
                 )}
               </div>
               <div className="flex items-center gap-2 shrink-0">
-                <span className="text-[10px] text-gray-600">{doneCount}/{g.lessons.length}</span>
-                <span className="text-gray-500 text-xs">{isOpen ? '\u25B2' : '\u25BC'}</span>
+                <span className="text-[10px] text-ds-subtle">{doneCount}/{g.lessons.length}</span>
+                <span className="text-ds-subtle text-xs">{isOpen ? '\u25B2' : '\u25BC'}</span>
               </div>
             </button>
 
@@ -126,17 +124,17 @@ function ModuleSidebar({
                       type="button"
                       onClick={() => onSelectLesson(lesson)}
                       className={`w-full text-left px-3 py-2 rounded-lg text-xs transition-colors flex items-center gap-2 ${
-                        active ? 'bg-cyan-600/30 text-cyan-100' : 'text-gray-400 hover:bg-white/5 hover:text-white'
+                        active ? 'bg-ds-accent-strong text-cyan-100' : 'text-ds-muted hover:bg-white/5 hover:text-white'
                       }`}
                     >
                       <span className={`w-4 h-4 rounded-full border flex items-center justify-center text-[10px] shrink-0 ${
-                        done ? 'bg-emerald-500 border-emerald-500 text-white' : active ? 'border-cyan-500 text-cyan-400' : 'border-gray-700'
+                        done ? 'bg-emerald-500 border-emerald-500 text-white' : active ? 'border-ds-accent text-ds-accent' : 'border-gray-700'
                       }`}>
                         {done ? '\u2713' : ''}
                       </span>
                       <div className="flex-1 min-w-0">
                         <p className="truncate">{lesson.title}</p>
-                        <p className="text-[10px] text-gray-600 mt-0.5">{chip}</p>
+                        <p className="text-[10px] text-ds-subtle mt-0.5">{chip}</p>
                       </div>
                     </button>
                   )
@@ -166,11 +164,13 @@ export function CoursePageClient({
   const setCourseContext = useTutorContextStore((s) => s.setCourseContext)
   const [course, setCourse] = useState<Course | null>(initialCourse)
   const [enrolling, setEnrolling] = useState(false)
+  // VNPay QR modal: holds the courseId we're collecting payment for. The
+  // modal itself owns the QR creation, polling, and redirect-fallback.
+  const [paymentCourseId, setPaymentCourseId] = useState<string | null>(null)
   const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null)
   const [showMobileLessons, setShowMobileLessons] = useState(false)
   const [reducedMode, setReducedMode] = useState(false)
   const [enableMobile3D, setEnableMobile3D] = useState(false)
-  const { getBeatByRef } = useNarrativeSpace('earth-history')
 
   const lessons = useMemo(
     () => (course?.lessons ?? []).filter((l): l is Lesson => 'content' in l),
@@ -277,17 +277,11 @@ export function CoursePageClient({
         amount: res.amount ?? 0,
         currency: res.currency || course.currency || 'VND',
       })
-      const pay = await createPayment({
-        courseId: res.courseId,
-        courseSlug: res.courseSlug,
-        amount: res.amount!,
-        currency: res.currency,
-      })
       setEnrolling(false)
-      if (pay.success && pay.paymentUrl) {
-        window.location.href = pay.paymentUrl
-        return
-      }
+      // Open the in-app QR modal — it owns the QR creation, polling, and
+      // redirect-fallback if the merchant doesn't have Merchant-hosted QR.
+      setPaymentCourseId(res.courseId)
+      return
     }
     setEnrolling(false)
     if (!res.success) {
@@ -307,7 +301,7 @@ export function CoursePageClient({
     return (
       <div className="min-h-screen bg-black">
         <main className="pt-16 flex items-center justify-center min-h-[50vh]">
-          <p className="text-gray-500">Loading course...</p>
+          <p className="text-ds-subtle">Loading course...</p>
         </main>
       </div>
     )
@@ -342,23 +336,23 @@ export function CoursePageClient({
   const nextLesson = currentIndex >= 0 && currentIndex < lessons.length - 1 ? lessons[currentIndex + 1] : null
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#05070c] via-black to-[#04090f] flex flex-col">
+    <div className="min-h-screen bg-ds-base flex flex-col">
       <main className="pt-14 flex-1 flex flex-col md:flex-row gap-0 md:gap-3">
-        <aside className="w-full md:w-80 shrink-0 border-b md:border-b-0 md:border-r border-white/10 bg-[#070c14]">
-          <div className="p-4 border-b border-white/10">
+        <aside className="w-full md:w-80 shrink-0 border-b md:border-b-0 md:border-r border-ds-border bg-ds-surface">
+          <div className="p-4 border-b border-ds-border">
             <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm mb-4">
-              <Link href="/courses" className="text-cyan-400 hover:text-cyan-300">
+              <Link href="/courses" className="text-ds-accent hover:text-ds-accent">
                 ← Courses
               </Link>
-              <span className="text-gray-600 hidden sm:inline">·</span>
-              <Link href={`/courses/${slug}`} className="text-gray-400 hover:text-cyan-300">
+              <span className="text-ds-subtle hidden sm:inline">·</span>
+              <Link href={`/courses/${slug}`} className="text-ds-muted hover:text-ds-accent">
                 Trang khóa học
               </Link>
             </div>
             <h1 className="font-bold text-white text-lg mb-2">{course.title}</h1>
-            <p className="text-sm text-gray-400 mb-4 line-clamp-3">{course.description}</p>
-            <div className="mb-4 rounded-xl border border-white/10 bg-white/5 p-3">
-              <div className="flex items-center justify-between text-xs text-gray-400 mb-2">
+            <p className="text-sm text-ds-muted mb-4 line-clamp-3">{course.description}</p>
+            <div className="mb-4 rounded-xl border border-ds-border bg-white/5 p-3">
+              <div className="flex items-center justify-between text-xs text-ds-muted mb-2">
                 <span>Progress</span>
                 <span>{completedCount}/{lessons.length} lessons</span>
               </div>
@@ -380,11 +374,11 @@ export function CoursePageClient({
                     : 'Ghi danh'}
               </button>
             )}
-            {!user && <p className="text-sm text-gray-500">Đăng nhập để ghi danh khóa học này.</p>}
+            {!user && <p className="text-sm text-ds-subtle">Đăng nhập để ghi danh khóa học này.</p>}
             <button
               type="button"
               onClick={() => setShowMobileLessons((v) => !v)}
-              className="md:hidden mt-3 w-full min-h-11 rounded-xl border border-white/10 bg-white/5 text-sm text-gray-200"
+              className="md:hidden mt-3 w-full min-h-11 rounded-xl border border-ds-border bg-white/5 text-sm text-gray-200"
             >
               {showMobileLessons ? 'Ẩn danh sách bài học' : 'Hiện danh sách bài học'}
             </button>
@@ -400,25 +394,25 @@ export function CoursePageClient({
           </div>
         </aside>
 
-        <div className="flex-1 min-h-0 flex flex-col bg-[#060a12] border-l border-white/5">
+        <div className="flex-1 min-h-0 flex flex-col bg-ds-base border-l border-white/5">
           {selectedLesson ? (
             <>
-              <div className="px-5 py-3 border-b border-white/10 flex items-center gap-2 text-sm text-gray-400 bg-[#0a1220]">
-                <Link href="/courses" className="hover:text-cyan-400">Courses</Link>
+              <div className="px-5 py-3 border-b border-ds-border flex items-center gap-2 text-sm text-ds-muted bg-ds-surface">
+                <Link href="/courses" className="hover:text-ds-accent">Courses</Link>
                 <span>/</span>
-                <Link href={`/courses/${slug}`} className="text-white hover:text-cyan-300 truncate max-w-[40vw]">
+                <Link href={`/courses/${slug}`} className="text-white hover:text-ds-accent truncate max-w-[40vw]">
                   {course.title}
                 </Link>
                 <span>/</span>
-                <span className="text-cyan-300 truncate">{selectedLesson.title}</span>
+                <span className="text-ds-accent truncate">{selectedLesson.title}</span>
               </div>
-              <div className="px-5 py-4 border-b border-white/10 flex items-center justify-between flex-wrap gap-2 bg-[#0b1018]">
+              <div className="px-5 py-4 border-b border-ds-border flex items-center justify-between flex-wrap gap-2 bg-ds-surface">
                 <h2 className="font-semibold text-white text-lg">{selectedLesson.title}</h2>
                 {isEnrolled && (
                   <button
                     type="button"
                     onClick={() => markComplete(selectedLesson.slug, !progressBySlug.get(selectedLesson.slug))}
-                    className="text-sm px-3 py-1.5 rounded-xl bg-white/10 text-gray-300 hover:bg-cyan-600/30 hover:text-cyan-300"
+                    className="text-sm px-3 py-1.5 rounded-xl bg-white/10 text-gray-300 hover:bg-ds-accent-strong hover:text-ds-accent"
                   >
                     {progressBySlug.get(selectedLesson.slug) ? 'Đánh dấu chưa hoàn thành' : 'Đánh dấu đã hoàn thành'}
                   </button>
@@ -429,7 +423,7 @@ export function CoursePageClient({
                   <div className="flex flex-col items-center justify-center min-h-[320px] p-8 text-center">
                     <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-8 max-w-md">
                       <p className="text-amber-200 font-medium mb-2">Nội dung khóa học trả phí</p>
-                      <p className="text-sm text-gray-400 mb-6">Mua khóa học để mở toàn bộ bài học và theo dõi tiến độ.</p>
+                      <p className="text-sm text-ds-muted mb-6">Mua khóa học để mở toàn bộ bài học và theo dõi tiến độ.</p>
                       <button
                         type="button"
                         onClick={handleEnroll}
@@ -458,7 +452,7 @@ export function CoursePageClient({
                 ) : selectedLesson.type === 'visualization' ? (
                   <div className="w-full h-full min-h-[400px] relative flex flex-col">
                     {reducedMode && !enableMobile3D && (
-                      <div className="px-6 py-8 border-b border-white/10 bg-[#0a111f]">
+                      <div className="px-6 py-8 border-b border-ds-border bg-ds-surface">
                         <p className="text-sm text-gray-300 mb-3">Mô phỏng 3D có thể nặng trên thiết bị di động.</p>
                         <button
                           type="button"
@@ -473,15 +467,15 @@ export function CoursePageClient({
                       <>
                         {selectedLesson.visualizationId === 'earth-history' && (() => {
                           const stageTime = selectedLesson.stageTime
-                          const stage = stageTime != null ? getBeatByRef.byTime(stageTime) : undefined
+                          const stage = stageTime != null ? findStageByTime(earthHistoryData, stageTime) : undefined
                           return (
                             <>
                               {stage && (
                                 <>
-                                  <p className="text-sm text-gray-400 px-4 py-2 border-b border-white/10 shrink-0">
+                                  <p className="text-sm text-ds-muted px-4 py-2 border-b border-ds-border shrink-0">
                                     {stage.timeDisplay} · {stage.description}
                                   </p>
-                                  <div className="px-4 py-3 border-b border-white/10 shrink-0">
+                                  <div className="px-4 py-3 border-b border-ds-border shrink-0">
                                     <FeaturedOrganisms stageId={stage.id} variant="full" />
                                   </div>
                                 </>
@@ -492,23 +486,34 @@ export function CoursePageClient({
                             </>
                           )
                         })()}
-                        {selectedLesson.visualizationId === 'solar-system' && (
-                          <SolarSystemScene onPlanetSelect={() => {}} />
-                        )}
-                        {selectedLesson.visualizationId === 'milky-way' && (
-                          <div className="flex-1 min-h-[360px]">
-                            <MilkyWayScene />
+                        {(selectedLesson.visualizationId === 'solar-system' ||
+                          selectedLesson.visualizationId === 'milky-way') && (
+                          <div className="flex-1 min-h-[360px] flex flex-col items-center justify-center gap-4 px-6 py-10 text-center border border-ds-border rounded-xl bg-ds-surface mx-4 my-4">
+                            <p className="text-sm font-medium text-ds-text max-w-md">
+                              {selectedLesson.visualizationId === 'milky-way'
+                                ? 'Chế độ Ngân hà (galaxy) chạy trên trang Explore — có camera, catalog và tối ưu hiệu năng riêng.'
+                                : 'Hệ Mặt Trời đầy đủ (quỹ đạo, thực thể NASA, camera) chạy trên trang Explore — không còn scene legacy trong khóa học.'}
+                            </p>
+                            <p className="text-xs text-ds-muted max-w-md">
+                              Trải nghiệm 3D đầy đủ (camera, catalog, hiệu năng) được tối ưu trên trang Explore. Hãy mở Explore để xem cùng giao diện với chế độ khám phá chính của ứng dụng.
+                            </p>
+                            <Link
+                              href="/explore"
+                              className="inline-flex items-center justify-center rounded-xl bg-ds-accent px-5 py-2.5 text-sm font-semibold text-ds-accent-fg hover:opacity-90 transition-opacity"
+                            >
+                              Mở Explore →
+                            </Link>
                           </div>
                         )}
                         {!['earth-history', 'solar-system', 'milky-way'].includes(selectedLesson.visualizationId || '') && (
-                          <div className="absolute inset-0 flex items-center justify-center text-gray-500">
+                          <div className="absolute inset-0 flex items-center justify-center text-ds-subtle">
                             Simulation: {selectedLesson.visualizationId || 'Not configured'}
                           </div>
                         )}
                       </>
                     )}
                     {nextLesson && (
-                      <div className="p-4 border-t border-white/10 shrink-0">
+                      <div className="p-4 border-t border-ds-border shrink-0">
                         <button
                           type="button"
                           onClick={() => handleSelectLesson(nextLesson)}
@@ -523,7 +528,7 @@ export function CoursePageClient({
                   <>
                     {selectedLesson.quizQuestions && selectedLesson.quizQuestions.length > 0 ? (
                       <>
-                        {selectedLesson.content && <p className="px-6 pt-6 text-sm text-gray-400 max-w-3xl">{selectedLesson.content}</p>}
+                        {selectedLesson.content && <p className="px-6 pt-6 text-sm text-ds-muted max-w-3xl">{selectedLesson.content}</p>}
                         <QuizLessonBlock
                           questions={selectedLesson.quizQuestions}
                           onComplete={() => isEnrolled && markComplete(selectedLesson.slug, true)}
@@ -541,7 +546,7 @@ export function CoursePageClient({
                         )}
                       </>
                     ) : (
-                      <div className="p-6 text-gray-400">Quiz lesson (no questions yet).</div>
+                      <div className="p-6 text-ds-muted">Quiz lesson (no questions yet).</div>
                     )}
                   </>
                 ) : null}
@@ -549,10 +554,10 @@ export function CoursePageClient({
             </>
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
-              <div className="max-w-2xl space-y-4 rounded-2xl border border-cyan-500/20 bg-[#08111f] p-8 shadow-xl">
+              <div className="max-w-2xl space-y-4 rounded-2xl border border-ds-accent-strong bg-ds-elevated p-8 shadow-xl">
                 <h2 className="text-2xl font-bold text-white">{course.title}</h2>
                 <p className="text-gray-300 text-sm leading-relaxed">{course.description}</p>
-                <p className="text-gray-500 text-xs">
+                <p className="text-ds-subtle text-xs">
                   {course.durationWeeks != null && `${course.durationWeeks} tuần · `}
                   {lessons.length} bài học
                 </p>
@@ -571,6 +576,19 @@ export function CoursePageClient({
           )}
         </div>
       </main>
+
+      {paymentCourseId && (
+        <PaymentQRModal
+          open
+          courseId={paymentCourseId}
+          onClose={() => setPaymentCourseId(null)}
+          onCompleted={async (paidSlug) => {
+            setPaymentCourseId(null)
+            const updated = await fetchCourse(paidSlug)
+            if (updated) setCourse(updated)
+          }}
+        />
+      )}
     </div>
   )
 }

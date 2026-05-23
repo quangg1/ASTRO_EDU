@@ -4,11 +4,12 @@ const ShowcaseEntityContent = require('../../content3d/models/ShowcaseEntityCont
 const ShowcaseUnlock = require('../models/ShowcaseUnlock');
 const GemTransaction = require('../models/GemTransaction');
 const UserReward = require('../models/UserReward');
+const { GEM_SPEND_SHOWCASE } = require('../constants/gemEarn');
 const { authMiddleware } = require('../../../shared/jwtAuth');
 
 const router = express.Router();
 
-const SHOWCASE_COSTS = { story: 40, orbit: 55 };
+const SHOWCASE_COSTS = GEM_SPEND_SHOWCASE;
 
 router.get('/catalog', authMiddleware, async (req, res) => {
   try {

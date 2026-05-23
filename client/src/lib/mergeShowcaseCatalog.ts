@@ -1,5 +1,11 @@
 import { getStaticAssetUrl, resolveMediaUrl } from '@/lib/apiConfig'
-import { getNasaCatalogItemById, type NasaCatalogItem, type ShowcaseOrbitEntity } from '@/lib/showcaseEntities'
+import { isResolvableShowcaseAssetUrl } from '@/lib/showcaseMediaUrl'
+import {
+  getNasaCatalogItemById,
+  SHOWCASE_ORBIT_ENTITIES,
+  type NasaCatalogItem,
+  type ShowcaseOrbitEntity,
+} from '@/lib/showcaseEntities'
 import type { ShowcaseEntityContentDTO } from '@/features/content3d/showcase/api/showcaseEntitiesApi'
 
 export type ResolvedNasaCatalogItem = NasaCatalogItem & {
@@ -45,13 +51,13 @@ function effectiveDiffuseUrl(row: ShowcaseEntityContentDTO | undefined, pub: boo
   const d = row.diffuseMapUrl?.trim() || ''
   const legacy = row.textureUrl?.trim() || ''
   const u = d || legacy
-  return u && (/^https?:\/\//i.test(u) || u.startsWith('/files/')) ? u : ''
+  return isResolvableShowcaseAssetUrl(u) ? u : ''
 }
 
 function effectiveOptionalUrl(row: ShowcaseEntityContentDTO | undefined, pub: boolean, key: keyof ShowcaseEntityContentDTO): string {
   if (!row || !pub) return ''
   const u = String(row[key] || '').trim()
-  return u && (/^https?:\/\//i.test(u) || u.startsWith('/files/')) ? u : ''
+  return isResolvableShowcaseAssetUrl(u) ? u : ''
 }
 
 function contentByEntityId(items: ShowcaseEntityContentDTO[] | undefined): Map<string, ShowcaseEntityContentDTO> {
@@ -150,3 +156,57 @@ export function getContentRow(
   if (!id) return undefined
   return contentByEntityId(items).get(id)
 }
+
+export function entityHasRenderableDiffuse(e: ShowcaseOrbitEntity): boolean {
+  const r = String(e.remoteTextureUrl || '').trim()
+  if (isResolvableShowcaseAssetUrl(r)) return true
+  return String(e.texturePath || '').trim().length > 1
+}
+
+/**
+ * Entity quả cầu cho Studio map picker — cùng merge CMS + catalog như Explore Deep History.
+ */
+export function buildStudioGlobeEntity(
+  entityId: string,
+  showcaseContent: ShowcaseEntityContentDTO[] | undefined,
+): ShowcaseOrbitEntity | null {
+  const id = String(entityId || '').trim()
+  if (!id) return null
+
+  const merged = mergeOrbitEntities(SHOWCASE_ORBIT_ENTITIES, showcaseContent)
+  const cat = getNasaCatalogItemById(id)
+  const catalogTexture = String(cat?.texturePath || '').trim()
+
+  const hit = merged.find((e) => String(e.id || '').trim() === id)
+  if (hit) {
+    if (entityHasRenderableDiffuse(hit)) return hit
+    if (catalogTexture) return { ...hit, texturePath: catalogTexture }
+    return hit
+  }
+
+  const row = getContentRow(showcaseContent, id)
+  const cmsDiffuse = effectiveDiffuseUrl(row, true)
+  if (!catalogTexture && !cmsDiffuse) return null
+
+  return {
+    id,
+    name: row?.nameVi?.trim() || cat?.name || id,
+    distance: 1,
+    period: 20,
+    size: 0.42,
+    color: id.startsWith('planet-') ? '#b48a5a' : '#9ca3af',
+    orbitColor: '#64748b',
+    texturePath: catalogTexture || undefined,
+    remoteTextureUrl: cmsDiffuse || undefined,
+  }
+}
+
+/** Globe entity cho Explore Deep History — cùng merge CMS + catalog như Studio map picker. */
+export function buildPlanetGlobeEntity(
+  entityId: string,
+  _mergedOrbitEntities: MergedShowcaseOrbitEntity[],
+  showcaseContent: ShowcaseEntityContentDTO[] | undefined,
+): ShowcaseOrbitEntity | null {
+  return buildStudioGlobeEntity(entityId, showcaseContent)
+}
+

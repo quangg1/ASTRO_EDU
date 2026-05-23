@@ -25,8 +25,8 @@ export function NodeTopicWeightsEditor({ topicWeights, onChange }: Props) {
   return (
     <div className="rounded-xl border border-amber-500/20 bg-amber-950/10 p-3 space-y-2">
       <p className="text-[10px] uppercase tracking-wider text-amber-200/70 font-semibold">Map chủ đề landing</p>
-      <p className="text-[11px] text-slate-500 leading-snug">
-        <strong className="text-slate-400">Mỗi thanh độc lập (0–100%):</strong> mức <em>liên quan</em> của
+      <p className="text-[11px] text-ds-subtle leading-snug">
+        <strong className="text-ds-muted">Mỗi thanh độc lập (0–100%):</strong> mức <em>liên quan</em> của
         <strong> node này</strong> với <strong>từng</strong> chủ đề landing — không phải chia 100% cho cả 8 ô (có thể
         nhiều chủ đề cùng cao). 0% = không hiện trong /topics/ đó. Lưu bằng <strong>Lưu toàn bộ</strong> phía trên.
       </p>
@@ -46,7 +46,7 @@ export function NodeTopicWeightsEditor({ topicWeights, onChange }: Props) {
                 onChange={(e) => setWeight(t.id, Number(e.target.value) / 100)}
                 className="flex-1 accent-amber-500"
               />
-              <span className="w-8 text-right tabular-nums text-slate-500">{Math.round(cur * 100)}%</span>
+              <span className="w-8 text-right tabular-nums text-ds-subtle">{Math.round(cur * 100)}%</span>
             </label>
           )
         })}

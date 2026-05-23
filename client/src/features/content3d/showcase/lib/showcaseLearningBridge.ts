@@ -1,4 +1,9 @@
-import type { LearningConcept, LearningModule, LessonItem } from '@/data/learningPathCurriculum'
+import type {
+  LearningConcept,
+  LearningModule,
+  LessonHistoryFocus,
+  LessonItem,
+} from '@/data/learningPathCurriculum'
 import type { RecallQuestion } from '@/features/learning-path/lib/lessonRecallQuiz'
 import { normalizeStudioRecallQuiz } from '@/features/learning-path/lib/lessonRecallQuiz'
 import { NASA_SHOWCASE_ITEMS } from '@/lib/showcaseEntities'
@@ -276,6 +281,38 @@ export function buildContextualQuizFromLessons(modules: LearningModule[], lesson
   return picked
 }
 
+export type ExploreHistoryFocus = LessonHistoryFocus
+
+export type LessonExploreTarget = {
+  entityId: string
+  href: string
+  beatId?: number
+  pinId?: string
+}
+
+export type LessonExploreTargets = {
+  showcase: LessonExploreTarget | null
+  history: LessonExploreTarget | null
+}
+
+/** Deep History — entity + beat/pin (song song showcase orbit). */
+export function exploreHrefForHistory(
+  entityIdRaw: unknown,
+  focus: ExploreHistoryFocus,
+): LessonExploreTarget | null {
+  const entityId = String(entityIdRaw || '').trim()
+  const beatId = Number(focus.beatId)
+  if (!entityId || !Number.isFinite(beatId)) return null
+  const params = new URLSearchParams()
+  params.set('mode', 'showcase')
+  params.set('entity', entityId)
+  params.set('history', '1')
+  params.set('beat', String(Math.round(beatId)))
+  const pinId = String(focus.pinId || '').trim()
+  if (pinId) params.set('pin', pinId)
+  return { entityId, href: `/explore?${params.toString()}`, beatId: Math.round(beatId), pinId: pinId || undefined }
+}
+
 function exploreHrefForShowcaseEntity(entityIdRaw: unknown): { entityId: string; href: string } | null {
   const entityId = String(entityIdRaw || '').trim()
   if (!entityId) return null
@@ -293,6 +330,33 @@ export function guessEntityRarity(entityId: string): 'common' | 'rare' | 'epic' 
   if (id.includes('eris') || id.includes('sedna') || id.includes('haumea') || id.includes('makemake')) return 'epic'
   if (id.includes('comet') || id.includes('dwarf') || id.includes('spacecraft') || id.includes('charon')) return 'rare'
   return 'common'
+}
+
+/** Showcase orbit + Deep History (nếu sceneContext có historyFocus). */
+export function suggestExploreTargetsForLesson(lesson: LessonItem): LessonExploreTargets {
+  const sc = lesson.sceneContext
+  if (sc) {
+    const ordered: string[] = []
+    const primary = String(sc.primaryEntityId || '').trim()
+    if (primary) ordered.push(primary)
+    for (const id of sc.entityIds || []) {
+      const x = String(id || '').trim()
+      if (x && !ordered.includes(x)) ordered.push(x)
+    }
+    let showcase: LessonExploreTarget | null = null
+    for (const entityId of ordered) {
+      const link = exploreHrefForShowcaseEntity(entityId)
+      if (link) {
+        showcase = link
+        break
+      }
+    }
+    const hf = sc.historyFocus
+    const history = primary && hf ? exploreHrefForHistory(primary, hf) : null
+    if (showcase || history) return { showcase, history }
+  }
+  const guessed = suggestShowcaseTargetForLesson(lesson)
+  return { showcase: guessed, history: null }
 }
 
 export function suggestShowcaseTargetForLesson(
@@ -331,4 +395,81 @@ export function suggestShowcaseTargetForLesson(
   const best = scored[0]?.row
   if (!best) return null
   return exploreHrefForShowcaseEntity(best.entityId)
+}
+
+function lessonRowsByIds(
+  modules: LearningModule[],
+  lessonIds: string[],
+): Array<{ lessonId: string; title: string; href: string; source: 'cms' | 'scene' }> {
+  const want = new Set(lessonIds.map((id) => String(id || '').trim()).filter(Boolean))
+  if (want.size === 0) return []
+  const out: Array<{ lessonId: string; title: string; href: string; source: 'cms' | 'scene' }> = []
+  for (const mod of modules) {
+    for (const node of mod.nodes) {
+      for (const depth of ['beginner', 'explorer', 'researcher'] as const) {
+        for (const lesson of node.depths[depth] || []) {
+          if (!want.has(lesson.id)) continue
+          out.push({
+            lessonId: lesson.id,
+            title: lesson.titleVi || lesson.title || lesson.id,
+            href: `/tutorial/${mod.id}/${node.id}/${encodeURIComponent(lesson.id)}`,
+            source: 'cms',
+          })
+        }
+      }
+    }
+  }
+  return out
+}
+
+/** Bài LP gắn Deep History qua sceneContext.historyFocus. */
+export function resolveLessonsWithHistoryFocus(
+  modules: LearningModule[],
+  entityId: string,
+  beatId?: number,
+): Array<{ lessonId: string; title: string; href: string; source: 'scene' }> {
+  const e = String(entityId || '').trim()
+  if (!e) return []
+  const rows: Array<{ lessonId: string; title: string; href: string; source: 'scene' }> = []
+  for (const mod of modules) {
+    for (const node of mod.nodes) {
+      for (const depth of ['beginner', 'explorer', 'researcher'] as const) {
+        for (const lesson of node.depths[depth] ?? []) {
+          const sc = lesson.sceneContext
+          if (!sc || String(sc.primaryEntityId || '').trim() !== e) continue
+          const hf = sc.historyFocus
+          if (!hf) continue
+          if (beatId != null && Number(hf.beatId) !== beatId) continue
+          rows.push({
+            lessonId: lesson.id,
+            title: lesson.titleVi || lesson.title || lesson.id,
+            href: `/tutorial/${mod.id}/${node.id}/${encodeURIComponent(lesson.id)}`,
+            source: 'scene',
+          })
+        }
+      }
+    }
+  }
+  return rows
+}
+
+/**
+ * Explore Deep History → bài LP: CMS linkedLessonIds + sceneContext + concept bridge.
+ */
+export function resolveLessonsForNarrativeEntity(
+  modules: LearningModule[],
+  concepts: LearningConcept[],
+  entityId: string,
+  opts?: { linkedLessonIds?: string[]; beatId?: number },
+): Array<{ lessonId: string; title: string; href: string; source: 'cms' | 'scene' | 'concept' }> {
+  const cms = lessonRowsByIds(modules, opts?.linkedLessonIds ?? []).map((r) => ({ ...r, source: 'cms' as const }))
+  const scene = resolveLessonsWithHistoryFocus(modules, entityId, opts?.beatId)
+  const concept = resolveMappedLessons(modules, resolveMappedConcepts(concepts, entityId).map((c) => c.id)).map(
+    (r) => ({ ...r, source: 'concept' as const }),
+  )
+  const byId = new Map<string, { lessonId: string; title: string; href: string; source: 'cms' | 'scene' | 'concept' }>()
+  for (const r of [...cms, ...scene, ...concept]) {
+    if (!byId.has(r.lessonId)) byId.set(r.lessonId, r)
+  }
+  return [...byId.values()].sort((a, b) => a.title.localeCompare(b.title, 'vi'))
 }

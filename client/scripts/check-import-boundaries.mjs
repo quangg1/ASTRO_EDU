@@ -22,12 +22,24 @@ const REPO_ROOT = join(SCRIPT_DIR, '..')
 const SCAN_ROOT = join(REPO_ROOT, 'src', 'components', '3d')
 
 // Imports that the 3D presentational layer is forbidden to consume.
-// Pattern matches: from '@/lib/<x>Api' OR from '@/features/<domain>/api/...'
+// Pattern matches:
+//   from '@/lib/<x>Api'                        — legacy lib API shim
+//   from '@/features/<domain>/api/...'         — flat domain api
+//   from '@/features/<a>/<b>/api/...'          — nested domain api (e.g. content3d/earth/api/*)
+//   from '@/features/<a>/<b>/<c>/api/...'      — defensive: deeper nesting
+// Use a non-greedy character class that allows '/' in the domain prefix,
+// stopping at the literal segment '/api/'.
 const FORBIDDEN_RE =
-  /from\s+['"]@\/(lib\/[A-Za-z0-9_-]*[Aa]pi|features\/[^'"\/]+\/api\/[^'"]+)['"]/g
+  /from\s+['"]@\/(lib\/[A-Za-z0-9_-]*[Aa]pi|features\/(?:[^'"\/]+\/)+api\/[^'"]+)['"]/g
 
-// Optional debt allowlist (empty after Phase 4 — add entries only with a ticket + removal plan).
-const ALLOWLIST = new Set([])
+// Debt allowlist — entries MUST cite a tracking note. Remove only after the file
+// receives data via props or a domain hook from the parent (page/orchestrator).
+const ALLOWLIST = new Set([
+  // PR7 (audit drift 2.5.A): pre-existing debt — EarthScene fetches fossils per
+  // stage directly. Refactor target: lift fetch into app/explore (parent) and
+  // pass `fossils` via props. Tracked in docs/ARCHITECTURE_AUDIT.md §2.5.A.
+  'src/components/3d/EarthScene.tsx',
+])
 
 function* walk(dir) {
   let entries

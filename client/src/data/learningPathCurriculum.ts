@@ -4,6 +4,9 @@
  */
 
 import type { LessonSection } from '@/features/courses/api/coursesApi'
+import type { QuizQuestion } from '@/shared/types/quizQuestion'
+
+export type { QuizQuestion }
 
 export type DepthLevel = 'beginner' | 'explorer' | 'researcher'
 
@@ -42,22 +45,21 @@ export type LessonConceptAnchor = {
   phrase: string
 }
 
+/** Deep History focus — cùng entity với showcase, mở timeline + beat (và pin tuỳ chọn). */
+export type LessonHistoryFocus = {
+  beatId: number
+  pinId?: string
+  labelVi?: string
+}
+
 /** Bài học "claim" entity showcase 3D — Layer 3 deep-link (không dùng bridge rule). */
 export type LessonSceneContext = {
   /** Entity catalog id (vd: planet-saturn) — ưu tiên hiển thị khi khớp. */
   primaryEntityId?: string
   /** Các entity bổ sung cùng bài có thể liên quan. */
   entityIds?: string[]
-}
-
-/** Câu hỏi trắc nghiệm cuối bài (mastery) — biên tập trong Studio. */
-export type LessonRecallQuizItem = {
-  id?: string
-  question: string
-  options: string[]
-  correctIndex: number
-  /** Giải thích theo từng phương án (A-D), gồm cả lý do đúng/sai. */
-  optionExplanations?: string[]
+  /** Cùng primaryEntityId — mở Deep History (?history=1&beat=&pin=). */
+  historyFocus?: LessonHistoryFocus
 }
 
 export type LessonItem = {
@@ -69,7 +71,7 @@ export type LessonItem = {
   /** Highlight + link theo cụm văn bản cụ thể (ưu tiên hơn auto keyword). */
   conceptAnchors?: LessonConceptAnchor[]
   /** 3–5 câu kiểm tra nhanh; nếu thiếu, client sinh câu từ concept gắn bài. */
-  recallQuiz?: LessonRecallQuizItem[]
+  recallQuiz?: QuizQuestion[]
   /** Block content — cùng schema với khóa học (richtext, image, video, …) */
   sections?: LessonSection[]
   /** Legacy: HTML đơn nếu chưa có sections (hoặc ghi đè từ API cũ) */

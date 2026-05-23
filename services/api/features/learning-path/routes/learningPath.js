@@ -6,6 +6,8 @@ const Concept = require('../../concepts/models/Concept');
 const { authMiddleware, optionalAuth, requireRole } = require('../../../shared/jwtAuth');
 const { generateRecallQuizFromLesson } = require('../../../lib/ai/tasks/generateRecallQuiz');
 const { emitAsync } = require('../../../services/eventBus');
+const { coerceLessonSections } = require('../../../shared/schemas/lessonSectionSchema');
+const { normalizeQuizList } = require('../../../shared/quizQuestion');
 
 const router = express.Router();
 
@@ -33,7 +35,8 @@ router.get('/editor', authMiddleware, requireRole('teacher', 'admin'), async (_r
 });
 
 function normalizeModules(modules) {
-  return modules.map((mod) => ({
+  let invalidSectionCount = 0;
+  const out = modules.map((mod) => ({
     ...mod,
     nodes: (mod.nodes || []).map((n) => {
       const raw = n.topicWeights;
@@ -51,29 +54,8 @@ function normalizeModules(modules) {
           .map((a) => ({ conceptId: String(a?.conceptId || '').trim(), phrase: String(a?.phrase || '').trim() }))
           .filter((a) => a.conceptId && a.phrase);
       };
-      const normalizeRecallQuiz = (lesson) => {
-        const rows = Array.isArray(lesson?.recallQuiz) ? lesson.recallQuiz : [];
-        return rows
-          .slice(0, 5)
-          .map((q, idx) => {
-            const question = String(q?.question || '').trim();
-            const rawOpts = Array.isArray(q?.options) ? q.options : [];
-            const rawExpl = Array.isArray(q?.optionExplanations) ? q.optionExplanations : [];
-            const pairs = rawOpts
-              .map((o, i) => ({ text: String(o || '').trim(), reason: String(rawExpl[i] || '').trim(), orig: i }))
-              .filter((p) => p.text);
-            const options = pairs.map((p) => p.text);
-            const ciRaw = Number(q?.correctIndex);
-            const ciSafe = Number.isFinite(ciRaw) ? ciRaw : 0;
-            const mappedIdx = pairs.findIndex((p) => p.orig === ciSafe);
-            const correctIndex = Math.max(0, Math.min(mappedIdx >= 0 ? mappedIdx : 0, Math.max(0, options.length - 1)));
-            const optionExplanations = pairs.map((p, i) =>
-              p.reason || (i === correctIndex ? 'Đây là đáp án đúng theo nội dung bài học.' : 'Phương án này chưa khớp với nội dung bài học.')
-            );
-            return { id: String(q?.id || '').trim() || `rq-${String(lesson?.id || 'lesson')}-${idx}`, question, options, correctIndex, optionExplanations };
-          })
-          .filter((q) => q.question && q.options.length >= 3 && q.options[q.correctIndex]);
-      };
+      const normalizeRecallQuiz = (lesson) =>
+        normalizeQuizList(lesson?.recallQuiz, String(lesson?.id || '').trim(), { maxCount: 5, minCount: 0 });
       const normalizeSceneContext = (lesson) => {
         const sc = lesson?.sceneContext;
         if (!sc || typeof sc !== 'object') return undefined;
@@ -81,19 +63,37 @@ function normalizeModules(modules) {
         const entityIds = Array.isArray(sc.entityIds)
           ? [...new Set(sc.entityIds.map((x) => String(x || '').trim()).filter(Boolean))].filter((id) => id !== primaryEntityId)
           : [];
-        if (!primaryEntityId && entityIds.length === 0) return undefined;
+        const hfRaw = sc.historyFocus;
+        let historyFocus;
+        if (hfRaw && typeof hfRaw === 'object' && primaryEntityId) {
+          const beatId = Number(hfRaw.beatId);
+          if (Number.isFinite(beatId)) {
+            historyFocus = { beatId };
+            const pinId = String(hfRaw.pinId || '').trim();
+            if (pinId) historyFocus.pinId = pinId;
+            const labelVi = String(hfRaw.labelVi || '').trim();
+            if (labelVi) historyFocus.labelVi = labelVi;
+          }
+        }
+        if (!primaryEntityId && entityIds.length === 0 && !historyFocus) return undefined;
         const out = {};
         if (primaryEntityId) out.primaryEntityId = primaryEntityId;
         if (entityIds.length) out.entityIds = entityIds;
+        if (historyFocus) out.historyFocus = historyFocus;
         return out;
       };
-      const normalizeConceptIds = (lesson) => ({
-        ...lesson,
-        conceptIds: Array.isArray(lesson?.conceptIds) ? [...new Set(lesson.conceptIds.map((x) => String(x || '').trim()).filter(Boolean))] : [],
-        conceptAnchors: normalizeConceptAnchors(lesson),
-        recallQuiz: normalizeRecallQuiz(lesson),
-        sceneContext: normalizeSceneContext(lesson),
-      });
+      const normalizeConceptIds = (lesson) => {
+        const { sections, dropped } = coerceLessonSections(lesson?.sections);
+        invalidSectionCount += dropped;
+        return {
+          ...lesson,
+          sections,
+          conceptIds: Array.isArray(lesson?.conceptIds) ? [...new Set(lesson.conceptIds.map((x) => String(x || '').trim()).filter(Boolean))] : [],
+          conceptAnchors: normalizeConceptAnchors(lesson),
+          recallQuiz: normalizeRecallQuiz(lesson),
+          sceneContext: normalizeSceneContext(lesson),
+        };
+      };
       const depths = n.depths || {};
       const nextDepths = {
         beginner: Array.isArray(depths.beginner) ? depths.beginner.map(normalizeConceptIds) : [],
@@ -103,6 +103,7 @@ function normalizeModules(modules) {
       return { ...n, topicWeights, depths: nextDepths };
     }),
   }));
+  return { modules: out, invalidSectionCount };
 }
 
 function validateModulesByConceptIds(modules, conceptIdSet) {
@@ -152,7 +153,7 @@ router.put('/editor', authMiddleware, requireRole('teacher', 'admin'), async (re
   try {
     const { modules, concepts, published } = req.body || {};
     if (!Array.isArray(modules)) return res.status(400).json({ success: false, error: 'modules phải là mảng' });
-    const normalized = normalizeModules(modules);
+    const { modules: normalized, invalidSectionCount } = normalizeModules(modules);
     const normalizedConcepts = Array.isArray(concepts) ? normalizeConcepts(concepts) : null;
     const conceptDocs = await Concept.find({}, { id: 1 }).lean();
     const conceptIdSet = new Set((conceptDocs || []).map((c) => String(c.id || '').trim()).filter(Boolean));
@@ -168,7 +169,16 @@ router.put('/editor', authMiddleware, requireRole('teacher', 'admin'), async (re
     }
     await doc.save();
     const fresh = await LearningPath.findOne({ slug: 'main' }).lean();
-    res.json({ success: true, data: { modules: fresh?.modules || [], concepts: fresh?.concepts || [], published: fresh?.published ?? true, invalidConceptIds } });
+    res.json({
+      success: true,
+      data: {
+        modules: fresh?.modules || [],
+        concepts: fresh?.concepts || [],
+        published: fresh?.published ?? true,
+        invalidConceptIds,
+        invalidSectionCount: invalidSectionCount || 0,
+      },
+    });
   } catch (err) {
     console.error('PUT learning-path editor error:', err);
     res.status(500).json({ success: false, code: 'LEARNING_PATH_EDITOR_SAVE_FAILED', error: 'Lỗi máy chủ' });

@@ -1,6 +1,6 @@
 'use client'
 
-import { Suspense, useMemo } from 'react'
+import { Suspense, useEffect, useMemo, useState } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { OrbitControls, Stars } from '@react-three/drei'
 import * as THREE from 'three'
@@ -15,6 +15,18 @@ function PreviewEntityNode({ entity }: { entity: ShowcaseOrbitEntity }) {
   )
 }
 
+function useDocumentVisible(): boolean {
+  const [visible, setVisible] = useState(
+    () => typeof document === 'undefined' || document.visibilityState === 'visible',
+  )
+  useEffect(() => {
+    const onVis = () => setVisible(document.visibilityState === 'visible')
+    document.addEventListener('visibilitychange', onVis)
+    return () => document.removeEventListener('visibilitychange', onVis)
+  }, [])
+  return visible
+}
+
 export function ShowcaseEntityPreviewCard({
   entity,
   effectiveTextureUrl,
@@ -22,6 +34,7 @@ export function ShowcaseEntityPreviewCard({
   entity: ShowcaseOrbitEntity
   effectiveTextureUrl: string
 }) {
+  const pageVisible = useDocumentVisible()
   const mediaSummary = useMemo(() => {
     const model = String(entity.remoteModelUrl || '').trim()
     const diffuse = String(entity.remoteTextureUrl || entity.texturePath || '').trim()
@@ -32,13 +45,15 @@ export function ShowcaseEntityPreviewCard({
   }, [entity])
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-[#0a0f17] p-4 space-y-3">
+    <div className="rounded-2xl border border-ds-border bg-ds-surface p-4 space-y-3">
       <div className="flex items-center justify-between gap-3">
         <h2 className="text-sm font-semibold text-white">Live preview (Showcase renderer)</h2>
-        <span className="text-[11px] text-slate-400">Orbit drag • wheel zoom</span>
+        <span className="text-[11px] text-ds-muted">Orbit drag • wheel zoom</span>
       </div>
-      <div className="h-[290px] w-full overflow-hidden rounded-xl border border-white/10 bg-black">
+      <div className="h-[290px] w-full overflow-hidden rounded-xl border border-ds-border bg-black">
         <Canvas
+          key={entity.id}
+          frameloop={pageVisible ? 'always' : 'never'}
           camera={{ position: [0, 0, 4.2], fov: 42 }}
           dpr={[1, 2]}
           gl={{ antialias: true, alpha: false, powerPreference: 'high-performance' }}
@@ -61,21 +76,21 @@ export function ShowcaseEntityPreviewCard({
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-[11px]">
-        <div className="rounded-lg border border-white/10 bg-black/25 p-2">
-          <p className="text-slate-500 uppercase tracking-wide mb-1">Effective diffuse</p>
-          <p className="font-mono text-cyan-300 break-all">{effectiveTextureUrl || '(none)'}</p>
+        <div className="rounded-lg border border-ds-border bg-black/25 p-2">
+          <p className="text-ds-subtle uppercase tracking-wide mb-1">Effective diffuse</p>
+          <p className="font-mono text-ds-accent break-all">{effectiveTextureUrl || '(none)'}</p>
         </div>
-        <div className="rounded-lg border border-white/10 bg-black/25 p-2">
-          <p className="text-slate-500 uppercase tracking-wide mb-1">Model URL</p>
-          <p className="font-mono text-cyan-300 break-all">{mediaSummary.model || '(none)'}</p>
+        <div className="rounded-lg border border-ds-border bg-black/25 p-2">
+          <p className="text-ds-subtle uppercase tracking-wide mb-1">Model URL</p>
+          <p className="font-mono text-ds-accent break-all">{mediaSummary.model || '(none)'}</p>
         </div>
-        <div className="rounded-lg border border-white/10 bg-black/25 p-2">
-          <p className="text-slate-500 uppercase tracking-wide mb-1">Normal</p>
-          <p className="font-mono text-cyan-300 break-all">{mediaSummary.normal || '(none)'}</p>
+        <div className="rounded-lg border border-ds-border bg-black/25 p-2">
+          <p className="text-ds-subtle uppercase tracking-wide mb-1">Normal</p>
+          <p className="font-mono text-ds-accent break-all">{mediaSummary.normal || '(none)'}</p>
         </div>
-        <div className="rounded-lg border border-white/10 bg-black/25 p-2">
-          <p className="text-slate-500 uppercase tracking-wide mb-1">Specular / Cloud</p>
-          <p className="font-mono text-cyan-300 break-all">
+        <div className="rounded-lg border border-ds-border bg-black/25 p-2">
+          <p className="text-ds-subtle uppercase tracking-wide mb-1">Specular / Cloud</p>
+          <p className="font-mono text-ds-accent break-all">
             {mediaSummary.spec || '(none)'} / {mediaSummary.cloud || '(none)'}
           </p>
         </div>

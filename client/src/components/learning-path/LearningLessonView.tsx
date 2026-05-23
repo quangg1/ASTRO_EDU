@@ -32,7 +32,7 @@ import {
   type LessonCompletionMap,
   type LessonMasteryMap,
 } from '@/features/learning-path/public'
-import { LessonRecallQuiz } from '@/components/learning-path/LessonRecallQuiz'
+import { LessonRecallQuizOverlay } from '@/components/learning-path/LessonRecallQuizOverlay'
 import { useAuthStore } from '@/features/auth/public'
 import { SectionPreview } from '@/components/studio/LessonPreview'
 import { applyConceptAnchorsToHtml } from '@/features/concepts/public'
@@ -52,7 +52,7 @@ function escapeHtmlTitle(s: string) {
 }
 
 function placeholderBody(lesson: LessonItem) {
-  return `<p class="text-slate-300 leading-relaxed">Nội dung bài học đang được biên soạn. Tiêu đề: <strong>${escapeHtmlTitle(lesson.titleVi)}</strong></p><p class="text-slate-500 text-sm mt-4">Giáo viên có thể thêm nội dung trong Studio → Lộ trình học.</p>`
+  return `<p class="text-slate-300 leading-relaxed">Nội dung bài học đang được biên soạn. Tiêu đề: <strong>${escapeHtmlTitle(lesson.titleVi)}</strong></p><p class="text-ds-subtle text-sm mt-4">Giáo viên có thể thêm nội dung trong Studio → Lộ trình học.</p>`
 }
 
 export default function LearningLessonView({
@@ -86,11 +86,22 @@ export default function LearningLessonView({
     })
   }, [userId])
 
+  const [quizOverlayOpen, setQuizOverlayOpen] = useState(false)
+
+  useEffect(() => {
+    setQuizOverlayOpen(false)
+  }, [lesson.id])
+
   const done = isLessonComplete(completion, lesson.id)
   const mastered = isLessonMastered(mastery, lesson.id)
 
   const recallQuestions = useMemo(() => normalizeStudioRecallQuiz(lesson), [lesson])
   const recallGateActive = recallQuestions.length >= 3
+
+  const openRecallQuiz = () => {
+    if (recallQuestions.length === 0 || mastered) return
+    setQuizOverlayOpen(true)
+  }
 
   const handleRecallPassed = () => {
     const wasMastered = isLessonMastered(mastery, lesson.id)
@@ -113,6 +124,7 @@ export default function LearningLessonView({
     })
     window.dispatchEvent(new Event('lp-progress-changed'))
   }
+
   const toggle = () => {
     const markingComplete = !done
     const nextMap = toggleLessonComplete(completion, lesson.id, markingComplete)
@@ -135,6 +147,9 @@ export default function LearningLessonView({
       completed: markingComplete,
     })
     window.dispatchEvent(new Event('lp-progress-changed'))
+    if (markingComplete && recallGateActive && !mastered) {
+      setQuizOverlayOpen(true)
+    }
   }
 
   const sections = lesson.sections ?? []
@@ -437,7 +452,7 @@ export default function LearningLessonView({
   }, [activeSectionId])
 
   return (
-    <div className="min-h-screen bg-[#02040a] relative overflow-x-hidden">
+    <div className="min-h-screen bg-ds-base relative overflow-x-hidden">
       <div
         className="pointer-events-none fixed inset-0 opacity-25"
         style={{
@@ -452,35 +467,35 @@ export default function LearningLessonView({
         }`}
         style={isConceptPanelOpen ? { marginRight: `${panelWidth + 40}px` } : undefined}
       >
-        <nav className="text-xs text-slate-500 mb-6 flex flex-wrap items-center gap-2">
-          <Link href="/tutorial" className="hover:text-cyan-400 transition-colors">
+        <nav className="text-xs text-ds-subtle mb-6 flex flex-wrap items-center gap-2">
+          <Link href="/tutorial" className="hover:text-ds-accent transition-colors">
             Lộ trình học
           </Link>
           <span className="opacity-50">/</span>
-          <Link href={`/tutorial/${displayModule.id}`} className="hover:text-cyan-400 transition-colors truncate max-w-[32vw]">
+          <Link href={`/tutorial/${displayModule.id}`} className="hover:text-ds-accent transition-colors truncate max-w-[32vw]">
             {displayModule.titleVi}
           </Link>
           <span className="opacity-50">/</span>
           <Link
             href={`/tutorial/${displayModule.id}/${displayNode.id}`}
-            className="hover:text-cyan-400 transition-colors truncate max-w-[32vw]"
+            className="hover:text-ds-accent transition-colors truncate max-w-[32vw]"
           >
             {displayNode.titleVi}
           </Link>
           <span className="opacity-50">/</span>
-          <span className="text-slate-400 truncate">Bài học</span>
+          <span className="text-ds-muted truncate">Bài học</span>
         </nav>
 
         <motion.header
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-7 rounded-2xl border border-white/10 bg-[#070b14]/80 p-5 md:p-6"
+          className="mb-7 rounded-2xl border border-ds-border bg-ds-overlay p-5 md:p-6"
         >
           <div className="flex flex-wrap items-center gap-2 mb-2">
-            <span className={`text-xs px-2 py-0.5 rounded-lg border border-white/10 bg-gradient-to-br ${meta.gradient}`}>
+            <span className={`text-xs px-2 py-0.5 rounded-lg border border-ds-border bg-gradient-to-br ${meta.gradient}`}>
               {meta.short} {meta.labelVi}
             </span>
-            <span className="text-[10px] uppercase tracking-widest text-slate-500">
+            <span className="text-[10px] uppercase tracking-widest text-ds-subtle">
               {displayModule.emoji} Mô-đun {displayModule.order}
             </span>
           </div>
@@ -490,14 +505,14 @@ export default function LearningLessonView({
           >
             {lesson.titleVi}
           </h1>
-          {lesson.title ? <p className="text-slate-400 text-sm md:text-base">{lesson.title}</p> : null}
+          {lesson.title ? <p className="text-ds-muted text-sm md:text-base">{lesson.title}</p> : null}
           <div className="mt-3 flex flex-wrap gap-2">
             {done ? (
               <span className="rounded-full border border-emerald-500/35 bg-emerald-500/15 px-2.5 py-0.5 text-[11px] font-medium text-emerald-100">
                 Đã đọc
               </span>
             ) : (
-              <span className="rounded-full border border-white/10 px-2.5 py-0.5 text-[11px] text-slate-500">Chưa đánh dấu đọc</span>
+              <span className="rounded-full border border-ds-border px-2.5 py-0.5 text-[11px] text-ds-subtle">Chưa đánh dấu đọc</span>
             )}
             {mastered ? (
               <span className="rounded-full border border-violet-500/40 bg-violet-500/15 px-2.5 py-0.5 text-[11px] font-medium text-violet-100">
@@ -510,9 +525,9 @@ export default function LearningLessonView({
             ) : null}
           </div>
           <div className="mt-4">
-            <div className="flex items-center justify-between text-[11px] text-slate-500 mb-1">
+            <div className="flex items-center justify-between text-[11px] text-ds-subtle mb-1">
               <span>Tiến độ đọc</span>
-              <span className="text-cyan-300 tabular-nums">{readingProgress}%</span>
+              <span className="text-ds-accent tabular-nums">{readingProgress}%</span>
             </div>
             <div className="h-1.5 rounded-full bg-white/10 overflow-hidden">
               <div
@@ -526,14 +541,14 @@ export default function LearningLessonView({
         {sections.length > 0 ? (
           <div className="relative mb-8">
             <aside className="hidden lg:block fixed top-20 left-4 w-[260px] z-20">
-              <div className="max-h-[calc(100vh-6rem)] overflow-y-auto rounded-2xl border border-white/10 bg-[#070b14]/92 p-3.5 shadow-xl">
-                <p className="text-[11px] uppercase tracking-wider text-slate-500 mb-2">Mục lục bài học</p>
+              <div className="max-h-[calc(100vh-6rem)] overflow-y-auto rounded-2xl border border-ds-border bg-ds-overlay p-3.5 shadow-xl">
+                <p className="text-[11px] uppercase tracking-wider text-ds-subtle mb-2">Mục lục bài học</p>
                 <div className="mb-3">
-                  <div className="flex items-center justify-between text-[11px] text-slate-500 mb-1">
+                  <div className="flex items-center justify-between text-[11px] text-ds-subtle mb-1">
                     <span>
                       {Math.min(activeSectionIndex + 1, Math.max(sectionNavItems.length, 1))}/{sectionNavItems.length}
                     </span>
-                    <span className="text-cyan-300 tabular-nums">{readingProgress}%</span>
+                    <span className="text-ds-accent tabular-nums">{readingProgress}%</span>
                   </div>
                   <div className="h-1.5 rounded-full bg-white/10 overflow-hidden">
                     <div
@@ -557,14 +572,14 @@ export default function LearningLessonView({
                           }}
                           className={`w-full text-left rounded-lg px-3 py-2.5 text-sm transition-colors ${
                             parentActive
-                              ? 'border border-cyan-500/40 bg-cyan-500/15 text-cyan-100 shadow-[inset_2px_0_0_0_rgba(34,211,238,0.9)]'
+                              ? 'border border-ds-accent-strong bg-ds-accent-soft text-cyan-100 shadow-[inset_2px_0_0_0_rgba(34,211,238,0.9)]'
                               : 'border border-transparent text-slate-300 hover:text-slate-100 hover:bg-white/5'
                           }`}
                         >
                           {group.parent.title}
                         </button>
                         {group.children.length > 0 ? (
-                          <div className="ml-2 pl-2 border-l border-white/10 space-y-1">
+                          <div className="ml-2 pl-2 border-l border-ds-border space-y-1">
                             {group.children.map((child) => (
                               <button
                                 key={child.id}
@@ -575,8 +590,8 @@ export default function LearningLessonView({
                                 }}
                                 className={`w-full text-left rounded-md px-2.5 py-1.5 text-xs transition-colors ${
                                   activeSectionId === child.id
-                                    ? 'text-cyan-200 bg-cyan-500/10 border border-cyan-500/25'
-                                    : 'text-slate-500 hover:text-slate-300 hover:bg-white/5 border border-transparent'
+                                    ? 'text-cyan-200 bg-ds-accent-soft border border-ds-accent-strong'
+                                    : 'text-ds-subtle hover:text-slate-300 hover:bg-white/5 border border-transparent'
                                 }`}
                               >
                                 {child.title}
@@ -600,16 +615,16 @@ export default function LearningLessonView({
                 <div
                   key={i}
                   id={`lesson-section-${i}`}
-                  className="scroll-mt-24 rounded-2xl border border-white/10 bg-[#070b14]/95 p-6 md:p-7 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]"
+                  className="scroll-mt-24 rounded-2xl border border-ds-border bg-ds-overlay p-6 md:p-7 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]"
                 >
-                  <SectionPreview sec={sec} index={i} />
+                  <SectionPreview sec={sec} />
                 </div>
               ))}
             </div>
           </div>
         ) : (
           <article
-            className="prose prose-invert prose-sm md:prose-base max-w-none rounded-2xl border border-white/10 bg-[#070b14]/90 p-6 md:p-8 mb-8 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] [&_p]:my-4 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0 [&_a]:text-cyan-400 [&_strong]:text-white"
+            className="prose prose-invert prose-sm md:prose-base max-w-none rounded-2xl border border-ds-border bg-ds-overlay p-6 md:p-8 mb-8 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] [&_p]:my-4 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0 [&_a]:text-ds-accent [&_strong]:text-white"
             onMouseMove={onConceptMouseMove}
             onMouseLeave={() => setTooltip(null)}
             onClick={onConceptClick}
@@ -619,7 +634,7 @@ export default function LearningLessonView({
 
         {tooltip && conceptMap.get(tooltip.id) && (
           <div
-            className="fixed z-[70] max-w-xs rounded-lg border border-cyan-500/30 bg-[#071018]/95 px-3 py-2 text-xs shadow-xl pointer-events-none"
+            className="fixed z-[70] max-w-xs rounded-lg border border-ds-accent-strong bg-ds-overlay px-3 py-2 text-xs shadow-xl pointer-events-none"
             style={{ left: tooltip.x, top: tooltip.y }}
           >
             <p className="text-cyan-200 font-medium">
@@ -631,14 +646,8 @@ export default function LearningLessonView({
           </div>
         )}
 
-        {recallQuestions.length > 0 ? (
-          <div className="mb-8">
-            <LessonRecallQuiz questions={recallQuestions} passed={mastered} onPassed={handleRecallPassed} />
-          </div>
-        ) : null}
-
         {linkedConcepts.length > 0 && (
-          <aside className="mb-8 rounded-2xl border border-cyan-500/20 bg-[#071018]/80 p-4">
+          <aside className="mb-8 rounded-2xl border border-ds-accent-strong bg-ds-overlay p-4">
             <h3 className="text-sm font-semibold text-cyan-100 mb-2">Khái niệm trong bài</h3>
             <div className="flex flex-wrap gap-2">
               {linkedConcepts.map((c) => (
@@ -659,8 +668,8 @@ export default function LearningLessonView({
                   }}
                   className={`rounded-full px-2.5 py-1 text-xs border transition-colors ${
                     activeConceptId === c.id
-                      ? 'border-cyan-400/60 bg-cyan-500/20 text-cyan-100'
-                      : 'border-white/15 bg-white/5 text-slate-300 hover:border-cyan-500/40'
+                      ? 'border-ds-accent-strong bg-ds-accent-strong text-cyan-100'
+                      : 'border-ds-border-strong bg-white/5 text-slate-300 hover:border-ds-accent-strong'
                   }`}
                 >
                   {c.id}
@@ -677,14 +686,23 @@ export default function LearningLessonView({
             className={`rounded-xl px-4 py-2.5 text-sm font-medium transition-all ${
               done
                 ? 'bg-emerald-600/30 border border-emerald-500/50 text-emerald-200'
-                : 'bg-white/5 border border-white/15 text-slate-200 hover:bg-white/10'
+                : 'bg-white/5 border border-ds-border-strong text-slate-200 hover:bg-white/10'
             }`}
           >
             {done ? '✓ Đã hoàn thành bài này' : 'Đánh dấu đã học xong bài này'}
           </button>
+          {recallGateActive && !mastered ? (
+            <button
+              type="button"
+              onClick={openRecallQuiz}
+              className="rounded-xl border border-violet-400/40 bg-gradient-to-r from-violet-600/80 to-fuchsia-600/60 px-4 py-2.5 text-sm font-semibold text-white shadow-[0_0_20px_rgba(139,92,246,0.2)] hover:from-violet-500 hover:to-fuchsia-500"
+            >
+              {done ? 'Làm kiểm tra nhanh' : 'Học xong → kiểm tra'}
+            </button>
+          ) : null}
           <Link
             href={`/tutorial/${displayModule.id}/${displayNode.id}`}
-            className="rounded-xl px-4 py-2.5 text-sm border border-white/10 text-slate-400 hover:text-white hover:bg-white/5"
+            className="rounded-xl px-4 py-2.5 text-sm border border-ds-border text-ds-muted hover:text-white hover:bg-white/5"
           >
             ← Về danh sách chủ đề
           </Link>
@@ -694,9 +712,9 @@ export default function LearningLessonView({
           {prev ? (
             <Link
               href={`/tutorial/${prev.moduleId}/${prev.nodeId}/${encodeURIComponent(prev.lesson.id)}`}
-              className="group flex-1 rounded-xl border border-white/10 bg-white/[0.02] px-4 py-3 hover:border-white/20 hover:bg-white/[0.04] transition-all"
+              className="group flex-1 rounded-xl border border-ds-border bg-white/[0.02] px-4 py-3 hover:border-ds-border-strong hover:bg-white/[0.04] transition-all"
             >
-              <span className="text-[10px] uppercase tracking-wider text-slate-500 flex items-center gap-1">
+              <span className="text-[10px] uppercase tracking-wider text-ds-subtle flex items-center gap-1">
                 <ChevronLeft className="w-3.5 h-3.5" /> Bài trước
               </span>
               <p className="text-sm font-medium text-slate-200 group-hover:text-cyan-200 mt-1 line-clamp-2">
@@ -713,20 +731,20 @@ export default function LearningLessonView({
               </span>
               <p className="text-sm font-medium text-amber-50 mt-1 line-clamp-2">{next.lesson.titleVi}</p>
               <p className="mt-2 text-[11px] text-amber-100/80">
-                Làm đúng kiểm tra nhanh phía trên để mở khóa &quot;Đã nắm&quot; — sau đó mới nên sang bài tiếp.
+                Hoàn thành kiểm tra nhanh để ghi nhận &quot;Đã nắm&quot; rồi mới sang bài tiếp.
               </p>
               <button
                 type="button"
-                onClick={() => document.getElementById('lesson-recall-quiz')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                onClick={openRecallQuiz}
                 className="mt-2 inline-flex rounded-lg border border-amber-400/40 bg-amber-600/20 px-3 py-1.5 text-[11px] font-medium text-amber-50 hover:bg-amber-600/30"
               >
-                Cuộn tới kiểm tra
+                Bắt đầu kiểm tra
               </button>
             </div>
           ) : next ? (
             <Link
               href={`/tutorial/${next.moduleId}/${next.nodeId}/${encodeURIComponent(next.lesson.id)}`}
-              className="group flex-1 rounded-xl border border-cyan-500/25 bg-cyan-500/5 px-4 py-3 hover:border-cyan-400/40 hover:bg-cyan-500/10 transition-all text-right"
+              className="group flex-1 rounded-xl border border-ds-accent-strong bg-ds-accent-soft px-4 py-3 hover:border-ds-accent-strong hover:bg-ds-accent-soft transition-all text-right"
             >
               <span className="text-[10px] uppercase tracking-wider text-cyan-500/80 flex items-center justify-end gap-1">
                 Bài tiếp <ChevronRight className="w-3.5 h-3.5" />
@@ -738,10 +756,10 @@ export default function LearningLessonView({
           ) : (
             <Link
               href="/tutorial"
-              className="flex-1 rounded-xl border border-white/10 bg-white/[0.02] px-4 py-3 text-right hover:bg-white/[0.05] transition-all"
+              className="flex-1 rounded-xl border border-ds-border bg-white/[0.02] px-4 py-3 text-right hover:bg-white/[0.05] transition-all"
             >
-              <span className="text-[10px] uppercase tracking-wider text-slate-500">Hết lộ trình</span>
-              <p className="text-sm font-medium text-cyan-300 mt-1">Về tổng quan →</p>
+              <span className="text-[10px] uppercase tracking-wider text-ds-subtle">Hết lộ trình</span>
+              <p className="text-sm font-medium text-ds-accent mt-1">Về tổng quan →</p>
             </Link>
           )}
         </nav>
@@ -755,7 +773,7 @@ export default function LearningLessonView({
             onClick={() => setActiveConceptId(null)}
           />
           <aside
-            className="fixed z-[80] w-full max-h-[82vh] md:max-h-[calc(100vh-7rem)] overflow-y-auto border border-cyan-500/25 bg-[#06101a]/98 shadow-2xl
+            className="fixed z-[80] w-full max-h-[82vh] md:max-h-[calc(100vh-7rem)] overflow-y-auto border border-ds-accent-strong bg-ds-overlay shadow-2xl
             left-0 right-0 bottom-0 rounded-t-2xl p-4 animate-slide-up-fade
             md:left-auto md:right-4 md:top-20 md:bottom-6 md:rounded-2xl md:p-5"
             style={{ width: `min(100vw, ${panelWidth}px)` }}
@@ -780,7 +798,7 @@ export default function LearningLessonView({
               <button
                 type="button"
                 onClick={() => setActiveConceptId(null)}
-                className="text-xs rounded border border-white/15 px-2 py-1 text-slate-300 hover:bg-white/10"
+                className="text-xs rounded border border-ds-border-strong px-2 py-1 text-slate-300 hover:bg-white/10"
               >
                 Đóng
               </button>
@@ -797,7 +815,7 @@ export default function LearningLessonView({
             ) : null}
             {activeConcept.related?.length ? (
               <div className="mt-4">
-                <p className="text-xs text-slate-400 mb-2">Khái niệm liên quan</p>
+                <p className="text-xs text-ds-muted mb-2">Khái niệm liên quan</p>
                 <div className="flex flex-wrap gap-2">
                   {activeConcept.related.map((rid) => {
                     const rel = conceptMap.get(rid)
@@ -821,8 +839,8 @@ export default function LearningLessonView({
                         disabled={!rel}
                         className={`rounded-full px-2 py-1 text-xs border ${
                           rel
-                            ? 'border-cyan-500/40 text-cyan-200 hover:bg-cyan-500/10'
-                            : 'border-white/10 text-slate-500'
+                            ? 'border-ds-accent-strong text-cyan-200 hover:bg-ds-accent-soft'
+                            : 'border-ds-border text-ds-subtle'
                         }`}
                       >
                         {rid}
@@ -832,15 +850,15 @@ export default function LearningLessonView({
                 </div>
               </div>
             ) : null}
-            <div id="related-lessons-by-concept" className="mt-5 border-t border-white/10 pt-4">
-              <p className="text-xs text-slate-400 mb-2">Bài học liên quan</p>
+            <div id="related-lessons-by-concept" className="mt-5 border-t border-ds-border pt-4">
+              <p className="text-xs text-ds-muted mb-2">Bài học liên quan</p>
               {relatedLessonsForActiveConcept.length > 0 ? (
                 <div className="space-y-2">
                   {relatedLessonsForActiveConcept.map((row) => (
                     <Link
                       key={`${activeConcept.id}-lesson-${row.lessonId}`}
                       href={`/tutorial/${row.moduleId}/${row.nodeId}/${encodeURIComponent(row.lessonId)}`}
-                      className="block rounded-lg border border-white/10 bg-white/5 px-3 py-2 hover:border-cyan-500/35 hover:bg-cyan-500/10 transition-colors"
+                      className="block rounded-lg border border-ds-border bg-white/5 px-3 py-2 hover:border-ds-accent-strong hover:bg-ds-accent-soft transition-colors"
                       onClick={() => setActiveConceptId(null)}
                     >
                       <p className="text-sm text-slate-100 line-clamp-2">{row.lessonTitle}</p>
@@ -848,7 +866,7 @@ export default function LearningLessonView({
                   ))}
                 </div>
               ) : (
-                <p className="text-xs text-slate-500">Chưa có bài khác dùng concept này.</p>
+                <p className="text-xs text-ds-subtle">Chưa có bài khác dùng concept này.</p>
               )}
             </div>
             {prerequisiteGuides.length > 0 ? (
@@ -862,7 +880,7 @@ export default function LearningLessonView({
                         <Link
                           href={p.lessonHref}
                           onClick={() => setActiveConceptId(null)}
-                          className="ml-3 inline-block text-cyan-300 hover:text-cyan-100 underline underline-offset-2"
+                          className="ml-3 inline-block text-ds-accent hover:text-cyan-100 underline underline-offset-2"
                         >
                           Học trước: {p.lessonTitle}
                         </Link>
@@ -893,6 +911,18 @@ export default function LearningLessonView({
           box-shadow: 0 0 0 2px rgba(34, 211, 238, 0.55);
         }
       `}</style>
+
+      {recallQuestions.length > 0 ? (
+        <LessonRecallQuizOverlay
+          open={quizOverlayOpen}
+          onClose={() => setQuizOverlayOpen(false)}
+          lessonTitle={lesson.titleVi}
+          questions={recallQuestions}
+          passed={mastered}
+          onPassed={handleRecallPassed}
+          gateActive={recallGateActive}
+        />
+      ) : null}
     </div>
   )
 }

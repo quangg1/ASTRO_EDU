@@ -11,8 +11,11 @@ const Order = require('../payment/models/Order');
 const Post = require('../community/models/Post');
 const LearningPathEvent = require('../learning-path/models/LearningPathEvent');
 const LearningPath = require('../learning-path/models/LearningPath');
+const gemEconomyRouter = require('./gemEconomy');
 
 const router = express.Router();
+
+router.use('/gem-economy', gemEconomyRouter);
 
 const RANGE_TO_DAYS = {
   '7d': 7,

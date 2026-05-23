@@ -35,11 +35,11 @@ export function TopicExploreView({ slug }: Props) {
   if (!topic) return null
 
   return (
-    <div className="min-h-screen bg-[#050508] pt-16 pb-16 px-4">
+    <div className="min-h-screen bg-ds-base pt-16 pb-16 px-4">
       <div className="max-w-3xl mx-auto">
         <Link
           href="/"
-          className="inline-flex items-center gap-1.5 text-sm text-cyan-400/90 hover:text-cyan-300 mb-8"
+          className="inline-flex items-center gap-1.5 text-sm text-ds-accent hover:text-ds-text mb-8"
         >
           <ArrowLeft className="w-4 h-4" />
           Trang chủ
@@ -47,23 +47,23 @@ export function TopicExploreView({ slug }: Props) {
 
         <header className="mb-10">
           <p className="text-[10px] uppercase tracking-[0.2em] text-amber-400/90 mb-2">Chủ đề landing</p>
-          <h1 className="text-3xl sm:text-4xl font-bold text-white font-heading tracking-tight">{topic.labelVi}</h1>
-          <p className="text-slate-400 mt-3 text-sm leading-relaxed">{topic.descriptionVi}</p>
-          <p className="text-xs text-slate-600 mt-4">
-            Các <strong className="text-slate-500">chủ đề (node)</strong> trong lộ trình được gắn trọng số — hiển thị theo module, không thay thế thứ tự học đầy đủ.{' '}
-            <Link href="/tutorial" className="text-cyan-500/90 hover:underline">
+          <h1 className="text-3xl sm:text-4xl font-bold text-ds-text font-heading tracking-tight">{topic.labelVi}</h1>
+          <p className="text-ds-muted mt-3 text-sm leading-relaxed">{topic.descriptionVi}</p>
+          <p className="text-xs text-ds-subtle mt-4">
+            Các <strong className="text-ds-subtle">chủ đề (node)</strong> trong lộ trình được gắn trọng số — hiển thị theo module, không thay thế thứ tự học đầy đủ.{' '}
+            <Link href="/tutorial" className="text-ds-accent hover:underline">
               Mở toàn bộ lộ trình →
             </Link>
           </p>
         </header>
 
         {loading ? (
-          <p className="text-slate-500 text-sm">Đang tải lộ trình…</p>
+          <p className="text-ds-subtle text-sm">Đang tải lộ trình…</p>
         ) : grouped.length === 0 ? (
-          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-8 text-center">
-            <p className="text-slate-400 text-sm">
+          <div className="rounded-ds-card border border-ds-border bg-white/[0.03] p-8 text-center">
+            <p className="text-ds-muted text-sm">
               Chưa có node nào gắn chủ đề này (hoặc API chưa đồng bộ). Biên tập trong{' '}
-              <Link href="/studio/learning-path" className="text-cyan-400 hover:underline">
+              <Link href="/studio/learning-path" className="text-ds-accent hover:underline">
                 Learning Path Studio
               </Link>
               , hoặc chạy script sync JSON → MongoDB.
@@ -74,18 +74,18 @@ export function TopicExploreView({ slug }: Props) {
             {grouped.map(({ module: mod, nodes }) => (
               <section
                 key={mod.id}
-                className="rounded-2xl border border-violet-500/20 bg-gradient-to-b from-[#0f0b18]/90 to-[#0a0812] overflow-hidden shadow-[0_12px_40px_rgba(0,0,0,0.35)]"
+                className="rounded-ds-card border border-violet-500/20 bg-gradient-to-b from-[#0f0b18]/90 to-[#0a0812] overflow-hidden shadow-[0_12px_40px_rgba(0,0,0,0.35)]"
               >
                 <div className="px-5 py-4 border-b border-white/[0.06] flex items-start gap-3">
                   <span className="text-2xl shrink-0" aria-hidden>
                     {mod.emoji}
                   </span>
                   <div>
-                    <p className="text-[10px] uppercase tracking-wider text-slate-500 flex items-center gap-1">
+                    <p className="text-[10px] uppercase tracking-wider text-ds-subtle flex items-center gap-1">
                       <Layers className="w-3 h-3" /> Module {mod.order}
                     </p>
-                    <h2 className="text-lg font-semibold text-white mt-0.5">{mod.titleVi}</h2>
-                    <p className="text-xs text-slate-500 mt-1 line-clamp-2">{mod.goalVi}</p>
+                    <h2 className="text-lg font-semibold text-ds-text mt-0.5">{mod.titleVi}</h2>
+                    <p className="text-xs text-ds-subtle mt-1 line-clamp-2">{mod.goalVi}</p>
                   </div>
                 </div>
                 <ul className="divide-y divide-white/[0.05]">
@@ -96,14 +96,14 @@ export function TopicExploreView({ slug }: Props) {
                         className="flex items-center justify-between gap-4 px-5 py-4 hover:bg-white/[0.04] transition-colors group"
                       >
                         <div className="min-w-0">
-                          <span className="text-sm font-medium text-slate-100 group-hover:text-cyan-200 transition-colors">
+                          <span className="text-sm font-medium text-slate-100 group-hover:text-ds-accent transition-colors">
                             {node.titleVi}
                           </span>
-                          <span className="block text-[11px] text-slate-500 mt-0.5">{weightLabel(weight)}</span>
+                          <span className="block text-[11px] text-ds-subtle mt-0.5">{weightLabel(weight)}</span>
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
-                          <span className="text-[10px] tabular-nums text-slate-600">{Math.round(weight * 100)}%</span>
-                          <ChevronRight className="w-4 h-4 text-slate-600 group-hover:text-cyan-400/80" />
+                          <span className="text-[10px] tabular-nums text-ds-subtle">{Math.round(weight * 100)}%</span>
+                          <ChevronRight className="w-4 h-4 text-ds-subtle group-hover:text-ds-accent" />
                         </div>
                       </Link>
                     </li>

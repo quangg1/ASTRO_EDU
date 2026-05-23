@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { EARTH_HISTORY_PRESET } from '@/features/content3d/narrative/public'
+import { earthHistoryData } from '@/features/content3d/earth/public'
 
 interface Props {
   value: number | null
@@ -10,8 +10,8 @@ interface Props {
 
 export default function StageTimePicker({ value, onChange }: Props) {
   const [open, setOpen] = useState(false)
-  const beats = EARTH_HISTORY_PRESET.beats
-  const current = value != null ? beats.find((s) => s.time === value) : null
+  const stages = earthHistoryData
+  const current = value != null ? stages.find((s) => s.time === value) : null
 
   return (
     <div className="space-y-2">
@@ -19,18 +19,18 @@ export default function StageTimePicker({ value, onChange }: Props) {
         <button
           type="button"
           onClick={() => setOpen(!open)}
-          className="flex-1 rounded-lg border border-white/15 bg-black/50 px-3 py-2 text-left text-sm transition-colors hover:border-cyan-500/40"
+          className="flex-1 rounded-lg border border-ds-border-strong bg-black/50 px-3 py-2 text-left text-sm transition-colors hover:border-ds-accent-strong"
         >
           {current ? (
             <span className="flex items-center gap-2">
               <span className="text-base">{current.icon}</span>
               <span className="text-white">{current.name}</span>
-              <span className="text-gray-500 text-xs ml-auto">{current.timeDisplay}</span>
+              <span className="text-ds-subtle text-xs ml-auto">{current.timeDisplay}</span>
             </span>
           ) : value != null ? (
-            <span className="text-gray-400">Custom: {value} Ma</span>
+            <span className="text-ds-muted">Custom: {value} Ma</span>
           ) : (
-            <span className="text-gray-600">Select Earth History stage...</span>
+            <span className="text-ds-subtle">Select Earth History stage...</span>
           )}
         </button>
         {value != null && (
@@ -45,12 +45,12 @@ export default function StageTimePicker({ value, onChange }: Props) {
       </div>
 
       {open && (
-        <div className="rounded-xl border border-cyan-500/20 bg-[#060b14] max-h-[400px] overflow-auto shadow-2xl shadow-cyan-500/5">
-          <div className="sticky top-0 px-3 py-2 border-b border-white/10 bg-[#060b14]">
-            <p className="text-[10px] uppercase tracking-wider text-gray-600">Earth History Timeline</p>
+        <div className="rounded-xl border border-ds-accent-strong bg-ds-surface max-h-[400px] overflow-auto shadow-2xl shadow-cyan-500/5">
+          <div className="sticky top-0 px-3 py-2 border-b border-ds-border bg-ds-surface">
+            <p className="text-[10px] uppercase tracking-wider text-ds-subtle">Earth History Timeline</p>
           </div>
           <div className="p-1">
-            {beats.map((stage) => {
+            {stages.map((stage) => {
               const isActive = value === stage.time
               return (
                 <button
@@ -59,22 +59,22 @@ export default function StageTimePicker({ value, onChange }: Props) {
                   onClick={() => { onChange(stage.time); setOpen(false) }}
                   className={`w-full text-left rounded-lg px-3 py-2.5 transition-all flex items-start gap-3 group ${
                     isActive
-                      ? 'bg-cyan-500/15 border border-cyan-500/30'
+                      ? 'bg-ds-accent-soft border border-ds-accent-strong'
                       : 'border border-transparent hover:bg-white/5'
                   }`}
                 >
                   <span className="text-xl mt-0.5 group-hover:scale-110 transition-transform">{stage.icon}</span>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className={`text-sm font-medium ${isActive ? 'text-cyan-300' : 'text-white'}`}>
+                      <span className={`text-sm font-medium ${isActive ? 'text-ds-accent' : 'text-white'}`}>
                         {stage.name}
                       </span>
-                      <span className="text-[10px] text-gray-600 ml-auto shrink-0">
+                      <span className="text-[10px] text-ds-subtle ml-auto shrink-0">
                         {stage.timeDisplay}
                       </span>
                     </div>
-                    <p className="text-[11px] text-gray-500 leading-tight mt-0.5 line-clamp-1">{stage.description}</p>
-                    <div className="flex items-center gap-2 mt-1 text-[10px] text-gray-600">
+                    <p className="text-[11px] text-ds-subtle leading-tight mt-0.5 line-clamp-1">{stage.description}</p>
+                    <div className="flex items-center gap-2 mt-1 text-[10px] text-ds-subtle">
                       <span>{stage.eon}</span>
                       {stage.era && <><span>-</span><span>{stage.era}</span></>}
                       {stage.period && <><span>-</span><span>{stage.period}</span></>}

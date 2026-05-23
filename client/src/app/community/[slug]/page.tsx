@@ -12,8 +12,8 @@ import {
   createPost,
   type Forum,
   type Post,
-} from '@/features/community/api/communityApi'
-import { plainTextExcerpt, postThumbnailUrl, isHtmlFragmentEmpty } from '@/lib/postContent'
+} from '@/features/community/public'
+import { plainTextExcerpt, postThumbnailUrl, isHtmlFragmentEmpty } from '@/features/community/public'
 
 const RichTextEditor = dynamic(() => import('@/components/studio/RichTextEditor'), {
   ssr: false,

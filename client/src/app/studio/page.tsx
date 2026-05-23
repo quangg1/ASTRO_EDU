@@ -27,13 +27,13 @@ export default function StudioHomePage() {
   }, [user])
 
   if (!checked || !user) {
-    return <div className="min-h-screen bg-black pt-20 px-4 text-gray-400">Checking auth...</div>
+    return <div className="min-h-screen bg-black pt-20 px-4 text-ds-muted">Checking auth...</div>
   }
 
   return (
     <div className="min-h-screen bg-black pt-16 px-4 pb-10">
       <main className="max-w-6xl mx-auto space-y-6">
-        <section className="rounded-2xl border border-cyan-500/20 bg-gradient-to-r from-cyan-500/20 via-blue-500/15 to-purple-500/20 p-6">
+        <section className="rounded-2xl border border-ds-accent-strong bg-gradient-to-r from-cyan-500/20 via-blue-500/15 to-purple-500/20 p-6">
           <p className="text-xs uppercase tracking-wide text-cyan-200">Teacher Studio</p>
           <h1 className="text-2xl md:text-3xl font-bold text-white mt-2">Cosmo Learn Studio</h1>
           <p className="text-sm text-gray-200 mt-2">
@@ -57,7 +57,7 @@ export default function StudioHomePage() {
               href="/studio/showcase-entities"
               className="inline-flex items-center min-h-10 px-4 rounded-xl bg-slate-600 text-white text-sm font-medium hover:bg-slate-500"
             >
-              Showcase entity (CMS)
+              Mở 3D Studio
             </Link>
             <Link
               href="/tutorial"
@@ -71,7 +71,7 @@ export default function StudioHomePage() {
         </section>
 
         {/* Courses */}
-        <section className="rounded-2xl border border-white/10 bg-[#0a0f17] p-4">
+        <section className="rounded-2xl border border-ds-border bg-ds-surface p-4">
           <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
             <h2 className="text-white font-semibold">Courses (curriculum & payments)</h2>
             <div className="flex items-center gap-2">
@@ -90,7 +90,7 @@ export default function StudioHomePage() {
                     value={newCourseTitle}
                     onChange={(e) => setNewCourseTitle(e.target.value)}
                     placeholder="Course title"
-                    className="rounded-lg bg-black/50 border border-white/15 px-3 py-1.5 text-sm text-white placeholder-gray-500 focus:border-cyan-500/50 focus:outline-none w-48"
+                    className="rounded-lg bg-black/50 border border-ds-border-strong px-3 py-1.5 text-sm text-white placeholder-gray-500 focus:border-ds-accent focus:outline-none w-48"
                   />
                   <button
                     type="button"
@@ -121,30 +121,30 @@ export default function StudioHomePage() {
                       setNewCourseTitle('')
                       setCreateError('')
                     }}
-                    className="text-xs min-h-10 px-2 text-gray-400 hover:text-white"
+                    className="text-xs min-h-10 px-2 text-ds-muted hover:text-white"
                   >
                     Cancel
                   </button>
                 </div>
               )}
-              <Link href="/courses" className="text-xs text-cyan-300 hover:text-cyan-200">
+              <Link href="/courses" className="text-xs text-ds-accent hover:text-cyan-200">
                 Student view
               </Link>
             </div>
           </div>
           {createError && <p className="text-sm text-red-400 mb-2">{createError}</p>}
           {loadingCourses ? (
-            <p className="text-sm text-gray-400">Loading courses...</p>
+            <p className="text-sm text-ds-muted">Loading courses...</p>
           ) : courses.length === 0 && !showCreateCourse ? (
-            <p className="text-sm text-gray-400">No courses yet. Click “Create course” to get started.</p>
+            <p className="text-sm text-ds-muted">No courses yet. Click “Create course” to get started.</p>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {courses.map((c) => (
-                <div key={c.id} className="rounded-xl border border-white/10 bg-white/5 p-4">
+                <div key={c.id} className="rounded-xl border border-ds-border bg-white/5 p-4">
                   <div className="flex items-center justify-between gap-3">
                     <div>
                       <h3 className="text-white font-semibold">{c.title}</h3>
-                      <p className="text-xs text-gray-500 mt-1">
+                      <p className="text-xs text-ds-subtle mt-1">
                         {c.lessonCount ?? 0} lessons &middot; {c.level}
                         {c.isPaid && (c.price ?? 0) > 0 && (
                           <>
@@ -161,7 +161,7 @@ export default function StudioHomePage() {
                       Open Studio
                     </Link>
                   </div>
-                  <p className="text-sm text-gray-400 mt-2 line-clamp-2">{c.description}</p>
+                  <p className="text-sm text-ds-muted mt-2 line-clamp-2">{c.description}</p>
                 </div>
               ))}
             </div>

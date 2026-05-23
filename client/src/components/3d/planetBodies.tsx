@@ -2,13 +2,16 @@
 
 import { useFrame, useLoader, useThree } from '@react-three/fiber'
 import { Billboard, Html } from '@react-three/drei'
-import { useRef, useMemo, useLayoutEffect, useState } from 'react'
+import { useRef, useMemo, useLayoutEffect, useState, type RefObject } from 'react'
 import * as THREE from 'three'
 import { applyGlobeTextureQuality } from '@/lib/planetTextureQuality'
 import { getStaticAssetUrl } from '@/lib/apiConfig'
 import { sunData, type PlanetData } from '@/lib/solarSystemData'
 import { computeOrbitalPosition } from '@/lib/solarOrbitMath'
 import { useShowcaseStore } from '@/features/content3d/showcase/public'
+import { ShowcaseDiffuseGlobe } from '@/components/3d/showcase/ShowcaseDiffuseGlobe'
+import type { ShowcaseOrbitEntity } from '@/lib/showcaseEntities'
+import { planetUsesShowcaseCmsTextures } from '@/lib/showcaseMediaUrl'
 
 export const SUN_SPIN_PERIOD = 25
 
@@ -358,6 +361,87 @@ function PlanetRing({
   )
 }
 
+function PlanetDefaultSphere({
+  data,
+  bodyScale,
+  unlitTexture,
+  profile,
+  bodyMeshRef,
+  interactive,
+  handlePlanetPick,
+  onHoverChange,
+}: {
+  data: PlanetData
+  bodyScale: number
+  unlitTexture: boolean
+  profile: PlanetRenderProfile
+  bodyMeshRef: RefObject<THREE.Mesh | null>
+  interactive: boolean
+  handlePlanetPick: () => void
+  onHoverChange?: (hovered: boolean) => void
+}) {
+  const { gl } = useThree()
+  const map = useLoader(THREE.TextureLoader, getStaticAssetUrl(data.texture)) as THREE.Texture
+  useLayoutEffect(() => {
+    applyGlobeTextureQuality(map, gl)
+  }, [map, gl])
+
+  return (
+    <>
+      <mesh
+        ref={bodyMeshRef as unknown as RefObject<THREE.Mesh>}
+        onClick={
+          interactive
+            ? (e) => {
+                e.stopPropagation()
+                handlePlanetPick()
+              }
+            : undefined
+        }
+        onPointerOver={interactive ? () => { document.body.style.cursor = 'pointer' } : undefined}
+        onPointerOut={interactive ? () => { document.body.style.cursor = 'auto' } : undefined}
+        onPointerEnter={interactive ? () => onHoverChange?.(true) : undefined}
+        onPointerLeave={interactive ? () => onHoverChange?.(false) : undefined}
+      >
+        <sphereGeometry args={[data.radius * bodyScale, 96, 96]} />
+        {unlitTexture ? (
+          <meshBasicMaterial map={map} toneMapped={false} />
+        ) : (
+          <meshStandardMaterial
+            map={map}
+            bumpMap={map}
+            bumpScale={profile.bumpScale}
+            roughness={profile.roughness}
+            metalness={profile.metalness}
+            envMapIntensity={0.55}
+          />
+        )}
+      </mesh>
+      {!unlitTexture && profile.atmosphereColor && profile.atmosphereOpacity > 0 && (
+        <mesh scale={[profile.atmosphereScale, profile.atmosphereScale, profile.atmosphereScale]}>
+          <sphereGeometry args={[data.radius * bodyScale, 64, 64]} />
+          <meshBasicMaterial
+            color={profile.atmosphereColor}
+            transparent
+            opacity={profile.atmosphereOpacity}
+            side={THREE.BackSide}
+            blending={THREE.AdditiveBlending}
+            depthWrite={false}
+          />
+        </mesh>
+      )}
+      {data.ringTexture ? (
+        <PlanetRing
+          inner={data.ringInner! * data.radius * bodyScale}
+          outer={data.ringOuter! * data.radius * bodyScale}
+          texturePath={getStaticAssetUrl(data.ringTexture)}
+          interactive={interactive}
+        />
+      ) : null}
+    </>
+  )
+}
+
 export function Planet({
   data,
   index,
@@ -378,6 +462,7 @@ export function Planet({
   /** Hành tinh đang chọn: luôn ưu tiên texture + nhãn rõ. */
   isSelected = false,
   onHoverChange,
+  showcaseOrbitEntity = null,
 }: {
   data: PlanetData
   index: number
@@ -396,6 +481,8 @@ export function Planet({
   exploreStyleLod?: boolean
   isSelected?: boolean
   onHoverChange?: (hovered: boolean) => void
+  /** Merge orbit entity (planet-*) — khi có diffuse/normal/spec/cloud từ Studio thì thay texture `planetsData`. */
+  showcaseOrbitEntity?: ShowcaseOrbitEntity | null
 }) {
   const groupRef = useRef<THREE.Group>(null)
   const fullGroupRef = useRef<THREE.Group>(null)
@@ -408,7 +495,8 @@ export function Planet({
   useMeshRaycastEnabled(iconHitRef, interactive)
   const ringMeshRef = useRef<THREE.Mesh>(null)
   useMeshRaycastEnabled(ringMeshRef, interactive)
-  const { gl, camera } = useThree()
+  const { camera } = useThree()
+  const hasCmsPlanetTextures = planetUsesShowcaseCmsTextures(showcaseOrbitEntity)
   const [iconMode, setIconMode] = useState(false)
   const [labelOpacity, setLabelOpacity] = useState(1)
   const iconModeSyncRef = useRef(false)
@@ -426,15 +514,11 @@ export function Planet({
     [data.orbitPhaseDeg]
   )
   const angleRef = useRef(Math.random() * Math.PI * 2 + phaseOffset)
-  const map = useLoader(THREE.TextureLoader, getStaticAssetUrl(data.texture)) as THREE.Texture
   const profile = useMemo(() => getPlanetRenderProfile(data.name), [data.name])
   const orbitColor = data.orbitColor || '#94a3b8'
   const iconRingArgs = useMemo(() => {
     return [0.4, 0.58, 64] as [number, number, number]
   }, [])
-  useLayoutEffect(() => {
-    applyGlobeTextureQuality(map, gl)
-  }, [map, gl])
 
   useFrame((_, delta) => {
     if (!groupRef.current) return
@@ -479,54 +563,59 @@ export function Planet({
     <group ref={groupRef} visible={visible}>
       <group ref={fullGroupRef} visible>
         <group ref={spinRef}>
-          <mesh
-            ref={bodyMeshRef}
-            onClick={
-              interactive
-                ? (e) => {
-                    e.stopPropagation()
-                    handlePlanetPick()
-                  }
-                : undefined
-            }
-            onPointerOver={interactive ? () => { document.body.style.cursor = 'pointer' } : undefined}
-            onPointerOut={interactive ? () => { document.body.style.cursor = 'auto' } : undefined}
-            onPointerEnter={interactive ? () => onHoverChange?.(true) : undefined}
-            onPointerLeave={interactive ? () => onHoverChange?.(false) : undefined}
-          >
-            <sphereGeometry args={[data.radius * bodyScale, 96, 96]} />
-            {unlitTexture ? (
-              <meshBasicMaterial map={map} toneMapped={false} />
-            ) : (
-              <meshStandardMaterial
-                map={map}
-                bumpMap={map}
-                bumpScale={profile.bumpScale}
-                roughness={profile.roughness}
-                metalness={profile.metalness}
-                envMapIntensity={0.55}
+          {hasCmsPlanetTextures && showcaseOrbitEntity ? (
+            <>
+              <ShowcaseDiffuseGlobe
+                entity={showcaseOrbitEntity}
+                sphereRadius={Math.max(0.06, data.radius * bodyScale)}
+                active={isSelected}
+                skipDistanceBasedScale
+                meshProps={{
+                  ref: bodyMeshRef,
+                  onClick: interactive
+                    ? (e) => {
+                        e.stopPropagation()
+                        handlePlanetPick()
+                      }
+                    : undefined,
+                  onPointerOver: interactive ? () => { document.body.style.cursor = 'pointer' } : undefined,
+                  onPointerOut: interactive ? () => { document.body.style.cursor = 'auto' } : undefined,
+                  onPointerEnter: interactive ? () => onHoverChange?.(true) : undefined,
+                  onPointerLeave: interactive ? () => onHoverChange?.(false) : undefined,
+                }}
               />
-            )}
-          </mesh>
-          {!unlitTexture && profile.atmosphereColor && profile.atmosphereOpacity > 0 && (
-            <mesh scale={[profile.atmosphereScale, profile.atmosphereScale, profile.atmosphereScale]}>
-              <sphereGeometry args={[data.radius * bodyScale, 64, 64]} />
-              <meshBasicMaterial
-                color={profile.atmosphereColor}
-                transparent
-                opacity={profile.atmosphereOpacity}
-                side={THREE.BackSide}
-                blending={THREE.AdditiveBlending}
-                depthWrite={false}
-              />
-            </mesh>
-          )}
-          {data.ringTexture && (
-            <PlanetRing
-              inner={data.ringInner! * data.radius * bodyScale}
-              outer={data.ringOuter! * data.radius * bodyScale}
-              texturePath={getStaticAssetUrl(data.ringTexture)}
+              {!unlitTexture && profile.atmosphereColor && profile.atmosphereOpacity > 0 ? (
+                <mesh scale={[profile.atmosphereScale, profile.atmosphereScale, profile.atmosphereScale]}>
+                  <sphereGeometry args={[data.radius * bodyScale, 64, 64]} />
+                  <meshBasicMaterial
+                    color={profile.atmosphereColor}
+                    transparent
+                    opacity={profile.atmosphereOpacity}
+                    side={THREE.BackSide}
+                    blending={THREE.AdditiveBlending}
+                    depthWrite={false}
+                  />
+                </mesh>
+              ) : null}
+              {data.ringTexture ? (
+                <PlanetRing
+                  inner={data.ringInner! * data.radius * bodyScale}
+                  outer={data.ringOuter! * data.radius * bodyScale}
+                  texturePath={getStaticAssetUrl(data.ringTexture)}
+                  interactive={interactive}
+                />
+              ) : null}
+            </>
+          ) : (
+            <PlanetDefaultSphere
+              data={data}
+              bodyScale={bodyScale}
+              unlitTexture={unlitTexture}
+              profile={profile}
+              bodyMeshRef={bodyMeshRef}
               interactive={interactive}
+              handlePlanetPick={handlePlanetPick}
+              onHoverChange={onHoverChange}
             />
           )}
         </group>

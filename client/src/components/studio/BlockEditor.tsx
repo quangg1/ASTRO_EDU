@@ -12,10 +12,9 @@ import SliderBlock from './blocks/SliderBlock'
 const RichTextEditor = dynamic(() => import('./RichTextEditor'), { ssr: false })
 const ModelViewer = dynamic(() => import('./ModelViewer'), { ssr: false })
 
-const inputCls = 'w-full rounded-lg bg-black/50 border border-white/15 px-3 py-2 text-white text-sm focus:border-cyan-500/50 focus:outline-none transition-colors'
 const LANGUAGES = ['javascript', 'typescript', 'python', 'html', 'css', 'json', 'sql', 'bash', 'java', 'c', 'cpp', 'go', 'rust']
 const CALLOUT_VARIANTS = [
-  { value: 'info', label: 'Info', color: 'border-cyan-500/40 bg-cyan-500/10', icon: '\u2139' },
+  { value: 'info', label: 'Info', color: 'border-ds-accent-strong bg-ds-accent-soft', icon: '\u2139' },
   { value: 'tip', label: 'Tip', color: 'border-emerald-500/40 bg-emerald-500/10', icon: '\u2714' },
   { value: 'warning', label: 'Warning', color: 'border-amber-500/40 bg-amber-500/10', icon: '\u26A0' },
   { value: 'danger', label: 'Danger', color: 'border-red-500/40 bg-red-500/10', icon: '\u2718' },
@@ -36,7 +35,7 @@ function UploadBtn({ accept, onUrl, label }: { accept: string; onUrl: (u: string
     <>
       <input ref={ref} type="file" accept={accept} onChange={handle} className="hidden" />
       <button type="button" onClick={() => ref.current?.click()} disabled={busy}
-        className="shrink-0 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-white/5 border border-white/10 text-gray-300 hover:bg-cyan-500/10 hover:border-cyan-500/30 transition-colors disabled:opacity-50">
+        className="shrink-0 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-white/5 border border-ds-border text-gray-300 hover:bg-ds-accent-soft hover:border-ds-accent-strong transition-colors disabled:opacity-50">
         {busy ? '...' : label}
       </button>
     </>
@@ -60,8 +59,8 @@ function ImageBlockEditor({ section, update }: { section: LessonSection; update:
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-1 mb-1">
-        <button type="button" onClick={() => setMode('url')} className={`text-[11px] px-2.5 py-1 rounded-md transition-colors ${mode === 'url' ? 'bg-cyan-600/80 text-white' : 'text-gray-500 hover:bg-white/5'}`}>Paste URL</button>
-        <button type="button" onClick={() => setMode('upload')} className={`text-[11px] px-2.5 py-1 rounded-md transition-colors ${mode === 'upload' ? 'bg-cyan-600/80 text-white' : 'text-gray-500 hover:bg-white/5'}`}>Upload File</button>
+        <button type="button" onClick={() => setMode('url')} className={`text-[11px] px-2.5 py-1 rounded-md transition-colors ${mode === 'url' ? 'bg-cyan-600/80 text-white' : 'text-ds-subtle hover:bg-white/5'}`}>Paste URL</button>
+        <button type="button" onClick={() => setMode('upload')} className={`text-[11px] px-2.5 py-1 rounded-md transition-colors ${mode === 'upload' ? 'bg-cyan-600/80 text-white' : 'text-ds-subtle hover:bg-white/5'}`}>Upload File</button>
       </div>
       {mode === 'url' ? (
         <div className="flex gap-2">
@@ -71,7 +70,7 @@ function ImageBlockEditor({ section, update }: { section: LessonSection; update:
             onBlur={applyUrl}
             onKeyDown={(e) => { if (e.key === 'Enter') applyUrl() }}
             placeholder="https://example.com/image.png"
-            className={inputCls}
+            className="studio-field"
           />
           <button type="button" onClick={applyUrl} className="shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium bg-cyan-600 text-white hover:bg-cyan-500 transition-colors">Apply</button>
         </div>
@@ -79,7 +78,7 @@ function ImageBlockEditor({ section, update }: { section: LessonSection; update:
         <UploadBtn accept="image/*,.gif,.webp,.svg,.png,.jpg,.jpeg" onUrl={(u) => { update({ imageUrl: u }); setUrlInput(u); setImgError(false) }} label="Choose file to upload" />
       )}
       {section.imageUrl && (
-        <div className="relative rounded-lg overflow-hidden border border-white/10 bg-black/30">
+        <div className="relative rounded-lg overflow-hidden border border-ds-border bg-black/30">
           {!imgError ? (
             <img
               src={section.imageUrl}
@@ -91,18 +90,18 @@ function ImageBlockEditor({ section, update }: { section: LessonSection; update:
           ) : (
             <div className="flex flex-col items-center justify-center py-6 text-center">
               <p className="text-red-400 text-xs">Failed to load image</p>
-              <p className="text-gray-600 text-[10px] mt-1 break-all px-4">{section.imageUrl}</p>
+              <p className="text-ds-subtle text-[10px] mt-1 break-all px-4">{section.imageUrl}</p>
             </div>
           )}
         </div>
       )}
-      <div className="rounded-lg border border-white/10 bg-white/[0.02] px-3 py-2">
+      <div className="rounded-lg border border-ds-border bg-white/[0.02] px-3 py-2">
         <div className="flex items-center justify-between gap-2">
           <label className="text-xs text-slate-300">Kích thước ảnh trong block</label>
           <select
             value={String(widthPct)}
             onChange={(e) => update({ imageWidthPct: Number(e.target.value) })}
-            className="min-w-[110px] rounded-md border border-white/15 bg-black/40 px-2 py-1 text-xs text-white focus:border-cyan-500/50 focus:outline-none"
+            className="min-w-[110px] rounded-md border border-ds-border-strong bg-black/40 px-2 py-1 text-xs text-white focus:border-ds-accent focus:outline-none"
           >
             <option value="25">XS (25%)</option>
             <option value="40">S (40%)</option>
@@ -132,12 +131,12 @@ function ImageBlockEditor({ section, update }: { section: LessonSection; update:
               if (!Number.isFinite(next)) return
               update({ imageWidthPct: Math.min(100, Math.max(20, next)) })
             }}
-            className="w-16 rounded-md border border-white/15 bg-black/40 px-2 py-1 text-xs text-white focus:border-cyan-500/50 focus:outline-none"
+            className="w-16 rounded-md border border-ds-border-strong bg-black/40 px-2 py-1 text-xs text-white focus:border-ds-accent focus:outline-none"
           />
-          <span className="text-xs text-slate-400">%</span>
+          <span className="text-xs text-ds-muted">%</span>
         </div>
       </div>
-      <input value={section.caption ?? ''} onChange={(e) => update({ caption: e.target.value })} placeholder="Caption (optional)" className={inputCls} />
+      <input value={section.caption ?? ''} onChange={(e) => update({ caption: e.target.value })} placeholder="Caption (optional)" className="studio-field" />
     </div>
   )
 }
@@ -169,8 +168,8 @@ function VideoBlockEditor({ section, update }: { section: LessonSection; update:
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-1 mb-1">
-        <button type="button" onClick={() => setMode('url')} className={`text-[11px] px-2.5 py-1 rounded-md transition-colors ${mode === 'url' ? 'bg-cyan-600/80 text-white' : 'text-gray-500 hover:bg-white/5'}`}>Paste URL</button>
-        <button type="button" onClick={() => setMode('upload')} className={`text-[11px] px-2.5 py-1 rounded-md transition-colors ${mode === 'upload' ? 'bg-cyan-600/80 text-white' : 'text-gray-500 hover:bg-white/5'}`}>Upload File</button>
+        <button type="button" onClick={() => setMode('url')} className={`text-[11px] px-2.5 py-1 rounded-md transition-colors ${mode === 'url' ? 'bg-cyan-600/80 text-white' : 'text-ds-subtle hover:bg-white/5'}`}>Paste URL</button>
+        <button type="button" onClick={() => setMode('upload')} className={`text-[11px] px-2.5 py-1 rounded-md transition-colors ${mode === 'upload' ? 'bg-cyan-600/80 text-white' : 'text-ds-subtle hover:bg-white/5'}`}>Upload File</button>
       </div>
       {mode === 'url' ? (
         <div className="flex gap-2">
@@ -180,7 +179,7 @@ function VideoBlockEditor({ section, update }: { section: LessonSection; update:
             onBlur={applyUrl}
             onKeyDown={(e) => { if (e.key === 'Enter') applyUrl() }}
             placeholder="https://youtube.com/watch?v=... or video URL"
-            className={inputCls}
+            className="studio-field"
           />
           <button type="button" onClick={applyUrl} className="shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium bg-cyan-600 text-white hover:bg-cyan-500 transition-colors">Apply</button>
         </div>
@@ -188,21 +187,21 @@ function VideoBlockEditor({ section, update }: { section: LessonSection; update:
         <UploadBtn accept="video/*,.mp4,.webm" onUrl={(u) => { update({ videoUrl: u }); setUrlInput(u) }} label="Choose video to upload" />
       )}
       {embedUrl && (
-        <div className="rounded-lg overflow-hidden border border-white/10 aspect-video bg-black/30">
+        <div className="rounded-lg overflow-hidden border border-ds-border aspect-video bg-black/30">
           <iframe src={embedUrl} className="w-full h-full" allowFullScreen />
         </div>
       )}
       {isDirectVideo && (
-        <div className="rounded-lg overflow-hidden border border-white/10 aspect-video bg-black/30">
+        <div className="rounded-lg overflow-hidden border border-ds-border aspect-video bg-black/30">
           <video src={section.videoUrl!} controls className="w-full h-full" />
         </div>
       )}
       {section.videoUrl && !embedUrl && !isDirectVideo && (
-        <div className="rounded-lg border border-white/10 bg-black/30 p-3 text-center">
-          <p className="text-xs text-gray-400">URL set: <span className="text-cyan-300">{section.videoUrl}</span></p>
+        <div className="rounded-lg border border-ds-border bg-black/30 p-3 text-center">
+          <p className="text-xs text-ds-muted">URL set: <span className="text-ds-accent">{section.videoUrl}</span></p>
         </div>
       )}
-      <input value={section.caption ?? ''} onChange={(e) => update({ caption: e.target.value })} placeholder="Caption (optional)" className={inputCls} />
+      <input value={section.caption ?? ''} onChange={(e) => update({ caption: e.target.value })} placeholder="Caption (optional)" className="studio-field" />
     </div>
   )
 }
@@ -246,14 +245,14 @@ export default function BlockEditor({ section, onChange }: Props) {
             value={section.title ?? ''}
             onChange={(e) => update({ title: e.target.value })}
             placeholder="Block title (optional)"
-            className={inputCls}
+            className="studio-field"
           />
-          <label className="flex items-center gap-2 rounded-lg border border-cyan-500/25 bg-cyan-500/5 px-3 py-2 text-xs text-cyan-100">
+          <label className="flex items-center gap-2 rounded-lg border border-ds-accent-strong bg-ds-accent-soft px-3 py-2 text-xs text-cyan-100">
             <span className="shrink-0 text-[11px] text-cyan-200/90">Mục lục:</span>
             <select
               value={section.sectionLevel ?? 'main'}
               onChange={(e) => update({ sectionLevel: e.target.value as LessonSection['sectionLevel'] })}
-              className="min-w-[140px] rounded-md border border-white/15 bg-black/40 px-2 py-1 text-xs text-white focus:border-cyan-500/50 focus:outline-none"
+              className="min-w-[140px] rounded-md border border-ds-border-strong bg-black/40 px-2 py-1 text-xs text-white focus:border-ds-accent focus:outline-none"
               title="TOC level"
             >
               <option value="main">Mục chính</option>
@@ -275,8 +274,8 @@ export default function BlockEditor({ section, onChange }: Props) {
       {/* PLAIN TEXT */}
       {section.type === 'text' && (
         <>
-          <input value={section.summary ?? ''} onChange={(e) => update({ summary: e.target.value })} placeholder="Summary" className={inputCls} />
-          <textarea value={section.content ?? ''} onChange={(e) => update({ content: e.target.value })} rows={4} placeholder="Content" className={inputCls} />
+          <input value={section.summary ?? ''} onChange={(e) => update({ summary: e.target.value })} placeholder="Summary" className="studio-field" />
+          <textarea value={section.content ?? ''} onChange={(e) => update({ content: e.target.value })} rows={4} placeholder="Content" className="studio-field" />
         </>
       )}
 
@@ -298,11 +297,11 @@ export default function BlockEditor({ section, onChange }: Props) {
             onChange={(e) => update({ latex: e.target.value })}
             rows={4}
             placeholder="LaTeX: E = mc^2, \frac{a}{b}, \int_0^1 x^2 dx"
-            className={`${inputCls} font-mono text-sm`}
+            className={`studio-field font-mono text-sm`}
             spellCheck={false}
           />
           {(section.latex || 'E = mc^2').trim() && (
-            <div className="rounded-lg border border-white/10 bg-black/30 p-4">
+            <div className="rounded-lg border border-ds-border bg-black/30 p-4">
               <MathBlock latex={section.latex || 'E = mc^2'} displayMode />
             </div>
           )}
@@ -326,10 +325,10 @@ export default function BlockEditor({ section, onChange }: Props) {
             value={section.notebookUrl ?? ''}
             onChange={(e) => update({ notebookUrl: e.target.value || null })}
             placeholder="https://observablehq.com/@user/notebook"
-            className={inputCls}
+            className="studio-field"
           />
           {section.notebookUrl && (
-            <div className="rounded-lg overflow-hidden border border-white/10 aspect-video bg-black/30">
+            <div className="rounded-lg overflow-hidden border border-ds-border aspect-video bg-black/30">
               <iframe
                 src={section.notebookUrl.replace('observablehq.com/', 'observablehq.com/embed/')}
                 className="w-full h-full"
@@ -343,7 +342,7 @@ export default function BlockEditor({ section, onChange }: Props) {
       {/* CODE */}
       {section.type === 'code' && (
         <div className="space-y-2">
-          <select value={section.language ?? 'javascript'} onChange={(e) => update({ language: e.target.value })} className={`w-40 ${inputCls}`}>
+          <select value={section.language ?? 'javascript'} onChange={(e) => update({ language: e.target.value })} className={`w-40 studio-field`}>
             {LANGUAGES.map((l) => <option key={l} value={l}>{l}</option>)}
           </select>
           <textarea
@@ -351,7 +350,7 @@ export default function BlockEditor({ section, onChange }: Props) {
             onChange={(e) => update({ code: e.target.value })}
             rows={8}
             placeholder="Paste your code here..."
-            className={`${inputCls} font-mono text-xs leading-5`}
+            className={`studio-field font-mono text-xs leading-5`}
             spellCheck={false}
           />
         </div>
@@ -361,17 +360,17 @@ export default function BlockEditor({ section, onChange }: Props) {
       {section.type === 'embed' && (
         <div className="space-y-2">
           <div className="flex gap-2">
-            <select value={section.embedType ?? 'iframe'} onChange={(e) => update({ embedType: e.target.value as LessonSection['embedType'] })} className={`w-32 ${inputCls}`}>
+            <select value={section.embedType ?? 'iframe'} onChange={(e) => update({ embedType: e.target.value as LessonSection['embedType'] })} className={`w-32 studio-field`}>
               <option value="iframe">iframe</option>
               <option value="canva">Canva</option>
               <option value="gslides">Google Slides</option>
               <option value="figma">Figma</option>
               <option value="other">Other</option>
             </select>
-            <input value={section.embedUrl ?? ''} onChange={(e) => update({ embedUrl: e.target.value || null })} placeholder="Embed URL" className={`flex-1 ${inputCls}`} />
+            <input value={section.embedUrl ?? ''} onChange={(e) => update({ embedUrl: e.target.value || null })} placeholder="Embed URL" className={`flex-1 studio-field`} />
           </div>
           {section.embedUrl && (
-            <div className="rounded-lg overflow-hidden border border-white/10 aspect-video bg-black/30">
+            <div className="rounded-lg overflow-hidden border border-ds-border aspect-video bg-black/30">
               <iframe src={section.embedUrl} className="w-full h-full" allowFullScreen sandbox="allow-scripts allow-same-origin allow-popups" />
             </div>
           )}
@@ -382,15 +381,15 @@ export default function BlockEditor({ section, onChange }: Props) {
       {section.type === '3d' && (
         <div className="space-y-2">
           <div className="flex gap-2">
-            <input value={section.modelUrl ?? ''} onChange={(e) => update({ modelUrl: e.target.value || null })} placeholder="GLB/GLTF model URL" className={inputCls} />
+            <input value={section.modelUrl ?? ''} onChange={(e) => update({ modelUrl: e.target.value || null })} placeholder="GLB/GLTF model URL" className="studio-field" />
             <UploadBtn accept=".glb,.gltf" onUrl={(u) => update({ modelUrl: u })} label="Upload .glb" />
           </div>
           {section.modelUrl && (
-            <div className="h-[280px] rounded-lg border border-cyan-500/20 overflow-hidden bg-black/40">
+            <div className="h-[280px] rounded-lg border border-ds-accent-strong overflow-hidden bg-black/40">
               <ModelViewer url={resolveMediaUrl(section.modelUrl)} />
             </div>
           )}
-          <input value={section.caption ?? ''} onChange={(e) => update({ caption: e.target.value })} placeholder="Caption (optional)" className={inputCls} />
+          <input value={section.caption ?? ''} onChange={(e) => update({ caption: e.target.value })} placeholder="Caption (optional)" className="studio-field" />
         </div>
       )}
 
@@ -404,7 +403,7 @@ export default function BlockEditor({ section, onChange }: Props) {
                 type="button"
                 onClick={() => update({ calloutVariant: v.value })}
                 className={`px-3 py-1 rounded-lg text-xs font-medium border transition-all ${
-                  section.calloutVariant === v.value ? v.color + ' text-white' : 'border-white/10 text-gray-500 hover:bg-white/5'
+                  section.calloutVariant === v.value ? v.color + ' text-white' : 'border-ds-border text-ds-subtle hover:bg-white/5'
                 }`}
               >
                 {v.icon} {v.label}
@@ -427,7 +426,7 @@ export default function BlockEditor({ section, onChange }: Props) {
       {section.type === 'divider' && (
         <div className="flex items-center gap-3 py-2">
           <div className="flex-1 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
-          <span className="text-[10px] text-gray-600">DIVIDER</span>
+          <span className="text-[10px] text-ds-subtle">DIVIDER</span>
           <div className="flex-1 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
         </div>
       )}

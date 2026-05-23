@@ -1,20 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { readEnv } from '@/lib/readEnv'
+import { devError } from '@/lib/devLog'
+import { userMessages } from '@/lib/userMessages'
+import ENV from '@galaxies/shared/envNames'
 
-const AI_SERVICE_URL = process.env.AI_SERVICE_URL || ''
+const AI_SERVICE_URL = readEnv(ENV.AI_SERVICE_URL)
 
-/**
- * Proxy chat to AI service (Python: RAG, security, multimodal).
- * Set AI_SERVICE_URL (e.g. http://localhost:5005) and run services/ai.
- */
 export async function POST(req: NextRequest) {
   if (!AI_SERVICE_URL) {
-    return NextResponse.json(
-      {
-        error:
-          'AI is not configured. Set AI_SERVICE_URL (e.g. http://localhost:5005) and run the Python AI service (services/ai).',
-      },
-      { status: 503 }
-    )
+    devError('chat', { missing: ENV.AI_SERVICE_URL })
+    return NextResponse.json({ error: userMessages.aiUnavailable }, { status: 503 })
   }
 
   try {
@@ -72,13 +67,7 @@ export async function POST(req: NextRequest) {
     if (err.name === 'AbortError') {
       return NextResponse.json({ error: 'Request timed out.' }, { status: 504 })
     }
-    console.error('Chat API error:', err)
-    return NextResponse.json(
-      {
-        error:
-          'Could not connect to the AI service. Check AI_SERVICE_URL and ensure the Python service (services/ai) is running.',
-      },
-      { status: 503 }
-    )
+    devError('chat', err)
+    return NextResponse.json({ error: userMessages.aiUnavailable }, { status: 503 })
   }
 }

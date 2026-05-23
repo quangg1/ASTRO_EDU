@@ -3,9 +3,9 @@
 import { useCallback, useEffect, useState } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { ChevronLeft, ChevronRight, Pause, Play } from 'lucide-react'
-import type { Post } from '@/features/community/api/communityApi'
+import type { Post } from '@/features/community/public'
 import { NewsCardLink } from '@/components/community/NewsCardLink'
-import { plainTextExcerpt, postThumbnailUrl } from '@/lib/postContent'
+import { plainTextExcerpt, postThumbnailUrl } from '@/features/community/public'
 
 function formatDate(date?: string | null): string {
   if (!date) return ''

@@ -30,8 +30,17 @@ function normalizeUrlField(raw) {
 
 function normalizeMediaUrlField(raw) {
   const t = String(raw || '').trim();
-  if (!t) return '';
+  if (!t || t.includes('..')) return '';
   if (t.startsWith('/files/') && t.length < 500) return t;
+  if (
+    (t.startsWith('/textures/') ||
+      t.startsWith('/models/') ||
+      t.startsWith('/images/') ||
+      t.startsWith('/course-media/')) &&
+    t.length < 500
+  ) {
+    return t;
+  }
   return normalizeUrlField(t);
 }
 

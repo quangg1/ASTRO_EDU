@@ -7,6 +7,8 @@ import { signInWithPopup, GoogleAuthProvider, FacebookAuthProvider } from 'fireb
 import { getFirebaseAuth } from '@/lib/firebaseClient'
 import { loginWithFirebaseIdToken } from '@/features/auth/api/authApi'
 import { useAuthStore } from '@/features/auth/public'
+import { isDev } from '@/lib/devLog'
+import { userMessages } from '@/lib/userMessages'
 
 function GoogleIcon({ className = 'size-6' }: { className?: string }) {
   return (
@@ -72,11 +74,11 @@ export function FirebaseAuthButtons({ redirectTo = '/dashboard' }: Props) {
           <FacebookIcon className="size-6 shrink-0" />
           <span className="font-medium text-[20px]">Continue with Facebook</span>
         </div>
-        <div className="rounded-xl border border-amber-400/30 bg-amber-500/10 px-4 py-3 text-[13px] text-amber-100/90">
-          Bật đăng nhập: thêm{' '}
-          <code className="rounded bg-black/30 px-1 py-0.5 text-[11px]">NEXT_PUBLIC_FIREBASE_*</code> vào{' '}
-          <code className="rounded bg-black/30 px-1 py-0.5 text-[11px]">.env.local</code> và khởi động lại dev server.
-        </div>
+        <p className="rounded-xl border border-amber-400/30 bg-amber-500/10 px-4 py-3 text-[13px] text-amber-100/90">
+          {isDev()
+            ? 'Đăng nhập Google/Facebook chưa bật trên máy dev — cấu hình Firebase trong file env local.'
+            : userMessages.authSocialUnavailable}
+        </p>
       </div>
     )
   }

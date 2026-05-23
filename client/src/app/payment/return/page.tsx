@@ -1,88 +1,113 @@
 'use client'
 
+/**
+ * Landing page after the VNPay hosted-redirect flow.
+ *
+ * The actual fulfillment happens via the server-side IPN callback
+ * (`GET /api/payments/ipn`) — this page is purely UI: it shows the user a
+ * confirmation while the IPN may still be racing, then links them into the
+ * paid course once their enrollment is visible.
+ *
+ * Query params (set by `GET /api/payments/return` → redirect):
+ *   slug   — course slug
+ *   txn    — VNPay vnp_TxnRef
+ *   status — 'success' | 'failed' | 'invalid' | 'error'
+ */
+
 import { Suspense, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
-import { trackEvent } from '@/lib/analytics'
-import { viText } from '@/messages/vi'
-
-function PaymentReturnContent() {
-  const searchParams = useSearchParams()
-  const success = searchParams.get('success') === '1' || searchParams.get('enrolled') === '1'
-  const slug = searchParams.get('slug')
-  const error = searchParams.get('error')
-  const [mounted, setMounted] = useState(false)
-
-  useEffect(() => setMounted(true), [])
-  useEffect(() => {
-    if (!mounted) return
-    trackEvent('payment_return_viewed', {
-      success,
-      slug: slug || null,
-      error: error || null,
-    })
-  }, [mounted, success, slug, error])
-
-  if (!mounted) {
-    return (
-      <div className="min-h-screen bg-black pt-20 flex items-center justify-center">
-        <p className="text-gray-500">{viText.common.loading}</p>
-      </div>
-    )
-  }
-
-  return (
-    <div className="min-h-screen bg-black pt-20 px-4 flex flex-col items-center justify-center">
-      <div className="max-w-md w-full rounded-2xl border border-white/10 bg-[#0a0f17] p-8 text-center">
-        {success ? (
-          <>
-            <p className="text-2xl mb-2">✓ {viText.payment.successTitle}</p>
-            <p className="text-gray-400 text-sm mb-6">{viText.payment.successSubtitle}</p>
-            {slug ? (
-              <Link
-                href={`/courses/${slug}?enrolled=1`}
-                className="inline-block px-6 py-3 rounded-xl bg-cyan-600 text-white font-medium hover:bg-cyan-500"
-              >
-                {viText.payment.goToCourse}
-              </Link>
-            ) : (
-              <Link href="/courses" className="inline-block px-6 py-3 rounded-xl bg-cyan-600 text-white font-medium hover:bg-cyan-500">
-                {viText.payment.browseCourses}
-              </Link>
-            )}
-          </>
-        ) : (
-          <>
-            <p className="text-xl text-amber-300 mb-2">{viText.payment.failedTitle}</p>
-            <p className="text-gray-400 text-sm mb-6">
-              {error === 'payment_failed' && viText.payment.failedPayment}
-              {error === 'order_not_found' && viText.payment.failedOrder}
-              {error === 'server' && viText.payment.failedServer}
-              {!error && viText.payment.failedDefault}
-            </p>
-            {slug ? (
-              <Link
-                href={`/courses/${slug}`}
-                className="inline-block px-6 py-3 rounded-xl bg-white/10 text-gray-300 hover:bg-white/20"
-              >
-                {viText.payment.backToCourse}
-              </Link>
-            ) : (
-              <Link href="/courses" className="inline-block px-6 py-3 rounded-xl bg-white/10 text-gray-300 hover:bg-white/20">
-                {viText.nav.courses}
-              </Link>
-            )}
-          </>
-        )}
-      </div>
-    </div>
-  )
-}
+import { Button, Card } from '@/design-system'
+import { fetchPaymentStatus } from '@/features/payment/public'
 
 export default function PaymentReturnPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-black pt-20 flex items-center justify-center"><p className="text-gray-500">{viText.common.loading}</p></div>}>
-      <PaymentReturnContent />
+    <Suspense fallback={<main className="min-h-screen" aria-busy />}>
+      <PaymentReturnInner />
     </Suspense>
+  )
+}
+
+function PaymentReturnInner() {
+  const params = useSearchParams()
+  const slug = params.get('slug') || ''
+  const txn = params.get('txn') || ''
+  const status = (params.get('status') || '').toLowerCase()
+
+  // Server reports 'success' as soon as VNPay return-URL is verified, but
+  // the enrollment is fulfilled by IPN — poll a few times so the user sees
+  // their course immediately if both calls completed.
+  const [confirmed, setConfirmed] = useState(false)
+
+  useEffect(() => {
+    if (status !== 'success' || !txn) return
+    let cancelled = false
+    let attempts = 0
+    const tick = async () => {
+      attempts += 1
+      const s = await fetchPaymentStatus(txn)
+      if (cancelled) return
+      if (s?.status === 'completed') {
+        setConfirmed(true)
+        return
+      }
+      if (attempts < 5) window.setTimeout(tick, 1500)
+    }
+    tick()
+    return () => {
+      cancelled = true
+    }
+  }, [status, txn])
+
+  const isSuccess = status === 'success'
+
+  return (
+    <main className="surface-edu min-h-screen flex items-center justify-center px-4 py-16">
+      <Card className="max-w-md w-full text-center space-y-4 p-ds-content">
+        <div
+          aria-hidden
+          className={`mx-auto h-12 w-12 rounded-full flex items-center justify-center text-2xl ${
+            isSuccess ? 'bg-ds-accent-soft text-ds-accent' : 'bg-ds-warning-soft text-ds-warning'
+          }`}
+        >
+          {isSuccess ? '✓' : '!'}
+        </div>
+
+        <h1 className="text-xl font-semibold text-ds-text">
+          {isSuccess ? 'Thanh toán thành công' : 'Giao dịch không hoàn tất'}
+        </h1>
+
+        {isSuccess ? (
+          <p className="text-sm text-ds-muted">
+            {confirmed
+              ? 'Bạn đã được enroll vào khoá học.'
+              : 'Đang xác nhận từ VNPay… việc enroll sẽ tự động kích hoạt trong vài giây.'}
+          </p>
+        ) : (
+          <p className="text-sm text-ds-muted">
+            {status === 'invalid'
+              ? 'Chữ ký URL từ VNPay không hợp lệ.'
+              : status === 'failed'
+                ? 'VNPay báo giao dịch không thành công.'
+                : 'Đã xảy ra lỗi khi xử lý kết quả thanh toán.'}
+          </p>
+        )}
+
+        {txn ? <p className="text-xs text-ds-muted font-mono">Mã đơn: {txn}</p> : null}
+
+        <div className="flex flex-col gap-2 pt-2">
+          {slug && (
+            <Link href={`/courses/${slug}`}>
+              <Button className="w-full">Quay lại khoá học</Button>
+            </Link>
+          )}
+          <Link href="/my-courses">
+            <Button variant="ghost" className="w-full">
+              Xem khoá học của tôi
+            </Button>
+          </Link>
+        </div>
+      </Card>
+    </main>
   )
 }

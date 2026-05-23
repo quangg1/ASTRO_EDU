@@ -31,6 +31,11 @@ export interface PlanetData {
 
 const T = '/textures'
 
+/**
+ * Mosaic Sao Hỏa NASA trong `public/textures/nasa/` — showcase (orbit/catalog) và Mars History globe dùng chung URL này.
+ */
+export const MARS_NASA_GLOBE_TEXTURE_PATH = `${T}/nasa/mars_nasa.jpg`
+
 /** Tỉ lệ phóng to hành tinh để dễ nhìn (bán kính × scale) */
 const PLANET_SIZE_SCALE = 2.8
 
@@ -94,7 +99,7 @@ export const planetsData: PlanetData[] = [
     nameVi: 'Sao Hỏa',
     explorerBlurb: 'Rusty deserts, giant volcanoes, and polar ice — humanity’s next frontier.',
     // NASA-3D-Resources texture (uploaded to CDN via /textures/nasa/*)
-    texture: `${T}/nasa/mars_nasa.jpg`,
+    texture: MARS_NASA_GLOBE_TEXTURE_PATH,
     radius: 0.18 * PLANET_SIZE_SCALE,
     distance: 30,
     period: 30,

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { getNasaCatalogItemById, NASA_SHOWCASE_ITEMS } from '@/lib/showcaseEntities'
 import { planetsData } from '@/lib/solarSystemData'
 import {
@@ -15,11 +15,13 @@ import { useAuthStore } from '@/features/auth/public'
 import { useShowcaseCatalogGen } from '@/components/showcase/ShowcaseCatalogProvider'
 import { ShowcaseMediaUrlField } from '@/app/studio/showcase-entities/ShowcaseMediaUrlField'
 import { ShowcaseEntityPreviewCard } from '@/app/studio/showcase-entities/ShowcaseEntityPreviewCard'
-import { NarrativeStudioMode } from '@/app/studio/showcase-entities/NarrativeStudioMode'
 import { resolveMediaUrl } from '@/lib/apiConfig'
+import { notifyShowcaseCatalogChanged } from '@/lib/showcaseCatalogRefresh'
 import { syncShowcaseOrbitEntityFromJpl } from '@/features/content3d/showcase/api/showcaseOrbitsApi'
 import type { ShowcaseOrbitEntity } from '@/lib/showcaseEntities'
 import { useLearningPath } from '@/features/learning-path/public'
+import { NarrativeStudioEditor } from '@/app/studio/showcase-entities/narrative/NarrativeStudioEditor'
+import { entitySupportsHistory } from '@/app/studio/showcase-entities/entityHistoryCapability'
 
 const ORBIT_COLOR_PRESETS = [
   '#f43f5e', '#fb7185', '#f97316', '#f59e0b', '#eab308', '#84cc16',
@@ -148,6 +150,7 @@ function newPanelBlock(type: 'text' | 'image' | 'chart'): ShowcasePanelBlockDTO 
 
 export default function StudioShowcaseEntitiesPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const showcaseCatalogGen = useShowcaseCatalogGen()
   const { user, checked } = useAuthStore()
   const [rows, setRows] = useState<ShowcaseEntityContentDTO[]>([])
@@ -156,8 +159,7 @@ export default function StudioShowcaseEntitiesPage() {
   const [saving, setSaving] = useState(false)
   const [syncingJpl, setSyncingJpl] = useState(false)
   const [message, setMessage] = useState('')
-  const [studioTab, setStudioTab] = useState<'media' | 'panel'>('media')
-  const [studioWorkspace, setStudioWorkspace] = useState<'entity' | 'narrative'>('entity')
+  const [studioTab, setStudioTab] = useState<'media' | 'panel' | 'history'>('media')
   const lastLoadedKeyRef = useRef('')
   const { modules, concepts } = useLearningPath()
 
@@ -166,32 +168,72 @@ export default function StudioShowcaseEntitiesPage() {
     if (checked && user && user.role !== 'teacher' && user.role !== 'admin') router.replace('/')
   }, [checked, user, router])
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (opts?: { silent?: boolean }) => {
     const token = typeof window !== 'undefined' ? localStorage.getItem('galaxies_token') : null
     if (!token) {
       setLoading(false)
       return
     }
-    setLoading(true)
+    if (!opts?.silent) setLoading(true)
     const db = await fetchEditorShowcaseEntityContents(token)
     setRows(buildInitialRows(db))
     setLoading(false)
-  }, [showcaseCatalogGen])
+  }, [])
 
+  /** Chỉ fetch CMS rows lúc đăng nhập — không reload khi catalog public refetch (tab focus). */
   useEffect(() => {
     const uid = String(user?.id || '')
     if (!uid) return
-    const key = `${uid}:${showcaseCatalogGen}`
-    if (lastLoadedKeyRef.current === key) return
-    lastLoadedKeyRef.current = key
+    if (lastLoadedKeyRef.current === uid) return
+    lastLoadedKeyRef.current = uid
     void load()
-  }, [user?.id, showcaseCatalogGen, load])
+  }, [user?.id, load])
 
   useEffect(() => {
     if (selectedId) return
     const first = rows[0]?.entityId || NASA_SHOWCASE_ITEMS[0]?.id || ''
     if (first) setSelectedId(first)
   }, [rows, selectedId])
+
+  useEffect(() => {
+    const entity = searchParams.get('entity')?.trim()
+    const tab = searchParams.get('tab')?.trim()
+    if (entity && NASA_SHOWCASE_ITEMS.some((it) => it.id === entity)) {
+      setSelectedId(entity)
+    }
+    if (tab === 'media' || tab === 'panel' || tab === 'history') {
+      setStudioTab(tab)
+    }
+  }, [searchParams])
+
+  useEffect(() => {
+    if (studioTab === 'history' && !entitySupportsHistory(selectedId)) {
+      setStudioTab('media')
+    }
+  }, [selectedId, studioTab])
+
+  const showHistoryTab = entitySupportsHistory(selectedId)
+
+  const setStudioTabWithUrl = (tab: 'media' | 'panel' | 'history') => {
+    setStudioTab(tab)
+    const params = new URLSearchParams()
+    params.set('entity', selectedId)
+    if (tab !== 'media') params.set('tab', tab)
+    router.replace(`/studio/showcase-entities?${params.toString()}`, { scroll: false })
+  }
+
+  const setSelectedIdWithUrl = (entityId: string) => {
+    setSelectedId(entityId)
+    const tab = studioTab
+    const params = new URLSearchParams()
+    params.set('entity', entityId)
+    if (tab !== 'media') params.set('tab', tab)
+    if (tab === 'history' && !entitySupportsHistory(entityId)) {
+      setStudioTab('media')
+      params.delete('tab')
+    }
+    router.replace(`/studio/showcase-entities?${params.toString()}`, { scroll: false })
+  }
 
   const selected = useMemo(() => rows.find((r) => r.entityId === selectedId), [rows, selectedId])
   const orbitColorHex = useMemo(() => normalizeHexColor(selected?.orbitColor || ''), [selected?.orbitColor])
@@ -207,7 +249,7 @@ export default function StudioShowcaseEntitiesPage() {
   }, [selected?.parentPlanetName, selected?.parentId])
   const selectedBase = useMemo(
     () => NASA_SHOWCASE_ITEMS.find((x) => x.id === selectedId) || null,
-    [selectedId],
+    [selectedId, showcaseCatalogGen],
   )
   const effectiveTextureUrl = useMemo(() => {
     const d = selected?.diffuseMapUrl?.trim() || ''
@@ -304,6 +346,7 @@ export default function StudioShowcaseEntitiesPage() {
     if (r.ok && r.items) {
       setRows(buildInitialRows(r.items))
       setMessage('Đã lưu.')
+      notifyShowcaseCatalogChanged()
     } else {
       setMessage(r.error || 'Lỗi lưu')
     }
@@ -339,71 +382,37 @@ export default function StudioShowcaseEntitiesPage() {
     })
     setMessage('Đã sync dữ liệu JPL cho entity hiện tại. Bấm Lưu để ghi DB.')
   }
-
-  const inputCls =
-    'w-full mt-1 rounded-lg bg-black/50 border border-white/15 px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-cyan-500/50 focus:outline-none'
-
   if (!checked || !user) {
-    return <div className="min-h-screen bg-black pt-20 px-4 text-gray-400">Đang kiểm tra đăng nhập...</div>
+    return <div className="min-h-screen bg-black pt-20 px-4 text-ds-muted">Đang kiểm tra đăng nhập...</div>
   }
 
-  const containerWidthCls = studioWorkspace === 'narrative' ? 'max-w-[1400px]' : 'max-w-3xl'
-
   return (
-    <div className="min-h-screen bg-[#050508] pt-14 pb-10 px-3 md:px-6">
-      <div className={`${containerWidthCls} mx-auto space-y-4`}>
+    <div className="min-h-screen bg-ds-base pt-14 pb-10 px-3 md:px-6">
+      <div className={`mx-auto space-y-4 ${studioTab === 'history' ? 'max-w-5xl' : 'max-w-3xl'}`}>
         <nav className="text-sm">
-          <Link href="/studio" className="text-cyan-400 hover:text-cyan-300">
+          <Link href="/studio" className="text-ds-accent hover:text-ds-accent">
             ← Studio
           </Link>
         </nav>
-        <div className="rounded-2xl border border-white/10 bg-[#0a0f17] p-5">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h1 className="text-xl font-semibold text-white">3D Studio</h1>
-              <p className="text-xs text-slate-400 mt-1">
-                Workspace cho teacher: chỉnh entity 3D (texture, panel) và thiết kế narrative space (beats, world, lesson links).
-              </p>
-            </div>
-            <div className="inline-flex rounded-lg border border-white/10 bg-black/40 p-1">
-              <button
-                type="button"
-                onClick={() => setStudioWorkspace('entity')}
-                className={`rounded-md px-3 py-1.5 text-xs font-medium transition ${
-                  studioWorkspace === 'entity'
-                    ? 'bg-cyan-500/20 text-cyan-100 ring-1 ring-cyan-400/40'
-                    : 'text-slate-300 hover:bg-white/5'
-                }`}
-              >
-                Entity
-              </button>
-              <button
-                type="button"
-                onClick={() => setStudioWorkspace('narrative')}
-                className={`rounded-md px-3 py-1.5 text-xs font-medium transition ${
-                  studioWorkspace === 'narrative'
-                    ? 'bg-cyan-500/20 text-cyan-100 ring-1 ring-cyan-400/40'
-                    : 'text-slate-300 hover:bg-white/5'
-                }`}
-              >
-                Narrative
-              </button>
-            </div>
-          </div>
+        <div className="rounded-2xl border border-ds-border bg-ds-surface p-5">
+          <h1 className="text-xl font-semibold text-white">3D Studio</h1>
+          <p className="text-xs text-ds-muted mt-1">
+            Một studio cho mọi entity Showcase: texture &amp; orbit, panel museum, và tab{' '}
+            <strong className="text-ds-text">Deep History</strong> (timeline, pin, shader — mọi entity). Chỉ tab{' '}
+            <strong className="text-ds-text">Hóa thạch</strong> là riêng Trái Đất.
+          </p>
         </div>
 
-        {studioWorkspace === 'narrative' ? (
-          <NarrativeStudioMode />
-        ) : loading ? (
-          <p className="text-slate-500 text-sm">Đang tải…</p>
+        {loading ? (
+          <p className="text-ds-subtle text-sm">Đang tải…</p>
         ) : (
-          <div className="rounded-2xl border border-white/10 bg-[#0a0f17] p-5 space-y-4">
-            <label className="block text-xs text-slate-400">
+          <div className="rounded-2xl border border-ds-border bg-ds-surface p-5 space-y-4">
+            <label className="block text-xs text-ds-muted">
               Entity
               <select
                 value={selectedId}
-                onChange={(e) => setSelectedId(e.target.value)}
-                className={inputCls}
+                onChange={(e) => setSelectedIdWithUrl(e.target.value)}
+                className="studio-field mt-1"
               >
                 {NASA_SHOWCASE_ITEMS.map((it) => (
                   <option key={it.id} value={it.id}>
@@ -415,52 +424,67 @@ export default function StudioShowcaseEntitiesPage() {
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                onClick={() => setStudioTab('media')}
+                onClick={() => setStudioTabWithUrl('media')}
                 className={`rounded-md border px-3 py-1.5 text-xs ${
                   studioTab === 'media'
-                    ? 'border-cyan-400/60 bg-cyan-500/15 text-cyan-100'
-                    : 'border-white/15 text-slate-300 hover:bg-white/10'
+                    ? 'border-ds-accent-strong bg-ds-accent-soft text-cyan-100'
+                    : 'border-ds-border-strong text-slate-300 hover:bg-white/10'
                 }`}
               >
                 Media & Orbit
               </button>
               <button
                 type="button"
-                onClick={() => setStudioTab('panel')}
+                onClick={() => setStudioTabWithUrl('panel')}
                 className={`rounded-md border px-3 py-1.5 text-xs ${
                   studioTab === 'panel'
-                    ? 'border-cyan-400/60 bg-cyan-500/15 text-cyan-100'
-                    : 'border-white/15 text-slate-300 hover:bg-white/10'
+                    ? 'border-ds-accent-strong bg-ds-accent-soft text-cyan-100'
+                    : 'border-ds-border-strong text-slate-300 hover:bg-white/10'
                 }`}
               >
                 Panel content
               </button>
+              {showHistoryTab ? (
+                <button
+                  type="button"
+                  onClick={() => setStudioTabWithUrl('history')}
+                  className={`rounded-md border px-3 py-1.5 text-xs ${
+                    studioTab === 'history'
+                      ? 'border-violet-500/60 bg-violet-950/50 text-violet-100'
+                      : 'border-ds-border-strong text-slate-300 hover:bg-white/10'
+                  }`}
+                >
+                  Deep History
+                </button>
+              ) : null}
             </div>
 
             {selected ? (
-              studioTab === 'media' ? (
+              studioTab === 'history' ? (
+                <NarrativeStudioEditor entityId={selectedId} showcaseContent={rows} />
+              ) : studioTab === 'media' ? (
               <>
-                <label className="block text-xs text-slate-400">
+                <label className="block text-xs text-ds-muted">
                   Tên hiển thị (Tiếng Việt, tuỳ chọn)
                   <input
                     value={selected.nameVi}
                     onChange={(e) => patchSelected({ nameVi: e.target.value })}
                     placeholder="Để trống = dùng tên EN mặc định trong catalog"
-                    className={inputCls}
+                    className="studio-field mt-1"
                   />
                 </label>
-                <label className="block text-xs text-slate-400">
+                <label className="block text-xs text-ds-muted">
                   Nhãn museum / mô tả ngắn (VI)
                   <textarea
                     value={selected.museumBlurbVi}
                     onChange={(e) => patchSelected({ museumBlurbVi: e.target.value })}
                     rows={5}
                     placeholder="Hiển thị trên Explore (Layer 1). Để trống = dùng copy mặc định trong code."
-                    className={inputCls}
+                    className="studio-field mt-1"
                   />
                 </label>
 
-                <label className="block text-xs text-slate-400">
+                <label className="block text-xs text-ds-muted">
                   Panel config (JSON) — chỉnh badge/tabs/blocks text-image-chart
                   <textarea
                     value={JSON.stringify(selected.panelConfig || null, null, 2)}
@@ -489,15 +513,15 @@ export default function StudioShowcaseEntitiesPage() {
     { "id": "s1", "type": "text", "title": "Tonight", "body": "Opposition in 12 days." }
   ]
 }`}
-                    className={inputCls}
+                    className="studio-field mt-1"
                   />
                 </label>
 
-                <div className="border-t border-white/10 pt-4 space-y-4">
+                <div className="border-t border-ds-border pt-4 space-y-4">
                   <p className="text-xs font-medium text-slate-300 uppercase tracking-wide">Maps (sphere)</p>
-                  <div className="rounded-md border border-white/10 bg-black/25 p-2">
-                    <p className="text-[11px] text-slate-500">Effective texture URL</p>
-                    <p className="text-[11px] text-cyan-300 font-mono break-all">
+                  <div className="rounded-md border border-ds-border bg-black/25 p-2">
+                    <p className="text-[11px] text-ds-subtle">Effective texture URL</p>
+                    <p className="text-[11px] text-ds-accent font-mono break-all">
                       {effectiveTextureUrl || '(chưa có)'}
                     </p>
                   </div>
@@ -531,12 +555,12 @@ export default function StudioShowcaseEntitiesPage() {
                 </div>
 
                 {previewEntity ? (
-                  <div className="border-t border-white/10 pt-4">
+                  <div className="border-t border-ds-border pt-4">
                     <ShowcaseEntityPreviewCard entity={previewEntity} effectiveTextureUrl={effectiveTextureUrl} />
                   </div>
                 ) : null}
 
-                <div className="border-t border-white/10 pt-4 space-y-2">
+                <div className="border-t border-ds-border pt-4 space-y-2">
                   <p className="text-xs font-medium text-slate-300 uppercase tracking-wide">Model 3D</p>
                   <ShowcaseMediaUrlField
                     label="glTF / glB (tuỳ chọn)"
@@ -547,7 +571,7 @@ export default function StudioShowcaseEntitiesPage() {
                   />
                 </div>
 
-                <div className="border-t border-white/10 pt-4 space-y-2">
+                <div className="border-t border-ds-border pt-4 space-y-2">
                   <p className="text-xs font-medium text-slate-300 uppercase tracking-wide">
                     Orbit model (hierarchical)
                   </p>
@@ -555,31 +579,31 @@ export default function StudioShowcaseEntitiesPage() {
                     type="button"
                     disabled={syncingJpl}
                     onClick={() => void syncSelectedFromJpl()}
-                    className="rounded-md border border-cyan-500/40 px-3 py-1.5 text-xs text-cyan-300 hover:bg-cyan-500/10 disabled:opacity-50"
+                    className="rounded-md border border-ds-accent-strong px-3 py-1.5 text-xs text-ds-accent hover:bg-ds-accent-soft disabled:opacity-50"
                   >
                     {syncingJpl ? 'Đang sync JPL…' : 'Sync from JPL (entity này)'}
                   </button>
-                  <label className="block text-xs text-slate-400">
+                  <label className="block text-xs text-ds-muted">
                     Horizons ID (vd: 399 Earth, 301 Moon)
                     <input
                       value={selected.horizonsId}
                       onChange={(e) => patchSelected({ horizonsId: e.target.value })}
                       placeholder="301"
-                      className={inputCls}
+                      className="studio-field mt-1"
                     />
                   </label>
-                  <label className="block text-xs text-slate-400">
+                  <label className="block text-xs text-ds-muted">
                     Parent entityId (scene graph parent)
                     <input
                       value={selected.parentId}
                       onChange={(e) => patchSelected({ parentId: e.target.value })}
                       placeholder="planet-earth"
-                      className={inputCls}
+                      className="studio-field mt-1"
                     />
                   </label>
-                  <label className="block text-xs text-slate-400">
+                  <label className="block text-xs text-ds-muted">
                     Neo quanh hành tinh (Explore 3D)
-                    <span className="block text-[11px] text-slate-500 mt-0.5 font-normal normal-case tracking-normal">
+                    <span className="block text-[11px] text-ds-subtle mt-0.5 font-normal normal-case tracking-normal">
                       Tên phải khớp mô phỏng (Mercury…Neptune). Explore neo mesh theo tên này khi không có group 3D
                       cho parentId — nên chọn thay vì chỉ gõ parentId.
                     </span>
@@ -596,7 +620,7 @@ export default function StudioShowcaseEntitiesPage() {
                           parentId: `planet-${v.toLowerCase()}`,
                         })
                       }}
-                      className={inputCls}
+                      className="studio-field mt-1"
                     >
                       <option value="">— Không chọn (giữ parentId như hiện tại) —</option>
                       {planetsData.map((p) => (
@@ -606,37 +630,37 @@ export default function StudioShowcaseEntitiesPage() {
                       ))}
                     </select>
                   </label>
-                  <label className="block text-xs text-slate-400">
+                  <label className="block text-xs text-ds-muted">
                     Orbit around (Horizons center, vd: 500@399 cho Moon quanh Earth)
                     <input
                       value={selected.orbitAround}
                       onChange={(e) => patchSelected({ orbitAround: e.target.value })}
                       placeholder="500@10 hoặc 500@399"
-                      className={inputCls}
+                      className="studio-field mt-1"
                     />
                   </label>
-                  <label className="block text-xs text-slate-400">
+                  <label className="block text-xs text-ds-muted">
                     Orbit color
                     <div className="mt-1 flex items-center gap-2">
                       <input
                         type="color"
                         value={orbitColorHex}
                         onChange={(e) => patchSelected({ orbitColor: e.target.value })}
-                        className="h-10 w-14 cursor-pointer rounded border border-white/15 bg-black/40"
+                        className="h-10 w-14 cursor-pointer rounded border border-ds-border-strong bg-black/40"
                       />
                       <input
                         value={selected.orbitColor || ''}
                         onChange={(e) => patchSelected({ orbitColor: e.target.value })}
                         placeholder="#64748b"
-                        className={inputCls}
+                        className="studio-field mt-1"
                       />
                     </div>
-                    <div className="mt-2 rounded-md border border-white/10 bg-black/25 p-3 space-y-3">
+                    <div className="mt-2 rounded-md border border-ds-border bg-black/25 p-3 space-y-3">
                       <div
-                        className="h-8 rounded border border-white/10"
+                        className="h-8 rounded border border-ds-border"
                         style={{ backgroundColor: orbitColorHex }}
                       />
-                      <label className="block text-[11px] text-slate-400">
+                      <label className="block text-[11px] text-ds-muted">
                         Hue ({orbitHsl.h})
                         <input
                           type="range"
@@ -651,7 +675,7 @@ export default function StudioShowcaseEntitiesPage() {
                           className="mt-1 w-full"
                         />
                       </label>
-                      <label className="block text-[11px] text-slate-400">
+                      <label className="block text-[11px] text-ds-muted">
                         Saturation ({orbitHsl.s}%)
                         <input
                           type="range"
@@ -666,7 +690,7 @@ export default function StudioShowcaseEntitiesPage() {
                           className="mt-1 w-full"
                         />
                       </label>
-                      <label className="block text-[11px] text-slate-400">
+                      <label className="block text-[11px] text-ds-muted">
                         Lightness ({orbitHsl.l}%)
                         <input
                           type="range"
@@ -689,67 +713,67 @@ export default function StudioShowcaseEntitiesPage() {
                           type="button"
                           title={hex}
                           onClick={() => patchSelected({ orbitColor: hex })}
-                          className="h-6 w-6 rounded border border-white/20"
+                          className="h-6 w-6 rounded border border-ds-border-strong"
                           style={{ backgroundColor: hex }}
                         />
                       ))}
                     </div>
                   </label>
-                  <label className="block text-xs text-slate-400">
+                  <label className="block text-xs text-ds-muted">
                     Radius (km)
                     <input
                       type="number"
                       value={selected.radiusKm}
                       onChange={(e) => patchSelected({ radiusKm: Number(e.target.value || 0) })}
-                      className={inputCls}
+                      className="studio-field mt-1"
                     />
                   </label>
                   <div className="grid grid-cols-2 gap-2">
-                    <label className="block text-xs text-slate-400">
+                    <label className="block text-xs text-ds-muted">
                       a (semi-major)
-                      <input type="number" value={selected.orbitalElements?.a ?? 0} onChange={(e) => patchSelected({ orbitalElements: { ...(selected.orbitalElements || { a: 0, e: 0, i: 0, om: 0, w: 0, m: 0, periodDays: 0 }), a: Number(e.target.value || 0) } })} className={inputCls} />
+                      <input type="number" value={selected.orbitalElements?.a ?? 0} onChange={(e) => patchSelected({ orbitalElements: { ...(selected.orbitalElements || { a: 0, e: 0, i: 0, om: 0, w: 0, m: 0, periodDays: 0 }), a: Number(e.target.value || 0) } })} className="studio-field mt-1" />
                     </label>
-                    <label className="block text-xs text-slate-400">
+                    <label className="block text-xs text-ds-muted">
                       e
-                      <input type="number" value={selected.orbitalElements?.e ?? 0} onChange={(e) => patchSelected({ orbitalElements: { ...(selected.orbitalElements || { a: 0, e: 0, i: 0, om: 0, w: 0, m: 0, periodDays: 0 }), e: Number(e.target.value || 0) } })} className={inputCls} />
+                      <input type="number" value={selected.orbitalElements?.e ?? 0} onChange={(e) => patchSelected({ orbitalElements: { ...(selected.orbitalElements || { a: 0, e: 0, i: 0, om: 0, w: 0, m: 0, periodDays: 0 }), e: Number(e.target.value || 0) } })} className="studio-field mt-1" />
                     </label>
-                    <label className="block text-xs text-slate-400">
+                    <label className="block text-xs text-ds-muted">
                       i (deg)
-                      <input type="number" value={selected.orbitalElements?.i ?? 0} onChange={(e) => patchSelected({ orbitalElements: { ...(selected.orbitalElements || { a: 0, e: 0, i: 0, om: 0, w: 0, m: 0, periodDays: 0 }), i: Number(e.target.value || 0) } })} className={inputCls} />
+                      <input type="number" value={selected.orbitalElements?.i ?? 0} onChange={(e) => patchSelected({ orbitalElements: { ...(selected.orbitalElements || { a: 0, e: 0, i: 0, om: 0, w: 0, m: 0, periodDays: 0 }), i: Number(e.target.value || 0) } })} className="studio-field mt-1" />
                     </label>
-                    <label className="block text-xs text-slate-400">
+                    <label className="block text-xs text-ds-muted">
                       om (deg)
-                      <input type="number" value={selected.orbitalElements?.om ?? 0} onChange={(e) => patchSelected({ orbitalElements: { ...(selected.orbitalElements || { a: 0, e: 0, i: 0, om: 0, w: 0, m: 0, periodDays: 0 }), om: Number(e.target.value || 0) } })} className={inputCls} />
+                      <input type="number" value={selected.orbitalElements?.om ?? 0} onChange={(e) => patchSelected({ orbitalElements: { ...(selected.orbitalElements || { a: 0, e: 0, i: 0, om: 0, w: 0, m: 0, periodDays: 0 }), om: Number(e.target.value || 0) } })} className="studio-field mt-1" />
                     </label>
-                    <label className="block text-xs text-slate-400">
+                    <label className="block text-xs text-ds-muted">
                       w (deg)
-                      <input type="number" value={selected.orbitalElements?.w ?? 0} onChange={(e) => patchSelected({ orbitalElements: { ...(selected.orbitalElements || { a: 0, e: 0, i: 0, om: 0, w: 0, m: 0, periodDays: 0 }), w: Number(e.target.value || 0) } })} className={inputCls} />
+                      <input type="number" value={selected.orbitalElements?.w ?? 0} onChange={(e) => patchSelected({ orbitalElements: { ...(selected.orbitalElements || { a: 0, e: 0, i: 0, om: 0, w: 0, m: 0, periodDays: 0 }), w: Number(e.target.value || 0) } })} className="studio-field mt-1" />
                     </label>
-                    <label className="block text-xs text-slate-400">
+                    <label className="block text-xs text-ds-muted">
                       m (deg)
-                      <input type="number" value={selected.orbitalElements?.m ?? 0} onChange={(e) => patchSelected({ orbitalElements: { ...(selected.orbitalElements || { a: 0, e: 0, i: 0, om: 0, w: 0, m: 0, periodDays: 0 }), m: Number(e.target.value || 0) } })} className={inputCls} />
+                      <input type="number" value={selected.orbitalElements?.m ?? 0} onChange={(e) => patchSelected({ orbitalElements: { ...(selected.orbitalElements || { a: 0, e: 0, i: 0, om: 0, w: 0, m: 0, periodDays: 0 }), m: Number(e.target.value || 0) } })} className="studio-field mt-1" />
                     </label>
-                    <label className="block text-xs text-slate-400 col-span-2">
+                    <label className="block text-xs text-ds-muted col-span-2">
                       periodDays
-                      <input type="number" value={selected.orbitalElements?.periodDays ?? 0} onChange={(e) => patchSelected({ orbitalElements: { ...(selected.orbitalElements || { a: 0, e: 0, i: 0, om: 0, w: 0, m: 0, periodDays: 0 }), periodDays: Number(e.target.value || 0) } })} className={inputCls} />
+                      <input type="number" value={selected.orbitalElements?.periodDays ?? 0} onChange={(e) => patchSelected({ orbitalElements: { ...(selected.orbitalElements || { a: 0, e: 0, i: 0, om: 0, w: 0, m: 0, periodDays: 0 }), periodDays: Number(e.target.value || 0) } })} className="studio-field mt-1" />
                     </label>
                   </div>
-                  <label className="block text-xs text-slate-400">
+                  <label className="block text-xs text-ds-muted">
                     COMMAND (legacy, đồng bộ từ horizonsId)
                     <input
                       value={selected.horizonsCommand}
                       onChange={(e) => patchSelected({ horizonsCommand: e.target.value })}
                       placeholder="Để trống = không gọi JPL cho entity này"
-                      className={inputCls}
+                      className="studio-field mt-1"
                     />
                   </label>
-                  <label className="block text-xs text-slate-400">
+                  <label className="block text-xs text-ds-muted">
                     CENTER (legacy, đồng bộ từ orbitAround)
                     <input
                       value={selected.horizonsCenter}
                       onChange={(e) => patchSelected({ horizonsCenter: e.target.value })}
                       placeholder="500@10"
-                      className={inputCls}
+                      className="studio-field mt-1"
                     />
                   </label>
                 </div>
@@ -759,17 +783,17 @@ export default function StudioShowcaseEntitiesPage() {
                     type="checkbox"
                     checked={selected.published}
                     onChange={(e) => patchSelected({ published: e.target.checked })}
-                    className="rounded border-white/20"
+                    className="rounded border-ds-border-strong"
                   />
                   Published (ẩn khi bỏ chọn — không áp dụng nội dung &amp; media từ DB)
                 </label>
               </>
             ) : (
               <div className="space-y-4">
-                <p className="text-xs text-slate-400">
+                <p className="text-xs text-ds-muted">
                   Chỉnh nội dung panel hiển thị trên Showcase theo dạng block trực quan.
                 </p>
-                <label className="block text-xs text-slate-400">
+                <label className="block text-xs text-ds-muted">
                   State badge (always-on)
                   <input
                     value={ensurePanelConfig(selected).stateBadge || ''}
@@ -777,10 +801,10 @@ export default function StudioShowcaseEntitiesPage() {
                       patchPanelConfig((cfg) => ({ ...cfg, stateBadge: e.target.value }))
                     }
                     placeholder="Opposition in 12 days · Peak brightness"
-                    className={inputCls}
+                    className="studio-field mt-1"
                   />
                 </label>
-                <div className="rounded-lg border border-white/10 bg-black/25 p-3 space-y-2">
+                <div className="rounded-lg border border-ds-border bg-black/25 p-3 space-y-2">
                   <p className="text-xs uppercase tracking-wide text-slate-300">Tabs hiển thị</p>
                   <div className="flex flex-wrap gap-2">
                     {(['overview', 'physical', 'sky'] as const).map((id) => {
@@ -805,11 +829,11 @@ export default function StudioShowcaseEntitiesPage() {
                     })}
                   </div>
                 </div>
-                <div className="rounded-lg border border-white/10 bg-black/25 p-3 space-y-2">
+                <div className="rounded-lg border border-ds-border bg-black/25 p-3 space-y-2">
                   <p className="text-xs uppercase tracking-wide text-slate-300">Tên tab tùy chỉnh</p>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
                     {(['overview', 'physical', 'sky'] as const).map((id) => (
-                      <label key={`tab-label-${id}`} className="block text-xs text-slate-400">
+                      <label key={`tab-label-${id}`} className="block text-xs text-ds-muted">
                         {id}
                         <input
                           value={ensurePanelConfig(selected).tabLabels?.[id] || ''}
@@ -823,7 +847,7 @@ export default function StudioShowcaseEntitiesPage() {
                             }))
                           }
                           placeholder={id}
-                          className={inputCls}
+                          className="studio-field mt-1"
                         />
                       </label>
                     ))}
@@ -831,19 +855,19 @@ export default function StudioShowcaseEntitiesPage() {
                 </div>
 
                 {(['overviewBlocks', 'physicalBlocks', 'skyBlocks'] as const).map((key) => (
-                  <div key={key} className="rounded-lg border border-white/10 bg-black/25 p-3 space-y-2">
+                  <div key={key} className="rounded-lg border border-ds-border bg-black/25 p-3 space-y-2">
                     <div className="flex items-center justify-between">
                       <p className="text-xs uppercase tracking-wide text-slate-300">{key}</p>
                       <div className="flex gap-2">
-                        <button type="button" onClick={() => patchPanelConfig((cfg) => ({ ...cfg, [key]: [...(cfg[key] || []), newPanelBlock('text')] }))} className="rounded border border-white/20 px-2 py-1 text-[11px] text-slate-200">+Text</button>
-                        <button type="button" onClick={() => patchPanelConfig((cfg) => ({ ...cfg, [key]: [...(cfg[key] || []), newPanelBlock('image')] }))} className="rounded border border-white/20 px-2 py-1 text-[11px] text-slate-200">+Image</button>
-                        <button type="button" onClick={() => patchPanelConfig((cfg) => ({ ...cfg, [key]: [...(cfg[key] || []), newPanelBlock('chart')] }))} className="rounded border border-white/20 px-2 py-1 text-[11px] text-slate-200">+Chart</button>
+                        <button type="button" onClick={() => patchPanelConfig((cfg) => ({ ...cfg, [key]: [...(cfg[key] || []), newPanelBlock('text')] }))} className="rounded border border-ds-border-strong px-2 py-1 text-[11px] text-slate-200">+Text</button>
+                        <button type="button" onClick={() => patchPanelConfig((cfg) => ({ ...cfg, [key]: [...(cfg[key] || []), newPanelBlock('image')] }))} className="rounded border border-ds-border-strong px-2 py-1 text-[11px] text-slate-200">+Image</button>
+                        <button type="button" onClick={() => patchPanelConfig((cfg) => ({ ...cfg, [key]: [...(cfg[key] || []), newPanelBlock('chart')] }))} className="rounded border border-ds-border-strong px-2 py-1 text-[11px] text-slate-200">+Chart</button>
                       </div>
                     </div>
                     {(ensurePanelConfig(selected)[key] || []).map((b, i) => (
-                      <div key={b.id || `${key}-${i}`} className="rounded border border-white/10 p-2 space-y-2">
+                      <div key={b.id || `${key}-${i}`} className="rounded border border-ds-border p-2 space-y-2">
                         <div className="flex items-center justify-between">
-                          <span className="text-[11px] text-slate-400">{b.type}</span>
+                          <span className="text-[11px] text-ds-muted">{b.type}</span>
                           <button
                             type="button"
                             onClick={() =>
@@ -866,7 +890,7 @@ export default function StudioShowcaseEntitiesPage() {
                             }))
                           }
                           placeholder="Title"
-                          className={inputCls}
+                          className="studio-field mt-1"
                         />
                         <textarea
                           value={b.body || ''}
@@ -878,10 +902,10 @@ export default function StudioShowcaseEntitiesPage() {
                           }
                           rows={2}
                           placeholder="Body"
-                          className={inputCls}
+                          className="studio-field mt-1"
                         />
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                          <label className="block text-xs text-slate-400">
+                          <label className="block text-xs text-ds-muted">
                             Variant
                             <select
                               value={b.style?.variant || 'glass'}
@@ -895,14 +919,14 @@ export default function StudioShowcaseEntitiesPage() {
                                   ),
                                 }))
                               }
-                              className={inputCls}
+                              className="studio-field mt-1"
                             >
                               <option value="glass">glass</option>
                               <option value="solid">solid</option>
                               <option value="minimal">minimal</option>
                             </select>
                           </label>
-                          <label className="block text-xs text-slate-400">
+                          <label className="block text-xs text-ds-muted">
                             Align
                             <select
                               value={b.style?.align || 'left'}
@@ -916,14 +940,14 @@ export default function StudioShowcaseEntitiesPage() {
                                   ),
                                 }))
                               }
-                              className={inputCls}
+                              className="studio-field mt-1"
                             >
                               <option value="left">left</option>
                               <option value="center">center</option>
                               <option value="right">right</option>
                             </select>
                           </label>
-                          <label className="block text-xs text-slate-400">
+                          <label className="block text-xs text-ds-muted">
                             Background
                             <input
                               type="color"
@@ -936,10 +960,10 @@ export default function StudioShowcaseEntitiesPage() {
                                   ),
                                 }))
                               }
-                              className="h-10 w-full rounded-lg border border-white/15 bg-black/50"
+                              className="h-10 w-full rounded-lg border border-ds-border-strong bg-black/50"
                             />
                           </label>
-                          <label className="block text-xs text-slate-400">
+                          <label className="block text-xs text-ds-muted">
                             Border
                             <input
                               type="color"
@@ -952,10 +976,10 @@ export default function StudioShowcaseEntitiesPage() {
                                   ),
                                 }))
                               }
-                              className="h-10 w-full rounded-lg border border-white/15 bg-black/50"
+                              className="h-10 w-full rounded-lg border border-ds-border-strong bg-black/50"
                             />
                           </label>
-                          <label className="block text-xs text-slate-400">
+                          <label className="block text-xs text-ds-muted">
                             Text color
                             <input
                               type="color"
@@ -968,10 +992,10 @@ export default function StudioShowcaseEntitiesPage() {
                                   ),
                                 }))
                               }
-                              className="h-10 w-full rounded-lg border border-white/15 bg-black/50"
+                              className="h-10 w-full rounded-lg border border-ds-border-strong bg-black/50"
                             />
                           </label>
-                          <label className="block text-xs text-slate-400">
+                          <label className="block text-xs text-ds-muted">
                             Accent color
                             <input
                               type="color"
@@ -984,7 +1008,7 @@ export default function StudioShowcaseEntitiesPage() {
                                   ),
                                 }))
                               }
-                              className="h-10 w-full rounded-lg border border-white/15 bg-black/50"
+                              className="h-10 w-full rounded-lg border border-ds-border-strong bg-black/50"
                             />
                           </label>
                         </div>
@@ -1006,7 +1030,7 @@ export default function StudioShowcaseEntitiesPage() {
                   </div>
                 ))}
 
-                <div className="rounded-lg border border-white/10 bg-black/25 p-3">
+                <div className="rounded-lg border border-ds-border bg-black/25 p-3">
                   <p className="text-xs uppercase tracking-wide text-slate-300 mb-2">Tag concepts</p>
                   <div className="max-h-40 overflow-y-auto grid grid-cols-1 md:grid-cols-2 gap-1">
                     {concepts.map((c) => {
@@ -1032,7 +1056,7 @@ export default function StudioShowcaseEntitiesPage() {
                   </div>
                 </div>
 
-                <div className="rounded-lg border border-white/10 bg-black/25 p-3">
+                <div className="rounded-lg border border-ds-border bg-black/25 p-3">
                   <p className="text-xs uppercase tracking-wide text-slate-300 mb-2">Lessons in learning path</p>
                   <div className="max-h-40 overflow-y-auto grid grid-cols-1 md:grid-cols-2 gap-1">
                     {lessonOptions.map((l) => {
@@ -1070,7 +1094,7 @@ export default function StudioShowcaseEntitiesPage() {
               >
                 {saving ? 'Đang lưu…' : 'Lưu toàn bộ catalog'}
               </button>
-              {message ? <span className="text-sm text-slate-400">{message}</span> : null}
+              {message ? <span className="text-sm text-ds-muted">{message}</span> : null}
             </div>
           </div>
         )}

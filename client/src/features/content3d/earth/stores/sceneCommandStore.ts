@@ -21,7 +21,12 @@ interface SceneCommandState {
     lng: number
     mode?: 'phylum' | 'single'
     phylumFossils?: Fossil[]
+    /** Khi bay tới một hóa thạch cụ thể — giữ sau khi animation xong để hiển thị nhãn tên. */
+    fossil?: Fossil | null
   } | null
+  /** Sau fly-to / chọn từ danh sách — pulse + nhãn tên trên globe. */
+  focusedFossil: Fossil | null
+  fossilDetailOpen: boolean
   earthRotationPaused: boolean
   setFossils: (fossils: Fossil[]) => void
   setFossilStats: (stats: FossilStats | null) => void
@@ -34,6 +39,11 @@ interface SceneCommandState {
   toggleHotspots: () => void
   toggleEffectTag: (tag: keyof SceneCommandState['effectTags']) => void
   setFlyToTarget: (target: SceneCommandState['flyToTarget']) => void
+  setFocusedFossil: (fossil: Fossil | null) => void
+  setFossilDetailOpen: (open: boolean) => void
+  clearFossilFocus: () => void
+  /** Fly-to + nhãn + panel chi tiết (không đụng rotation pause). */
+  clearAllGlobeFossilUi: () => void
   setEarthRotationPaused: (paused: boolean) => void
 }
 
@@ -48,6 +58,8 @@ export const useSceneCommandStore = create<SceneCommandState>((set) => ({
   showHotspots: true,
   effectTags: { meteorShower: true, debrisField: true, dustHaze: true },
   flyToTarget: null,
+  focusedFossil: null,
+  fossilDetailOpen: false,
   earthRotationPaused: false,
   setFossils: (fossils) => set({ fossils }),
   setFossilStats: (fossilStats) => set({ fossilStats }),
@@ -64,5 +76,10 @@ export const useSceneCommandStore = create<SceneCommandState>((set) => ({
   toggleHotspots: () => set((s) => ({ showHotspots: !s.showHotspots })),
   toggleEffectTag: (tag) => set((s) => ({ effectTags: { ...s.effectTags, [tag]: !s.effectTags[tag] } })),
   setFlyToTarget: (flyToTarget) => set({ flyToTarget }),
+  setFocusedFossil: (focusedFossil) => set({ focusedFossil }),
+  setFossilDetailOpen: (fossilDetailOpen) => set({ fossilDetailOpen }),
+  clearFossilFocus: () => set({ focusedFossil: null, fossilDetailOpen: false }),
+  clearAllGlobeFossilUi: () =>
+    set({ flyToTarget: null, focusedFossil: null, fossilDetailOpen: false }),
   setEarthRotationPaused: (earthRotationPaused) => set({ earthRotationPaused }),
 }))

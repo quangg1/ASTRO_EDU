@@ -27,15 +27,15 @@ export default function CoursesPage() {
   }, [level, pricing])
 
   return (
-    <div className="min-h-screen bg-black">
+    <div className="min-h-screen bg-ds-base">
       <main className="pt-16 px-4 pb-12 max-w-4xl mx-auto">
-        <h1 className="text-2xl font-bold text-cyan-400 mt-8 mb-2">Courses</h1>
-        <p className="text-gray-400 text-sm mb-6">
+        <h1 className="text-2xl font-bold text-ds-accent mt-8 mb-2">Courses</h1>
+        <p className="text-ds-muted text-sm mb-6">
           Join courses and interact with 3D simulations: Earth History, the Solar System, and the Milky Way.
         </p>
 
         <div className="flex flex-wrap items-center gap-2 mb-3">
-          <span className="text-[10px] uppercase tracking-wide text-gray-600">Độ khó</span>
+          <span className="text-[10px] uppercase tracking-wide text-ds-subtle">Độ khó</span>
           {(
             [
               ['', 'Tất cả'],
@@ -49,7 +49,7 @@ export default function CoursesPage() {
               type="button"
               onClick={() => setLevel(v)}
               className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
-                level === v ? 'border-cyan-500/50 bg-cyan-500/10 text-cyan-200' : 'border-white/10 text-gray-400 hover:bg-white/5'
+                level === v ? 'border-ds-accent-strong bg-ds-accent-soft text-cyan-200' : 'border-ds-border text-ds-muted hover:bg-white/5'
               }`}
             >
               {label}
@@ -58,14 +58,14 @@ export default function CoursesPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2 mb-8">
-          <span className="text-[10px] uppercase tracking-wide text-gray-600">Giá</span>
+          <span className="text-[10px] uppercase tracking-wide text-ds-subtle">Giá</span>
           {(['', 'free', 'paid'] as const).map((v) => (
             <button
               key={v || 'all-pr'}
               type="button"
               onClick={() => setPricing(v)}
               className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
-                pricing === v ? 'border-cyan-500/50 bg-cyan-500/10 text-cyan-200' : 'border-white/10 text-gray-400 hover:bg-white/5'
+                pricing === v ? 'border-ds-accent-strong bg-ds-accent-soft text-cyan-200' : 'border-ds-border text-ds-muted hover:bg-white/5'
               }`}
             >
               {v === '' ? 'Tất cả' : v === 'free' ? 'Miễn phí' : 'Trả phí'}
@@ -73,7 +73,7 @@ export default function CoursesPage() {
           ))}
           <Link
             href="/tutorial"
-            className="ml-auto text-xs text-cyan-400/90 hover:text-cyan-300"
+            className="ml-auto text-xs text-ds-accent hover:text-cyan-100"
           >
             Lộ trình miễn phí →
           </Link>
@@ -82,18 +82,18 @@ export default function CoursesPage() {
         {loading ? (
           <SkeletonList count={4} />
         ) : courses.length === 0 ? (
-          <p className="text-gray-500">No courses yet.</p>
+          <p className="text-ds-subtle">No courses yet.</p>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2">
             {courses.map((c) => (
               <Link
                 key={c.id}
                 href={`/courses/${c.slug}`}
-                className="block glass rounded-xl p-5 hover:bg-white/10 transition-colors border border-white/10"
+                className="block glass rounded-xl p-5 hover:bg-white/10 transition-colors border border-ds-border"
               >
-                <h2 className="font-semibold text-white mb-1">{c.title}</h2>
-                <p className="text-sm text-gray-400 line-clamp-2 mb-2">{c.description}</p>
-                <span className="text-xs text-cyan-400/80">
+                <h2 className="font-semibold text-ds-text mb-1">{c.title}</h2>
+                <p className="text-sm text-ds-muted line-clamp-2 mb-2">{c.description}</p>
+                <span className="text-xs text-ds-accent">
                   {c.lessonCount ?? 0} lessons · {c.level}
                   {c.isPaid && c.price != null && c.price > 0 && (
                     <> · {c.currency === 'USD' ? `$${c.price}` : `${(c.price ?? 0).toLocaleString('en-US')} ₫`}</>

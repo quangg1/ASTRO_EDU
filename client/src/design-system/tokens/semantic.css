@@ -1,0 +1,67 @@
+/**
+ * Layer 2 — Semantic tokens.
+ *
+ * Components reference these by role (--color-accent, --color-bg-surface),
+ * never the raw color value. Surfaces in `surfaces/*.css` override these per
+ * context (Edu / Studio / Scene / etc.) without touching component code.
+ *
+ * Defaults below are tuned to match the dominant Edu/Course look already in
+ * the codebase, so a primitive consuming these tokens renders identically
+ * to the legacy hand-rolled markup it replaces.
+ */
+
+:root {
+  /* ── Backgrounds ──────────────────────────────────────────────────────── */
+  --color-bg-base: #02040a;            /* page background */
+  --color-bg-surface: #0a0f17;         /* cards, sidebars, inline panels */
+  --color-bg-elevated: #0f1623;        /* dialogs, popovers, raised cards */
+  --color-bg-overlay: rgba(7, 13, 20, 0.92); /* glass / 3D overlay panels */
+
+  /* ── Borders ──────────────────────────────────────────────────────────── */
+  --color-border: rgba(255, 255, 255, 0.10);
+  --color-border-strong: rgba(255, 255, 255, 0.20);
+
+  /* ── Text ─────────────────────────────────────────────────────────────── */
+  --color-text-primary: #f1f5f9;       /* slate-100 */
+  --color-text-muted: #94a3b8;         /* slate-400 */
+  --color-text-subtle: #64748b;        /* slate-500 */
+
+  /* ── Accent (default = Edu/Course cyan; surfaces override) ────────────── */
+  --color-accent: #22d3ee;                          /* cyan-400 */
+  --color-accent-soft: rgba(34, 211, 238, 0.10);    /* tint backgrounds */
+  --color-accent-strong: rgba(34, 211, 238, 0.30);  /* hover/active borders */
+  --color-accent-fg: #042e36;                       /* on-accent text */
+
+  /* ── Roles ────────────────────────────────────────────────────────────── */
+  --color-success: #10b981;
+  --color-success-soft: rgba(16, 185, 129, 0.10);
+  --color-success-strong: rgba(16, 185, 129, 0.30);
+
+  --color-warning: #f59e0b;
+  --color-warning-soft: rgba(245, 158, 11, 0.10);
+  --color-warning-strong: rgba(245, 158, 11, 0.30);
+
+  --color-danger: #ef4444;
+  --color-danger-soft: rgba(239, 68, 68, 0.10);
+  --color-danger-strong: rgba(239, 68, 68, 0.30);
+
+  --color-info: #22d3ee;
+  --color-info-soft: rgba(34, 211, 238, 0.10);
+  --color-info-strong: rgba(34, 211, 238, 0.30);
+
+  /* ── Radius (semantic) ────────────────────────────────────────────────── */
+  --radius-card: 16px;
+  --radius-control: 12px;
+  --radius-chip: 9999px;
+
+  /* ── Density (per surface; primitives read these for padding/gap) ─────── */
+  --density-pad-x: 14px;
+  --density-pad-y: 8px;
+  --density-content: 24px;
+  --density-gap: 16px;
+
+  /* ── Motion ───────────────────────────────────────────────────────────── */
+  --motion-fast: 120ms;
+  --motion-base: 200ms;
+  --motion-easing: cubic-bezier(0.22, 1, 0.36, 1);
+}

@@ -1,0 +1,40 @@
+# Architecture guards for the Next.js client.
+# Runs the boundary + SSOT scripts on every PR/push that touches the client.
+# These scripts are zero-cost guards (no network, no install of optional native
+# deps) and back the spec in client/DOMAIN_MAP.md + docs/ARCHITECTURE_AUDIT.md.
+name: Client guards
+
+on:
+  pull_request:
+    paths:
+      - "client/src/**"
+      - "client/scripts/check-*.mjs"
+      - "client/package.json"
+      - ".github/workflows/client-guards.yml"
+  push:
+    branches: [main, master]
+    paths:
+      - "client/src/**"
+      - "client/scripts/check-*.mjs"
+      - "client/package.json"
+
+jobs:
+  guards:
+    name: Boundary + Earth SSOT
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      # Scripts are pure Node — no dependencies needed. Skip `npm ci` to keep
+      # the job under 30s. If a future check imports a node_module, install
+      # only the package(s) it needs.
+      - name: Run guards
+        working-directory: client
+        run: |
+          node scripts/check-import-boundaries.mjs
+          node scripts/check-earth-history-ssot.mjs

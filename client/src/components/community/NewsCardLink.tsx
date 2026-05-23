@@ -1,9 +1,8 @@
 'use client'
 
 import Link from 'next/link'
-import type { Post } from '@/features/community/api/communityApi'
-import { newsPostHref, newsPostOpensNewTab } from '@/lib/postContent'
-import { recordPostSourceOpen } from '@/lib/postEngagement'
+import type { Post } from '@/features/community/public'
+import { newsPostHref, newsPostOpensNewTab, recordPostSourceOpen } from '@/features/community/public'
 
 type Props = {
   post: Post

@@ -56,7 +56,7 @@ export default function LearningModuleView({ module }: Props) {
   }, [m.id, m.order])
 
   return (
-    <div className="min-h-screen bg-[#02040a] relative overflow-hidden">
+    <div className="min-h-screen bg-ds-base relative overflow-hidden">
       <div
         className="pointer-events-none fixed inset-0 opacity-30"
         style={{
@@ -66,8 +66,8 @@ export default function LearningModuleView({ module }: Props) {
       />
 
       <main className="relative z-10 pt-20 pb-16 px-4 max-w-4xl mx-auto">
-        <nav className="text-xs text-slate-500 mb-6 flex flex-wrap items-center gap-2">
-          <Link href="/tutorial" className="hover:text-cyan-400 transition-colors">
+        <nav className="text-xs text-ds-subtle mb-6 flex flex-wrap items-center gap-2">
+          <Link href="/tutorial" className="hover:text-ds-accent transition-colors">
             Learning Path
           </Link>
           <ChevronRight className="w-3 h-3 opacity-60" />
@@ -82,29 +82,29 @@ export default function LearningModuleView({ module }: Props) {
           <div className="flex flex-wrap items-center gap-3 mb-3">
             <span className="text-4xl md:text-5xl">{module.emoji}</span>
             <div>
-              <p className="text-[10px] uppercase tracking-widest text-slate-500 font-semibold">
+              <p className="text-[10px] uppercase tracking-widest text-ds-subtle font-semibold">
                 Module {module.order}
               </p>
               <h1
-                className="text-2xl md:text-3xl font-bold text-white"
+                className="text-2xl md:text-3xl font-bold text-ds-text"
                 style={{ fontFamily: 'var(--font-heading), Space Grotesk, sans-serif' }}
               >
                 {module.titleVi}
               </h1>
-              <p className="text-slate-500 text-sm mt-0.5">{module.title}</p>
+              <p className="text-ds-subtle text-sm mt-0.5">{module.title}</p>
             </div>
           </div>
-          <p className="text-slate-400 text-sm md:text-base leading-relaxed max-w-2xl border-l-2 border-cyan-500/40 pl-4">
+          <p className="text-ds-muted text-sm md:text-base leading-relaxed max-w-2xl border-l-2 border-ds-accent-strong pl-4">
             {module.goalVi}
           </p>
 
           <div className="mt-6 flex flex-col sm:flex-row sm:items-center gap-4">
             <div className="flex-1 min-w-0">
-              <div className="flex justify-between text-xs text-slate-500 mb-1">
+              <div className="flex justify-between text-xs text-ds-subtle mb-1">
                 <span>Tiến độ module</span>
-                <span className="text-cyan-300 tabular-nums">{pct}%</span>
+                <span className="text-ds-accent tabular-nums">{pct}%</span>
               </div>
-              <div className="h-2 rounded-full bg-white/5 border border-white/10 overflow-hidden">
+              <div className="h-2 rounded-full bg-white/5 border border-ds-border overflow-hidden">
                 <motion.div
                   className="h-full rounded-full bg-gradient-to-r from-violet-500/90 to-cyan-400"
                   initial={{ width: 0 }}
@@ -120,9 +120,9 @@ export default function LearningModuleView({ module }: Props) {
               {m.connections.map((c) => (
                 <span
                   key={c}
-                  className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-400"
+                  className="inline-flex items-center gap-1.5 rounded-full border border-ds-border bg-white/5 px-3 py-1 text-xs text-ds-muted"
                 >
-                  <Layers className="w-3 h-3 text-cyan-500/80" />
+                  <Layers className="w-3 h-3 text-ds-accent" />
                   {c}
                 </span>
               ))}
@@ -136,7 +136,7 @@ export default function LearningModuleView({ module }: Props) {
           animate="show"
           variants={{ show: { transition: { staggerChildren: 0.06 } } }}
         >
-          <li className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-500 px-1">
+          <li className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-ds-subtle px-1">
             Các chủ đề (nodes)
           </li>
           {m.nodes.map((node, i) => {
@@ -151,32 +151,32 @@ export default function LearningModuleView({ module }: Props) {
               >
                 <Link
                   href={`/tutorial/${m.id}/${node.id}`}
-                  className="group flex items-center gap-4 rounded-xl border border-white/10 bg-white/[0.02] hover:bg-white/[0.05] hover:border-cyan-500/30 px-4 py-4 transition-all duration-300"
+                  className="group flex items-center gap-4 rounded-xl border border-ds-border bg-white/[0.02] hover:bg-white/[0.05] hover:border-ds-accent-strong px-4 py-4 transition-all duration-300"
                 >
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-500/20 to-violet-500/10 border border-white/10 text-sm font-semibold text-cyan-200">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-500/20 to-violet-500/10 border border-ds-border text-sm font-semibold text-cyan-200">
                     {i + 1}
                   </span>
                   <div className="min-w-0 flex-1">
-                    <p className="font-medium text-white group-hover:text-cyan-100 transition-colors">
+                    <p className="font-medium text-ds-text group-hover:text-cyan-100 transition-colors">
                       {node.titleVi}
                     </p>
-                    <p className="text-xs text-slate-500 truncate">{node.title}</p>
+                    <p className="text-xs text-ds-subtle truncate">{node.title}</p>
                   </div>
-                  <p className="hidden sm:block text-[10px] text-slate-500 uppercase tracking-wide shrink-0">
+                  <p className="hidden sm:block text-[10px] text-ds-subtle uppercase tracking-wide shrink-0">
                     {nLessons} bài
                   </p>
-                  <ChevronRight className="w-5 h-5 text-slate-600 group-hover:text-cyan-400 group-hover:translate-x-0.5 transition-all shrink-0" />
+                  <ChevronRight className="w-5 h-5 text-ds-subtle group-hover:text-ds-accent group-hover:translate-x-0.5 transition-all shrink-0" />
                 </Link>
               </motion.li>
             )
           })}
         </motion.ul>
 
-        <div className="mt-10 pt-8 border-t border-white/10 flex flex-wrap justify-between gap-4">
+        <div className="mt-10 pt-8 border-t border-ds-border flex flex-wrap justify-between gap-4">
           {m.order > 1 ? (
             <Link
               href={`/tutorial/${modules.find((x) => x.order === m.order - 1)?.id ?? ''}`}
-              className="text-sm text-slate-400 hover:text-cyan-400 transition-colors"
+              className="text-sm text-ds-muted hover:text-ds-accent transition-colors"
             >
               ← Module trước
             </Link>
@@ -186,12 +186,12 @@ export default function LearningModuleView({ module }: Props) {
           {m.order < 6 ? (
             <Link
               href={`/tutorial/${modules.find((x) => x.order === m.order + 1)?.id ?? ''}`}
-              className="text-sm text-cyan-400 hover:text-cyan-300 transition-colors"
+              className="text-sm text-ds-accent hover:text-cyan-100 transition-colors"
             >
               Module tiếp theo →
             </Link>
           ) : (
-            <Link href="/tutorial" className="text-sm text-cyan-400 hover:text-cyan-300">
+            <Link href="/tutorial" className="text-sm text-ds-accent hover:text-cyan-100">
               Về tổng quan →
             </Link>
           )}

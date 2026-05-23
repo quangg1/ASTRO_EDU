@@ -1,4 +1,6 @@
 const mongoose = require('mongoose');
+const { lessonSectionSchema } = require('../../../shared/schemas/lessonSectionSchema');
+const { quizQuestionMongooseSchema } = require('../../../shared/quizQuestion');
 
 const lessonItemSchema = new mongoose.Schema(
   {
@@ -16,24 +18,24 @@ const lessonItemSchema = new mongoose.Schema(
       default: [],
     },
     body: { type: String, default: '' },
-    sections: { type: [mongoose.Schema.Types.Mixed], default: [] },
-    recallQuiz: {
-      type: [
-        {
-          id: { type: String, default: '' },
-          question: { type: String, required: true },
-          options: [{ type: String }],
-          correctIndex: { type: Number, default: 0 },
-          optionExplanations: [{ type: String }],
-        },
-      ],
-      default: [],
-    },
+    sections: { type: [lessonSectionSchema], default: [] },
+    recallQuiz: { type: [new mongoose.Schema(quizQuestionMongooseSchema, { _id: false })], default: [] },
     sceneContext: {
       type: new mongoose.Schema(
         {
           primaryEntityId: { type: String, default: '' },
           entityIds: [{ type: String }],
+          historyFocus: {
+            type: new mongoose.Schema(
+              {
+                beatId: { type: Number, required: true },
+                pinId: { type: String, default: '' },
+                labelVi: { type: String, default: '' },
+              },
+              { _id: false },
+            ),
+            default: undefined,
+          },
         },
         { _id: false },
       ),

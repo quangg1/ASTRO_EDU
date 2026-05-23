@@ -365,7 +365,7 @@ export function AITutor() {
       }
       setMessages((m) => [...m, assistantMsg])
     } catch {
-      setError('Không kết nối được AI. Kiểm tra AI service (5005), OpenRouter API key hoặc LM Studio local.')
+      setError('Trợ lý AI tạm thời không khả dụng. Vui lòng thử lại sau.')
     } finally {
       setLoading(false)
     }

@@ -4,7 +4,9 @@
  *
  * Canonical data: src/features/content3d/earth/lib/earthHistoryData.ts
  * Allowed imports of that module path:
- *   - src/features/content3d/narrative/presets/earth.ts (builds Narrative preset beats)
+ *   - src/features/content3d/earth/stores/earthHistoryStore.ts (slim Zustand
+ *     store; needs the static fallback when the `/api/earth-history` request
+ *     fails). The store re-exports via the `earth/public` barrel.
  *
  * Consumers should prefer `@/features/content3d/earth/public` for `earthHistoryData` / getStage*.
  */
@@ -17,7 +19,9 @@ const REPO_ROOT = join(SCRIPT_DIR, '..')
 const SRC = join(REPO_ROOT, 'src')
 
 const CANONICAL = 'features/content3d/earth/lib/earthHistoryData'
-const ALLOW_DEEP_IMPORT = new Set(['src/features/content3d/narrative/presets/earth.ts'])
+const ALLOW_DEEP_IMPORT = new Set([
+  'src/features/content3d/earth/stores/earthHistoryStore.ts',
+])
 
 function* walk(dir) {
   let entries

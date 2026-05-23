@@ -1,5 +1,6 @@
 const fetch = require('node-fetch');
 const { runWithFallback } = require('../chatCompletion');
+const { normalizeQuizList, newQuizQuestionId } = require('../../../shared/quizQuestion');
 const AI_SERVICE_URL = (process.env.AI_SERVICE_URL || '').trim();
 
 function flattenSectionText(sections) {
@@ -19,31 +20,7 @@ function flattenSectionText(sections) {
 }
 
 function normalizeGeneratedRecallQuiz(items, lessonId) {
-  if (!Array.isArray(items)) return [];
-  return items
-    .slice(0, 5)
-    .map((q, idx) => {
-      const question = String(q?.question || '').trim();
-      const options = Array.isArray(q?.options)
-        ? q.options.map((o) => String(o || '').trim()).filter(Boolean).slice(0, 4)
-        : [];
-      const rawReasons = Array.isArray(q?.optionExplanations) ? q.optionExplanations : [];
-      const ciRaw = Number(q?.correctIndex);
-      const ciSafe = Number.isFinite(ciRaw) ? ciRaw : 0;
-      const correctIndex = Math.max(0, Math.min(ciSafe, Math.max(0, options.length - 1)));
-      const optionExplanations = options.map((_, i) => {
-        const r = String(rawReasons[i] || '').trim();
-        return r || (i === correctIndex ? 'Đây là đáp án đúng theo nội dung bài.' : 'Phương án này chưa khớp nội dung bài.');
-      });
-      return {
-        id: String(q?.id || '').trim() || `rq-${String(lessonId || 'lesson')}-${idx}`,
-        question,
-        options,
-        correctIndex,
-        optionExplanations,
-      };
-    })
-    .filter((q) => q.question && q.options.length >= 3 && q.options[q.correctIndex]);
+  return normalizeQuizList(items, lessonId, { minCount: 0, maxCount: 5 });
 }
 
 function fallbackQuizFromSource(source, lessonId, minQuestions = 3, targetQuestions = 4) {
@@ -51,48 +28,45 @@ function fallbackQuizFromSource(source, lessonId, minQuestions = 3, targetQuesti
     .replace(/\n+/g, ' ')
     .split('.')
     .map((s) => s.trim())
-    .filter(Boolean)
-  const facts = sents.length ? sents : [String(source || '').slice(0, 220).trim() || 'Nội dung chính của bài học.']
-  const total = Math.max(minQuestions, Math.min(5, targetQuestions))
-  const out = []
+    .filter(Boolean);
+  const facts = sents.length ? sents : [String(source || '').slice(0, 220).trim() || 'Nội dung chính của bài học.'];
+  const total = Math.max(minQuestions, Math.min(5, targetQuestions));
+  const out = [];
   for (let i = 0; i < total; i += 1) {
-    const fact = String(facts[i % facts.length] || '').slice(0, 180)
+    const fact = String(facts[i % facts.length] || '').slice(0, 180);
     out.push({
-      id: `rq-${String(lessonId || 'lesson')}-fb-${i}`,
+      id: newQuizQuestionId(`rq-${String(lessonId || 'lesson')}-fb-${i}`),
+      type: 'mcq',
       question: `Theo bài học, nhận định nào đúng nhất (${i + 1})?`,
       options: [
-        fact,
-        'Bài học kết luận điều ngược lại hoàn toàn với nội dung trên.',
-        'Bài học không đề cập và phủ nhận chủ đề này.',
-        'Đây chỉ là nhận định ngoài lề, không liên quan bài học.',
+        { text: fact },
+        { text: 'Bài học kết luận điều ngược lại hoàn toàn với nội dung trên.' },
+        { text: 'Bài học không đề cập và phủ nhận chủ đề này.' },
+        { text: 'Đây chỉ là nhận định ngoài lề, không liên quan bài học.' },
       ],
-      correctIndex: 0,
+      answer: 0,
       optionExplanations: [
         'Đúng: phương án này bám sát nội dung bài học.',
         'Sai: phương án này mâu thuẫn với nội dung bài học.',
         'Sai: bài học không khẳng định như phương án này.',
         'Sai: đây là diễn giải không đúng trọng tâm bài học.',
       ],
-    })
+    });
   }
-  return out
+  return out;
 }
 
 async function generateRecallQuizFromLesson(lesson) {
   const lessonId = String(lesson?.id || '').trim();
   const titleVi = String(lesson?.titleVi || '').trim();
   const title = String(lesson?.title || '').trim();
-  const body = String(lesson?.body || '').trim();
-  const sectionText = flattenSectionText(lesson?.sections);
-  const source = [titleVi || title, sectionText || body].filter(Boolean).join('\n\n').trim();
+  const source =
+    flattenSectionText(lesson?.sections) ||
+    String(lesson?.body || '').trim() ||
+    `${titleVi}\n${title}`;
 
-  if (!source || source.length < 120) {
-    return {
-      ok: false,
-      status: 400,
-      code: 'LESSON_CONTENT_TOO_SHORT',
-      error: 'Nội dung bài học còn quá ngắn để sinh quiz tự động',
-    };
+  if (!source.trim()) {
+    return { ok: false, status: 400, code: 'LESSON_CONTENT_EMPTY', error: 'Bài học không có nội dung để sinh quiz' };
   }
 
   if (AI_SERVICE_URL) {
@@ -117,12 +91,12 @@ async function generateRecallQuizFromLesson(lesson) {
   const systemPrompt =
     'Bạn là giáo viên thiên văn học. Tạo quiz kiểm tra hiểu bài bằng tiếng Việt, rõ ràng, không đánh đố, chỉ bám nội dung bài. Trả JSON hợp lệ.';
   const userPrompt = [
-    'Tạo 5 câu trắc nghiệm một đáp án đúng.',
-    'Mỗi câu có đúng 4 options.',
+    'Tạo 5 câu trắc nghiệm một đáp án đúng (type: mcq).',
+    'Mỗi câu có đúng 4 options (mảng object { "text": "..." }).',
     'Không dùng phương án "Tất cả đều đúng/đều sai".',
-    'Phân bố vị trí correctIndex ngẫu nhiên.',
+    'Phân bố vị trí answer (chỉ số 0–3) ngẫu nhiên.',
     'Đầu ra bắt buộc:',
-    '{"quiz":[{"question":"...","options":["...","...","...","..."],"correctIndex":0,"optionExplanations":["...","...","...","..."]}]}',
+    '{"quiz":[{"id":"","type":"mcq","question":"...","options":[{"text":"..."},{"text":"..."},{"text":"..."},{"text":"..."}],"answer":0,"optionExplanations":["...","...","...","..."]}]}',
     '',
     `lesson_id: ${lessonId || 'unknown'}`,
     `lesson_title_vi: ${titleVi}`,
@@ -134,9 +108,9 @@ async function generateRecallQuizFromLesson(lesson) {
   const { payload, providerErrors } = await runWithFallback(systemPrompt, userPrompt, 'object');
   const quiz = normalizeGeneratedRecallQuiz(payload?.quiz || [], lessonId);
   if (quiz.length < 3) {
-    const fallbackQuiz = fallbackQuizFromSource(source, lessonId, 3, 4)
+    const fallbackQuiz = fallbackQuizFromSource(source, lessonId, 3, 4);
     if (fallbackQuiz.length >= 3) {
-      return { ok: true, recallQuiz: fallbackQuiz, provider: 'api_template_fallback' }
+      return { ok: true, recallQuiz: fallbackQuiz, provider: 'api_template_fallback' };
     }
     return {
       ok: false,

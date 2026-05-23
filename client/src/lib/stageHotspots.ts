@@ -7,10 +7,7 @@ export type StageHotspot = {
   maxMa?: number
 }
 
-/**
- * Các hotspot mẫu cho Earth History (phase đầu).
- * Sau này có thể migrate sang NarrativeSpace beat.assetRefs.
- */
+/** Các hotspot tĩnh cho Earth History (phase đầu). */
 export const STAGE_HOTSPOTS: StageHotspot[] = [
   { id: 'lhb-impact-basin', label: 'Impact Basin', lat: 28, lng: -35, minMa: 3800, maxMa: 4200 },
   { id: 'cyanobacteria-coast', label: 'Cyanobacteria Coast', lat: -18, lng: 142, minMa: 2800, maxMa: 3600 },

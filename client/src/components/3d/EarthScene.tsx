@@ -1,17 +1,18 @@
 'use client'
 
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
+import type { ThreeEvent } from '@react-three/fiber'
 import { OrbitControls, Stars, Preload } from '@react-three/drei'
-import React, { Suspense, useEffect, useMemo, useRef, useState } from 'react'
+import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import * as THREE from 'three'
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib'
-import { Earth } from './Earth'
+import { Earth, globeSurfaceRaycast } from './Earth'
 import { FossilPoints } from './FossilPoints'
 import { GeoLabels } from './GeoLabels'
 import { Moon } from './Moon'
 import { StageHotspots } from './StageHotspots'
-import { useNarrativeStore } from '@/features/content3d/narrative/public'
-import { useSceneCommandStore } from '@/features/content3d/earth/public'
+import { FossilFocusHighlight } from './FossilFocusHighlight'
+import { useEarthHistoryStore, useSceneCommandStore } from '@/features/content3d/earth/public'
 import { fetchFossilsForStage } from '@/features/content3d/earth/api/earthApi'
 import { latLngToVector3 } from '@/lib/geo'
 import type { EarthStage } from '@/types'
@@ -20,15 +21,61 @@ import type { Fossil } from '@/types'
 const EARTH_RADIUS = 5
 const FLY_TARGET_LERP = 0.1
 const FLY_DONE_DIST = 0.08
-/** Khoảng cách camera → target khi fly-to (cận cảnh để phân biệt hóa thạch gần nhau). Khớp minDistance của OrbitControls. */
-const FLY_CAMERA_DISTANCE = 8
+/**
+ * Zoom khi chọn một điểm — khoảng cách camera ↔ orbit target (điểm trên bề mặt).
+ * `minDistance` OrbitControls là khoảng cách tới *target*, không phải tới tâm Trái Đất —
+ * giá trị ~5 từng làm “hết zoom” vẫn xa; dùng ~1.6–2 để xem cận bản đồ / tách chấm.
+ */
+const FLY_SINGLE_CAMERA_DISTANCE = 1.72
 const FLY_CAMERA_LERP = 0.08
 const PHYLUM_LINE_RADIUS = EARTH_RADIUS + 0.25
-const PHYLUM_LINE_MAX_POINTS = 120
-const SINGLE_MARKER_RADIUS = EARTH_RADIUS + 0.22
-const SINGLE_MARKER_SIZE = 0.18
+/** Ít điểm hơn để đường nối đỡ rối khi phân bố rộng. */
+const PHYLUM_LINE_MAX_POINTS = 56
 
-/** Đường nối các mẫu trong một ngành (khi Đi tới theo ngành) – vòng kín quanh vùng phân bố. */
+/**
+ * Lớp sphere trong suốt giữa bản đồ (globe không raycast) và chấm PBDB.
+ * Nhận click biển/trống → bỏ focus fossil (không dùng ray của Stars).
+ */
+function GlobeBackdropPickSurface() {
+  const pointerDownRef = useRef<{ clientX: number; clientY: number } | null>(null)
+
+  const onPointerDown = useCallback((e: ThreeEvent<PointerEvent>) => {
+    if (e.nativeEvent.button !== 0) return
+    pointerDownRef.current = { clientX: e.nativeEvent.clientX, clientY: e.nativeEvent.clientY }
+  }, [])
+
+  const onPointerUp = useCallback((e: ThreeEvent<PointerEvent>) => {
+    if (e.nativeEvent.button !== 0) return
+    const down = pointerDownRef.current
+    pointerDownRef.current = null
+    if (!down) return
+    const dx = e.nativeEvent.clientX - down.clientX
+    const dy = e.nativeEvent.clientY - down.clientY
+    /** Tránh xóa focus khi đang drag orbit (OrbitControls). */
+    if (dx * dx + dy * dy > 36) return
+    useSceneCommandStore.getState().clearAllGlobeFossilUi()
+  }, [])
+
+  const onPointerLeave = useCallback(() => {
+    pointerDownRef.current = null
+  }, [])
+
+  return (
+    <mesh
+      renderOrder={-400}
+      raycast={globeSurfaceRaycast}
+      onPointerDown={onPointerDown}
+      onPointerUp={onPointerUp}
+      onPointerLeave={onPointerLeave}
+      onPointerCancel={onPointerLeave}
+    >
+      <sphereGeometry args={[EARTH_RADIUS + 0.042, 56, 52]} />
+      <meshBasicMaterial transparent opacity={0} depthWrite={false} side={THREE.DoubleSide} />
+    </mesh>
+  )
+}
+
+/** Đường gợi ý phân bố (polyline mở — không khép vòng để giảm “quấn” loạn trên globe). */
 function PhylumOutlineLine({ fossils }: { fossils: Fossil[] }) {
   const points = useMemo(() => {
     const withCoords = fossils
@@ -55,9 +102,8 @@ function PhylumOutlineLine({ fossils }: { fossils: Fossil[] }) {
         usePoints.push(sorted[Math.min(Math.floor(i * step), sorted.length - 1)])
       }
     }
-    const closed = [...usePoints, usePoints[0]]
-    const pos = new Float32Array(closed.length * 3)
-    closed.forEach((p, i) => {
+    const pos = new Float32Array(usePoints.length * 3)
+    usePoints.forEach((p, i) => {
       const v = latLngToVector3(p.lat, p.lng, PHYLUM_LINE_RADIUS)
       pos[i * 3] = v.x
       pos[i * 3 + 1] = v.y
@@ -66,56 +112,32 @@ function PhylumOutlineLine({ fossils }: { fossils: Fossil[] }) {
     return pos
   }, [fossils])
 
-  if (points.length < 6) return null
+  const lineObject = useMemo(() => {
+    if (points.length < 6) return null
+    const geo = new THREE.BufferGeometry()
+    geo.setAttribute('position', new THREE.BufferAttribute(points, 3))
+    const mat = new THREE.LineBasicMaterial({
+      color: '#38bdf8',
+      transparent: true,
+      opacity: 0.38,
+      depthWrite: false,
+    })
+    const ln = new THREE.Line(geo, mat)
+    ln.raycast = () => {}
+    return ln
+  }, [points])
 
-  return (
-    <line>
-      <bufferGeometry>
-        <bufferAttribute
-          attach="attributes-position"
-          count={points.length / 3}
-          array={points}
-          itemSize={3}
-        />
-      </bufferGeometry>
-      <lineBasicMaterial color="#00d4ff" transparent opacity={0.92} />
-    </line>
-  )
-}
+  useEffect(() => {
+    return () => {
+      if (!lineObject) return
+      lineObject.geometry.dispose()
+      ;(lineObject.material as THREE.Material).dispose()
+    }
+  }, [lineObject])
 
-/** Tín hiệu rõ ràng vị trí một mẫu (khi Đi tới theo mẫu cụ thể): chấm sáng + vòng pulse nằm trên mặt cầu. */
-function SingleFossilMarker({ lat, lng }: { lat: number; lng: number }) {
-  const { pos, quat } = useMemo(() => {
-    const p = latLngToVector3(lat, lng, SINGLE_MARKER_RADIUS)
-    const q = new THREE.Quaternion().setFromUnitVectors(
-      new THREE.Vector3(0, 0, 1),
-      p.clone().normalize()
-    )
-    return { pos: p, quat: q }
-  }, [lat, lng])
-  const ringRef = useRef<THREE.Mesh>(null)
+  if (!lineObject) return null
 
-  useFrame((state) => {
-    if (!ringRef.current) return
-    const t = state.clock.elapsedTime
-    const scale = 1 + Math.sin(t * 2.5) * 0.35
-    ringRef.current.scale.setScalar(scale)
-    const mat = ringRef.current.material as THREE.MeshBasicMaterial
-    mat.opacity = 0.5 + Math.sin(t * 2.5) * 0.25
-  })
-
-  return (
-    <group position={[pos.x, pos.y, pos.z]}>
-      <mesh>
-        <sphereGeometry args={[SINGLE_MARKER_SIZE, 20, 16]} />
-        <meshBasicMaterial color="#00ffff" />
-      </mesh>
-      <mesh ref={ringRef} quaternion={quat}>
-        <torusGeometry args={[0.35, 0.04, 16, 32]} />
-        <meshBasicMaterial color="#00ffff" transparent opacity={0.7} depthWrite={false} />
-      </mesh>
-    </group>
-  )
+  return <primitive object={lineObject} />
 }
 
 /** Nhóm Trái Đất + hóa thạch; hỗ trợ override từ khóa học (stage + fossils) */
@@ -132,6 +154,7 @@ const EarthWithFossils = React.forwardRef<
       lng: number
       mode?: 'phylum' | 'single'
       phylumFossils?: Fossil[]
+      fossil?: Fossil | null
     } | null
     effectTags: {
       meteorShower: boolean
@@ -165,18 +188,16 @@ const EarthWithFossils = React.forwardRef<
   const canShowPlaceLabels = stage.time <= 23
   const showFossilsForStage = fossilsOverride != null ? true : showFossils
   const showPhylumLine = flyToTarget?.mode === 'phylum' && (flyToTarget.phylumFossils?.length ?? 0) > 0
-  const showSingleMarker = flyToTarget?.mode === 'single'
 
   return (
     <group ref={setRef}>
       <Earth stage={stage} effectTags={effectTags} />
+      <GlobeBackdropPickSurface />
       {showFossilsForStage && <FossilPoints fossilsOverride={fossilsOverride} />}
       {showPhylumLine && flyToTarget.phylumFossils && (
         <PhylumOutlineLine fossils={flyToTarget.phylumFossils} />
       )}
-      {showSingleMarker && (
-        <SingleFossilMarker lat={flyToTarget.lat} lng={flyToTarget.lng} />
-      )}
+      {fossilsOverride == null && <FossilFocusHighlight />}
       <GeoLabels visible={showPlaceLabels && canShowPlaceLabels} />
     </group>
   )
@@ -184,10 +205,10 @@ const EarthWithFossils = React.forwardRef<
 
 const SINGLE_MARKER_MIN_DURATION = 2
 
-/** Zoom satellite nhẹ hơn single một chút để nhìn cả vòng phân bố ngành. */
-const PHYLUM_SURFACE_OFFSET = FLY_CAMERA_DISTANCE * 1.45
+/** Tổng quan phân bố ngành — xa hơn zoom đơn để không chồng chấm. */
+const PHYLUM_SURFACE_OFFSET = 11.6
 
-/** Chỉ move camera, không xoay Trái Đất. Single = zoom cận + marker rồi auto-clear; phylum = zoom về phía centroid như single nhưng giữ target để xem đường nối. */
+/** Phylum: sau khi bay xong ngừng hẳn can thiệp camera/orbit — không khóa zoom. */
 function FlyToController({
   earthGroupRef,
   controlsRef,
@@ -201,12 +222,14 @@ function FlyToController({
     lng: number
     mode?: 'phylum' | 'single'
     phylumFossils?: Fossil[]
+    fossil?: Fossil | null
   } | null
   setFlyToTarget: (target: {
     lat: number
     lng: number
     mode?: 'phylum' | 'single'
     phylumFossils?: Fossil[]
+    fossil?: Fossil | null
   } | null) => void
 }) {
   const { camera } = useThree()
@@ -214,6 +237,17 @@ function FlyToController({
   const desiredCameraPos = useRef(new THREE.Vector3())
   const singleMarkerShownAt = useRef<number | null>(null)
   const prevFlyMode = useRef<string | null>(null)
+  /** Phylum flight đã “đậu” → không lerp nữa để OrbitControls nhận zoom/pan/xoay tay. */
+  const phylumFlightComplete = useRef(false)
+
+  useEffect(() => {
+    phylumFlightComplete.current = false
+  }, [
+    flyToTarget?.lat,
+    flyToTarget?.lng,
+    flyToTarget?.mode,
+    flyToTarget?.phylumFossils?.length,
+  ])
 
   useFrame((state) => {
     if (!flyToTarget || !earthGroupRef?.current || !controlsRef?.current) return
@@ -229,26 +263,34 @@ function FlyToController({
     const localUnit = latLngToVector3(flyToTarget.lat, flyToTarget.lng, 1).normalize()
     const localPoint = localUnit.clone().multiplyScalar(EARTH_RADIUS)
     worldTarget.current.copy(localPoint).applyMatrix4(earth.matrixWorld)
-    controls.target.lerp(worldTarget.current, FLY_TARGET_LERP)
 
     if (flyToTarget.mode === 'phylum') {
       singleMarkerShownAt.current = null
+      if (phylumFlightComplete.current) return
+
+      controls.target.lerp(worldTarget.current, FLY_TARGET_LERP)
       const radial = worldTarget.current.clone().normalize()
       desiredCameraPos.current.copy(worldTarget.current).add(radial.multiplyScalar(PHYLUM_SURFACE_OFFSET))
       camera.position.lerp(desiredCameraPos.current, FLY_CAMERA_LERP)
+
+      const targetDone = controls.target.distanceTo(worldTarget.current) < FLY_DONE_DIST * 2.5
+      const camDone = camera.position.distanceTo(desiredCameraPos.current) < 0.22
+      if (targetDone && camDone) phylumFlightComplete.current = true
       return
     }
 
+    controls.target.lerp(worldTarget.current, FLY_TARGET_LERP)
+
     if (flyToTarget.mode === 'single') {
       const distToTarget = camera.position.distanceTo(controls.target)
-      if (distToTarget > FLY_CAMERA_DISTANCE + 0.05) {
+      if (distToTarget > FLY_SINGLE_CAMERA_DISTANCE + 0.05) {
         desiredCameraPos.current
           .copy(worldTarget.current)
-          .add(worldTarget.current.clone().normalize().multiplyScalar(FLY_CAMERA_DISTANCE))
+          .add(worldTarget.current.clone().normalize().multiplyScalar(FLY_SINGLE_CAMERA_DISTANCE))
         camera.position.lerp(desiredCameraPos.current, FLY_CAMERA_LERP)
       }
       const targetDone = controls.target.distanceTo(worldTarget.current) < FLY_DONE_DIST
-      const zoomDone = camera.position.distanceTo(controls.target) <= FLY_CAMERA_DISTANCE + 0.1
+      const zoomDone = camera.position.distanceTo(controls.target) <= FLY_SINGLE_CAMERA_DISTANCE + 0.12
       if (targetDone && zoomDone) {
         if (singleMarkerShownAt.current === null) {
           singleMarkerShownAt.current = clock.elapsedTime
@@ -272,7 +314,7 @@ interface SceneProps {
 function Scene({ overrideStage, overrideFossils }: SceneProps = {}) {
   const earthGroupRef = useRef<THREE.Group>(null)
   const controlsRef = useRef<OrbitControlsImpl | null>(null)
-  const currentStage = useNarrativeStore((s) => s.currentBeat)
+  const currentStage = useEarthHistoryStore((s) => s.currentStage)
   const {
     showFossils,
     showPlaceLabels,
@@ -283,6 +325,7 @@ function Scene({ overrideStage, overrideFossils }: SceneProps = {}) {
     setFossilStats,
     setFossilsLoading,
     setFlyToTarget,
+    clearAllGlobeFossilUi,
     loadPhylumMetadata,
   } = useSceneCommandStore()
 
@@ -290,30 +333,26 @@ function Scene({ overrideStage, overrideFossils }: SceneProps = {}) {
   const stage = overrideStage ?? currentStage
   const fossils = overrideStage != null ? courseFossils : null
   const renderFlyToTarget = overrideStage != null ? null : flyToTarget
-  const moodBackground = useMemo(() => {
-    const atmo = new THREE.Color(stage.atmosphereColor || '#0b1220')
-    return atmo.clone().multiplyScalar(0.17)
-  }, [stage.atmosphereColor])
-  const fillLightColor = useMemo(
-    () => new THREE.Color(stage.atmosphereColor || '#4488ff').multiplyScalar(0.8),
-    [stage.atmosphereColor],
-  )
+  /** Nền không theo màu khí quyển từng kỷ — tránh cả scene “cam lè”; trời sao đọc rõ. */
+  const spaceBackground = useMemo(() => new THREE.Color(0x03050c), [])
+  /** Đèn fill trung tính, không nhuộm cam theo atmosphereColor. */
+  const fillLightColor = useMemo(() => new THREE.Color(0x7a9ec4).multiplyScalar(0.42), [])
 
   useEffect(() => {
     loadPhylumMetadata()
   }, [loadPhylumMetadata])
 
-  // Đổi beat / thời kỳ → bỏ fly-to phylum/single cũ để preview không “kẹt” camera & đường nối.
+  // Đổi beat / thời kỳ → bỏ fly-to + nhãn hóa thạch để preview không “kẹt”.
   useEffect(() => {
     if (overrideStage != null) return
-    setFlyToTarget(null)
+    clearAllGlobeFossilUi()
   }, [
     overrideStage,
     currentStage.id,
     currentStage.time,
     currentStage.maxMa,
     currentStage.minMa,
-    setFlyToTarget,
+    clearAllGlobeFossilUi,
   ])
 
   // Khi có overrideStage (khóa học): load fossils cho thời kỳ đó
@@ -353,12 +392,12 @@ function Scene({ overrideStage, overrideFossils }: SceneProps = {}) {
 
   return (
     <>
-      <SmoothBackground targetColor={moodBackground} />
-      <ambientLight intensity={0.4} />
-      <directionalLight position={[100, 50, 100]} intensity={2.2} color="#FFFFDD" />
+      <SmoothBackground targetColor={spaceBackground} />
+      <ambientLight intensity={0.52} />
+      <directionalLight position={[100, 50, 100]} intensity={2.55} color="#FFFFEE" />
       <SmoothFillLight targetColor={fillLightColor} />
 
-      <Stars radius={300} depth={60} count={5000} factor={4} saturation={0} fade speed={1} />
+      <Stars radius={420} depth={120} count={12000} factor={0.85} saturation={0} fade speed={0.35} />
 
       <EarthWithFossils
         ref={earthGroupRef}
@@ -388,7 +427,7 @@ function Scene({ overrideStage, overrideFossils }: SceneProps = {}) {
         enablePan
         enableZoom
         enableRotate
-        minDistance={8}
+        minDistance={0.38}
         maxDistance={100}
         autoRotate={false}
       />
@@ -414,7 +453,7 @@ function SmoothFillLight({ targetColor }: { targetColor: THREE.Color }) {
     colorRef.current.lerp(targetColor, Math.min(1, delta * 2.4))
     lightRef.current.color.copy(colorRef.current)
   })
-  return <pointLight ref={lightRef} position={[-10, 5, 10]} intensity={0.4} color={colorRef.current} />
+  return <pointLight ref={lightRef} position={[-10, 5, 10]} intensity={0.5} color={colorRef.current} />
 }
 
 export interface EarthSceneProps {
@@ -423,11 +462,25 @@ export interface EarthSceneProps {
 }
 
 export default function EarthScene({ overrideStage }: EarthSceneProps = {}) {
+  const onPointerMissed = useCallback(() => {
+    useSceneCommandStore.getState().clearAllGlobeFossilUi()
+  }, [])
+
   return (
     <Canvas
-      camera={{ position: [0, 5, 25], fov: 60 }}
+      camera={{ position: [0, 5, 25], fov: 60, near: 0.006 }}
       gl={{ antialias: true, alpha: false }}
       style={{ background: '#000000' }}
+      onPointerMissed={onPointerMissed}
+      raycaster={{
+        params: {
+          Mesh: {},
+          Line: { threshold: 1 },
+          LOD: {},
+          Points: { threshold: 0.42 },
+          Sprite: {},
+        },
+      }}
     >
       <Suspense fallback={null}>
         <Scene overrideStage={overrideStage} />

@@ -1,4 +1,4 @@
-import { LayoutChromeBoundary } from '@/components/ui/LayoutChromeBoundary'
+import { LayoutChromeBoundary } from '@/components/layout/LayoutChromeBoundary'
 
 export default function StudioLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -9,7 +9,7 @@ export default function StudioLayout({ children }: { children: React.ReactNode }
         showStarfield: false,
       }}
     >
-      {children}
+      <div className="surface-studio">{children}</div>
     </LayoutChromeBoundary>
   )
 }

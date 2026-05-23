@@ -1,8 +1,8 @@
 'use client'
 
-import type { Post } from '@/features/community/api/communityApi'
+import type { Post } from '@/features/community/public'
 import { NewsCardLink } from '@/components/community/NewsCardLink'
-import { plainTextExcerpt, postThumbnailUrl } from '@/lib/postContent'
+import { plainTextExcerpt, postThumbnailUrl } from '@/features/community/public'
 import { Flame } from 'lucide-react'
 
 function formatDate(date?: string | null): string {

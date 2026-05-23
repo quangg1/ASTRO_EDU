@@ -12,6 +12,8 @@ const {
 } = require('../../services/teacherApplicationService');
 const { requireString } = require('../../shared/validation');
 const { AppError } = require('../../shared/errors');
+const { getRuntimeEnv } = require('../../config/runtimeEnv');
+const APP_PATHS = require('../../../../shared/appPaths');
 
 const ROLES = ['student', 'teacher', 'moderator', 'admin'];
 
@@ -129,7 +131,7 @@ router.post('/firebase', async (req, res) => {
     if (!admin) {
       return res.status(503).json({
         success: false,
-        error: 'Server chưa cấu hình FIREBASE_SERVICE_ACCOUNT_JSON',
+        error: 'Đăng nhập chưa sẵn sàng. Vui lòng thử lại sau.',
       });
     }
     const idToken = req.body?.idToken;
@@ -287,8 +289,8 @@ router.post('/forgot-password', async (req, res) => {
     user.resetToken = token;
     user.resetTokenExpires = new Date(Date.now() + 60 * 60 * 1000);
     await user.save({ validateBeforeSave: false });
-    const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
-    const resetLink = `${clientUrl}/reset-password?token=${token}`;
+    const clientUrl = getRuntimeEnv().clientUrl;
+    const resetLink = `${clientUrl}${APP_PATHS.resetPassword}?token=${token}`;
     res.json({ success: true, message: 'Kiểm tra email của bạn.', resetLink });
   } catch (err) {
     console.error('Forgot password error:', err);

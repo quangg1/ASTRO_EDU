@@ -1,5 +1,5 @@
 import { getApiPathBase } from '@/lib/apiConfig'
-import type { LearningConcept, LearningModule, LessonItem, LessonRecallQuizItem } from '@/data/learningPathCurriculum'
+import type { LearningConcept, LearningModule, LessonItem, QuizQuestion } from '@/data/learningPathCurriculum'
 
 const API = `${getApiPathBase()}/learning-path`
 
@@ -113,7 +113,7 @@ export async function saveEditorLearningPath(
 export async function generateRecallQuizForLesson(
   token: string,
   lesson: LessonItem,
-): Promise<{ ok: boolean; recallQuiz?: LessonRecallQuizItem[]; error?: string }> {
+): Promise<{ ok: boolean; recallQuiz?: QuizQuestion[]; error?: string }> {
   try {
     const res = await fetch(`${API}/editor/generate-quiz`, {
       method: 'POST',
@@ -125,7 +125,7 @@ export async function generateRecallQuizForLesson(
     })
     const data = await res.json()
     if (data.success && Array.isArray(data.data?.recallQuiz)) {
-      return { ok: true, recallQuiz: data.data.recallQuiz as LessonRecallQuizItem[] }
+      return { ok: true, recallQuiz: data.data.recallQuiz as QuizQuestion[] }
     }
     return { ok: false, error: data.error || 'Generate quiz failed' }
   } catch (e) {

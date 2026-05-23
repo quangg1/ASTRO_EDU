@@ -1,4 +1,4 @@
-import { LayoutChromeBoundary } from '@/components/ui/LayoutChromeBoundary'
+import { LayoutChromeBoundary } from '@/components/layout/LayoutChromeBoundary'
 
 export default function LoginLayout({ children }: { children: React.ReactNode }) {
   return (

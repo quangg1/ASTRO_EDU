@@ -14,11 +14,10 @@ const {
   showcaseEntitiesRouter,
   showcaseCatalogRouter,
   showcaseOrbitsJplRouter,
-  narrativeSpacesRouter,
   earthHistoryRouter,
   fossilsRouter,
   phylaRouter,
-  spaceContextRouter,
+  planetNarrativeRouter,
 } = require('./features/content3d');
 const { gemsRouter, showcaseGamificationRouter } = require('./features/rewards');
 const paymentRouter = require('./features/payment');
@@ -45,11 +44,10 @@ app.use('/api/showcase-catalog', showcaseCatalogRouter);
 app.use('/api/showcase-orbits', showcaseOrbitsJplRouter);
 app.use('/api/gems', gemsRouter);
 app.use('/api/showcase', showcaseGamificationRouter);
-app.use('/api/narrative-spaces', narrativeSpacesRouter);
 app.use('/api/earth-history', earthHistoryRouter);
+app.use('/api/planet-narratives', planetNarrativeRouter);
 app.use('/api/fossils', fossilsRouter);
 app.use('/api/phyla', phylaRouter);
-app.use('/api/content-3d', spaceContextRouter);
 app.use('/api/payments', paymentRouter);
 app.use('/api/forums', forumsRouter);
 app.use('/api/posts', postsRouter);
@@ -71,12 +69,13 @@ async function start() {
 ╔══════════════════════════════════════════════════════════════╗
 ║           Galaxies Unified API (Modular Monolith)            ║
 ╠══════════════════════════════════════════════════════════════╣
-║  http://localhost:${PORT}                                        ║
+║  ${env.clientUrl.padEnd(54)}║
+║  (listen PORT=${PORT})                                           ║
 ║  /auth          - register, login, Firebase, me, admin      ║
 ║  /api/courses   - courses, enroll, progress, editor           ║
 ║  /api/tutorials - tutorials, categories, editor               ║
 ║  /api/learning-path - curriculum (public + editor)            ║
-║  /api/payments  - create, callback/vnpay, orders              ║
+║  /api/payments  - create-qr, create-url, ipn, return, status ║
 ║  /api/forums    - forums, posts                               ║
 ║  /api/posts     - post detail, comments, vote                  ║
 ║  /api/news      - tin thiên văn                               ║
