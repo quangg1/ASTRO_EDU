@@ -37,6 +37,8 @@ import { useAuthStore } from '@/features/auth/public'
 import { SectionPreview } from '@/components/studio/LessonPreview'
 import { applyConceptAnchorsToHtml } from '@/features/concepts/public'
 import { trackEvent } from '@/lib/analytics'
+import { CommunityAskButton } from '@/components/community/learning/CommunityAskButton'
+import { LessonRelatedQuestions } from '@/components/community/learning/LessonRelatedQuestions'
 type Props = {
   /** Từ server merge API — đồng bộ SSR */
   modules?: LearningModule[]
@@ -506,6 +508,20 @@ export default function LearningLessonView({
             {lesson.titleVi}
           </h1>
           {lesson.title ? <p className="text-ds-muted text-sm md:text-base">{lesson.title}</p> : null}
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            <CommunityAskButton
+              variant="compact"
+              context={{
+                pathSource: 'learning-path',
+                learningModuleId: displayModule.id,
+                learningNodeId: displayNode.id,
+                learningLessonId: lesson.id,
+                moduleTitle: displayModule.titleVi,
+                nodeTitle: displayNode.titleVi,
+                lessonTitle: lesson.titleVi,
+              }}
+            />
+          </div>
           <div className="mt-3 flex flex-wrap gap-2">
             {done ? (
               <span className="rounded-full border border-emerald-500/35 bg-emerald-500/15 px-2.5 py-0.5 text-[11px] font-medium text-emerald-100">
@@ -645,6 +661,19 @@ export default function LearningLessonView({
             </p>
           </div>
         )}
+
+        <LessonRelatedQuestions
+          className="mb-8 p-4 md:p-5"
+          context={{
+            pathSource: 'learning-path',
+            learningModuleId: displayModule.id,
+            learningNodeId: displayNode.id,
+            learningLessonId: lesson.id,
+            moduleTitle: displayModule.titleVi,
+            nodeTitle: displayNode.titleVi,
+            lessonTitle: lesson.titleVi,
+          }}
+        />
 
         {linkedConcepts.length > 0 && (
           <aside className="mb-8 rounded-2xl border border-ds-accent-strong bg-ds-overlay p-4">

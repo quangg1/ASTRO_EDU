@@ -1,5 +1,5 @@
 import { notFound, redirect } from 'next/navigation'
-import { fetchCourseOutlineServer } from '@/features/courses/api/server'
+import { fetchCourseOutlineServer } from '@/features/courses/server'
 
 export default async function CourseLearnIndexPage({
   params,

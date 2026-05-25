@@ -138,6 +138,22 @@ function authHeaders(): HeadersInit {
   return h
 }
 
+/** API admin trả phẳng `{ success, kpis, ... }` — không bọc trong `data`. */
+function unwrapAnalyticsPayload<T>(json: Record<string, unknown>): T | null {
+  if (json.kpis != null || json.summary != null || Array.isArray(json.funnel)) {
+    const { success: _s, ...rest } = json
+    return rest as T
+  }
+  const nested = json.data
+  if (nested && typeof nested === 'object') {
+    const inner = nested as Record<string, unknown>
+    if (inner.kpis != null || inner.summary != null || Array.isArray(inner.funnel)) {
+      return inner as T
+    }
+  }
+  return null
+}
+
 export async function fetchAdminAnalyticsOverview(
   range: AnalyticsRange
 ): Promise<{ success: boolean; data?: AdminAnalyticsOverview; error?: string }> {
@@ -148,7 +164,9 @@ export async function fetchAdminAnalyticsOverview(
     })
     const data = await res.json()
     if (!res.ok || !data.success) return { success: false, error: data.error || 'Không tải được analytics' }
-    return { success: true, data: data as AdminAnalyticsOverview }
+    const payload = unwrapAnalyticsPayload<AdminAnalyticsOverview>(data)
+    if (!payload) return { success: false, error: 'Dữ liệu analytics không đúng định dạng' }
+    return { success: true, data: payload }
   } catch {
     return { success: false, error: 'Không kết nối được API analytics' }
   }
@@ -216,7 +234,9 @@ export async function fetchAdminLearningPathAnalytics(
     })
     const data = await res.json()
     if (!res.ok || !data.success) return { success: false, error: data.error || 'Không tải được learning path analytics' }
-    return { success: true, data: data as AdminLearningPathAnalytics }
+    const payload = unwrapAnalyticsPayload<AdminLearningPathAnalytics>(data)
+    if (!payload) return { success: false, error: 'Dữ liệu learning path không đúng định dạng' }
+    return { success: true, data: payload }
   } catch {
     return { success: false, error: 'Không kết nối được API learning path analytics' }
   }

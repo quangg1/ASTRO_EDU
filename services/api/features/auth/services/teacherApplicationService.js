@@ -1,8 +1,9 @@
-const TeacherApplication = require('../features/auth/models/TeacherApplication');
-const User = require('../features/auth/models/User');
-const { AppError } = require('../shared/errors');
-const { updateAdminUserRole } = require('./adminUserService');
-const { sendTeacherApplicationDecisionEmail } = require('../shared/mailer');
+const TeacherApplication = require('../models/TeacherApplication');
+const User = require('../models/User');
+const { AppError } = require('../../../shared/errors');
+const { updateAdminUserRole } = require('../../admin/services/adminUserService');
+const { sendTeacherApplicationDecisionEmail } = require('../../../shared/mailer');
+const { notifyTeacherApplicationDecision } = require('../../notifications/services/notificationService');
 
 const BIO_MIN = 30;
 const BIO_MAX = 4000;
@@ -138,6 +139,11 @@ async function reviewApplication({ actorUserId, applicationId, action, note }) {
         reviewNote,
       });
     }
+    void notifyTeacherApplicationDecision({
+      userId: targetUserId,
+      approved: false,
+      reviewNote,
+    });
     return formatApplication(app);
   }
 
@@ -161,6 +167,12 @@ async function reviewApplication({ actorUserId, applicationId, action, note }) {
       reviewNote: '',
     });
   }
+
+  void notifyTeacherApplicationDecision({
+    userId: targetUserId,
+    approved: true,
+    reviewNote: '',
+  });
 
   return formatApplication(app);
 }

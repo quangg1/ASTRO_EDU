@@ -16,6 +16,8 @@ const userRewardSchema = new mongoose.Schema(
     ownedDecorationSkus: { type: [String], default: [] },
     /** SKU trang trí đang đeo quanh avatar (null = không đeo). */
     equippedDecorationSkuId: { type: String, default: null },
+    /** Các hạng Learner đã nhận perk (tránh grant trùng). */
+    grantedLearnerTierPerks: { type: [String], default: [] },
   },
   { timestamps: true, minimize: false },
 );

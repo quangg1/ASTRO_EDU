@@ -3,7 +3,7 @@
 import { useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
 import type { LessonSection, SectionType } from '@/features/courses/api/coursesApi'
-import { uploadMedia } from '@/features/courses/api/coursesApi'
+import { uploadMedia, type UploadMediaContext } from '@/features/courses/api/coursesApi'
 import { resolveMediaUrl } from '@/lib/apiConfig'
 import MathBlock from './blocks/MathBlock'
 import ChartBlock from './blocks/ChartBlock'
@@ -20,13 +20,23 @@ const CALLOUT_VARIANTS = [
   { value: 'danger', label: 'Danger', color: 'border-red-500/40 bg-red-500/10', icon: '\u2718' },
 ] as const
 
-function UploadBtn({ accept, onUrl, label }: { accept: string; onUrl: (u: string) => void; label: string }) {
+function UploadBtn({
+  accept,
+  onUrl,
+  label,
+  uploadContext,
+}: {
+  accept: string
+  onUrl: (u: string) => void
+  label: string
+  uploadContext?: UploadMediaContext
+}) {
   const ref = useRef<HTMLInputElement>(null)
   const [busy, setBusy] = useState(false)
   const handle = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0]; if (!f) return
     setBusy(true)
-    const r = await uploadMedia(f)
+    const r = await uploadMedia(f, uploadContext)
     setBusy(false)
     if (r.success && r.url) onUrl(r.url)
     if (ref.current) ref.current.value = ''
@@ -42,7 +52,15 @@ function UploadBtn({ accept, onUrl, label }: { accept: string; onUrl: (u: string
   )
 }
 
-function ImageBlockEditor({ section, update }: { section: LessonSection; update: (p: Partial<LessonSection>) => void }) {
+function ImageBlockEditor({
+  section,
+  update,
+  uploadContext,
+}: {
+  section: LessonSection
+  update: (p: Partial<LessonSection>) => void
+  uploadContext?: UploadMediaContext
+}) {
   const [mode, setMode] = useState<'url' | 'upload'>('url')
   const [urlInput, setUrlInput] = useState(section.imageUrl ?? '')
   const [imgError, setImgError] = useState(false)
@@ -75,7 +93,12 @@ function ImageBlockEditor({ section, update }: { section: LessonSection; update:
           <button type="button" onClick={applyUrl} className="shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium bg-cyan-600 text-white hover:bg-cyan-500 transition-colors">Apply</button>
         </div>
       ) : (
-        <UploadBtn accept="image/*,.gif,.webp,.svg,.png,.jpg,.jpeg" onUrl={(u) => { update({ imageUrl: u }); setUrlInput(u); setImgError(false) }} label="Choose file to upload" />
+        <UploadBtn
+          accept="image/*,.gif,.webp,.svg,.png,.jpg,.jpeg"
+          onUrl={(u) => { update({ imageUrl: u }); setUrlInput(u); setImgError(false) }}
+          label="Choose file to upload"
+          uploadContext={uploadContext}
+        />
       )}
       {section.imageUrl && (
         <div className="relative rounded-lg overflow-hidden border border-ds-border bg-black/30">
@@ -153,7 +176,15 @@ function toYouTubeEmbed(url: string): string | null {
   return videoId ? `https://www.youtube.com/embed/${videoId}` : null
 }
 
-function VideoBlockEditor({ section, update }: { section: LessonSection; update: (p: Partial<LessonSection>) => void }) {
+function VideoBlockEditor({
+  section,
+  update,
+  uploadContext,
+}: {
+  section: LessonSection
+  update: (p: Partial<LessonSection>) => void
+  uploadContext?: UploadMediaContext
+}) {
   const [mode, setMode] = useState<'url' | 'upload'>('url')
   const [urlInput, setUrlInput] = useState(section.videoUrl ?? '')
 
@@ -184,7 +215,12 @@ function VideoBlockEditor({ section, update }: { section: LessonSection; update:
           <button type="button" onClick={applyUrl} className="shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium bg-cyan-600 text-white hover:bg-cyan-500 transition-colors">Apply</button>
         </div>
       ) : (
-        <UploadBtn accept="video/*,.mp4,.webm" onUrl={(u) => { update({ videoUrl: u }); setUrlInput(u) }} label="Choose video to upload" />
+        <UploadBtn
+          accept="video/*,.mp4,.webm"
+          onUrl={(u) => { update({ videoUrl: u }); setUrlInput(u) }}
+          label="Choose video to upload"
+          uploadContext={uploadContext}
+        />
       )}
       {embedUrl && (
         <div className="rounded-lg overflow-hidden border border-ds-border aspect-video bg-black/30">
@@ -209,9 +245,10 @@ function VideoBlockEditor({ section, update }: { section: LessonSection; update:
 interface Props {
   section: LessonSection
   onChange: (updated: LessonSection) => void
+  uploadContext?: UploadMediaContext
 }
 
-export default function BlockEditor({ section, onChange }: Props) {
+export default function BlockEditor({ section, onChange, uploadContext }: Props) {
   const update = (partial: Partial<LessonSection>) => onChange({ ...section, ...partial })
 
   const typeLabel: Record<SectionType, string> = {
@@ -281,12 +318,12 @@ export default function BlockEditor({ section, onChange }: Props) {
 
       {/* IMAGE */}
       {(section.type === 'image' || section.type === 'gif') && (
-        <ImageBlockEditor section={section} update={update} />
+        <ImageBlockEditor section={section} update={update} uploadContext={uploadContext} />
       )}
 
       {/* VIDEO */}
       {section.type === 'video' && (
-        <VideoBlockEditor section={section} update={update} />
+        <VideoBlockEditor section={section} update={update} uploadContext={uploadContext} />
       )}
 
       {/* MATH */}
@@ -382,7 +419,12 @@ export default function BlockEditor({ section, onChange }: Props) {
         <div className="space-y-2">
           <div className="flex gap-2">
             <input value={section.modelUrl ?? ''} onChange={(e) => update({ modelUrl: e.target.value || null })} placeholder="GLB/GLTF model URL" className="studio-field" />
-            <UploadBtn accept=".glb,.gltf" onUrl={(u) => update({ modelUrl: u })} label="Upload .glb" />
+            <UploadBtn
+              accept=".glb,.gltf"
+              onUrl={(u) => update({ modelUrl: u })}
+              label="Upload .glb"
+              uploadContext={uploadContext}
+            />
           </div>
           {section.modelUrl && (
             <div className="h-[280px] rounded-lg border border-ds-accent-strong overflow-hidden bg-black/40">

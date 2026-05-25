@@ -2,9 +2,10 @@
 
 import { useMemo } from 'react'
 import dynamic from 'next/dynamic'
-import type { Lesson, LessonSection, ResourceLink } from '@/features/courses/api/coursesApi'
+import type { LessonSection, ResourceLink } from '@/features/courses/api/coursesApi'
 import { resolveMediaUrl } from '@/lib/apiConfig'
-import { earthHistoryData, findStageByTime } from '@/features/content3d/earth/public'
+import { earthHistoryData, findStageByTime, useCourseStageFossils } from '@/features/content3d/earth/public'
+import type { Lesson } from '@/features/courses/public'
 import { FeaturedOrganisms } from '@/features/content3d/earth/ui/FeaturedOrganisms'
 import { Loading } from '@/components/ui/Loading'
 import { SectionPreview } from '@/components/studio/LessonPreview'
@@ -21,6 +22,12 @@ function getResourceLabel(link: ResourceLink, idx: number) {
 }
 
 export function LessonContentBody({ lesson }: { lesson: Lesson }) {
+  const earthStage = useMemo(
+    () => (lesson.stageTime != null ? findStageByTime(earthHistoryData, lesson.stageTime) : null),
+    [lesson.stageTime],
+  )
+  const earthFossils = useCourseStageFossils(earthStage)
+
   const sections = (lesson.sections ?? []) as LessonSection[]
   const videoSections = useMemo(() => sections.filter(isVideoSection), [sections])
   const readingSections = useMemo(() => sections.filter((s) => !isVideoSection(s)), [sections])
@@ -145,7 +152,7 @@ export function LessonContentBody({ lesson }: { lesson: Lesson }) {
                       </div>
                     )}
                     <div className="h-[380px]">
-                      <EarthScene overrideStage={stage} />
+                      <EarthScene overrideStage={stage} overrideFossils={earthFossils} />
                     </div>
                   </>
                 )

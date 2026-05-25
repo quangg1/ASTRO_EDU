@@ -35,8 +35,9 @@ import {
   fetchTaxonomyRegistryEditor,
   type TaxonomyRegistry,
 } from '@/features/concepts/public'
-import type { Lesson } from '@/features/courses/api/coursesApi'
+import type { Lesson } from '@/features/courses/public'
 import { useAuthStore } from '@/features/auth/public'
+import { canEnterStudio } from '@/lib/roles'
 import {
   BookOpen,
   ChevronDown,
@@ -57,7 +58,7 @@ import { LearningPathRecallQuizEditor } from '@/components/studio/LearningPathRe
 import { NASA_SHOWCASE_ITEMS } from '@/lib/showcaseEntities'
 import { useShowcaseCatalogGen } from '@/components/showcase/ShowcaseCatalogProvider'
 import { mergeNasaCatalog, type ResolvedNasaCatalogItem } from '@/lib/mergeShowcaseCatalog'
-import { fetchPublicShowcaseEntityContents, type ShowcaseEntityContentDTO } from '@/features/content3d/showcase/api/showcaseEntitiesApi'
+import { fetchPublicShowcaseEntityContents, type ShowcaseEntityContentDTO } from '@/features/content3d/showcase/public'
 import { entityHasExploreHistoryViewer } from '@/app/studio/showcase-entities/entityHistoryCapability'
 import { studioFallbackBundle } from '@/features/content3d/narrative/lib/legacyPresets'
 import { narrativeSitesForBeat } from '@/features/content3d/narrative/lib/siteVisibility'
@@ -1090,7 +1091,22 @@ function LearningPathLessonEditor({
                       </button>
                     </div>
                   </div>
-                  <BlockEditor section={sec} onChange={(updated) => blockActions.updateAt(bi, updated)} />
+                  <BlockEditor
+                    section={sec}
+                    onChange={(updated) => blockActions.updateAt(bi, updated)}
+                    uploadContext={{
+                      purpose: 'learning-path-lesson',
+                      entityId: activeLesson.id,
+                      variant:
+                        sec.type === 'image' || sec.type === 'gif'
+                          ? `blocks/image-${bi}`
+                          : sec.type === 'video'
+                            ? `blocks/video-${bi}`
+                            : sec.type === '3d'
+                              ? `blocks/model-${bi}`
+                              : `blocks/block-${bi}`,
+                    }}
+                  />
                 </div>
               ))}
               <BlockPalette onAdd={(sec) => blockActions.append(sec)} />
@@ -1222,7 +1238,7 @@ export default function StudioLearningPathPage() {
 
   useEffect(() => {
     if (checked && !user) router.replace('/login?redirect=/studio/learning-path')
-    if (checked && user && user.role !== 'teacher' && user.role !== 'admin') router.replace('/')
+    if (checked && user && !canEnterStudio(user)) router.replace('/')
   }, [checked, user, router])
 
   useEffect(() => {

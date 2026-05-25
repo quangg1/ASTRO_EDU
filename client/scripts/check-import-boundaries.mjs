@@ -34,12 +34,7 @@ const FORBIDDEN_RE =
 
 // Debt allowlist — entries MUST cite a tracking note. Remove only after the file
 // receives data via props or a domain hook from the parent (page/orchestrator).
-const ALLOWLIST = new Set([
-  // PR7 (audit drift 2.5.A): pre-existing debt — EarthScene fetches fossils per
-  // stage directly. Refactor target: lift fetch into app/explore (parent) and
-  // pass `fossils` via props. Tracked in docs/ARCHITECTURE_AUDIT.md §2.5.A.
-  'src/components/3d/EarthScene.tsx',
-])
+const ALLOWLIST = new Set([])
 
 function* walk(dir) {
   let entries

@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
-import { fetchCourses } from '@/features/courses/api/coursesApi'
-import type { Course } from '@/features/courses/api/coursesApi'
+import { fetchCourses } from '@/features/courses/public'
+import type { Course } from '@/features/courses/public'
 import { DEPTH_ORDER, type LearningConcept, type LearningModule } from '@/data/learningPathCurriculum'
 import { useLearningPath } from '@/features/learning-path/public'
 

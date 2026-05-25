@@ -2,8 +2,9 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { Gem } from 'lucide-react'
+import { Gem, ChevronRight } from 'lucide-react'
 import { useAuthStore } from '@/features/auth/public'
+import { LearnerTierBadge } from '@/components/profile/LearnerTierBadge'
 import { loadGemWallet, syncGemWallet, type GemWalletState } from '@/features/rewards/public'
 
 function formatTransactionDate(input: string) {
@@ -31,10 +32,10 @@ export default function GemPage() {
 
   const earnWays = useMemo(
     () => [
-      { label: 'Hoàn thành một bài trong lộ trình', reward: '+5 Gem' },
-      { label: 'Trả lời câu hỏi trong diễn đàn', reward: '+5 Gem' },
-      { label: 'Hoàn thành khóa học', reward: '+50 Gem' },
-      { label: 'Duy trì chuỗi 7 ngày', reward: '+20 Gem' },
+      { label: 'Hoàn thành bài học (lộ trình, đủ thời gian)', reward: '+5 Gem' },
+      { label: 'Hoàn thành depth / recall quiz', reward: '+8–20 Gem' },
+      { label: 'Khám phá thực thể 3D (Deep History)', reward: '+5 Gem' },
+      { label: 'Duy trì chuỗi ngày học', reward: 'Streak' },
     ],
     [],
   )
@@ -50,6 +51,54 @@ export default function GemPage() {
           Vào cửa hàng
         </Link>
       </header>
+
+      <section className="rounded-2xl border border-white/10 bg-[#0c0a12] p-5">
+        <p className="text-sm text-slate-300 leading-relaxed">
+          Gem là phần thưởng học tập — ghi nhận effort của học sinh. Gem giúp học sinh tiết kiệm khi đầu tư thêm,
+          không phải thay thế đầu tư đó. Khóa học trả phí thanh toán trên trang checkout; gem chỉ dùng voucher
+          giảm giá tối đa 15% hoặc mở thử module.
+        </p>
+      </section>
+
+      {wallet.learnerTier && (
+        <Link
+          href="/gem/tiers"
+          className="block rounded-2xl border border-violet-500/30 bg-gradient-to-r from-violet-500/10 to-cyan-500/10 p-5 hover:border-violet-400/45 transition-colors group"
+        >
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-xs uppercase tracking-wider text-slate-500">Hạng Learner</p>
+              <p className="mt-1 text-lg font-semibold text-white flex items-center gap-2">
+                <LearnerTierBadge tierId={wallet.learnerTier.current.id} size="md" />
+                {wallet.learnerTier.current.emoji} {wallet.learnerTier.current.nameVi}
+              </p>
+              {wallet.learnerTier.next ? (
+                <p className="mt-1 text-xs text-slate-400">
+                  {(wallet.totalGemsEarned ?? wallet.learnerTier.gemsEarned).toLocaleString('vi-VN')} gem đã kiếm ·
+                  Còn {wallet.learnerTier.gemsToNext.toLocaleString('vi-VN')} tới{' '}
+                  {wallet.learnerTier.next.emoji} {wallet.learnerTier.next.nameVi}
+                </p>
+              ) : (
+                <p className="mt-1 text-xs text-amber-200/80">Hạng cao nhất</p>
+              )}
+            </div>
+            <ChevronRight className="h-5 w-5 text-slate-500 group-hover:text-cyan-300 shrink-0" aria-hidden />
+          </div>
+          {wallet.learnerTier.next && (
+            <div className="mt-4 h-1.5 rounded-full bg-white/10 overflow-hidden">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-violet-500"
+                style={{ width: `${wallet.learnerTier.progressPct}%` }}
+              />
+            </div>
+          )}
+          {wallet.learnerTier.current.checkoutDiscountPct > 0 && (
+            <p className="mt-3 text-xs text-cyan-200/90">
+              Giảm {wallet.learnerTier.current.checkoutDiscountPct}% khóa trả phí (không trừ gem) — xem so sánh hạng
+            </p>
+          )}
+        </Link>
+      )}
 
       <section className="rounded-2xl border border-cyan-500/35 bg-[#101224] p-5 sm:p-8 shadow-[0_10px_40px_rgba(0,0,0,0.35)]">
         <div className="mx-auto max-w-sm rounded-2xl border border-cyan-500/35 bg-[#0d1020] py-9 px-6 text-center">

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useAuthStore, updateProfile, changePassword, deactivateMyAccount } from '@/features/auth/public'
-import { canModerate } from '@/lib/roles'
+import { canAdminContentOverride, canEnterStudio, canManagePlatform, canModerate } from '@/lib/roles'
 import { ProfileAvatarEditor } from '@/components/profile/ProfileAvatarEditor'
 import { AvatarDecorationPicker } from '@/components/profile/AvatarDecorationPicker'
 import { Button, Input } from '@/design-system'
@@ -119,7 +119,15 @@ export default function ProfilePage() {
           ← Về trang chủ
         </Link>
         <h1 className="text-2xl font-bold text-white mb-2">Hồ sơ</h1>
-        <p className="text-sm text-slate-500 mb-6">Tên hiển thị và ảnh đại diện dùng trên header và các khu vực có tài khoản.</p>
+        <p className="text-sm text-slate-500 mb-2">Tên hiển thị và ảnh đại diện dùng trên header và các khu vực có tài khoản.</p>
+        {user?.id && (
+          <p className="text-sm mb-6">
+            <Link href={`/users/${user.id}`} className="text-cyan-400 hover:text-cyan-300">
+              Xem hồ sơ công khai (như người khác thấy) →
+            </Link>
+          </p>
+        )}
+        {!user?.id && <div className="mb-6" />}
 
         <div className="flex flex-wrap gap-3 mb-8">
           <Link
@@ -134,6 +142,12 @@ export default function ProfilePage() {
           >
             Ví Gem
           </Link>
+          <Link
+            href="/gem/tiers"
+            className="px-4 py-2 rounded-lg bg-violet-500/15 border border-violet-500/35 text-violet-200 text-sm hover:bg-violet-500/25"
+          >
+            Hạng Learner
+          </Link>
           {isStudentRole(user.role) && (
             <Link
               href="/apply-teacher"
@@ -142,9 +156,16 @@ export default function ProfilePage() {
               Xin quyền giảng viên
             </Link>
           )}
-          {(user.role === 'teacher' || user.role === 'admin') && (
-            <Link href="/studio" className="px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-gray-300 text-sm hover:bg-white/15">
-              Studio
+          {canEnterStudio(user) && (
+            <Link
+              href="/studio"
+              className={`px-4 py-2 rounded-lg text-sm hover:bg-white/15 ${
+                canAdminContentOverride(user)
+                  ? 'bg-amber-500/15 border border-amber-500/30 text-amber-200'
+                  : 'bg-white/10 border border-white/20 text-gray-300'
+              }`}
+            >
+              {canAdminContentOverride(user) ? 'Studio (override)' : 'Studio'}
             </Link>
           )}
           {canModerate(user) && (
@@ -152,12 +173,12 @@ export default function ProfilePage() {
               href="/dashboard/moderate"
               className="px-4 py-2 rounded-lg bg-violet-500/15 border border-violet-500/35 text-violet-200 text-sm hover:bg-violet-500/25"
             >
-              Kiểm duyệt
+              Kiểm duyệt diễn đàn
             </Link>
           )}
-          {user.role === 'admin' && (
+          {canManagePlatform(user) && (
             <Link href="/admin" className="px-4 py-2 rounded-lg bg-amber-500/20 border border-amber-500/30 text-amber-300 text-sm hover:bg-amber-500/30">
-              Quản trị
+              Quản trị hệ thống
             </Link>
           )}
         </div>

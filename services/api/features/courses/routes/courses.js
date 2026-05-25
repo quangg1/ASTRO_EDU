@@ -4,6 +4,13 @@ const Enrollment = require('../models/Enrollment');
 const { authMiddleware, optionalAuth, requireRole, canEditCourse } = require('../../../shared/jwtAuth');
 const { requireString } = require('../../../shared/validation');
 const { AppError } = require('../../../shared/errors');
+const {
+  normalizeCoursePricingFields,
+  courseRequiresPayment,
+  paidCoursesQuery,
+  freeCoursesQuery,
+} = require('../lib/coursePricing');
+const { notifyFreeEnrollment } = require('../../notifications/services/notificationService');
 
 const router = express.Router();
 
@@ -16,7 +23,7 @@ function sortedLessons(course) {
 }
 
 function courseIsPaidLocked(course) {
-  return Boolean(course.isPaid && Number(course.price) > 0);
+  return courseRequiresPayment(course);
 }
 
 function lessonOutlinePayload(l) {
@@ -72,9 +79,10 @@ function buildCourseDetailPayload(course, enrollment, outlineOnly) {
     thumbnail: course.thumbnail,
     level: course.level,
     durationWeeks: course.durationWeeks ?? null,
-    price: course.price ?? 0,
+    price: Math.round(Number(course.price) || 0),
     currency: course.currency ?? 'VND',
-    isPaid: course.isPaid ?? false,
+    isPaid: Boolean(course.isPaid),
+    requiresPayment: courseRequiresPayment(course),
     modules: mods,
     lessons,
     enrollment: enrollment
@@ -113,31 +121,36 @@ router.get('/', optionalAuth, async (req, res) => {
     }
     const pricing = String(req.query.pricing || '').trim().toLowerCase();
     if (pricing === 'free') {
-      pieces.push({
-        $or: [{ isPaid: false }, { price: { $lte: 0 } }],
-      });
+      pieces.push(freeCoursesQuery());
     }
     if (pricing === 'paid') {
-      pieces.push({ isPaid: true, price: { $gt: 0 } });
+      pieces.push(paidCoursesQuery());
     }
 
     const filter = pieces.length === 1 ? pieces[0] : { $and: pieces };
     const courses = await Course.find(filter)
-      .select('title slug description thumbnail level lessons')
+      .select('title slug description thumbnail level lessons price currency isPaid durationWeeks')
       .sort({ createdAt: -1 })
       .lean();
-    const list = courses.map((c) => ({
-      id: c._id,
-      title: c.title,
-      slug: c.slug,
-      description: c.description,
-      thumbnail: c.thumbnail,
-      level: c.level,
-      lessonCount: (c.lessons || []).length,
-      price: c.price ?? 0,
-      currency: c.currency ?? 'VND',
-      isPaid: c.isPaid ?? false,
-    }));
+    const list = courses.map((c) => {
+      const price = Math.round(Number(c.price) || 0);
+      const isPaid = Boolean(c.isPaid);
+      const requiresPayment = courseRequiresPayment({ isPaid, price });
+      return {
+        id: c._id,
+        title: c.title,
+        slug: c.slug,
+        description: c.description,
+        thumbnail: c.thumbnail,
+        level: c.level,
+        lessonCount: (c.lessons || []).length,
+        durationWeeks: c.durationWeeks ?? null,
+        price,
+        currency: c.currency ?? 'VND',
+        isPaid,
+        requiresPayment,
+      };
+    });
     res.json({ success: true, data: list });
   } catch (err) {
     console.error('List courses error:', err);
@@ -153,22 +166,28 @@ router.get('/editor/list', authMiddleware, requireRole('teacher', 'admin'), asyn
       query.teacherId = req.userId;
     }
     const courses = await Course.find(query)
-      .select('title slug description thumbnail level lessons published')
+      .select('title slug description thumbnail level lessons published price currency isPaid durationWeeks')
       .sort({ updatedAt: -1 })
       .lean();
-    const list = courses.map((c) => ({
-      id: c._id,
-      title: c.title,
-      slug: c.slug,
-      description: c.description,
-      thumbnail: c.thumbnail,
-      level: c.level,
-      lessonCount: (c.lessons || []).length,
-      price: c.price ?? 0,
-      currency: c.currency ?? 'VND',
-      isPaid: c.isPaid ?? false,
-      published: c.published ?? false,
-    }));
+    const list = courses.map((c) => {
+      const price = Math.round(Number(c.price) || 0);
+      const isPaid = Boolean(c.isPaid);
+      return {
+        id: c._id,
+        title: c.title,
+        slug: c.slug,
+        description: c.description,
+        thumbnail: c.thumbnail,
+        level: c.level,
+        lessonCount: (c.lessons || []).length,
+        durationWeeks: c.durationWeeks ?? null,
+        price,
+        currency: c.currency ?? 'VND',
+        isPaid,
+        requiresPayment: courseRequiresPayment({ isPaid, price }),
+        published: c.published ?? false,
+      };
+    });
     res.json({ success: true, data: list });
   } catch (err) {
     console.error('Editor list courses error:', err);
@@ -316,6 +335,11 @@ router.post('/:slug/enroll', authMiddleware, async (req, res) => {
       courseId: course._id,
       progress,
     });
+    void notifyFreeEnrollment({
+      userId: req.userId,
+      courseTitle: course.title,
+      courseSlug: course.slug,
+    });
     res.status(201).json({
       success: true,
       message: 'Đăng ký khóa học thành công',
@@ -389,9 +413,10 @@ router.get('/:slug/editor', authMiddleware, requireRole('teacher', 'admin'), asy
         level: data.level,
         durationWeeks: data.durationWeeks,
         published: data.published,
-        price: data.price ?? 0,
+        price: Math.round(Number(data.price) || 0),
         currency: data.currency ?? 'VND',
-        isPaid: data.isPaid ?? false,
+        isPaid: Boolean(data.isPaid),
+        requiresPayment: courseRequiresPayment(data),
         crossSellTutorialHref: data.crossSellTutorialHref ?? '/tutorial',
         crossSellTutorialLabelVi: data.crossSellTutorialLabelVi ?? '',
         crossSellTutorialBodyVi: data.crossSellTutorialBodyVi ?? '',
@@ -418,6 +443,7 @@ router.put('/:slug/editor', authMiddleware, requireRole('teacher', 'admin'), asy
       isPaid,
       modules,
       lessons,
+      thumbnail,
       crossSellTutorialHref,
       crossSellTutorialLabelVi,
       crossSellTutorialBodyVi,
@@ -438,12 +464,18 @@ router.put('/:slug/editor', authMiddleware, requireRole('teacher', 'admin'), asy
 
     if (typeof title === 'string' && title.trim()) course.title = title.trim();
     if (typeof description === 'string') course.description = description;
+    if (thumbnail === null || thumbnail === '') {
+      course.thumbnail = null;
+    } else if (typeof thumbnail === 'string' && thumbnail.trim()) {
+      course.thumbnail = thumbnail.trim().slice(0, 2048);
+    }
     if (['beginner', 'intermediate', 'advanced'].includes(level)) course.level = level;
     if (durationWeeks != null) course.durationWeeks = Number(durationWeeks) || null;
     if (typeof published === 'boolean') course.published = published;
     if (price != null) course.price = Math.max(0, Math.floor(Number(price)) || 0);
     if (['VND', 'USD'].includes(currency)) course.currency = currency;
     if (typeof isPaid === 'boolean') course.isPaid = isPaid;
+    normalizeCoursePricingFields(course);
     if (typeof crossSellTutorialHref === 'string' && crossSellTutorialHref.trim()) {
       course.crossSellTutorialHref = crossSellTutorialHref.trim().slice(0, 512);
     }

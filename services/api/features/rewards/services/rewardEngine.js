@@ -6,6 +6,7 @@ const Achievement = require('../models/Achievement');
 const UserAchievement = require('../models/UserAchievement');
 const { DWELL_SEC_MIN, GEM_EARN, depthGemsMap } = require('../constants/gemEarn');
 const { getCachedSeasonalMultiplier, scaleEarn } = require('./gemRuntimeConfigService');
+const { handleLearnerTierProgression } = require('./learnerTierService');
 
 const DEPTH_GEMS = depthGemsMap();
 
@@ -49,6 +50,9 @@ async function applyGemEarn(userId, amount, txBase) {
   if (nextLevel !== (updated.level ?? 1)) {
     await UserReward.updateOne({ userId }, { $set: { level: nextLevel } });
   }
+  void handleLearnerTierProgression(userId, prevTotal, nextTotal).catch((err) => {
+    console.error('[rewards] learner tier progression failed:', err?.message || err);
+  });
   await GemTransaction.create({
     ...txBase,
     userId,

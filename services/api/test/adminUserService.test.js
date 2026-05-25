@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { updateAdminUserRole, updateAdminUserStatus } = require('../services/adminUserService');
+const { updateAdminUserRole, updateAdminUserStatus } = require('../features/admin/services/adminUserService');
 
 test('updateAdminUserRole rejects admin self-demotion', async () => {
   await assert.rejects(

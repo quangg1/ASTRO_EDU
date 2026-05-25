@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useAuthStore } from '@/features/auth/public'
-import { canModerate } from '@/lib/roles'
+import { canAccessStudio, canAdminContentOverride, canModerate, canManagePlatform } from '@/lib/roles'
 import { navItemsForSurface, navLabel, type NavGroup } from '@/lib/navigationConfig'
 
 function navItemActive(href: string, pathname: string): boolean {
@@ -93,7 +93,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
               </ul>
             </div>
           )}
-          {user && (user.role === 'teacher' || user.role === 'admin') && (
+          {user && (canAccessStudio(user) || canAdminContentOverride(user)) && (
             <div>
               <p className="px-3 mb-1.5 text-[10px] uppercase tracking-wider text-slate-500">Giảng viên</p>
               <ul>
@@ -143,7 +143,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
               </ul>
             </div>
           )}
-          {user?.role === 'admin' && (
+          {user && canManagePlatform(user) && (
             <div>
               <p className="px-3 mb-1.5 text-[10px] uppercase tracking-wider text-slate-500">Quản trị</p>
               <ul>

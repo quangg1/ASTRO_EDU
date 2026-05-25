@@ -31,11 +31,8 @@ export type {
 export {
   fetchAdminTeacherApplications,
   reviewTeacherApplication,
-} from '@/features/auth/api/teacherApplicationsApi'
-export type {
-  TeacherApplication,
-  TeacherApplicationWithUser,
-} from '@/features/auth/api/teacherApplicationsApi'
+} from '@/features/auth/public'
+export type { TeacherApplication, TeacherApplicationWithUser } from '@/features/auth/public'
 
 // Analytics (cross-domain reporting) -------------------------------------------
 export {
@@ -81,3 +78,14 @@ export type {
   DecorationCategoryAdminDTO,
 } from './api/adminGemEconomyApi'
 export type { DecorationBulkImportResult } from '@/features/rewards/public'
+
+export { sendAdminBroadcast } from './api/adminBroadcastApi'
+export type { BroadcastRole } from './api/adminBroadcastApi'
+
+export {
+  fetchAdminPromoCodes,
+  createAdminPromoCode,
+  patchAdminPromoCode,
+  deleteAdminPromoCode,
+} from './api/adminPromoCodesApi'
+export type { PromoCodeAdmin } from './api/adminPromoCodesApi'

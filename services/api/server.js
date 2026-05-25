@@ -1,4 +1,5 @@
 require('dotenv').config();
+const http = require('http');
 const express = require('express');
 const cors = require('cors');
 const connectDB = require('./config/db');
@@ -21,9 +22,15 @@ const {
 } = require('./features/content3d');
 const { gemsRouter, showcaseGamificationRouter } = require('./features/rewards');
 const paymentRouter = require('./features/payment');
-const { forumsRouter, postsRouter, newsRouter } = require('./features/community');
+const promotionsRouter = require('./features/promotions');
+const notificationsRouter = require('./features/notifications');
+const usersRouter = require('./features/users');
+const { forumsRouter, postsRouter, commentsRouter, newsRouter, communityRouter } = require('./features/community');
+const { bootstrapCommunityForums } = require('./features/community/services/forumBootstrapService');
+const { startNewsCrawlScheduler } = require('./features/community/jobs/newsCrawlScheduler');
 const mediaRouter = require('./features/media');
 const adminRouter = require('./features/admin');
+const { attachNotificationWebSocket, WS_PATH } = require('./features/notifications/ws/attachNotificationWs');
 
 const env = validateApiEnv();
 const app = express();
@@ -49,9 +56,14 @@ app.use('/api/planet-narratives', planetNarrativeRouter);
 app.use('/api/fossils', fossilsRouter);
 app.use('/api/phyla', phylaRouter);
 app.use('/api/payments', paymentRouter);
+app.use('/api/promotions', promotionsRouter);
+app.use('/api/notifications', notificationsRouter);
+app.use('/api/users', usersRouter);
 app.use('/api/forums', forumsRouter);
 app.use('/api/posts', postsRouter);
+app.use('/api/comments', commentsRouter);
 app.use('/api/news', newsRouter);
+app.use('/api/community', communityRouter);
 app.use('/api/admin', adminRouter);
 app.use(mediaRouter); // POST /upload, GET /files/*
 app.use(errorMiddleware);
@@ -63,19 +75,31 @@ app.get('/health', (req, res) => {
 async function start() {
   await connectDB();
   await bootstrapCoreData();
+  const forumBootstrap = await bootstrapCommunityForums();
+  if (forumBootstrap.removedForums > 0) {
+    console.log(
+      `[community] Đã xóa ${forumBootstrap.removedForums} forum cũ (${forumBootstrap.removedPosts} bài)`,
+    );
+  }
 
-  app.listen(PORT, () => {
+  const server = http.createServer(app);
+  attachNotificationWebSocket(server);
+  startNewsCrawlScheduler({ info: (msg, meta) => console.log(msg, meta || ''), error: (msg, meta) => console.error(msg, meta || '') });
+
+  server.listen(PORT, () => {
     console.log(`
 ╔══════════════════════════════════════════════════════════════╗
 ║           Galaxies Unified API (Modular Monolith)            ║
 ╠══════════════════════════════════════════════════════════════╣
 ║  ${env.clientUrl.padEnd(54)}║
 ║  (listen PORT=${PORT})                                           ║
+║  ${WS_PATH.padEnd(54)}║
 ║  /auth          - register, login, Firebase, me, admin      ║
 ║  /api/courses   - courses, enroll, progress, editor           ║
 ║  /api/tutorials - tutorials, categories, editor               ║
 ║  /api/learning-path - curriculum (public + editor)            ║
-║  /api/payments  - create-qr, create-url, ipn, return, status ║
+║  /api/payments  - checkout-quote, checkout, confirm, orders  ║
+║  /api/notifications - inbox + WebSocket push                ║
 ║  /api/forums    - forums, posts                               ║
 ║  /api/posts     - post detail, comments, vote                  ║
 ║  /api/news      - tin thiên văn                               ║

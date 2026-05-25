@@ -1,7 +1,7 @@
 'use client'
 
 import { useId, useRef, useState } from 'react'
-import { uploadMedia } from '@/features/courses/api/coursesApi'
+import { uploadMedia, type UploadMediaContext } from '@/features/courses/public'
 
 type Props = {
   label: string
@@ -9,9 +9,11 @@ type Props = {
   value: string
   onChange: (url: string) => void
   accept: string
+  /** Key S3: `showcase-entities/{entityId}/{variant}.ext` */
+  uploadContext?: UploadMediaContext
 }
 
-export function ShowcaseMediaUrlField({ label, description, value, onChange, accept }: Props) {
+export function ShowcaseMediaUrlField({ label, description, value, onChange, accept, uploadContext }: Props) {
   const id = useId()
   const urlInputId = `${id}-url`
   const fileRef = useRef<HTMLInputElement>(null)
@@ -24,7 +26,7 @@ export function ShowcaseMediaUrlField({ label, description, value, onChange, acc
     if (!file) return
     setErr('')
     setUploading(true)
-    const r = await uploadMedia(file)
+    const r = await uploadMedia(file, uploadContext)
     setUploading(false)
     if (r.success && r.url) onChange(r.url)
     else setErr(r.error || 'Upload thất bại')

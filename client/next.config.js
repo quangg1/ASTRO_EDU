@@ -16,8 +16,11 @@ const UNIFIED_API_ROUTE_SEGMENTS = [
   'fossils',
   'phyla',
   'payments',
+  'promotions',
+  'notifications',
   'forums',
   'posts',
+  'comments',
   'news',
   'admin',
 ];
@@ -80,6 +83,9 @@ const nextConfig = {
         destination: `${apiOrigin}/api/${segment}`,
       },
     ]);
+    const wsRules = [
+      { source: '/ws/:path*', destination: `${apiOrigin}/ws/:path*` },
+    ];
     const authRules = [
       { source: '/auth/:path*', destination: `${apiOrigin}/auth/:path*` },
       { source: '/auth', destination: `${apiOrigin}/auth` },
@@ -89,7 +95,9 @@ const nextConfig = {
       { source: '/files/:path*', destination: `${apiOrigin}/files/:path*` },
       { source: '/files', destination: `${apiOrigin}/files` },
     ];
-    return mediaRule ? [mediaRule, ...apiRules, ...authRules] : [...apiRules, ...authRules];
+    return mediaRule
+      ? [mediaRule, ...wsRules, ...apiRules, ...authRules]
+      : [...wsRules, ...apiRules, ...authRules];
   },
 
   async headers() {

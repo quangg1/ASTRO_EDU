@@ -5,7 +5,8 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { ChevronDown, ChevronUp, Layers } from 'lucide-react'
 import { useAuthStore } from '@/features/auth/public'
-import { fetchMyCourses, type MyCourse } from '@/features/courses/api/coursesApi'
+import { fetchMyCourses, type MyCourse } from '@/features/courses/public'
+import { CourseCatalogCard, CourseCatalogCardSkeleton } from '@/components/courses/CourseCatalogCard'
 import { SkeletonList } from '@/components/ui/Skeleton'
 import { fetchMyOrders, type Order } from '@/features/payment/public'
 import { getLessonById } from '@/data/learningPathCurriculum'
@@ -211,7 +212,11 @@ export default function MyCoursesPage() {
 
         <h2 className="text-lg font-semibold text-white mb-3">Khóa đã ghi danh</h2>
         {loading ? (
-          <SkeletonList count={3} />
+          <div className="grid gap-5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 mb-10">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <CourseCatalogCardSkeleton key={i} />
+            ))}
+          </div>
         ) : courses.length === 0 ? (
           <div className="rounded-xl border border-white/10 bg-[#0a0f17] p-8 text-center mb-10">
             <p className="text-gray-500 mb-4">Bạn chưa ghi danh khóa học trả phí nào.</p>
@@ -223,35 +228,26 @@ export default function MyCoursesPage() {
             </Link>
           </div>
         ) : (
-          <div className="grid gap-4 mb-10">
+          <div className="grid gap-5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 mb-10">
             {courses.map((c) => (
-              <Link
+              <CourseCatalogCard
                 key={c.id}
                 href={`/courses/${c.slug}/learn`}
-                className="block glass rounded-xl p-5 hover:bg-white/10 transition-colors border border-white/10"
-              >
-                <div className="flex items-start justify-between gap-4">
-                  <div className="min-w-0 flex-1">
-                    <h2 className="font-semibold text-white mb-1">{c.title}</h2>
-                    <p className="text-sm text-gray-400 line-clamp-2 mb-2">{c.description || 'Course'}</p>
-                    <div className="flex items-center gap-3 text-xs text-cyan-400/80">
-                      <span>
-                        {c.completedCount}/{c.totalLessons} lessons
-                      </span>
-                      <span>{c.percentComplete}% complete</span>
-                    </div>
-                  </div>
-                  <div className="w-24 shrink-0 h-12 rounded-lg bg-white/5 flex items-center justify-center">
-                    <span className="text-lg font-bold text-cyan-400">{c.percentComplete}%</span>
-                  </div>
-                </div>
-                <div className="mt-3 h-1.5 rounded-full bg-white/10 overflow-hidden">
-                  <div
-                    className="h-full rounded-full bg-cyan-500/80 transition-all"
-                    style={{ width: `${c.percentComplete}%` }}
-                  />
-                </div>
-              </Link>
+                course={{
+                  slug: c.slug,
+                  title: c.title,
+                  description: c.description,
+                  thumbnail: c.thumbnail,
+                  level: c.level,
+                  lessonCount: c.totalLessons,
+                  isPaid: false,
+                }}
+                progress={{
+                  percent: c.percentComplete,
+                  completed: c.completedCount,
+                  total: c.totalLessons,
+                }}
+              />
             ))}
           </div>
         )}

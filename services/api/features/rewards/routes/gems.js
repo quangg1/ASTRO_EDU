@@ -11,8 +11,27 @@ const {
   purchaseDecoration,
   equipDecoration,
 } = require('../services/avatarDecorationService');
+const { listLearnerTiersPublic } = require('../constants/learnerTiers');
+const { getWalletLearnerMeta } = require('../services/learnerTierService');
 
 const router = express.Router();
+
+/** Public — catalog hạng Learner (trang so sánh). */
+router.get('/learner-tiers', async (req, res) => {
+  try {
+    res.json({
+      success: true,
+      data: {
+        tiers: listLearnerTiersPublic(),
+        policyVi:
+          'Hạng tính trên tổng gem bạn đã kiếm (không giảm khi tiêu). Mỗi đơn khóa trả phí chỉ một ưu đãi: coupon, voucher gem, hoặc giảm giá hạng.',
+      },
+    });
+  } catch (err) {
+    console.error('GET /gems/learner-tiers error:', err);
+    res.status(500).json({ success: false, error: 'Lỗi máy chủ' });
+  }
+});
 
 /** Public — client tab Khóa học / voucher + seasonal hiển thị */
 router.get('/shop/bootstrap', async (req, res) => {
@@ -117,11 +136,15 @@ router.get('/wallet', authMiddleware, async (req, res) => {
         depth: t.depth || undefined,
       },
     }));
+    const totalGemsEarned = ur?.totalGemsEarned ?? 0;
+    const learnerTier = getWalletLearnerMeta(totalGemsEarned);
     res.json({
       success: true,
       data: {
         balance,
         level,
+        totalGemsEarned,
+        learnerTier,
         transactions,
       },
     });

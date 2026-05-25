@@ -2,7 +2,7 @@
 
 import { useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { setToken, fetchMe } from '@/features/auth/api/authApi'
+import { setToken, fetchMe } from '@/features/auth/public'
 import { useAuthStore } from '@/features/auth/public'
 
 function CallbackContent() {

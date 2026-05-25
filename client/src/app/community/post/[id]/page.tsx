@@ -19,8 +19,13 @@ import {
   type Post,
   type Comment,
 } from '@/features/community/public'
-import { canModerate } from '@/lib/roles'
+import { canModerateOrAdminOverride } from '@/lib/roles'
+import { ReportContentButton } from '@/components/community/moderation/ReportContentButton'
 import { PostMarkdown } from '@/components/community/PostMarkdown'
+import { CommentThread } from '@/components/community/comments/CommentThread'
+import { PostLearningContextChip } from '@/components/community/learning/PostLearningContextChip'
+import { UserProfileLink } from '@/components/profile/UserProfileLink'
+import { readRouteCache, writeRouteCache } from '@/lib/clientRouteCache'
 
 function formatDate(date?: string): string {
   if (!date) return ''
@@ -32,18 +37,30 @@ export default function PostPage() {
   const router = useRouter()
   const id = params.id as string
   const { user } = useAuthStore()
-  const [data, setData] = useState<{ post: Post & { comments: Comment[]; myVote?: number | null } } | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [commentText, setCommentText] = useState('')
-  const [submitting, setSubmitting] = useState(false)
+  const cacheKey = id ? `post:${id}` : ''
+  const cached = cacheKey ? readRouteCache<{ post: Post & { comments: Comment[]; myVote?: number | null } }>(cacheKey) : null
+  const [data, setData] = useState<{ post: Post & { comments: Comment[]; myVote?: number | null } } | null>(cached)
+  const [loading, setLoading] = useState(!cached)
   const [modAction, setModAction] = useState<'pin' | 'delete' | null>(null)
   const detailViewRecorded = useRef(false)
 
   useEffect(() => {
     if (!id) return
     detailViewRecorded.current = false
-    fetchPost(id).then(setData).finally(() => setLoading(false))
-  }, [id])
+    const hit = readRouteCache<typeof data>(cacheKey)
+    if (hit) {
+      setData(hit)
+      setLoading(false)
+    } else if (!data) {
+      setLoading(true)
+    }
+    fetchPost(id)
+      .then((next) => {
+        if (next) writeRouteCache(cacheKey, next)
+        setData(next)
+      })
+      .finally(() => setLoading(false))
+  }, [id, cacheKey])
 
   useEffect(() => {
     if (!id || loading || !data?.post?._id) return
@@ -58,13 +75,10 @@ export default function PostPage() {
     })
   }, [id, data?.post?._id, loading])
 
-  const handleAddComment = async () => {
-    if (!data || !user || !commentText.trim()) return
-    setSubmitting(true)
-    const res = await addComment(data.post._id, commentText.trim())
-    setSubmitting(false)
+  const handleAddComment = async (content: string, parentId?: string): Promise<boolean> => {
+    if (!data) return false
+    const res = await addComment(data.post._id, content, parentId)
     if (res.success && res.data) {
-      setCommentText('')
       setData((d) =>
         d
           ? {
@@ -75,16 +89,21 @@ export default function PostPage() {
                 commentCount: d.post.commentCount + 1,
               },
             }
-          : null
+          : null,
       )
-    } else {
-      alert(res.error || 'Error')
+      return true
     }
+    if (res.code === 'AUTH_REQUIRED') {
+      router.push(`/login?redirect=${encodeURIComponent(`/community/post/${id}`)}`)
+      return false
+    }
+    alert(res.error || 'Không gửi được bình luận')
+    return false
   }
 
   const handleVote = async (value: 1 | -1) => {
     if (!data || !user) {
-      alert('Log in to vote')
+      alert('Đăng nhập để vote')
       return
     }
     const res = await votePost(data.post._id, value)
@@ -95,8 +114,18 @@ export default function PostPage() {
     }
   }
 
+  const handleVoteComment = (commentId: string, voteCount: number, myVote: number | null | undefined) => {
+    setData((d) => {
+      if (!d) return null
+      const comments = d.post.comments.map((c) =>
+        c._id === commentId ? { ...c, voteCount, myVote } : c,
+      )
+      return { ...d, post: { ...d.post, comments } }
+    })
+  }
+
   const handlePin = async () => {
-    if (!data || !canModerate(user || null)) return
+    if (!data || !canModerateOrAdminOverride(user || null)) return
     setModAction('pin')
     const res = await pinPost(data.post._id, !data.post.isPinned)
     setModAction(null)
@@ -108,8 +137,8 @@ export default function PostPage() {
   }
 
   const handleDelete = async () => {
-    if (!data || !canModerate(user || null)) return
-    if (!confirm('Delete this post? This cannot be undone.')) return
+    if (!data || !canModerateOrAdminOverride(user || null)) return
+    if (!confirm('Xóa bài viết này? Không thể hoàn tác.')) return
     setModAction('delete')
     const res = await deletePost(data.post._id)
     setModAction(null)
@@ -209,6 +238,25 @@ export default function PostPage() {
                 </span>
               )}
             </div>
+            {!isNewsArticle && (post.contextTitle || post.courseSlug || post.learningLessonId) && (
+              <div className="mt-4">
+                <PostLearningContextChip post={post} />
+              </div>
+            )}
+            {!isNewsArticle && post.tags && post.tags.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-4">
+                {post.tags.map((tag) => (
+                  <Link
+                    key={tag}
+                    href={`/community/tags/${encodeURIComponent(tag)}`}
+                    className="text-xs px-2.5 py-0.5 rounded-full bg-violet-500/15 text-violet-200 border border-violet-400/30 hover:bg-violet-500/25"
+                  >
+                    #{tag}
+                  </Link>
+                ))}
+              </div>
+            )}
+
             <div className="flex items-center gap-4 mt-4 text-sm text-gray-400 flex-wrap">
               {isNewsArticle ? (
                 <>
@@ -225,7 +273,15 @@ export default function PostPage() {
                 </>
               ) : (
                 <>
-                  <span>{post.authorName}</span>
+                  <UserProfileLink
+                    userId={post.authorId}
+                    displayName={post.authorName}
+                    avatarUrl={post.authorAvatar}
+                    overlayUrl={post.authorOverlayUrl}
+                    learnerTier={post.authorLearnerTier}
+                    size="sm"
+                    showName
+                  />
                   {post.sourceName && <span>{post.sourceName}</span>}
                   <span>{formatDate(post.createdAt)}</span>
                   <span>{post.viewCount} lượt xem</span>
@@ -272,7 +328,7 @@ export default function PostPage() {
               )}
               {!user && <span className="text-gray-400">{post.voteCount} vote</span>}
               <span className="text-gray-400">{post.commentCount} bình luận</span>
-              {canModerate(user || null) && (
+              {canModerateOrAdminOverride(user || null) && (
                 <div className="ml-auto flex items-center gap-2">
                   <button
                     type="button"
@@ -328,52 +384,23 @@ export default function PostPage() {
           </div>
         </article>
 
-        <section className="mt-8">
-          <h2 className="text-lg font-semibold text-white mb-4">Bình luận</h2>
-
-          {user && (
-            <div className="mb-6 rounded-xl border border-white/10 bg-white/[0.03] p-4">
-              <textarea
-                placeholder="Bình luận (Markdown được hỗ trợ)..."
-                value={commentText}
-                onChange={(e) => setCommentText(e.target.value)}
-                rows={3}
-                className="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-gray-500 resize-y min-h-[80px] text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50"
-              />
-              <div className="mt-3 flex justify-end">
-                <button
-                  type="button"
-                  onClick={handleAddComment}
-                  disabled={submitting || !commentText.trim()}
-                  className="px-4 py-2 rounded-lg bg-cyan-600 text-white font-medium disabled:opacity-50"
-                >
-                  {submitting ? 'Đang gửi...' : 'Gửi bình luận'}
-                </button>
-              </div>
-            </div>
-          )}
-
-          <div className="space-y-4">
-            {post.comments.map((c) => (
-              <div
-                key={c._id}
-                className="rounded-xl border border-white/10 bg-white/5 p-4"
-              >
-                <div className="flex items-center gap-2 text-sm">
-                  <span className="font-medium text-white">{c.authorName}</span>
-                  <span className="text-gray-500">{formatDate(c.createdAt)}</span>
-                </div>
-                <div className="mt-2 text-gray-200 text-sm">
-                  <PostMarkdown source={c.content} />
-                </div>
-              </div>
-            ))}
-            {!post.comments.length && (
-              <div className="rounded-xl border border-dashed border-white/20 bg-white/[0.03] p-6 text-center text-gray-400">
-                Chưa có bình luận nào. Hãy là người mở đầu cuộc thảo luận.
-              </div>
-            )}
+        {user && !isNewsArticle && (
+          <div className="mt-6">
+            <ReportContentButton targetType="post" targetId={post._id} />
           </div>
+        )}
+
+        <section className="mt-8">
+          <h2 className="text-lg font-semibold text-white mb-4">
+            Bình luận
+            <span className="ml-2 text-sm font-normal text-gray-500">({post.commentCount})</span>
+          </h2>
+          <CommentThread
+            comments={post.comments}
+            user={user}
+            onAddComment={handleAddComment}
+            onVoteComment={handleVoteComment}
+          />
         </section>
       </div>
     </div>

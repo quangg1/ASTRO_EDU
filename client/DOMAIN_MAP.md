@@ -3,8 +3,8 @@
 Single source of truth for the **frontend ↔ backend** alignment during the modular refactor.
 Every backend bounded context maps to exactly one frontend domain folder. New code MUST be placed
 in the target folder. **Phase 4 (done)** removed legacy re-export shims (`lib/*Api.ts`, duplicate
-`features/narrative/*`, empty `store/` shims, etc.): import from **`features/<domain>/public`** or,
-where appropriate, **`features/<domain>/api/<file>`** (`app/` UI may use `api/` for auth actions).
+`features/narrative/*`, empty `store/` shims, etc.). **`app/`** imports **`features/<domain>/public`**
+only (enforced by `check:app-public`). Non-`app/` feature code may still import sibling `api/` when needed.
 
 > Naming convention: **`client/src/features/<domain>/`** (chosen over `domains/` to match backend
 > `services/api/features/`). No duplication — never both `features/` and `domains/`.
@@ -16,7 +16,7 @@ where appropriate, **`features/<domain>/api/<file>`** (`app/` UI may use `api/` 
 | Backend feature (services/api) | Public mounts | Frontend domain (target) | Current lib/ files (to migrate) | Stores | Env vars |
 |---|---|---|---|---|---|
 | `auth` | `/auth/*` | `features/auth/` | **`public`** (token + **`useAuthStore`**); **`api/authApi`** (login/register/profile); `lib/firebaseClient.ts`, `lib/roles.ts` | `features/auth/stores/useAuthStore.ts` | `NEXT_PUBLIC_AUTH_URL`, `NEXT_PUBLIC_FIREBASE_*` |
-| `courses` (delivery) | `/api/courses/*`, `/api/tutorials/*` | `features/courses/` | **`api/coursesApi`**, **`api/server`** (SSR outline); tutorial curriculum helpers still in `lib/` | `features/courses/stores/useTutorContextStore.ts` | `NEXT_PUBLIC_API_BASE_URL`, `NEXT_PUBLIC_COURSES_URL` |
+| `courses` (delivery) | `/api/courses/*`, `/api/tutorials/*` | `features/courses/` | Client: **`courses/public`** (`coursesApi` + store). RSC only: **`courses/server`** (`api/server`). | `features/courses/stores/useTutorContextStore.ts` | `NEXT_PUBLIC_API_BASE_URL`, `NEXT_PUBLIC_COURSES_URL` |
 | `courses` (curriculum / learning-path) | `/api/learning-path/*` | `features/learning-path/` | API + **`public`** (`useLearningPath`, progress helpers) | — | `NEXT_PUBLIC_API_BASE_URL` |
 | `concepts` (KERNEL) | `/api/concepts/*` | `features/concepts/` | **`public`** barrel + **`features/concepts/lib/`** `{conceptAnchorsHtml,knowledgeGraphData}` | — | `NEXT_PUBLIC_API_BASE_URL` |
 | `content3d/showcase` | `/api/showcase-entities/*`, `/api/showcase-catalog/*`, `/api/showcase-orbits/*` | `features/content3d/showcase/` | **`showcase/api/*`**; **`showcase/public`** (store + bridge); solar/NASA merge helpers remain in `lib/` | `features/content3d/showcase/stores/showcaseStore.ts` | `NEXT_PUBLIC_API_BASE_URL` |
@@ -24,7 +24,9 @@ where appropriate, **`features/<domain>/api/<file>`** (`app/` UI may use `api/` 
 | `rewards` | `/api/gems/*`, `/api/showcase/*` (gamification) | `features/rewards/` | **`api/gemsWalletApi`**, **`rewards/public`**; **`rewards/lib/{gemWallet,solarJourneyProgress}`** | client-first gem cache in `features/rewards/lib/gemWallet.ts` | `NEXT_PUBLIC_API_BASE_URL` |
 | `payment` | `/api/payments/*` | `features/payment/` | **`api/paymentApi`** (checkout + orders) | — | `NEXT_PUBLIC_API_BASE_URL` |
 | `community` | `/api/forums/*`, `/api/posts/*`, `/api/news/*` | `features/community/` | **`community/api/communityApi`**; **`community/lib/{postContent,postEngagement}`** (re-exported from **`community/public`**) | — | `NEXT_PUBLIC_API_BASE_URL` |
-| `admin` | `/api/admin/*` | `features/admin/` | **`features/admin/api/adminAnalyticsApi`** | — | `NEXT_PUBLIC_API_BASE_URL` |
+| `admin` | `/api/admin/*` | `features/admin/` | **`features/admin/public`** (analytics, users, promo, broadcast, gem-economy) | — | `NEXT_PUBLIC_API_BASE_URL` |
+| `promotions` | `/api/promotions/*` | `features/promotions/` | **`features/promotions/public`** | — | `NEXT_PUBLIC_API_BASE_URL` |
+| `notifications` | `/api/notifications/*` | `features/notifications/` | **`features/notifications/public`** | — | `NEXT_PUBLIC_API_BASE_URL` |
 | `media` | `/upload`, `/files/*` | (no dedicated frontend domain) | `lib/apiConfig.ts:resolveMediaUrl` (kept in shared) | — | `NEXT_PUBLIC_API_BASE_URL` |
 
 ---
@@ -126,12 +128,12 @@ Today's `client/src/features/` is a partial migration:
 1. `client/src/components/3d/**` MUST NOT import `@/lib/*Api` or `@/features/*/api/*` directly.
    It receives data via props, or via a domain hook from the parent (page/orchestrator).
    **Allowlist:** empty — new violations fail CI (`scripts/check-import-boundaries.mjs`).
-2. `client/src/app/**` may import `features/<domain>/public` and `shared/*`. It MUST NOT
-   re-implement fetch logic that already exists in a domain `api/`.
+2. `client/src/app/**` MUST import `features/<domain>/public` (not deep `./api/*`).
+   Enforced by **`npm run check:app-public`** (hooked in `check:guards` / `prebuild`).
 3. Feature folder A imports from feature B: only via `features/<B>/public` (see pragmatic `lib/*` exception above).
 4. `shared/*` MUST NOT import any `features/*`.
 
-These rules are advisory in Phase 0; enforced by CI script in Phase 1+.
+**Earth 3D fetch:** `app/explore` calls `useExploreStageFossils`; course lesson pages call `useCourseStageFossils` and pass `overrideFossils` into `EarthScene` — the 3D component does not call `earthApi` directly.
 
 ---
 
@@ -141,7 +143,8 @@ These rules are advisory in Phase 0; enforced by CI script in Phase 1+.
 - [x] Phase 1: `lib/*Api.ts` → `features/<domain>/api/` + shims
 - [x] Phase 2: hooks + stores + content3d narrative/earth/showcase consolidation + rewards gem split + concepts lib; `useAuthStore` canonical = `features/auth/stores`
 - [x] Phase 3: Earth SSOT — canonical `earthHistoryData` under `content3d/earth/lib/`; `check:earth-ssot` guardrail
-- [x] Phase 4: **shims deleted** (`lib/*Api`, duplicate narrative + empty `store/`, learning-path hook shim, SSOT shim); **`check-import-boundaries` allowlist cleared** (`EarthScene` uses `earthApi` path that does not violate the flat `features/*/api/*` matcher). oversized page splits + strict lint polish **optional follow-up**.
+- [x] Phase 4: **shims deleted** (`lib/*Api`, duplicate narrative + empty `store/`, learning-path hook shim, SSOT shim); **`check-import-boundaries` allowlist cleared**.
+- [x] **Hygiene wave (2026-05):** `app/` → `features/*/public` only (`check:app-public`); `EarthScene` fossil fetch lifted to `earth/hooks/useStageFossils`; expanded barrels (`courses`, `showcase`, `promotions`, `notifications`, `admin`); backend `adminOrderService` / `adminUserService` / `teacherApplicationService` colocated under `features/admin|auth/services/`.
 
 ---
 

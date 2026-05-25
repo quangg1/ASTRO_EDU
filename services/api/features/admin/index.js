@@ -1,8 +1,8 @@
 const express = require('express');
 const { authMiddleware, requireRole } = require('../../shared/jwtAuth');
-const { listAdminUsers, updateAdminUserRole, updateAdminUserStatus } = require('../../services/adminUserService');
-const { listApplicationsForAdmin, reviewApplication } = require('../../services/teacherApplicationService');
-const { getAdminOrderOverview } = require('../../services/adminOrderService');
+const { listAdminUsers, updateAdminUserRole, updateAdminUserStatus } = require('./services/adminUserService');
+const { listApplicationsForAdmin, reviewApplication } = require('../auth/services/teacherApplicationService');
+const { getAdminOrderOverview } = require('./services/adminOrderService');
 const User = require('../auth/models/User');
 const Enrollment = require('../courses/models/Enrollment');
 const TutorialProgress = require('../courses/models/TutorialProgress');
@@ -12,10 +12,31 @@ const Post = require('../community/models/Post');
 const LearningPathEvent = require('../learning-path/models/LearningPathEvent');
 const LearningPath = require('../learning-path/models/LearningPath');
 const gemEconomyRouter = require('./gemEconomy');
+const adminPromoRoutes = require('../promotions/adminPromoRoutes');
+const { broadcastAdminNotification, VALID_ROLES } = require('./adminBroadcastService');
+const { requireString } = require('../../shared/validation');
 
 const router = express.Router();
 
 router.use('/gem-economy', gemEconomyRouter);
+router.use('/promo-codes', adminPromoRoutes);
+
+router.post('/notifications/broadcast', authMiddleware, requireRole('admin'), async (req, res) => {
+  try {
+    const titleVi = requireString(req.body?.titleVi, 'titleVi', 'Tiêu đề').slice(0, 200);
+    const bodyVi = typeof req.body?.bodyVi === 'string' ? req.body.bodyVi.trim().slice(0, 2000) : '';
+    const href = typeof req.body?.href === 'string' && req.body.href.trim() ? req.body.href.trim().slice(0, 500) : null;
+    const roles = Array.isArray(req.body?.roles)
+      ? req.body.roles.filter((r) => VALID_ROLES.includes(String(r)))
+      : null;
+
+    const result = await broadcastAdminNotification({ titleVi, bodyVi, href, roles });
+    res.json({ success: true, data: result });
+  } catch (err) {
+    console.error('Admin broadcast error:', err);
+    res.status(400).json({ success: false, error: err.message || 'Không gửi được thông báo' });
+  }
+});
 
 const RANGE_TO_DAYS = {
   '7d': 7,

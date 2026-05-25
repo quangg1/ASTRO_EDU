@@ -10,6 +10,29 @@
 >
 > Audit này KHÔNG thay thế các spec trên — nó kiểm tra xem **code thật có khớp spec không**, và liệt kê drift.
 
+### Tiến độ cập nhật doc (2026-05) — dùng khi báo cáo
+
+| Hạng mục | Trạng thái | Ghi chú |
+|----------|-----------|---------|
+| Hygiene `app/` → `public` | **Done** | `check:app-public` trong `check:guards` + CI `client-guards.yml`; `app/` không còn `@/features/*/api/*` |
+| `courses` SSR tách `server-only` | **Done** | RSC: `@/features/courses/server`; client: `@/features/courses/public` (tránh kéo `server-only` vào `AITutor`) |
+| Earth fossil / 3D boundary | **Done** | `useStageFossils`; `EarthScene` presentational; boundary script bắt nested `content3d/*/api` |
+| Explore orchestrator | **Done** | `app/explore/{hooks,components}/` + `ExplorePageContent.tsx`; xem `app/explore/README.md` |
+| Backend `services/api/services/*` | **Done** | Colocated `features/admin|auth/services/` |
+| §2.3 / §2.4 / §3.3 narrative cũ | **Doc refreshed** | Bảng dưới phản ánh `usePlanetNarrativeStore` + xoá `useNarrativeStore` / NarrativeStudioMode |
+| **Còn mở** (Part 4) | P1/P2 | `cosmic-*` marketing, DS primitives thiếu, `components/` import sâu `api/`, `learning-path/public` re-export `server`, studio showcase-entities dày |
+
+### Hygiene wave (2026-05) — resolved in repo
+
+| ID (Part 4) | Item | Status |
+|-------------|------|--------|
+| 2.4 / 1.8.A (`app/`) | `app/` deep `features/*/api/*` | **Done** |
+| 2.5.A | `EarthScene` direct `earthApi` fetch | **Done** |
+| 2.6 | admin analytics + `content3d/context` stub | **Done / removed** |
+| 1.7 (backend) | `services/api/services/*` orphan | **Done** |
+| Explore split | `explore/page.tsx` ~1k dòng | **Done** — tách module |
+| `courses/server` | `public` gộp `server-only` | **Done** — barrel client-only |
+
 ---
 
 ## Mục lục
@@ -91,7 +114,7 @@ services/api/
 - **Cấu trúc nhất quán** trong mỗi feature: `{index.js, routes/, models/, services?, lib?, subscribers?}`. Đây là điểm mạnh nhất của codebase.
 - **Event-driven hint**: `services/eventBus.js` + `rewards/subscribers/learningPathRewards.js` cho thấy có cơ chế subscribe cross-feature.
 - **`content3d` đặc biệt** — chứa cả "showcase" (vũ trụ) và sub-feature lồng nhau `narrative` (Earth history). Đây là feature lớn nhất.
-- **Folder `services/` (top level của API)** trộn 4 thứ khác nhau: eventBus (infra), adminOrderService + adminUserService (lẽ ra thuộc `features/admin`), teacherApplicationService (lẽ ra thuộc `features/auth`). Drift nhẹ.
+- **Folder `services/` (top level của API)** chủ yếu `eventBus.js` (infra). Admin/order + teacher-application logic nằm trong `features/admin/services/` và `features/auth/services/` (2026-05).
 
 ---
 
@@ -206,7 +229,7 @@ Tổng **47 page.tsx + 8 layout.tsx + 2 api/route.ts**. Group theo domain:
 - `/studio` (hub)
 - `/studio/[slug]` (generic editor)
 - `/studio/concepts`, `/studio/learning-path`
-- `/studio/showcase-entities` + 2 sibling component files (NarrativeStudioMode, ShowcaseEntityPreviewCard, ShowcaseMediaUrlField — colocated, không phải route)
+- `/studio/showcase-entities` + colocated (`narrative/NarrativeStudioEditor`, `ShowcaseEntityPreviewCard`, … — **không** còn `NarrativeStudioMode` generic)
 - `/studio/tutorial`, `/studio/tutorial/new`, `/studio/tutorial/[slug]`
 - `studio/layout.tsx` — wrap `surface-studio`
 
@@ -284,21 +307,23 @@ Studio editor UI: `BlockEditor`, `BlockPalette`, `LessonPreview`, `RichTextEdito
 | Domain | api | lib | stores | hooks | public | types |
 |---|---|---|---|---|---|---|
 | `auth` | `authApi` | — | `useAuthStore` | — | ✓ | ✓ |
-| `admin` | `adminAnalyticsApi` | — | — | — | — | — |
-| `community` | `communityApi` | — | — | — | — | — |
+| `admin` | `adminAnalyticsApi`, `adminUsersApi`, … | — | — | — | ✓ | — |
+| `community` | `communityApi` | `postContent`, `postEngagement` | — | — | ✓ | — |
+| `promotions` | `promoCodesApi` | — | — | — | ✓ | — |
+| `notifications` | `notificationsApi` | — | — | — | ✓ | — |
 | `concepts` | `conceptsApi` | `conceptAnchorsHtml`, `knowledgeGraphData` | — | — | ✓ | — |
-| `courses` | `coursesApi`, `tutorialsApi`, `server` (SSR) | — | `useTutorContextStore` | — | ✓ | ✓ |
+| `courses` | `coursesApi` (+ `server.ts` **RSC-only**, không trong `public`) | — | `useTutorContextStore` | — | ✓ | ✓ |
 | `learning-path` | `learningPathApi`, `server` (SSR) | `learningPathProgress`, `learningPathBehavior`, `lessonRecallQuiz` | — | `useLearningPath` | ✓ | — |
-| `payment` | `paymentApi` | — | — | — | — | — |
+| `payment` | `paymentApi` | — | — | — | ✓ | — |
 | `rewards` | `gemsWalletApi`, `showcaseGamificationApi` | `gemWallet` | — | — | ✓ | — |
 | `content3d/earth` | `earthApi`, `earthHistoryApi` | `earthHistoryData` (SSOT) | `sceneCommandStore`, `playbackStore` | — | ✓ | — |
-| `content3d/narrative` | `narrativeSpacesApi` + `service`, `selectors`, `hooks`, `presets/earth` | (in store) | `store` (Zustand) | `hooks` | ✓ | ✓ + `earthHistoryTypes` |
+| `content3d/narrative` | `planetNarrativeApi`, panel-schema, adapters | beat/globe helpers | `planetNarrativeStore` | — | ✓ | ✓ (planet beats; **không** còn generic narrative-space) |
 | `content3d/showcase` | `showcaseCatalogApi`, `showcaseEntitiesApi`, `showcaseOrbitsApi` | `showcaseLearningBridge` | `showcaseStore` | — | ✓ | ✓ |
-| `content3d/context` | `content3dContextApi` | — | — | — | — | — |
+| ~~`content3d/context`~~ | — | — | — | — | **Removed** | — |
 
 **Điểm mạnh**: alignment 1:1 với backend `services/api/features/*` (cùng tên domain). Đây là điểm thiết kế quan trọng nhất của dự án.
 
-**Drift 1.8.A**: 4 domain (`admin`, `community`, `payment`, `content3d/context`) **không có `public.ts`** — bất kỳ ai dùng đều phải import sâu vào `api/`. Vi phạm cross-domain rule (rule #3 trong DOMAIN_MAP). Cần thêm barrel. **Update post-3.6.E**: `content3d/context` đã bị xoá; admin/community/payment đã có `public.ts` trong các PR trước; chỉ còn rà soát một số deep import từ `app/`.
+**Drift 1.8.A**: ~~4 domain thiếu `public.ts`~~ — **Partial 2026-05**: `admin`, `community`, `payment`, `promotions`, `notifications` đã có barrel; `app/` enforce `public` qua `check:app-public`. **Còn**: `components/` và một số `studio/*` vẫn import sâu `*/api/*` (§2.5).
 
 **Drift 1.8.B**: `narrative` đặc biệt — không nằm trong `api/` mà có nhiều file ngang cấp (`hooks.ts`, `selectors.ts`, `service.ts`, `store.ts`). Inconsistent với pattern còn lại. **Resolved by Drift 3.6.E** (toàn bộ folder `narrative/` bị xoá).
 
@@ -464,49 +489,39 @@ Cột **Nguồn** = nơi page lấy dữ liệu (public barrel vs `*/api/*` vs `
 
 | Route / file | Domain chính | Nguồn (import) | Tuân DOMAIN_MAP? |
 |---|---|---|---|
-| `page.tsx` (landing) | courses | `features/courses/api/server` | ⚠ `app` import sâu `api/server` thay vì `courses/public` (DOMAIN_MAP cho phép SSR `server.ts` nhưng barrel chưa re-export). |
+| `page.tsx` (landing) | courses | `features/courses/server` | ✓ RSC entry server-only (tách khỏi `public` — tránh client bundle). |
 | `login`, `register`, `forgot-password`, `reset-password`, `auth/callback` | auth | `authApi` + `auth/public` + `lib/{apiConfig,ssrStableRandom,analytics}` | ⚠ `app` import sâu `authApi` (DOMAIN_MAP: “app may use api for auth actions” — **gray zone**, có thể chấp nhận). |
 | `apply-teacher`, `profile` | auth | `authApi` + `auth/public` | ⚠ tương tự |
 | `dashboard/page.tsx` | learning-path + rewards + lib | `learning-path/public`, `rewards/public`, `lib/solarJourneyProgress` | ⚠ solar journey là **client-side progress** nằm `lib/` — nên thuộc `rewards` hoặc `learning-path` theo product. |
 | `dashboard/moderate` | auth + lib | `auth/public`, `lib/roles` | ✓ |
-| `courses/page.tsx` | courses | `courses/api/coursesApi` | ⚠ nên qua `courses/public` |
-| `courses/[slug]/page.tsx`, `.../learn/...` | courses | `courses/api/server` | ⚠ |
-| `my-courses` | courses + payment + learning-path | `coursesApi`, `paymentApi`, `learning-path/public` | ⚠ payment/courses deep |
-| `search/page.tsx` | courses + learning-path | `coursesApi`, `learning-path/public` | ⚠ |
+| `courses/page.tsx` | courses | `courses/public` | ✓ |
+| `courses/[slug]/page.tsx`, `.../learn/...` | courses | `courses/server` (SSR) + client qua `public` | ✓ |
+| `my-courses` | courses + payment + learning-path | `courses/public`, `payment/public`, `learning-path/public` | ✓ |
+| `search/page.tsx` | courses + learning-path | `courses/public`, `learning-path/public` | ✓ |
 | `tutorial/**` | learning-path | `learning-path/public` | ✓ |
-| `studio/page.tsx`, `studio/[slug]` | courses + auth | `coursesApi`, `auth/public` | ⚠ |
+| `studio/page.tsx`, `studio/[slug]` | courses + auth | `courses/public`, `auth/public` | ✓ |
 | `studio/concepts`, `studio/learning-path` | concepts + learning-path + courses + showcase | `concepts/public`, `learning-path/public`, type từ `coursesApi`, `showcaseEntitiesApi`, `lib/showcaseEntities`, `lib/mergeShowcaseCatalog` | ⚠ nhiều lớp + `lib` cho catalog merge |
 | `studio/showcase-entities` (+ colocated TSX) | showcase + auth + learning-path + narrative + courses | `showcaseEntitiesApi`, `showcaseOrbitsApi`, `lib/*`, `auth/public`, `learning-path/public`, `narrative/public`, `coursesApi` (upload) | ⚠ orchestrator rất dày — đúng bản chất studio nhưng vi phạm “page mỏng” |
-| `explore/page.tsx` | content3d (earth + narrative + showcase) + learning-path + rewards + auth | `narrative/public`, `earth/public`, `showcase/public` + **deep** `showcaseEntitiesApi`, `showcaseOrbitsApi` + `lib/{solarSystemData,showcaseEntities,mergeShowcaseCatalog}` | ⚠ page vừa là orchestrator 3D vừa merge catalog ở `lib/` |
-| `community/*` | community + auth | `communityApi`, `auth/public`, `lib/postContent`, `postEngagement`, `roles` | ⚠ community không có barrel |
-| `admin/page.tsx` | auth + courses + payment + **lib admin analytics** | `authApi`, `coursesApi`, `paymentApi`, `@/lib/analytics/reporting/admin` | ⚠ **không** dùng `features/admin`; analytics nằm `lib/` |
+| `explore/` (thin `page.tsx` + `ExplorePageContent`) | content3d + learning-path + rewards + auth | `explore/hooks/*` → `earth/public`, `narrative/public`, `showcase/public`, `learning-path/public`, `rewards/public` | ✓ orchestrator tách module; catalog merge trong `useExploreShowcaseCatalog` + `lib/` pragmatic |
+| `community/*` | community + auth | `community/public`, `auth/public` | ✓ |
+| `admin/page.tsx` | admin + auth + courses + payment | `admin/public`, `auth/public`, `payment/public` | ✓ |
 | `gem/page.tsx` | rewards + auth | `rewards/public`, `auth/public` | ✓ |
 | `payment/return` | (tracking) | `lib/analytics` | ✓ cross-cutting |
 | `layout.tsx` | infra | `lib/apiConfig` | ✓ |
 
-**Kết luận §2.3**: Không có route nào **chỉ** dùng barrel `public` cho mọi domain. Pattern thực tế = **hybrid**: `public` cho hook/state-heavy domains (`learning-path`, `rewards`, `concepts`, `narrative`, `earth`, `showcase` store), còn **CRUD/read** thì page import thẳng `*/api/*`.
+**Kết luận §2.3 (2026-05)**: `app/` đã chuẩn hoá **`features/*/public`** cho hầu hết route (enforce CI). **Ngoại lệ có chủ đích**: RSC pages import `features/courses/server` (và tương tự có thể cần `learning-path/server` sau này). **Orchestrator nặng** chuyển sang `app/explore/hooks/` thay vì một `page.tsx` khổng lồ. Studio `showcase-entities` vẫn hybrid (nhiều API + `lib/` merge).
 
 ---
 
-## 2.4 Vi phạm / drift cụ thể — `app/` import sâu vào `features/*/api/*`
+## 2.4 `app/` import sâu `features/*/api/*` — **resolved 2026-05 (app routes)**
 
-Các file sau import **trực tiếp** `@/features/.../api/...` (không qua `public.ts`):
+**Trước:** hàng chục `app/**` import thẳng `*/api/*`.
 
-- `app/courses/page.tsx` → `courses/api/coursesApi`
-- `app/search/page.tsx` → `courses/api/coursesApi`
-- `app/page.tsx` → `courses/api/server`
-- `app/courses/[slug]/page.tsx`, `courses/[slug]/learn/*.tsx` → `courses/api/server`
-- `app/login|register|forgot-password|reset-password|auth/callback|apply-teacher|profile|admin` → `auth/api/authApi`
-- `app/admin/page.tsx` → `courses/api/coursesApi`, `payment/api/paymentApi`
-- `app/my-courses/page.tsx` → `courses/api/coursesApi`, `payment/api/paymentApi`
-- `app/studio/page.tsx`, `studio/[slug]/page.tsx` → `courses/api/coursesApi`
-- `app/studio/learning-path/page.tsx` → `courses/api/coursesApi` (types), `showcase/api/showcaseEntitiesApi`
-- `app/studio/showcase-entities/page.tsx` → `showcase/api/showcaseEntitiesApi`, `showcaseOrbitsApi`
-- `app/studio/showcase-entities/ShowcaseMediaUrlField.tsx` → `courses/api/coursesApi` (upload)
-- `app/explore/page.tsx` → `showcase/api/showcaseEntitiesApi`, `showcaseOrbitsApi`
-- `app/community/page.tsx`, `community/[slug]/page.tsx`, `community/post/[id]/page.tsx` → `community/api/communityApi`
+**Hiện tại:** `node scripts/check-app-public-imports.mjs` — **0 violation** trên `client/src/app/`. Barrel mở rộng (`admin`, `community`, `payment`, `promotions`, `notifications`, `courses`, `showcase`, …).
 
-**Đánh giá**: DOMAIN_MAP ghi *“app/ UI may use api/ for auth actions”* — codebase đã **mở rộng** pattern đó sang courses, payment, community, showcase. Đây không phải bug runtime, nhưng là **nợ kiến trúc**: barrel `public.ts` không phản ánh surface thật của domain → reviewer khó biết “API công khai của domain là gì”.
+**Ngoại lệ RSC (không vi phạm guard):** Server Components import `features/courses/server` (không qua `public` — cố ý tách `server-only`).
+
+**Còn nợ liên quan (không nằm trong `app/`):** `studio/showcase-entities/*`, `studio/learning-path/*` vẫn có thể import sâu showcase/courses API — xem §2.5; không bị `check-app-public` quét.
 
 ---
 
@@ -525,32 +540,19 @@ Các file **không** phải `components/3d/**` nhưng vẫn import API trực ti
 | `components/showcase/ShowcaseCatalogProvider.tsx` | `showcase/api/showcaseCatalogApi` |
 | `components/3d/showcase/ShowcaseEntityPanel.tsx` | type từ `showcaseEntitiesApi` |
 | `components/ui/FossilPanel.tsx` | `earth/api/earthApi` (`searchFossils`) |
-| `components/3d/EarthScene.tsx` | `earth/api/earthApi` (`fetchFossilsForStage`) |
+| ~~`components/3d/EarthScene.tsx`~~ | ~~`earth/api/earthApi`~~ → **resolved** — fossil fetch qua `earth/hooks/useStageFossils`; parent/orchestrator truyền props |
 
-**Drift 2.5.A — Boundary `check-import-boundaries.mjs` chỉ quét `components/3d/`**  
-Script báo `OK` dù `EarthScene.tsx` có:
-
-```ts
-import { fetchFossilsForStage } from '@/features/content3d/earth/api/earthApi'
-```
-
-**Lý do**: regex trong script chỉ khớp đường dạng `features/<một-segment>/api/...` (một cấp sau `features/`), **không** khớp `features/content3d/earth/api/...` (nested domain path).  
-→ Guard **false negative** cho mọi import `features/content3d/<sub>/api/*` từ `components/3d/**`.
-
-**Hệ quả**: Quy tắc DOMAIN_MAP (“3D không import domain API”) **không được enforce** cho Earth scene; data fetch nằm trong component 3D.
-
-**Khuyến nghị sửa script** (ghi vào backlog Part 4): đổi pattern thành `features\/[^'"]+\/api\/` hoặc liệt kê explicit `features/content3d/earth/api`, `.../showcase/api`, v.v.
+**Drift 2.5.A — EarthScene fetch** — ✅ **Resolved 2026-05**  
+Regex boundary script đã bắt nested `features/content3d/*/api/*`; `ShowcaseScene` dùng type từ `showcase/public`. Allowlist **rỗng**; `npm run check:boundaries` PASS.
 
 ---
 
-## 2.6 Domain chết / stub chưa dùng
+## 2.6 Domain chết / stub chưa dùng — **resolved 2026-05**
 
 | Path | Trạng thái |
 |---|---|
-| `features/admin/api/adminAnalyticsApi.ts` | Re-export sang `lib/analytics/reporting/admin` — **0 import** trong `client/src`. |
-| `features/content3d/context/api/content3dContextApi.ts` | File tồn tại — **0 import** trong `client/src` (API `/api/content-3d/...` trong DOMAIN_MAP vẫn *planned*). |
-
-→ Hai folder này là **scaffolding** hoặc **orphan**; nên gộp vào barrel + wire hoặc xóa cho đến khi có route thật.
+| `features/admin/api/adminAnalyticsApi.ts` | **Canonical implementation** (moved from `lib/analytics/reporting/admin`); consumed via **`admin/public`** (`app/admin/page.tsx`). |
+| `features/content3d/context/api/content3dContextApi.ts` | **Removed** — no client file; Earth/planet paths documented in `services/api/features/content3d/README.md`. |
 
 ---
 
@@ -564,11 +566,11 @@ Grep các import `from '@/features/` bên trong `client/src/features/` (ngoại 
 | `courses/api/server.ts` | `courses/api/coursesApi` | ✓ nội bộ |
 | `auth/stores/useAuthStore.ts` | `auth/api/authApi` (type) | ✓ nội bộ |
 | `rewards/lib/gemWallet.ts` | `rewards/api/gemsWalletApi` | ✓ nội bộ |
-| `content3d/narrative/service.ts` | `content3d/earth/api/earthHistoryApi` | ⚠ **cross sub-domain** content3d — hợp lý cho SSOT fallback nhưng cần document (đã có trong DOMAIN_MAP Earth SSOT). |
-| `content3d/earth/stores/sceneCommandStore.ts` | `earth/api/earthApi` (type `PhylumInfoFromApi`) | ✓ type-only từ api |
-| `content3d/narrative/public.ts` | re-export `narrative/api/narrativeSpacesApi` | ✓ barrel chủ đích |
+| `content3d/narrative/lib/legacyPresets.ts` | `earth/public` (`earthHistoryData`) | ✓ SSOT qua barrel |
+| `content3d/earth/stores/sceneCommandStore.ts` | `earth/api/earthApi` (type / dynamic import) | ✓ nội bộ sub-domain |
+| `content3d/narrative/public.ts` | `planetNarrativeApi`, adapters | ✓ planet beats (không còn narrative-spaces API) |
 
-Không thấy feature A import **implementation** sâu của feature B (ngoài narrative→earth fallback) — tốt.
+Generic **narrative-space** wrapper đã xoá (Drift 3.6.E); cross-link còn lại là earth SSOT ↔ planet-narrative adapters.
 
 ---
 
@@ -576,21 +578,23 @@ Không thấy feature A import **implementation** sâu của feature B (ngoài n
 
 Ngoài `apiConfig`, `roles`, `analytics` (đúng shared), các `lib/*` **mang nghĩa domain** vẫn được route/pages gọi trực tiếp:
 
-- `explore` + `studio/learning-path` + `studio/showcase-entities`: `showcaseEntities`, `mergeShowcaseCatalog`, `solarSystemData`
-- `dashboard`: `solarJourneyProgress`
-- `community`: `postContent`, `postEngagement`
+- `explore/hooks/useExploreShowcaseCatalog` + `studio/*`: `showcaseEntities`, `mergeShowcaseCatalog`, `solarSystemData` (pragmatic `lib/`)
+- ~~`dashboard`: `solarJourneyProgress`~~ → `rewards/lib` (PR10)
+- ~~`community`: `postContent`, `postEngagement`~~ → `community/lib` (PR10)
 
 Điều này **khớp** phần “Remainder” trong DOMAIN_MAP (merge NASA + solar data ở `lib/`), nhưng vẫn là điểm mở rộng: nếu muốn barrel sạch, nên wrap trong `showcase/public` re-export.
 
 ---
 
-## 2.9 Tóm tắt Part 2 — “vấn đề hiện tại” ở lớp liên kết
+## 2.9 Tóm tắt Part 2 — “vấn đề hiện tại” ở lớp liên kết (2026-05)
 
-1. **Barrel `public.ts` không phải single entry** — `app/` và `components/` import sâu `*/api/*` rất phổ biến (auth, courses, payment, community, showcase). DOMAIN_MAP cho phép một phần (auth) nhưng thực tế đã **generalize** → spec và code lệch.
-2. **`features/admin` + `content3d/context` gần như dead** — stub / re-export không được wire.
-3. **`check-import-boundaries.mjs` không bắt nested `features/content3d/.../api`** — Earth scene fetch fossil trực tiếp từ `earthApi` mà CI vẫn “OK”.
-4. **Orchestrator nặng** ở `explore/page.tsx` và `studio/showcase-entities` — đúng chức năng nhưng khó test/tách; không sai kiến trúc nhưng là **điểm nóng** khi mở rộng.
-5. **Payment & community** thiếu `public.ts` → mọi consumer phụ thuộc path file vật lý `api/*` — refactor rename file = breaking nhiều chỗ.
+1. ~~**`app/` import sâu `*/api/*`**~~ — **Done** (`check:app-public`).
+2. ~~**admin/context dead stub**~~ — **Done** (§2.6).
+3. ~~**3D boundary false negative + EarthScene fetch**~~ — **Done** (§2.5.A).
+4. ~~**Explore orchestrator một file ~1k dòng**~~ — **Done** (`app/explore/README.md`).
+5. **Còn mở:** `components/` (courses, studio, community, auth, landing) vẫn import sâu `*/api/*` — §2.5; codemod hoặc mở rộng guard.
+6. **Còn mở:** `studio/showcase-entities` orchestrator dày; `learning-path/public` vẫn `export *` từ `api/server` (rủi ro tương tự courses nếu client import nhầm).
+7. **Còn mở:** `courses/server` pattern — document trong DOMAIN_MAP; có thể áp dụng cho `learning-path/server` nếu cần.
 
 ---
 
@@ -676,26 +680,26 @@ Spec đề xuất Button/Card/Badge/Input + Dialog/Tabs/Tooltip/Select/Popover/T
 
 ---
 
-## 3.3 State management — sơ đồ store
+## 3.3 State management — sơ đồ store (2026-05)
 
-6 Zustand store, mỗi store **không** import store khác. Bảng owner ↔ consumer:
+7 Zustand store (sau Drift 3.6.E + planet narrative). Mỗi store **không** import store khác:
 
 | Store | Module | Owner write | Consumer read |
 |---|---|---|---|
-| `useAuthStore` | `features/auth/stores` | `AuthProvider` (root layout) | `app/{login,register,profile,admin,my-courses,gem,explore,...}` + `components/{auth,ui/AppHeader}` |
-| `useTutorContextStore` | `features/courses/stores` | (page courses set khi mount) | `components/ai-tutor/AITutor` (root) |
-| `useSceneCommandStore` | `features/content3d/earth/stores` | `app/explore`, `EarthScene`, `FossilPanel` | `EarthScene`, `FossilPoints`, `FossilPanel`, `FossilDetailOverlay`, `Controls`, `InfoPanel` |
-| `usePlaybackStore` | `features/content3d/earth/stores` | `Controls` / Timeline | `EarthScene` (auto-advance), `Controls` |
-| `useNarrativeStore` | `features/content3d/narrative/store` | `app/explore` (`loadSpace`), narrative editor (`setDraftSpace`) | `EarthScene`, `Timeline`, `InfoPanel`, `Controls`, `studio/showcase-entities/NarrativeStudioMode` |
-| `useShowcaseStore` | `features/content3d/showcase/stores` | `ShowcaseScene`, `ShowcaseCameraManager`, `ShowcaseEntityLayer` | `ShowcaseEntityPanel`, `ShowcaseEntityMesh`, `ShowcaseLighting`, `app/explore` |
+| `useAuthStore` | `features/auth/stores` | `AuthProvider` | `app/*`, `AppHeader`, … |
+| `useTutorContextStore` | `features/courses/stores` | course learn pages | `components/ai-tutor/AITutor` (root) |
+| `useEarthHistoryStore` | `features/content3d/earth/stores` | `loadStages`, timeline | `InfoPanel`, `Timeline`, `Controls`, lessons (`findStageByTime`) |
+| `useSceneCommandStore` | `features/content3d/earth/stores` | fossils, phylum, UI flags | `EarthScene`, `FossilPanel`, `FossilDetailOverlay`, … |
+| `usePlaybackStore` | `features/content3d/earth/stores` | `Controls` / Timeline | `EarthScene`, `Controls` |
+| `usePlanetNarrativeStore` | `features/content3d/narrative/stores` | `app/explore` (`loadForEntity`), studio planet editor | `PlanetHistoryScene`, `NarrativeTimeline`, `NarrativeInfoPanel`, `NarrativeControls` |
+| `useShowcaseStore` | `features/content3d/showcase/stores` | preload group, camera helpers | `ShowcaseScene`, `ShowcaseEntityLayer`, `app/explore` |
+
+**Đã xoá (không còn trong repo):** `useNarrativeStore`, `NarrativeStudioMode.tsx`, tab narrative-space trong studio entities (Drift 3.6.E).
 
 **Quan sát**:
-- 4/6 store đặt cạnh nhau trong `features/content3d/{earth,narrative,showcase}` — đúng spec “stores đặt trong feature”.
-- `useNarrativeStore` cross-domain bằng `narrativeSpaceService` để fallback từ earth-history (đã được DOMAIN_MAP cho phép như SSOT chain).
-- `useTutorContextStore` được set bởi `app/courses/[slug]/learn/...` → đọc bởi `AITutor` ở root → đây là một trong những lý do `AITutor` phải mount toàn cục.
-
-**Drift 3.3.A — `narrative/store.ts` không nằm trong `stores/`** — ✅ RESOLVED (Drift 3.6.E)  
-Store mới `earth/stores/earthHistoryStore.ts` đặt đúng pattern.
+- Earth timeline SSOT = `useEarthHistoryStore` + `/api/earth-history` (không qua generic narrative wrapper).
+- Planet deep-history = `usePlanetNarrativeStore` + `/api/planet-narratives` (Mars, studio CMS beats).
+- `useTutorContextStore` + global `AITutor` — chưa có domain `features/ai/` riêng (xem `AI_TUTOR_PLAN.md`).
 
 **Drift 3.3.B — Store call API trực tiếp**  
 `sceneCommandStore.loadPhylumMetadata` dynamic import `earth/api/earthApi` ngay trong action; **mới**: `earthHistoryStore.loadStages` cũng gọi `earth/api/earthHistoryApi` trực tiếp (đã đơn giản hoá chain so với narrative trước đây). Pattern này phá nguyên tắc "store chỉ giữ state" nhưng được giữ lại cho ergonomics — giảm boilerplate cho consumer page. Ghi nhận để biết shape.
@@ -760,10 +764,11 @@ Sau cleanup, 3D content có **2 scene engine sống**:
 
 | Engine | File | Domain | Mount | State store |
 |---|---|---|---|---|
-| **Earth** | `components/3d/EarthScene.tsx` | Earth-specific (geo + fossils + stages) | `/explore`, studio narrative | `useNarrativeStore`, `useSceneCommandStore`, `usePlaybackStore` |
-| **Showcase** | `components/3d/showcase/ShowcaseScene.tsx` (+ Camera/Entity/Lighting) | Solar system + entities (multi-planet, generic engine) | `/explore` (chuyển mode) | `useShowcaseStore` |
+| **Earth** | `components/3d/EarthScene.tsx` | Earth timeline + fossils (presentational) | `/explore`, course lessons | `useEarthHistoryStore`, `useSceneCommandStore`, `usePlaybackStore` |
+| **Planet history** | `components/3d/PlanetHistoryScene.tsx` | Planet narrative globe | `/explore` (`?history=1`) | `usePlanetNarrativeStore` |
+| **Showcase** | `components/3d/showcase/ShowcaseScene.tsx` | Solar system catalog | `/explore` (default mode) | `useShowcaseStore` |
 
-Cả hai đều nạp **dynamic** từ `app/explore/page.tsx` (`ssr: false`, fallback `<Loading />`).
+Dynamic import từ `app/explore/components/ExploreSceneCanvas.tsx` (`ssr: false`).
 
 **Sub-tree tài sản**:
 - Earth: `Earth`, `Moon`, `OrbitPath`, `FossilPoints`, `FossilFocusHighlight`, `GeoLabels`, `StageHotspots`, `ExploreEntityFx`, `planetBodies`, `orbitProximityFade`
@@ -773,19 +778,21 @@ Cả hai đều nạp **dynamic** từ `app/explore/page.tsx` (`ssr: false`, fal
 ```
 ShowcaseCatalogProvider (root layout)
   ↓ fetchPublicShowcaseCatalogBundle()  →  catalog gen counter
-explore/page.tsx
+app/explore/hooks/useExploreShowcaseCatalog.ts
   ↓ fetchPublicShowcaseEntityContents() + fetchJplShowcaseOrbits()
-  ↓ mergeNasaCatalog / mergeOrbitEntities / mergeOrbitalElementsPreferUsable
-  ↓ resolvedCatalog + mergedOrbitEntities → truyền props vào ShowcaseScene + EarthScene
+  ↓ mergeNasaCatalog / mergeOrbitEntities
+  ↓ ExploreSceneCanvas → ShowcaseScene | PlanetHistoryScene | EarthScene
+app/explore/hooks/useExploreEarthMode.ts
+  ↓ useExploreStageFossils → sceneCommandStore (fossils cho Earth mode)
 ```
 
 **Quan sát**:
-- `mergeShowcaseCatalog` + raw `NASA_SHOWCASE_ITEMS` + `SHOWCASE_ORBIT_ENTITIES` đều ở `client/src/lib/` (xem §1.9.A) — đúng vì cần dùng cho cả `app/explore` và `app/studio/learning-path`.
-- `EarthScene` import `fetchFossilsForStage` trực tiếp (vi phạm boundary nếu script regex bắt `features/content3d/earth/api/`, xem §2.5.A).
-- Tách trách nhiệm rõ: `Showcase` engine không biết Earth, `Earth` engine không biết Solar system — chỉ `app/explore/page.tsx` orchestrate switch.
+- Catalog merge vẫn dùng `lib/showcaseEntities` + `mergeShowcaseCatalog` (pragmatic exception DOMAIN_MAP).
+- Fossil fetch **không** nằm trong `EarthScene` — orchestrator/hook (§2.5.A).
+- `ExplorePageContent` chọn `sceneMode`: `earth` | `planet-history` | `showcase`.
 
-**Drift 3.6.A — Studio narrative dùng `EarthScene` nhưng không qua `surface-scene`** — ✅ RESOLVED (post-PR12)  
-`app/explore` đã wrap trong PR11.2. `app/studio/showcase-entities/NarrativeStudioMode` cũng đã wrap section preview bằng `className="surface-scene"` và set `--planet-accent` từ `doc.world.bodySlug` qua `resolvePlanetAccent`. Mọi overlay HUD trong scene editor giờ retint theo body đang chỉnh.
+**Drift 3.6.A — `surface-scene` trên explore** — ✅ RESOLVED  
+`ExplorePageContent` bọc `surface-scene` + `--planet-accent` từ `useExploreShowcaseNav`.
 
 **Drift 3.6.C — Narrative editor là Earth-only tool nhưng UI/copy generic gây nhầm lẫn** — ✅ RESOLVED (post-PR12)  
 Workspace `narrative` thực chất hardcode `EarthScene` + chỉ có preset `earth-history`, nhưng tên gọi "Narrative" và labels schema-jargon (`Slug`, `Body slug`, `Beat`, `Sequence type`, `Eon`, ...) làm teacher tưởng đây là tool generic cho mọi entity. Fix:
@@ -886,7 +893,7 @@ ErrorBoundaryWrap                     ← bắt render error
 useTutorContextStore                  ← AI tutor mode (general/course)
 (per-route)
   surface-edu | surface-studio | (chưa có surface-scene)
-  + (3D pages) useNarrativeStore + useSceneCommandStore + usePlaybackStore + useShowcaseStore
+  + (3D pages) useEarthHistoryStore + usePlanetNarrativeStore + useSceneCommandStore + usePlaybackStore + useShowcaseStore
 ```
 
 → Mọi route nhận **đúng 1 user, 1 catalog gen, 1 chrome state** từ root, **1 surface theme** từ layout, và route 3D thì cộng thêm 4 store con.
@@ -920,18 +927,20 @@ Cột “P/E” = Priority (P0/P1/P2/P3) · Effort (S/M/L). Cột “Loại” =
 | 1.1 | Root `package.json` reference 4 service không tồn tại (`dev:auth/courses/media/community/payment`) | P0/S | Hygiene | `install:all` & `dev:*` scripts gãy. |
 | 1.2 | Secret/asset rời ở root: `aws_credentials.txt`, `cosmolearn-…firebase-adminsdk….json`, file `.glb`, PDF mojibake | P0/S | Security | Cần verify `.gitignore` + di dời. |
 | 1.7.A | `components/ui/` là junk drawer (5 nhóm: app shell, system util, generic atom, domain 3D UI, error boundary) | P1/M | Restructure | 27 file. Phân loại theo §1.7. |
-| 1.8.A | 4 domain thiếu `public.ts` barrel: `admin`, `community`, `payment`, `content3d/context` | P1/S | Spec drift | Tạo barrel + chuyển import cho ≥10 file. |
+| 1.8.A | ~~4 domain thiếu `public.ts`~~ (`app/` deep import) | ~~P1/S~~ | **Partial 2026-05** | Barrels + `check:app-public`; `components/` + studio còn deep import |
 | 1.8.B / 3.3.A | `narrative` lệch pattern: store ở `store.ts` (ngang), không `stores/` | P2/S | Consistency | Move file + update imports. |
 | 1.9.A | Domain data 3D vẫn ở `lib/`: `iconicOrganisms`, `fossilPhyla`, `paleoTextureMap`, `planetTextureQuality`, `stageHotspots`, `solarSystemData`, `solarOrbitMath` | P2/M | Spec drift | DOMAIN_MAP cho phép “pragmatic exception”; đánh giá từng file có nên move. |
 | 1.9.B | ~~`solarJourneyProgress.ts` ở `lib/`~~ → **`features/rewards/lib/`** + barrel **`rewards/public`** (PR10) | ~~P2/S~~ | Done | — |
 | 1.9.C | ~~`postContent`, `postEngagement` ở `lib/`~~ → **`features/community/lib/`** + barrel **`community/public`** (PR10) | ~~P2/S~~ | Done | — |
-| 1.10.A / 3.2.D | Design system primitives mới có 4/13 (thiếu Dialog/Tabs/Tooltip/Select/Popover/Toast/Slider/Progress/Command) | P1/L | DS expand | Mỗi primitive 1 sub-PR. |
+| 1.10.A / 3.2.D | DS primitives: 4 ban đầu + Tooltip/Toast (explore); còn Dialog/Tabs/Select/Popover/Slider/Progress/Command | P1/L | DS expand | Mỗi primitive 1 sub-PR. |
 | 1.12.A | `next@14.2.0` outdated (Next 15 GA, dev hint outdated) | P3/L | Toolchain | Major upgrade. |
-| 1.13.A | 2 boundary script chưa hook vào CI / `prebuild` | P0/S | CI | Thêm `prebuild` + GitHub Actions step. |
-| 2.4 | `app/` import sâu `*/api/*` lan rộng (auth/courses/payment/community/showcase) — vượt phạm vi DOMAIN_MAP cho phép | P1/M | Spec drift | Bổ sung public exports + codemod replace import. |
-| 2.5.A | `check-import-boundaries.mjs` regex không bắt nested `features/content3d/<sub>/api/...` → Earth scene fetch direct | P0/S | CI bug | Sửa regex `features/[^'"]+/api/`. |
-| 2.5 (general) | `components/courses,studio,community,landing,auth,ui,3d,showcase` import sâu API/type từ `features/*/api/*.ts` | P2/M | Spec drift | Sau khi có barrel + types ổn định, codemod. |
-| 2.6 | `features/admin/` + `features/content3d/context/` gần dead | P1/S | Cleanup | `admin/api` chỉ re-export → wire hoặc xoá; context API stub → giữ với note. |
+| 1.13.A | ~~Boundary scripts chưa hook CI~~ | ~~P0/S~~ | **Partial 2026-05** | `prebuild` → `check:guards` (boundaries + earth-ssot + app-public); add `.github/workflows/client-guards.yml` if not on default branch yet |
+| 2.4 | ~~`app/` import sâu `*/api/*`~~ | ~~P1/M~~ | **Resolved 2026-05** | `check:app-public` + barrels |
+| 2.5.A | ~~`EarthScene` fetch direct~~ | ~~P0/S~~ | **Resolved 2026-05** | `useStageFossils` hooks |
+| 2.5 (general) | `components/*` + `studio/*` import sâu `features/*/api/*` | P2/M | Spec drift | Codemod hoặc `check-components-public` (ngoài scope `app/` guard) |
+| — | Explore page monolith ~1058 LOC | ~~P2/M~~ | **Done 2026-05** | `app/explore/{hooks,components}/` |
+| — | `courses/public` re-export `server-only` | ~~P1/S~~ | **Done 2026-05** | `features/courses/server.ts` |
+| 2.6 | ~~`features/admin/` + `content3d/context` stub~~ | ~~P1/S~~ | **Resolved 2026-05** | Analytics SSOT in `admin/api`; context API deleted |
 | 3.2.A / 3.6.A | `surface-scene` chưa apply ở 3D overlay; `--planet-accent` không bao giờ được set | P1/M | DS wiring | Sửa `EarthScene`, `ShowcaseScene` overlay wrappers. |
 | 3.2.B | Marketing dùng legacy `cosmic-*` HSL — chưa thuộc surface | P3/M | DS hygiene | Tạo `surface-marketing` nếu muốn gói gọn (optional). |
 | 3.2.C | `--density-*` chưa expose Tailwind utility | P2/S | DS expand | Thêm `paddingX`, `gap` mapping vào tailwind.config. |
@@ -941,7 +950,7 @@ Cột “P/E” = Priority (P0/P1/P2/P3) · Effort (S/M/L). Cột “Loại” =
 | 3.7.A | `registerPushNotifications` orphan (không call site) | P2/S | Cleanup | Wire vào `HybridBootstrap` permission hoặc remove. |
 | 3.6.B | `SHOWCASE_TECH_NOTES.md` lẫn trong `components/3d/showcase/` | P3/S | Doc placement | Optional, di chuyển sang `docs/3d/`. |
 
-**Tổng**: 23 mục — 5 P0, 8 P1, 7 P2, 3 P3.
+**Tổng (cập nhật 2026-05):** ~18 mục **còn mở** (sau khi đánh dấu Done hygiene/explore/courses-server/2.5.A/2.4 app/2.6). P0 vẫn: 1.1, 1.2 (root scripts, secrets). P1 chủ yếu: 1.7.A `components/ui`, 1.10.A DS primitives, 3.2.A surface (một phần đã wire explore).
 
 ---
 
@@ -949,10 +958,10 @@ Cột “P/E” = Priority (P0/P1/P2/P3) · Effort (S/M/L). Cột “Loại” =
 
 - **Hygiene/Security (gọn ngọn, bắt buộc)**: 1.1, 1.2 — không động kiến trúc, làm trước.
 - **CI tooling không enforce spec**: 1.13.A, 2.5.A — script đã có nhưng *không bắt vi phạm*. Sửa rất nhẹ tay nhưng giá trị cao (cứ mỗi PR mới về sau đều có guard).
-- **Barrel `public.ts` thiếu/đa nhiệm + `app/` import sâu**: 1.8.A, 2.4, 2.5, 3.5.A — gốc rễ là “API public surface không phản ánh thật”. Sửa cần codemod nhưng phần lớn là rename import.
+- **Barrel + import sâu**: ~~2.4 (`app/`)~~ done; còn **2.5 (`components/`)**, 3.5.A (authApi đa nhiệm).
 - **Lệch vị trí file (`narrative` store, `lib` chứa domain data)**: 1.8.B/3.3.A, 1.9.A/B/C — *cosmetic* đối với runtime, *quan trọng* cho navigation và quy tắc “một chỗ cho một việc”.
 - **Design system thiếu lớp 3 cho 3D + thiếu primitives + density utility**: 1.10.A, 3.2.A/C/D, 3.6.A — phần dở dang lớn nhất sau PR1–PR5.
-- **Stub/orphan**: 2.6 (admin/context dead), 3.7.A (push notif).
+- **Stub/orphan**: ~~2.6~~ (done 2026-05); 3.7.A (push notif).
 - **Toolchain version**: 1.12.A — defer.
 
 ---
@@ -1066,14 +1075,14 @@ features/content3d/earth/ui/         ← domain Earth/3D presentational
 
 **Scope** (✅ DONE 2026-05-12):
 1. ✅ **Wire `surface-scene`**:
-   - `app/explore/page.tsx`: `<main className="surface-scene" style={{ '--planet-accent': planetAccent }}>` bọc cả canvas + `.ui-overlay`.
+   - `app/explore/ExplorePageContent.tsx`: `<main className="surface-scene" style={{ '--planet-accent': planetAccent }}>` bọc canvas + `.ui-overlay`.
    - `planetAccent` resolve từ `selectedSolarPlanetIndex` (fallback `activeResolved.linkedPlanetName`) qua `resolvePlanetAccent()` trong `features/content3d/showcase/lib/planetAccent.ts`.
    - `ShowcaseEntityPanel` thay 100% hex hardcode (`#0b0f16`, `#f0c35d`, `#2a3447`, …) bằng `bg-ds-overlay`, `border-ds-border`, `text-ds-accent`. Chart-bar default accent đổi `'rgba(34,211,238,0.85)'` → `'var(--color-accent)'` để tự retint per planet.
    - `InfoPanel` + `Controls`: shell chuyển `glass` → `bg-ds-overlay border border-ds-border backdrop-blur-md`. **Beat accent (atmosphereColor) cố tình giữ** — đó là domain semantic của geological era, không phải surface token.
 2. ✅ **Density utility**: `tailwind.config.ts` thêm `padding.ds-{x,y,content}`, `gap.{ds,ds-content}`, `spacing.{ds-content,ds-gap}`. Primitives đã consume sẵn (Input dùng `px-[var(--density-pad-x)]` từ trước, Dialog dùng `px-ds-content`). Button cố ý giữ size variants — density chỉ áp dụng khi consumer opt-in (`px-ds-x py-ds-y`), tránh đè size='sm/md/lg' đã quen.
 3. ⏸ `surface-marketing` defer (cosmic-* hoạt động ổn — chỉ wrap khi xây thêm marketing page mới).
 
-**File đụng** (8 file): `tailwind.config.ts`, `app/explore/page.tsx`, `components/3d/showcase/ShowcaseEntityPanel.tsx`, `features/content3d/earth/ui/{InfoPanel,Controls}.tsx`, `features/content3d/showcase/{lib/planetAccent.ts (mới), public.ts}`.
+**File đụng** (8 file): `tailwind.config.ts`, `app/explore/ExplorePageContent.tsx`, `components/3d/showcase/ShowcaseEntityPanel.tsx`, `features/content3d/earth/ui/{InfoPanel,Controls}.tsx`, `features/content3d/showcase/{lib/planetAccent.ts, public.ts}`.
 **Kết quả**: Focus Sao Hỏa → ShowcaseEntityPanel đổi accent đỏ (#d96343); focus Sao Thổ → vàng (#e8c170); focus mặt trăng → kế thừa accent của hành tinh mẹ. `tsc --noEmit` clean, build production thành công, guards pass.
 
 ---
@@ -1086,8 +1095,8 @@ features/content3d/earth/ui/         ← domain Earth/3D presentational
 |---|---|---|---|
 | `Dialog` + `DialogFooter` + `DialogCloseButton` | `design-system/primitives/Dialog.tsx` | (chưa migrate consumer cũ — chờ khi Studio refactor `window.confirm`/`window.prompt`) | Không dùng Radix, có ESC + backdrop-click + body-scroll-lock + return-focus, chưa có full focus trap |
 | `Tabs` + `TabList` + `Tab` + `TabPanel` | `design-system/primitives/Tabs.tsx` | `app/admin/page.tsx` — 5 analytics tabs, ARIA + keyboard ←→/Home/End | Controlled (consumer giữ state) để URL-sync vẫn explicit |
-| `Tooltip` | `design-system/primitives/Tooltip.tsx` | `app/explore/page.tsx` — Learning Bridge v2 badge | Pure-CSS hover/focus, không portal, không Floating UI; chỉ phù hợp khi trigger có chỗ trên/dưới |
-| `ToastProvider` + `useToast` | `design-system/primitives/Toast.tsx` | `app/explore/page.tsx` — bỏ 3 `useState<string\|null>` + 3 `useEffect` setTimeout. `<ToastProvider>` mounted ở `app/layout.tsx`. | Tone tự theme `ds-info/success/warning/danger`; auto-dismiss; click-to-dismiss |
+| `Tooltip` | `design-system/primitives/Tooltip.tsx` | `ExploreShowcaseOverlay` — Learning Bridge badge | Pure-CSS hover/focus |
+| `ToastProvider` + `useToast` | `design-system/primitives/Toast.tsx` | `useExploreRewards` / bridge hooks; `<ToastProvider>` ở `app/layout.tsx` | Tone `ds-*`; auto-dismiss |
 | `Select` | `design-system/primitives/Select.tsx` | `app/admin/page.tsx` — 4 native `<select>` (module filter, depth filter, teacher app filter, user role + status) | Wrap native `<select>` để giữ keyboard nav / mobile picker / SR; không build custom dropdown đến khi có consumer thật yêu cầu |
 
 **Kết quả**: 6 chỗ duplicate đã bị thay bằng primitive shared. ToastProvider sẵn sàng cho mọi page (replace `setTimeout`+state notification). Admin tabs có ARIA roles + keyboard nav đúng chuẩn lần đầu. `tsc --noEmit` clean, build production thành công.
@@ -1134,16 +1143,18 @@ PR7 (CI guard)      ├─→ PR8 (barrel + authApi tách) ─→ PR9 (component
 
 ## 4.5 Acceptance checklist sau toàn bộ roadmap
 
-- [ ] `node scripts/check-import-boundaries.mjs` — 0 violation, 0 allowlist (hoặc chỉ allowlist có ticket).
-- [ ] `node scripts/check-earth-history-ssot.mjs` — 0 violation.
+- [x] `node scripts/check-import-boundaries.mjs` — 0 violation, allowlist rỗng (2026-05).
+- [x] `node scripts/check-earth-history-ssot.mjs` — PASS (2026-05).
+- [x] `node scripts/check-app-public-imports.mjs` — PASS trên `app/` (2026-05).
 - [ ] `tsc --noEmit` — 0 lỗi.
 - [ ] `npm run lint` — 0 cảnh báo unused.
-- [ ] Mọi `app/<route>/page.tsx` — không import `@/features/*/api/*` (trừ auth core action ở `login/register/forgot/reset/callback`).
-- [ ] 11 domain frontend đều có `public.ts`.
+- [x] Mọi `app/**` — không import `@/features/*/api/*` (2026-05); RSC dùng `features/courses/server`.
+- [x] Domain chính có `public.ts` (admin, community, payment, courses, …); SSR tách `*/server.ts` khi cần `server-only`.
 - [ ] `lib/` chỉ chứa: `apiConfig`, `cn`, `firebaseClient`, `roles`, `navigationConfig`, `analytics/*`, `geo`, `ssrStableRandom`, `hybrid/*`, `topicPathMapping` (cross-cutting). Domain data đã ra hoặc được document chính thức làm exception.
 - [ ] `components/` có 7 subfolder rõ vai trò: `3d/`, `auth/`, `community/`, `courses/`, `landing/`, `learning-path/`, `studio/` + `layout/`, `system/`. Không còn `components/ui/` đa nghĩa.
 - [ ] `design-system/primitives/` có ≥9 component (4 hiện có + Dialog, Tabs, Tooltip, Toast, Select).
-- [ ] `surface-scene` được apply tại `app/explore` + studio narrative; primitives dùng density tokens.
+- [x] `surface-scene` + `--planet-accent` tại `app/explore` (`ExplorePageContent`).
+- [ ] Studio planet narrative editor + density utilities toàn app (PR12 còn dở).
 - [ ] `package.json` root chỉ liệt kê script chạy được.
 - [ ] Secret/asset không còn ở repo root (hoặc đã `.gitignore` + có note).
 
@@ -1160,11 +1171,10 @@ PR7 (CI guard)      ├─→ PR8 (barrel + authApi tách) ─→ PR9 (component
 
 ## 4.7 Tóm tắt cuối
 
-Codebase đang ở **trạng thái chín hơn nhiều so với 1 tuần trước**: PR1–PR5 đã đặt nền design system + token hệ thống, đợt cleanup dọn dead island + 3D scene legacy đã giảm ~62 KB nhiễu. Hiện trạng chính:
+Codebase (2026-05) sau PR design system + **hygiene wave** + **explore split**:
 
-- **Cấu trúc**: kiến trúc tốt — backend + frontend cùng dùng pattern bounded context theo `features/`. Design system 3-layer đã sống.
-- **Vấn đề lớn nhất** là *spec drift*: barrel `public.ts` chưa thật sự là single entry; `app/` quen import sâu; 3D overlay chưa nhận surface tokens; `components/ui/` còn là junk drawer.
-- **Vấn đề nguy hiểm nhất** (P0) chỉ có 5 mục, đều **nhỏ và sửa nhanh** (PR6 + PR7).
-- **Roadmap** 7 PR, ~7 ngày người, đưa codebase về trạng thái **gần như zero drift** so với DOMAIN_MAP + design system spec — sau đó các feature mới cứ thế tuân quy ước, không sinh nợ mới.
+- **Đã cải thiện rõ:** `app/` import qua `public` (CI); 3D Earth fossil boundary; explore tách module; `courses/server` tách `server-only`; admin services colocated; earth owns history (doc + guards).
+- **Còn drift chính:** `components/` + studio import sâu `api/`; marketing `cosmic-*`; DS primitives/density chưa đủ; root `package.json` scripts gãy (P0); AI tutor chưa có §kiến trúc agent riêng trong audit (dùng `AI_TUTOR_PLAN.md`).
+- **Báo cáo tiến độ:** dùng bảng **“Tiến độ cập nhật doc (2026-05)”** đầu file + master table §4.1 (cột Done).
 
 > **Audit kết thúc.** Khi bắt đầu PR thực thi, dùng tài liệu này làm bản tham chiếu — mỗi PR mở đầu bằng quote ID drift đang giải quyết để dễ truy ngược.

@@ -12,78 +12,166 @@ function authHeaders(): HeadersInit {
   return h
 }
 
-// ────────────────────────────────────────────────────────────────────────────
-// VNPay in-app QR (primary checkout path).
-// Returns the raw `qrcontent` string from VNPay's `generateQr` endpoint —
-// the modal renders it with `qrcode.react` so the QR lives inside our UI.
-// ────────────────────────────────────────────────────────────────────────────
+export interface CheckoutVoucherTier {
+  id: string
+  labelVi: string
+  discountPct: number
+  gemCost: number
+  discountAmount: number
+  finalAmount: number
+  eligible: boolean
+  lockedReason: string | null
+  supersededByLearnerTier?: boolean
+}
 
-export interface PaymentQRTicket {
-  qrContent: string
+export interface CheckoutLearnerTierMeta {
+  current: {
+    id: string
+    nameVi: string
+    emoji: string
+    checkoutDiscountPct: number
+  }
+  next: { id: string; nameVi: string; minGemsEarned: number } | null
+  gemsEarned: number
+  gemsToNext: number
+  progressPct: number
+}
+
+export interface CheckoutQuote {
+  courseId: string
+  courseSlug: string
+  courseTitle: string
+  currency: string
+  listPrice: number
+  gemBalance: number
+  totalGemsEarned?: number
+  maxDiscountPct: number
+  learnerTier?: CheckoutLearnerTierMeta
+  tiers: CheckoutVoucherTier[]
+  selected: {
+    tierId: string | null
+    labelVi: string | null
+    discountPct: number
+    gemCost: number
+    discountAmount: number
+    finalAmount: number
+    promoCode: string | null
+    promoCodeId: string | null
+    promoLabelVi: string | null
+    learnerTierId: string | null
+    learnerTierLabelVi: string | null
+  }
+  discountSource: 'promo' | 'gem_voucher' | 'learner_tier' | 'none'
+  exclusiveDiscountVi: string
+  gemPolicyVi: string
+}
+
+export type FetchCheckoutQuoteResult =
+  | { success: true; data: CheckoutQuote }
+  | { success: false; error: string; code?: string }
+
+export async function fetchCheckoutQuote(params: {
+  courseId: string
+  voucherTierId?: string | null
+  promoCode?: string | null
+}): Promise<FetchCheckoutQuoteResult> {
+  const q = new URLSearchParams({ courseId: params.courseId })
+  if (params.voucherTierId) q.set('voucherTierId', params.voucherTierId)
+  if (params.promoCode) q.set('promoCode', params.promoCode)
+  const res = await fetch(`${PAYMENT_BASE}/payments/checkout-quote?${q.toString()}`, {
+    headers: authHeaders(),
+  })
+  const data = await res.json()
+  if (data?.success && data.data) {
+    return { success: true, data: data.data as CheckoutQuote }
+  }
+  return {
+    success: false,
+    error: forUserFacingError(data?.error, userMessages.loadDataFailed),
+    code: data?.code,
+  }
+}
+
+export interface CheckoutSession {
   txnRef: string
   amount: number
+  listPrice: number
+  discountAmount: number
+  discountPct: number
   currency: string
-  expiresInSec: number
+  courseSlug: string
+  courseTitle: string
+  gemsCommitted: number
+  promoCode?: string | null
+  discountSource?: string
+  expiresAt: string
+  demoMode: boolean
 }
 
-export type CreatePaymentQRResult =
-  | { success: true; data: PaymentQRTicket }
-  | { success: false; error: string; code?: string; txnRef?: string }
+export type CreateCheckoutSessionResult =
+  | { success: true; data: CheckoutSession }
+  | { success: false; error: string; code?: string }
 
-export async function createPaymentQR(params: { courseId: string }): Promise<CreatePaymentQRResult> {
-  const res = await fetch(`${PAYMENT_BASE}/payments/create-qr`, {
-    method: 'POST',
-    headers: authHeaders(),
-    body: JSON.stringify(params),
-  })
-  const data = await res.json()
-  if (data?.success && data.data?.qrContent) {
-    return { success: true, data: data.data as PaymentQRTicket }
-  }
-  return {
-    success: false,
-    error: forUserFacingError(data?.error, userMessages.paymentQrFailed),
-    code: data?.code,
-    txnRef: data?.txnRef,
-  }
-}
-
-// ────────────────────────────────────────────────────────────────────────────
-// VNPay hosted-redirect URL (fallback when Merchant-hosted QR is not enabled
-// on the merchant account). Caller opens the URL in a new tab.
-// ────────────────────────────────────────────────────────────────────────────
-
-export type CreatePaymentUrlResult =
-  | { success: true; paymentUrl: string; txnRef: string; amount: number; currency: string }
-  | { success: false; error: string }
-
-export async function createPaymentUrl(params: {
+export async function createCheckoutSession(params: {
   courseId: string
-}): Promise<CreatePaymentUrlResult> {
-  const res = await fetch(`${PAYMENT_BASE}/payments/create-url`, {
+  voucherTierId?: string | null
+  promoCode?: string | null
+}): Promise<CreateCheckoutSessionResult> {
+  const res = await fetch(`${PAYMENT_BASE}/payments/checkout`, {
     method: 'POST',
     headers: authHeaders(),
-    body: JSON.stringify(params),
+    body: JSON.stringify({
+      courseId: params.courseId,
+      voucherTierId: params.voucherTierId || undefined,
+      promoCode: params.promoCode || undefined,
+    }),
   })
   const data = await res.json()
-  if (data?.success && data.data?.paymentUrl) {
-    return {
-      success: true,
-      paymentUrl: data.data.paymentUrl,
-      txnRef: data.data.txnRef,
-      amount: data.data.amount,
-      currency: data.data.currency,
-    }
+  if (data?.success && data.data) {
+    return { success: true, data: data.data as CheckoutSession }
   }
   return {
     success: false,
-    error: forUserFacingError(data?.error, userMessages.paymentUrlFailed),
+    error: forUserFacingError(data?.error, userMessages.checkoutSessionFailed),
+    code: data?.code,
   }
 }
 
-// ────────────────────────────────────────────────────────────────────────────
-// Status polling — called by the modal every few seconds while open.
-// ────────────────────────────────────────────────────────────────────────────
+export interface ConfirmCheckoutResult {
+  status: 'completed'
+  courseSlug: string
+  txnRef: string
+  transactionId?: string
+  paidAt?: string
+  alreadyCompleted?: boolean
+}
+
+export type ConfirmCheckoutResponse =
+  | { success: true; data: ConfirmCheckoutResult }
+  | { success: false; error: string; code?: string }
+
+export async function confirmCheckout(params: {
+  txnRef: string
+  paymentMethod?: 'card'
+}): Promise<ConfirmCheckoutResponse> {
+  const res = await fetch(
+    `${PAYMENT_BASE}/payments/checkout/${encodeURIComponent(params.txnRef)}/confirm`,
+    {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({ paymentMethod: params.paymentMethod || 'card' }),
+    },
+  )
+  const data = await res.json()
+  if (data?.success && data.data) {
+    return { success: true, data: data.data as ConfirmCheckoutResult }
+  }
+  return {
+    success: false,
+    error: forUserFacingError(data?.error, userMessages.paymentConfirmFailed),
+    code: data?.code,
+  }
+}
 
 export type PaymentStatus = 'pending' | 'completed' | 'failed' | 'cancelled'
 
@@ -91,6 +179,7 @@ export interface PaymentStatusResponse {
   status: PaymentStatus
   courseSlug: string
   paidAt: string | null
+  transactionId?: string | null
 }
 
 export async function fetchPaymentStatus(
@@ -104,10 +193,6 @@ export async function fetchPaymentStatus(
   if (data?.success && data.data) return data.data as PaymentStatusResponse
   return null
 }
-
-// ────────────────────────────────────────────────────────────────────────────
-// Orders
-// ────────────────────────────────────────────────────────────────────────────
 
 export interface Order {
   _id: string
@@ -141,11 +226,15 @@ export async function fetchAdminOrderStats(): Promise<{
   stats: AdminOrderStats | null
   orders: Order[]
 }> {
-  const res = await fetch(`${PAYMENT_BASE}/admin/orders/overview`, { headers: authHeaders() })
-  const data = await res.json()
-  if (!data.success) return { stats: null, orders: [] }
-  return {
-    stats: data.stats as AdminOrderStats,
-    orders: Array.isArray(data.orders) ? (data.orders as Order[]) : [],
+  try {
+    const res = await fetch(`${PAYMENT_BASE}/admin/orders/overview`, { headers: authHeaders() })
+    const data = await res.json()
+    if (!res.ok || !data.success) return { stats: null, orders: [] }
+    return {
+      stats: data.stats as AdminOrderStats,
+      orders: Array.isArray(data.orders) ? (data.orders as Order[]) : [],
+    }
+  } catch {
+    return { stats: null, orders: [] }
   }
 }

@@ -10,6 +10,16 @@ export {
   syncGemWallet,
 } from './lib/gemWallet'
 export type { GemTransaction, GemWalletState } from './lib/gemWallet'
+export {
+  fetchLearnerTiersCatalog,
+  fetchLearnerTiersWithProgress,
+  formatGemsEarnedRange,
+} from './api/learnerTiersApi'
+export type {
+  LearnerTierPublic,
+  LearnerTierProgress,
+  LearnerTiersCatalog,
+} from './api/learnerTiersApi'
 export * from './api/showcaseGamificationApi'
 export {
   fetchGemShopBootstrap,

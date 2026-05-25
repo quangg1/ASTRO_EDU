@@ -1,10 +1,13 @@
 import { getApiPathBase } from '@/lib/apiConfig'
+import type { LearnerTierProgress } from './learnerTiersApi'
 
 const API = `${getApiPathBase()}/gems`
 
 export interface GemWalletState {
   balance: number
   level?: number
+  totalGemsEarned?: number
+  learnerTier?: LearnerTierProgress
   transactions: GemTransaction[]
 }
 
@@ -29,6 +32,9 @@ export async function fetchGemWalletFromServer(token: string): Promise<GemWallet
     return {
       balance: Number(data.data.balance) || 0,
       level: typeof data.data.level === 'number' ? data.data.level : undefined,
+      totalGemsEarned:
+        typeof data.data.totalGemsEarned === 'number' ? data.data.totalGemsEarned : undefined,
+      learnerTier: data.data.learnerTier ?? undefined,
       transactions: Array.isArray(data.data.transactions) ? data.data.transactions : [],
     }
   } catch {

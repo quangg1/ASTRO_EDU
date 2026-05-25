@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useAuthStore } from '@/features/auth/public'
+import { canManagePlatform } from '@/lib/roles'
 import {
   fetchAdminShopItems,
   fetchGemEarnConstants,
@@ -114,11 +115,11 @@ export default function AdminGemEconomyPage() {
 
   useEffect(() => {
     if (checked && !user) router.replace('/login?redirect=/admin/gem-economy')
-    if (checked && user && user.role !== 'admin') router.replace('/')
+    if (checked && user && !canManagePlatform(user)) router.replace('/')
   }, [checked, user, router])
 
   useEffect(() => {
-    if (!user || user.role !== 'admin') return
+    if (!user || !canManagePlatform(user)) return
     setLoading(true)
     refreshAll().catch((err) => setError(err instanceof Error ? err.message : String(err))).finally(() => setLoading(false))
   }, [user, refreshAll])
@@ -218,7 +219,7 @@ export default function AdminGemEconomyPage() {
     )
   }
 
-  if (user.role !== 'admin') return null
+  if (!canManagePlatform(user)) return null
 
   return (
     <div className="min-h-screen bg-black pt-16 px-4 pb-16">

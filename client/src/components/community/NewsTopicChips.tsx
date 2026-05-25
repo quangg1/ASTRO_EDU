@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { Sparkles } from 'lucide-react'
+import { NEWS_FORUM_SLUG } from '@/features/community/lib/forumKinds'
 
 type Props = {
   categories: string[]
@@ -22,7 +23,7 @@ export function NewsTopicChips({ categories }: Props) {
         {list.map((c) => (
           <Link
             key={c}
-            href={`/community/tin-thien-van?category=${encodeURIComponent(c)}`}
+            href={`/community/${NEWS_FORUM_SLUG}?category=${encodeURIComponent(c)}`}
             className="rounded-full border border-white/12 bg-white/[0.04] px-3.5 py-1.5 text-xs text-slate-300 transition hover:border-cyan-400/40 hover:bg-cyan-500/10 hover:text-cyan-100"
           >
             {c}

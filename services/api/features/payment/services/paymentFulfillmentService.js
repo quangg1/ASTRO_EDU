@@ -3,12 +3,19 @@ const mongoose = require('mongoose');
 const Order = require('../models/Order');
 const Course = require('../../courses/models/Course');
 const Enrollment = require('../../courses/models/Enrollment');
+const { burnCommittedGemsForOrder } = require('./courseCheckoutService');
+const { recordPromoRedemption } = require('../../promotions/services/promoCodeService');
+const {
+  notifyCoursePurchase,
+  pushNotificationRealtime,
+} = require('../../notifications/services/notificationService');
 
 async function completeOrderAndEnroll({ txnRef, transactionId }) {
   const session = await mongoose.startSession();
 
   try {
     let result = null;
+    let purchaseNotification = null;
     await session.withTransaction(async () => {
       const order = await Order.findOne({ txnRef }).session(session);
       if (!order) {
@@ -49,10 +56,39 @@ async function completeOrderAndEnroll({ txnRef, transactionId }) {
       }
 
       if (order.status !== 'completed') {
+        if ((order.gemsCommitted || 0) > 0 && !order.gemsBurnedAt) {
+          await burnCommittedGemsForOrder(order, session);
+          order.gemsBurnedAt = new Date();
+        }
+        if (order.discountSource === 'promo' && order.promoCodeId) {
+          await recordPromoRedemption(
+            {
+              promoCodeId: order.promoCodeId,
+              code: order.promoCode,
+              userId: order.userId,
+              courseId: String(course._id),
+              orderId: String(order._id),
+              txnRef: order.txnRef,
+              discountAmount: order.discountAmount,
+            },
+            session,
+          );
+        }
         order.status = 'completed';
         order.transactionId = transactionId;
         order.paidAt = new Date();
         await order.save({ session });
+        purchaseNotification = await notifyCoursePurchase(
+          {
+            userId: order.userId,
+            courseTitle: course.title,
+            courseSlug: order.courseSlug,
+            txnRef: order.txnRef,
+            amount: order.amount,
+            currency: order.currency,
+          },
+          { session, deferRealtime: true },
+        );
       }
 
       result = {
@@ -62,6 +98,9 @@ async function completeOrderAndEnroll({ txnRef, transactionId }) {
       };
     });
 
+    if (purchaseNotification) {
+      pushNotificationRealtime(purchaseNotification);
+    }
     return { success: true, ...result };
   } finally {
     await session.endSession();

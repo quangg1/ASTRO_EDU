@@ -8,15 +8,19 @@ import {
   fetchCourseForEditor,
   saveCourseFromEditor,
   uploadMedia,
+  type UploadMediaContext,
   type Course,
   type CourseEditorPayload,
   type CourseModule,
   type Lesson,
   type LessonSection,
   type QuizQuestion,
-} from '@/features/courses/api/coursesApi'
+} from '@/features/courses/public'
 import { useAuthStore } from '@/features/auth/public'
+import { canEnterStudio } from '@/lib/roles'
 import { useBlockEditorActions } from '@/components/studio/hooks/useBlockEditorActions'
+import { CourseStorefrontEditor } from '@/components/studio/CourseStorefrontEditor'
+import { courseRequiresPayment } from '@/components/courses/courseCatalogMeta'
 import { emptyMcqQuestion, mcqAnswerIndex, mcqOptionTexts, patchMcqOption, setMcqAnswer } from '@/shared/types/quizQuestion'
 
 const BlockEditor = dynamic(() => import('@/components/studio/BlockEditor'), { ssr: false })
@@ -44,12 +48,22 @@ function makeQuiz(): QuizQuestion {
   return emptyMcqQuestion('course')
 }
 
-function UploadBtn({ accept, onUrl, label }: { accept: string; onUrl: (u: string) => void; label: string }) {
+function UploadBtn({
+  accept,
+  onUrl,
+  label,
+  uploadContext,
+}: {
+  accept: string
+  onUrl: (u: string) => void
+  label: string
+  uploadContext?: UploadMediaContext
+}) {
   const ref = useRef<HTMLInputElement>(null)
   const [busy, setBusy] = useState(false)
   const handle = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0]; if (!f) return
-    setBusy(true); const r = await uploadMedia(f); setBusy(false)
+    setBusy(true); const r = await uploadMedia(f, uploadContext); setBusy(false)
     if (r.success && r.url) onUrl(r.url)
     if (ref.current) ref.current.value = ''
   }
@@ -78,7 +92,10 @@ export default function StudioEditorPage() {
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({})
   const [editingModId, setEditingModId] = useState<string | null>(null)
 
-  useEffect(() => { if (checked && !user) router.replace(`/login?redirect=/studio/${slug}`) }, [checked, user, slug, router])
+  useEffect(() => {
+    if (checked && !user) router.replace(`/login?redirect=/studio/${slug}`)
+    if (checked && user && !canEnterStudio(user)) router.replace('/')
+  }, [checked, user, slug, router])
 
   useEffect(() => {
     if (!slug || !user) return
@@ -158,9 +175,15 @@ export default function StudioEditorPage() {
   const save = async () => {
     if (!course) return; setSaving(true); setMsg(null)
     const r = await saveCourseFromEditor(slug, {
-      title: course.title, description: course.description, level: course.level,
-      durationWeeks: course.durationWeeks, published: !!course.published,
-      price: course.price ?? 0, currency: course.currency ?? 'VND', isPaid: !!course.isPaid,
+      title: course.title,
+      description: course.description,
+      thumbnail: course.thumbnail ?? null,
+      level: course.level,
+      durationWeeks: course.durationWeeks,
+      published: !!course.published,
+      price: course.price ?? 0,
+      currency: course.currency ?? 'VND',
+      isPaid: !!course.isPaid,
       crossSellTutorialHref: course.crossSellTutorialHref ?? '/tutorial',
       crossSellTutorialLabelVi: course.crossSellTutorialLabelVi ?? '',
       crossSellTutorialBodyVi: course.crossSellTutorialBodyVi ?? '',
@@ -365,6 +388,25 @@ export default function StudioEditorPage() {
             </div>
           </div>
 
+          <CourseStorefrontEditor
+            courseId={course.id}
+            course={{
+              slug: course.slug,
+              title: course.title,
+              description: course.description,
+              thumbnail: course.thumbnail,
+              level: course.level,
+              lessonCount: course.lessons.length,
+              durationWeeks: course.durationWeeks,
+              isPaid: course.isPaid,
+              price: course.price,
+              currency: course.currency,
+              requiresPayment: courseRequiresPayment(course),
+            }}
+            lessonCount={course.lessons.length}
+            onChange={(patch) => uc((p) => ({ ...p, ...patch }))}
+          />
+
           <div className="rounded-2xl border border-ds-border bg-ds-overlay backdrop-blur p-4 space-y-3">
             <p className="text-xs font-semibold text-gray-300">Trang khóa học công khai</p>
             <p className="text-[10px] text-ds-subtle leading-relaxed">
@@ -457,7 +499,24 @@ export default function StudioEditorPage() {
                           <button type="button" onClick={() => blockActions.removeAt(bi)} className="text-[10px] text-red-500/50 hover:text-red-400 px-1">&times;</button>
                         </div>
                       </div>
-                      <BlockEditor section={sec} onChange={(updated) => blockActions.updateAt(bi, updated)} />
+                      <BlockEditor
+                        section={sec}
+                        onChange={(updated) => blockActions.updateAt(bi, updated)}
+                        uploadContext={{
+                          purpose: 'course-block',
+                          entityId: course.id,
+                          slug: course.slug,
+                          lessonSlug: lesson.slug,
+                          variant:
+                            sec.type === 'image' || sec.type === 'gif'
+                              ? `image-${bi}`
+                              : sec.type === 'video'
+                                ? `video-${bi}`
+                                : sec.type === '3d'
+                                  ? `model-${bi}`
+                                  : `block-${bi}`,
+                        }}
+                      />
                     </div>
                   ))}
                   <BlockPalette onAdd={(sec) => blockActions.append(sec)} />
@@ -503,8 +562,8 @@ export default function StudioEditorPage() {
                       </select>
                     </label>
                     <div className="text-xs text-ds-muted">3D Earth Simulation<div className="mt-1"><StageTimePicker value={lesson.stageTime ?? null} onChange={(v) => ul((l) => ({ ...l, stageTime: v }))} /></div></div>
-                    <div className="text-xs text-ds-muted">Video URL<div className="flex gap-2 mt-1"><input value={lesson.videoUrl ?? ''} onChange={(e) => ul((l) => ({ ...l, videoUrl: e.target.value || null }))} placeholder="YouTube or upload" className="studio-field" /><UploadBtn accept="video/*" onUrl={(u) => ul((l) => ({ ...l, videoUrl: u }))} label="Upload" /></div></div>
-                    <div className="text-xs text-ds-muted">Cover Image<div className="flex gap-2 mt-1"><input value={lesson.coverImage ?? ''} onChange={(e) => ul((l) => ({ ...l, coverImage: e.target.value || null }))} placeholder="URL or upload" className="studio-field" /><UploadBtn accept="image/*" onUrl={(u) => ul((l) => ({ ...l, coverImage: u }))} label="Upload" /></div>{lesson.coverImage && <img src={lesson.coverImage} alt="" className="mt-2 h-20 rounded-lg object-cover border border-ds-border" />}</div>
+                    <div className="text-xs text-ds-muted">Video URL<div className="flex gap-2 mt-1"><input value={lesson.videoUrl ?? ''} onChange={(e) => ul((l) => ({ ...l, videoUrl: e.target.value || null }))} placeholder="YouTube or upload" className="studio-field" /><UploadBtn accept="video/*" onUrl={(u) => ul((l) => ({ ...l, videoUrl: u }))} label="Upload" uploadContext={{ purpose: 'course-lesson', entityId: course.id, slug: course.slug, lessonSlug: lesson.slug, variant: 'video' }} /></div></div>
+                    <div className="text-xs text-ds-muted">Cover Image<div className="flex gap-2 mt-1"><input value={lesson.coverImage ?? ''} onChange={(e) => ul((l) => ({ ...l, coverImage: e.target.value || null }))} placeholder="URL or upload" className="studio-field" /><UploadBtn accept="image/*" onUrl={(u) => ul((l) => ({ ...l, coverImage: u }))} label="Upload" uploadContext={{ purpose: 'course-lesson', entityId: course.id, slug: course.slug, lessonSlug: lesson.slug, variant: 'cover' }} /></div>{lesson.coverImage && <img src={lesson.coverImage} alt="" className="mt-2 h-20 rounded-lg object-cover border border-ds-border" />}</div>
                     <label className="text-xs text-ds-muted md:col-span-2">Description<textarea value={lesson.description} onChange={(e) => ul((l) => ({ ...l, description: e.target.value }))} rows={2} className={`mt-1 studio-field`} /></label>
                     <label className="text-xs text-ds-muted md:col-span-2">Learning Goals (one per line)<textarea rows={3} value={(lesson.learningGoals ?? []).join('\n')} onChange={(e) => ul((l) => ({ ...l, learningGoals: e.target.value.split('\n').filter(Boolean) }))} className={`mt-1 studio-field`} placeholder="Each line = one goal" /></label>
                   </div>

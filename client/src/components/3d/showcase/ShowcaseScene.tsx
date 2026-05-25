@@ -21,10 +21,12 @@ import {
   ShowcaseCameraManager,
   type ShowcaseCameraSpherical,
 } from '@/components/3d/showcase/ShowcaseCameraManager'
-import { useShowcaseStore } from '@/features/content3d/showcase/public'
+import {
+  useShowcaseStore,
+  type ShowcaseEntityContentDTO,
+} from '@/features/content3d/showcase/public'
 import { useShowcaseCatalogGen } from '@/components/showcase/ShowcaseCatalogProvider'
 import { buildPlanetShowcaseEntity } from '@/lib/mergeShowcaseCatalog'
-import type { ShowcaseEntityContentDTO } from '@/features/content3d/showcase/api/showcaseEntitiesApi'
 
 function sanitizeControlsCamera(c: OrbitControlsImpl) {
   const p = c.object.position

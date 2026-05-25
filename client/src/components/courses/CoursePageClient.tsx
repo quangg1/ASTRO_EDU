@@ -5,6 +5,8 @@ import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useAuthStore } from '@/features/auth/public'
+import { CommunityAskButton } from '@/components/community/learning/CommunityAskButton'
+import { LessonRelatedQuestions } from '@/components/community/learning/LessonRelatedQuestions'
 import { useTutorContextStore } from '@/features/courses/public'
 import {
   fetchCourse,
@@ -12,9 +14,8 @@ import {
   updateLessonProgress,
   type Course,
   type Lesson,
-} from '@/features/courses/api/coursesApi'
-import { PaymentQRModal } from '@/features/payment/public'
-import { earthHistoryData, findStageByTime } from '@/features/content3d/earth/public'
+} from '@/features/courses/public'
+import { earthHistoryData, findStageByTime, useCourseStageFossils } from '@/features/content3d/earth/public'
 import { FeaturedOrganisms } from '@/features/content3d/earth/ui/FeaturedOrganisms'
 import { Loading } from '@/components/ui/Loading'
 import { LessonContentBody } from '@/components/courses/LessonContentBody'
@@ -164,9 +165,6 @@ export function CoursePageClient({
   const setCourseContext = useTutorContextStore((s) => s.setCourseContext)
   const [course, setCourse] = useState<Course | null>(initialCourse)
   const [enrolling, setEnrolling] = useState(false)
-  // VNPay QR modal: holds the courseId we're collecting payment for. The
-  // modal itself owns the QR creation, polling, and redirect-fallback.
-  const [paymentCourseId, setPaymentCourseId] = useState<string | null>(null)
   const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null)
   const [showMobileLessons, setShowMobileLessons] = useState(false)
   const [reducedMode, setReducedMode] = useState(false)
@@ -176,6 +174,15 @@ export function CoursePageClient({
     () => (course?.lessons ?? []).filter((l): l is Lesson => 'content' in l),
     [course?.lessons],
   )
+
+  const earthLessonStage = useMemo(() => {
+    if (selectedLesson?.visualizationId !== 'earth-history') return null
+    const t = selectedLesson.stageTime
+    if (t == null) return undefined
+    return findStageByTime(earthHistoryData, t)
+  }, [selectedLesson])
+
+  const earthLessonFossils = useCourseStageFossils(earthLessonStage ?? null)
 
   useEffect(() => {
     setCourse(initialCourse)
@@ -271,16 +278,15 @@ export function CoursePageClient({
       setEnrolling(false)
       return
     }
-    if (res.requiresPayment && res.courseId && res.courseSlug && (res.amount ?? 0) > 0) {
+    if (res.requiresPayment && res.courseSlug && (res.amount ?? 0) > 0) {
       trackEvent('checkout_started', {
         course_slug: res.courseSlug,
         amount: res.amount ?? 0,
         currency: res.currency || course.currency || 'VND',
+        surface: 'learn_enroll',
       })
       setEnrolling(false)
-      // Open the in-app QR modal — it owns the QR creation, polling, and
-      // redirect-fallback if the merchant doesn't have Merchant-hosted QR.
-      setPaymentCourseId(res.courseId)
+      router.push(`/courses/${res.courseSlug}/checkout`)
       return
     }
     setEnrolling(false)
@@ -361,20 +367,39 @@ export function CoursePageClient({
               </div>
             </div>
             {!isEnrolled && user && (
-              <button
-                type="button"
-                onClick={handleEnroll}
-                disabled={enrolling}
-                className="w-full py-2 rounded-xl bg-cyan-600 text-white text-sm font-medium hover:bg-cyan-500 disabled:opacity-50"
-              >
-                {enrolling
-                  ? 'Enrolling...'
-                  : course.isPaid && (course.price ?? 0) > 0
-                    ? `Mua khóa học ${course.currency === 'USD' ? `$${course.price}` : `${(course.price ?? 0).toLocaleString('en-US')} ₫`}`
-                    : 'Ghi danh'}
-              </button>
+              course.isPaid && (course.price ?? 0) > 0 ? (
+                <Link
+                  href={`/courses/${slug}/checkout`}
+                  className="block w-full py-2 rounded-xl bg-cyan-600 text-white text-sm font-medium hover:bg-cyan-500 text-center"
+                >
+                  Mua khóa học ·{' '}
+                  {course.currency === 'USD' ? `$${course.price}` : `${(course.price ?? 0).toLocaleString('vi-VN')} ₫`}
+                </Link>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleEnroll}
+                  disabled={enrolling}
+                  className="w-full py-2 rounded-xl bg-cyan-600 text-white text-sm font-medium hover:bg-cyan-500 disabled:opacity-50"
+                >
+                  {enrolling ? 'Đang ghi danh…' : 'Ghi danh miễn phí'}
+                </button>
+              )
             )}
             {!user && <p className="text-sm text-ds-subtle">Đăng nhập để ghi danh khóa học này.</p>}
+            <CommunityAskButton
+              className="mt-3 w-full"
+              variant="outline"
+              context={{
+                pathSource: 'course',
+                courseSlug: course.slug,
+                courseId: course.id,
+                courseTitle: course.title,
+                ...(selectedLesson
+                  ? { lessonSlug: selectedLesson.slug, lessonTitle: selectedLesson.title }
+                  : {}),
+              }}
+            />
             <button
               type="button"
               onClick={() => setShowMobileLessons((v) => !v)}
@@ -408,15 +433,28 @@ export function CoursePageClient({
               </div>
               <div className="px-5 py-4 border-b border-ds-border flex items-center justify-between flex-wrap gap-2 bg-ds-surface">
                 <h2 className="font-semibold text-white text-lg">{selectedLesson.title}</h2>
-                {isEnrolled && (
-                  <button
-                    type="button"
-                    onClick={() => markComplete(selectedLesson.slug, !progressBySlug.get(selectedLesson.slug))}
-                    className="text-sm px-3 py-1.5 rounded-xl bg-white/10 text-gray-300 hover:bg-ds-accent-strong hover:text-ds-accent"
-                  >
-                    {progressBySlug.get(selectedLesson.slug) ? 'Đánh dấu chưa hoàn thành' : 'Đánh dấu đã hoàn thành'}
-                  </button>
-                )}
+                <div className="flex flex-wrap items-center gap-2">
+                  <CommunityAskButton
+                    variant="compact"
+                    context={{
+                      pathSource: 'course',
+                      courseSlug: course.slug,
+                      courseId: course.id,
+                      courseTitle: course.title,
+                      lessonSlug: selectedLesson.slug,
+                      lessonTitle: selectedLesson.title,
+                    }}
+                  />
+                  {isEnrolled && (
+                    <button
+                      type="button"
+                      onClick={() => markComplete(selectedLesson.slug, !progressBySlug.get(selectedLesson.slug))}
+                      className="text-sm px-3 py-1.5 rounded-xl bg-white/10 text-gray-300 hover:bg-ds-accent-strong hover:text-ds-accent"
+                    >
+                      {progressBySlug.get(selectedLesson.slug) ? 'Đánh dấu chưa hoàn thành' : 'Đánh dấu đã hoàn thành'}
+                    </button>
+                  )}
+                </div>
               </div>
               <div className="flex-1 min-h-0 overflow-auto">
                 {!isEnrolled && course.isPaid && (course.price ?? 0) > 0 ? (
@@ -424,14 +462,18 @@ export function CoursePageClient({
                     <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-8 max-w-md">
                       <p className="text-amber-200 font-medium mb-2">Nội dung khóa học trả phí</p>
                       <p className="text-sm text-ds-muted mb-6">Mua khóa học để mở toàn bộ bài học và theo dõi tiến độ.</p>
-                      <button
-                        type="button"
-                        onClick={handleEnroll}
-                        disabled={enrolling}
-                        className="px-6 py-3 rounded-xl bg-cyan-600 text-white font-medium hover:bg-cyan-500 disabled:opacity-50"
+                      <Link
+                        href={`/courses/${slug}/checkout`}
+                        className="inline-flex px-6 py-3 rounded-xl bg-cyan-600 text-white font-medium hover:bg-cyan-500"
                       >
-                        {enrolling ? 'Đang xử lý...' : `Mua ngay ${course.currency === 'USD' ? `$${course.price}` : `${(course.price ?? 0).toLocaleString('en-US')} ₫`}`}
-                      </button>
+                        Mua ngay ·{' '}
+                        {course.currency === 'USD' ? `$${course.price}` : `${(course.price ?? 0).toLocaleString('vi-VN')} ₫`}
+                      </Link>
+                      <p className="mt-4 text-xs text-ds-subtle">
+                        <Link href={`/courses/${slug}`} className="text-ds-accent hover:underline">
+                          ← Về trang khóa học
+                        </Link>
+                      </p>
                     </div>
                   </div>
                 ) : selectedLesson.type === 'text' ? (
@@ -481,7 +523,7 @@ export function CoursePageClient({
                                 </>
                               )}
                               <div className="flex-1 min-h-[360px]">
-                                <EarthScene overrideStage={stage} />
+                                <EarthScene overrideStage={stage} overrideFossils={earthLessonFossils} />
                               </div>
                             </>
                           )
@@ -551,6 +593,17 @@ export function CoursePageClient({
                   </>
                 ) : null}
               </div>
+              <LessonRelatedQuestions
+                className="shrink-0 mx-5 my-4 p-4 md:p-5"
+                context={{
+                  pathSource: 'course',
+                  courseSlug: course.slug,
+                  courseId: course.id,
+                  courseTitle: course.title,
+                  lessonSlug: selectedLesson.slug,
+                  lessonTitle: selectedLesson.title,
+                }}
+              />
             </>
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
@@ -577,18 +630,6 @@ export function CoursePageClient({
         </div>
       </main>
 
-      {paymentCourseId && (
-        <PaymentQRModal
-          open
-          courseId={paymentCourseId}
-          onClose={() => setPaymentCourseId(null)}
-          onCompleted={async (paidSlug) => {
-            setPaymentCourseId(null)
-            const updated = await fetchCourse(paidSlug)
-            if (updated) setCourse(updated)
-          }}
-        />
-      )}
     </div>
   )
 }

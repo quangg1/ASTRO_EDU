@@ -10,18 +10,24 @@ import {
   saveShowcaseEntityContents,
   type ShowcasePanelBlockDTO,
   type ShowcaseEntityContentDTO,
-} from '@/features/content3d/showcase/api/showcaseEntitiesApi'
+} from '@/features/content3d/showcase/public'
 import { useAuthStore } from '@/features/auth/public'
+import { canEnterStudio } from '@/lib/roles'
 import { useShowcaseCatalogGen } from '@/components/showcase/ShowcaseCatalogProvider'
 import { ShowcaseMediaUrlField } from '@/app/studio/showcase-entities/ShowcaseMediaUrlField'
+import type { UploadMediaContext } from '@/features/courses/public'
 import { ShowcaseEntityPreviewCard } from '@/app/studio/showcase-entities/ShowcaseEntityPreviewCard'
 import { resolveMediaUrl } from '@/lib/apiConfig'
 import { notifyShowcaseCatalogChanged } from '@/lib/showcaseCatalogRefresh'
-import { syncShowcaseOrbitEntityFromJpl } from '@/features/content3d/showcase/api/showcaseOrbitsApi'
+import { syncShowcaseOrbitEntityFromJpl } from '@/features/content3d/showcase/public'
 import type { ShowcaseOrbitEntity } from '@/lib/showcaseEntities'
 import { useLearningPath } from '@/features/learning-path/public'
 import { NarrativeStudioEditor } from '@/app/studio/showcase-entities/narrative/NarrativeStudioEditor'
 import { entitySupportsHistory } from '@/app/studio/showcase-entities/entityHistoryCapability'
+
+function showcaseUploadContext(entityId: string, variant: string): UploadMediaContext {
+  return { purpose: 'showcase-entity', entityId, variant }
+}
 
 const ORBIT_COLOR_PRESETS = [
   '#f43f5e', '#fb7185', '#f97316', '#f59e0b', '#eab308', '#84cc16',
@@ -165,7 +171,7 @@ function StudioShowcaseEntitiesPage() {
 
   useEffect(() => {
     if (checked && !user) router.replace('/login?redirect=/studio/showcase-entities')
-    if (checked && user && user.role !== 'teacher' && user.role !== 'admin') router.replace('/')
+    if (checked && user && !canEnterStudio(user)) router.replace('/')
   }, [checked, user, router])
 
   const load = useCallback(async (opts?: { silent?: boolean }) => {
@@ -531,12 +537,14 @@ function StudioShowcaseEntitiesPage() {
                     value={selected.diffuseMapUrl}
                     onChange={(url) => patchSelected({ diffuseMapUrl: url, textureUrl: url })}
                     accept="image/jpeg,image/png,image/webp,image/gif"
+                    uploadContext={showcaseUploadContext(selected.entityId, 'diffuse')}
                   />
                   <ShowcaseMediaUrlField
                     label="Normal map (tuỳ chọn)"
                     value={selected.normalMapUrl}
                     onChange={(url) => patchSelected({ normalMapUrl: url })}
                     accept="image/jpeg,image/png,image/webp"
+                    uploadContext={showcaseUploadContext(selected.entityId, 'normal')}
                   />
                   <ShowcaseMediaUrlField
                     label="Specular map (tuỳ chọn)"
@@ -544,6 +552,7 @@ function StudioShowcaseEntitiesPage() {
                     value={selected.specularMapUrl}
                     onChange={(url) => patchSelected({ specularMapUrl: url })}
                     accept="image/jpeg,image/png,image/webp"
+                    uploadContext={showcaseUploadContext(selected.entityId, 'specular')}
                   />
                   <ShowcaseMediaUrlField
                     label="Cloud / alpha layer (tuỳ chọn)"
@@ -551,6 +560,7 @@ function StudioShowcaseEntitiesPage() {
                     value={selected.cloudMapUrl}
                     onChange={(url) => patchSelected({ cloudMapUrl: url })}
                     accept="image/png,image/webp"
+                    uploadContext={showcaseUploadContext(selected.entityId, 'cloud')}
                   />
                 </div>
 
@@ -568,6 +578,7 @@ function StudioShowcaseEntitiesPage() {
                     value={selected.modelUrl}
                     onChange={(url) => patchSelected({ modelUrl: url })}
                     accept=".glb,.gltf,model/gltf-binary,model/gltf+json"
+                    uploadContext={showcaseUploadContext(selected.entityId, 'model')}
                   />
                 </div>
 
@@ -1023,6 +1034,10 @@ function StudioShowcaseEntitiesPage() {
                               }))
                             }
                             accept="image/jpeg,image/png,image/webp,image/gif"
+                            uploadContext={showcaseUploadContext(
+                              selected.entityId,
+                              `panel-${key}-${b.id}`,
+                            )}
                           />
                         ) : null}
                       </div>

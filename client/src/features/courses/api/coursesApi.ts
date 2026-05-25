@@ -113,6 +113,8 @@ export interface Course {
   price?: number
   currency?: string
   isPaid?: boolean
+  /** Server-computed: isPaid && price > 0 */
+  requiresPayment?: boolean
   modules?: CourseModule[]
   lessonCount?: number
   lessons?: Array<Lesson | CourseLessonOutline>
@@ -164,17 +166,21 @@ export type FetchCoursesOpts = {
 }
 
 export async function fetchCourses(filters?: string | FetchCoursesOpts): Promise<Course[]> {
-  const opts: FetchCoursesOpts = typeof filters === 'string' ? { search: filters } : filters ?? {}
-  const qs = new URLSearchParams()
-  if (opts.search?.trim()) qs.set('q', opts.search.trim())
-  if (opts.level && ['beginner', 'intermediate', 'advanced'].includes(opts.level)) qs.set('level', opts.level)
-  if (opts.pricing === 'free' || opts.pricing === 'paid') qs.set('pricing', opts.pricing)
-  const suffix = qs.toString()
-  const url = suffix ? `${COURSES_BASE}/courses?${suffix}` : `${COURSES_BASE}/courses`
-  const res = await fetch(url, { headers: authHeaders() })
-  const data = await res.json()
-  if (data.success && Array.isArray(data.data)) return data.data
-  return []
+  try {
+    const opts: FetchCoursesOpts = typeof filters === 'string' ? { search: filters } : filters ?? {}
+    const qs = new URLSearchParams()
+    if (opts.search?.trim()) qs.set('q', opts.search.trim())
+    if (opts.level && ['beginner', 'intermediate', 'advanced'].includes(opts.level)) qs.set('level', opts.level)
+    if (opts.pricing === 'free' || opts.pricing === 'paid') qs.set('pricing', opts.pricing)
+    const suffix = qs.toString()
+    const url = suffix ? `${COURSES_BASE}/courses?${suffix}` : `${COURSES_BASE}/courses`
+    const res = await fetch(url, { headers: authHeaders() })
+    const data = await res.json()
+    if (data.success && Array.isArray(data.data)) return data.data
+    return []
+  } catch {
+    return []
+  }
 }
 
 /** SSR / catalog: chỉ metadata bài học — giữ payload nhẹ và tránh leak nội dung paywall */
@@ -245,15 +251,50 @@ export async function updateLessonProgress(
   return { success: false, error: data.error || 'Cập nhật thất bại' }
 }
 
-export async function uploadMedia(file: File): Promise<{ success: boolean; url?: string; error?: string }> {
+export type MediaUploadPurpose =
+  | 'course-thumbnail'
+  | 'course-lesson'
+  | 'course-block'
+  | 'showcase-entity'
+  | 'learning-path-lesson'
+  | 'generic'
+
+/** Metadata gửi kèm upload — API map sang key S3 có cấu trúc (vd. `courses/{id}/thumbnail.jpg`). */
+export interface UploadMediaContext {
+  purpose: MediaUploadPurpose
+  /** Mongo id hoặc id ổn định của entity */
+  entityId?: string
+  /** Fallback khi chưa có entityId (vd. slug khóa học) */
+  slug?: string
+  lessonSlug?: string
+  /** Tên field semantic: thumbnail, cover, diffuse, blocks/image-0, … */
+  variant?: string
+}
+
+function appendUploadContext(form: FormData, context?: UploadMediaContext) {
+  if (!context?.purpose || context.purpose === 'generic') return
+  form.append('purpose', context.purpose)
+  if (context.entityId) form.append('entityId', context.entityId)
+  if (context.slug) form.append('slug', context.slug)
+  if (context.lessonSlug) form.append('lessonSlug', context.lessonSlug)
+  if (context.variant) form.append('variant', context.variant)
+}
+
+export async function uploadMedia(
+  file: File,
+  context?: UploadMediaContext,
+): Promise<{ success: boolean; url?: string; storageKey?: string; error?: string }> {
   const token = typeof window !== 'undefined' ? localStorage.getItem('galaxies_token') : null
   const form = new FormData()
   form.append('file', file)
+  appendUploadContext(form, context)
   const headers: HeadersInit = {}
   if (token) headers['Authorization'] = `Bearer ${token}`
   const res = await fetch(`${MEDIA_BASE}/upload`, { method: 'POST', headers, body: form })
   const data = await res.json()
-  if (data.success && data.url) return { success: true, url: data.url }
+  if (data.success && data.url) {
+    return { success: true, url: data.url, storageKey: data.storageKey }
+  }
   return { success: false, error: data.error || 'Upload failed' }
 }
 

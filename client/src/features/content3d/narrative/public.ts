@@ -41,3 +41,8 @@ export {
   narrativeToEarthStages,
   ensureBeatVisual,
 } from '@/features/content3d/narrative/adapters'
+export {
+  fetchPlanetNarrative,
+  fetchEditorPlanetNarrative,
+  savePlanetNarrative,
+} from '@/features/content3d/planet-narrative/api/planetNarrativeApi'

@@ -3,7 +3,10 @@ const Forum = require('../models/Forum');
 const Post = require('../models/Post');
 const { findPostsHot } = require('../postSort');
 const { optionalAuth, authMiddleware } = require('../../../shared/jwtAuth');
-const { escapeRegex } = require('../../../shared/escapeRegex');
+const { enrichPostsWithAuthors } = require('../../users/publicProfileService');
+const { isNewsForum } = require('../constants/forumCatalog');
+const { buildForumPostFilter } = require('../lib/postListQuery');
+const { mergePostTags } = require('../lib/postTags');
 
 const router = express.Router();
 
@@ -21,7 +24,10 @@ router.get('/:slug', optionalAuth, async (req, res) => {
   try {
     const forum = await Forum.findOne({ slug: req.params.slug }).lean();
     if (!forum) return res.status(404).json({ success: false, error: 'Không tìm thấy diễn đàn' });
-    res.json({ success: true, data: forum });
+    res.json({
+      success: true,
+      data: { ...forum, isNews: isNewsForum(forum) },
+    });
   } catch (err) {
     console.error('Get forum error:', err);
     res.status(500).json({ success: false, error: 'Lỗi server' });
@@ -30,46 +36,26 @@ router.get('/:slug', optionalAuth, async (req, res) => {
 
 router.get('/:slug/posts', optionalAuth, async (req, res) => {
   try {
-    const forum = await Forum.findOne({ slug: req.params.slug });
+    const forum = await Forum.findOne({ slug: req.params.slug }).lean();
     if (!forum) return res.status(404).json({ success: false, error: 'Không tìm thấy diễn đàn' });
 
-    const { page = 1, limit = 20, sort = 'newest', category, q } = req.query;
+    const { page = 1, limit = 20, sort = 'newest' } = req.query;
     const skip = (Math.max(1, parseInt(page, 10)) - 1) * Math.min(50, parseInt(limit, 10) || 20);
     const limitNum = Math.min(50, parseInt(limit, 10) || 20);
 
     let sortOpt = { isPinned: -1, createdAt: -1 };
     if (sort === 'top') sortOpt = { isPinned: -1, voteCount: -1, createdAt: -1 };
 
-    const postFilter = { forumId: forum._id };
-    const cat = typeof category === 'string' ? category.trim() : '';
-    const qStr = typeof q === 'string' ? q.trim() : '';
-    const extra = [];
-    if (cat) {
-      extra.push({
-        rssCategories: new RegExp(`^${escapeRegex(cat)}$`, 'i'),
-      });
-    }
-    if (qStr.length >= 2) {
-      extra.push({ title: new RegExp(escapeRegex(qStr), 'i') });
-    }
-    const filter =
-      extra.length === 0
-        ? postFilter
-        : extra.length === 1
-          ? { ...postFilter, ...extra[0] }
-          : { ...postFilter, $and: extra };
+    const filter = buildForumPostFilter(forum, req.query, req.userRole);
 
     const posts =
       sort === 'hot'
         ? await findPostsHot(filter, skip, limitNum)
-        : await Post.find(filter)
-            .sort(sortOpt)
-            .skip(skip)
-            .limit(limitNum)
-            .lean();
+        : await Post.find(filter).sort(sortOpt).skip(skip).limit(limitNum).lean();
 
     const total = await Post.countDocuments(filter);
-    res.json({ success: true, data: posts, total, page: parseInt(page, 10), limit: limitNum });
+    const data = await enrichPostsWithAuthors(posts);
+    res.json({ success: true, data, total, page: parseInt(page, 10), limit: limitNum });
   } catch (err) {
     console.error('List posts error:', err);
     res.status(500).json({ success: false, error: 'Lỗi server' });
@@ -80,9 +66,30 @@ router.post('/:slug/posts', authMiddleware, async (req, res) => {
   try {
     const forum = await Forum.findOne({ slug: req.params.slug });
     if (!forum) return res.status(404).json({ success: false, error: 'Không tìm thấy diễn đàn' });
+    if (isNewsForum(forum)) {
+      return res.status(400).json({ success: false, error: 'Không thể đăng bài vào kênh tin tổng hợp' });
+    }
 
-    const { title, content, courseId, courseSlug, lessonSlug } = req.body || {};
+    const {
+      title,
+      content,
+      courseId,
+      courseSlug,
+      lessonSlug,
+      pathSource,
+      contextTitle,
+      learningModuleId,
+      learningNodeId,
+      learningLessonId,
+      tags,
+    } = req.body || {};
     if (!title || !title.trim()) return res.status(400).json({ success: false, error: 'Thiếu tiêu đề' });
+
+    const mergedTags = mergePostTags({
+      explicitTags: tags,
+      title: title.trim(),
+      content: (content || '').trim(),
+    });
 
     const post = await Post.create({
       forumId: forum._id,
@@ -93,10 +100,17 @@ router.post('/:slug/posts', authMiddleware, async (req, res) => {
       courseId: courseId || null,
       courseSlug: courseSlug || null,
       lessonSlug: lessonSlug || null,
+      pathSource: pathSource === 'course' || pathSource === 'learning-path' ? pathSource : null,
+      contextTitle: typeof contextTitle === 'string' ? contextTitle.trim().slice(0, 500) || null : null,
+      learningModuleId: learningModuleId || null,
+      learningNodeId: learningNodeId || null,
+      learningLessonId: learningLessonId || null,
+      tags: mergedTags,
     });
 
     await Forum.findByIdAndUpdate(forum._id, { $inc: { postCount: 1 } });
-    res.status(201).json({ success: true, data: post });
+    const [enriched] = await enrichPostsWithAuthors([post.toObject ? post.toObject() : post]);
+    res.status(201).json({ success: true, data: enriched });
   } catch (err) {
     console.error('Create post error:', err);
     res.status(500).json({ success: false, error: 'Lỗi server' });

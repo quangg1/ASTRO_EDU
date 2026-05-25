@@ -16,6 +16,7 @@ import {
   YAxis,
 } from 'recharts'
 import { useAuthStore } from '@/features/auth/public'
+import { canManagePlatform } from '@/lib/roles'
 import {
   fetchAdminUsers,
   updateUserRole,
@@ -37,7 +38,7 @@ import {
   type AdminAnalyticsRetention,
   type AnalyticsRange,
 } from '@/features/admin/public'
-import { fetchCourses } from '@/features/courses/api/coursesApi'
+import { fetchCourses } from '@/features/courses/public'
 import { fetchAdminOrderStats, type AdminOrderStats, type Order } from '@/features/payment/public'
 import { trackEvent } from '@/lib/analytics/tracking'
 import { viText } from '@/messages/vi'
@@ -84,14 +85,14 @@ export default function AdminPage() {
 
   useEffect(() => {
     if (checked && !user) router.replace('/login?redirect=/admin')
-    if (checked && user && user.role !== 'admin') router.replace('/')
+    if (checked && user && !canManagePlatform(user)) router.replace('/')
   }, [checked, user, router])
 
   useEffect(() => {
     if (!user) return
-    if (user.role !== 'admin') return
+    if (!canManagePlatform(user)) return
     setLoading(true)
-    Promise.all([
+    void Promise.allSettled([
       fetchAdminUsers(),
       fetchCourses(),
       fetchAdminOrderStats(),
@@ -101,13 +102,25 @@ export default function AdminPage() {
       fetchAdminAnalyticsCohort(analyticsRange),
       fetchAdminLearningPathAnalytics(analyticsRange, learningPathFilter),
     ])
-      .then(([uRes, courses, orderOverview, analyticsOverview, funnelOverview, retentionOverview, cohortOverview, lpOverview]) => {
+      .then((results) => {
+        const val = <T,>(i: number, fallback: T): T =>
+          results[i].status === 'fulfilled' ? (results[i] as PromiseFulfilledResult<T>).value : fallback
+
+        const uRes = val(0, { success: false as const, error: 'Không tải danh sách người dùng' })
+        const courses = val(1, [] as Awaited<ReturnType<typeof fetchCourses>>)
+        const orderOverview = val(2, { stats: null, orders: [] as Order[] })
+        const analyticsOverview = val(3, { success: false as const, error: 'Không tải analytics' })
+        const funnelOverview = val(4, { success: false as const, error: 'Không tải funnel' })
+        const retentionOverview = val(5, { success: false as const, error: 'Không tải retention' })
+        const cohortOverview = val(6, { success: false as const, error: 'Không tải cohort' })
+        const lpOverview = val(7, { success: false as const, error: 'Không tải learning path' })
+
         if (uRes.success && uRes.data) setUsers(uRes.data)
         else setError(uRes.error || '')
         setMessage(null)
-        setCourseCount(courses.length)
+        setCourseCount(Array.isArray(courses) ? courses.length : 0)
         setOrderStats(orderOverview.stats)
-        setRecentOrders(orderOverview.orders)
+        setRecentOrders(orderOverview.orders ?? [])
         if (analyticsOverview.success && analyticsOverview.data) {
           setAnalytics(analyticsOverview.data)
           setAnalyticsError('')
@@ -135,12 +148,17 @@ export default function AdminPage() {
         } else {
           setLearningPathAnalytics(null)
         }
+
+        const failed = results.filter((r) => r.status === 'rejected')
+        if (failed.length > 0 && process.env.NODE_ENV === 'development') {
+          console.warn('[admin] Một số API dashboard lỗi:', failed)
+        }
       })
       .finally(() => setLoading(false))
   }, [user, analyticsRange, learningPathFilter])
 
   useEffect(() => {
-    if (!user || user.role !== 'admin') return
+    if (!user || !canManagePlatform(user)) return
     setTeacherAppLoading(true)
     fetchAdminTeacherApplications(teacherAppFilter)
       .then((res) => {
@@ -151,7 +169,7 @@ export default function AdminPage() {
   }, [user, teacherAppFilter])
 
   useEffect(() => {
-    if (!user || user.role !== 'admin') return
+    if (!user || !canManagePlatform(user)) return
     trackEvent('admin_dashboard_viewed', { range: analyticsRange })
   }, [user, analyticsRange])
 
@@ -159,7 +177,7 @@ export default function AdminPage() {
     return <div className="min-h-screen bg-black pt-20 px-4 text-gray-400">Đang kiểm tra phiên đăng nhập...</div>
   }
 
-  if (user.role !== 'admin') {
+  if (!canManagePlatform(user)) {
     return null
   }
 
@@ -229,7 +247,7 @@ export default function AdminPage() {
       <main className="max-w-5xl mx-auto">
         <PageHeader
           title={viText.admin.title}
-          description="Theo dõi người dùng, doanh thu và hành vi học tập từ một bề mặt quản trị thống nhất."
+          description="Người dùng, thanh toán, analytics và cấu hình hệ thống. Kiểm duyệt diễn đàn thuộc moderator; Studio thường ngày thuộc giáo viên."
           action={
             <Link href="/" className="text-sm text-cyan-400 hover:text-cyan-300">
               ← Trang chủ
@@ -237,7 +255,37 @@ export default function AdminPage() {
           }
         />
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 my-8">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
+          <Card className="p-4 border-amber-500/20 bg-amber-500/5">
+            <p className="text-xs font-medium text-amber-200/90 uppercase tracking-wide">Admin</p>
+            <p className="text-sm text-slate-400 mt-2 leading-relaxed">
+              Vai trò, đơn hàng, gem, promo, analytics. Can thiệp nội dung forum chỉ khi cần override trên từng bài.
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Link href="/admin/gem-economy" className="text-xs text-cyan-400 hover:underline">
+                Gem economy →
+              </Link>
+            </div>
+          </Card>
+          <Card className="p-4 border-white/10">
+            <p className="text-xs font-medium text-slate-300 uppercase tracking-wide">Studio (override)</p>
+            <p className="text-sm text-slate-500 mt-2 leading-relaxed">
+              Sửa khóa học / showcase khi cần — không thay thế quy trình giáo viên sở hữu nội dung.
+            </p>
+            <Link href="/studio" className="inline-block mt-3 text-xs text-amber-300 hover:underline">
+              Mở Studio →
+            </Link>
+          </Card>
+          <Card className="p-4 border-violet-500/20 bg-violet-500/5">
+            <p className="text-xs font-medium text-violet-200/90 uppercase tracking-wide">Moderator</p>
+            <p className="text-sm text-slate-400 mt-2 leading-relaxed">
+              Hàng đợi báo cáo, cảnh báo, ẩn/xóa — chỉ diễn đàn. Gán role <code className="text-violet-300">moderator</code> trong bảng người dùng bên dưới.
+            </p>
+            <p className="mt-3 text-xs text-slate-500">Admin không có /dashboard/moderate — dùng override trên bài viết.</p>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 my-8">
           <Card className="p-4">
             <p className="text-xs text-gray-500 uppercase tracking-wider">{viText.admin.users}</p>
             <p className="text-2xl font-bold text-white mt-1">{loading ? '...' : users.length}</p>
@@ -271,6 +319,20 @@ export default function AdminPage() {
               <Badge>Cấu hình</Badge>
             </div>
             <p className="text-white font-medium mt-1">Chỉ số và cửa hàng →</p>
+          </Link>
+          <Link href="/admin/promo-codes" className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 hover:bg-amber-500/20 transition-colors">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-xs text-amber-200 uppercase tracking-wider">Coupon</p>
+              <Badge>Giảm giá</Badge>
+            </div>
+            <p className="text-white font-medium mt-1">Mã & banner sự kiện →</p>
+          </Link>
+          <Link href="/admin/broadcast" className="rounded-xl border border-violet-500/30 bg-violet-500/10 p-4 hover:bg-violet-500/20 transition-colors">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-xs text-violet-200 uppercase tracking-wider">Thông báo</p>
+              <Badge>Broadcast</Badge>
+            </div>
+            <p className="text-white font-medium mt-1">Gửi tới user / vai trò →</p>
           </Link>
         </div>
 
@@ -317,7 +379,16 @@ export default function AdminPage() {
           ) : analyticsError ? (
             <div className="p-8 text-center text-red-300">{analyticsError}</div>
           ) : !analytics && analyticsTab === 'overview' ? (
-            <EmptyState title="Chưa có dữ liệu analytics" description="Hệ thống sẽ hiển thị biểu đồ khi có dữ liệu hành vi và giao dịch đủ để tổng hợp." className="m-4" />
+            <EmptyState
+              title={analyticsError ? 'Không tải được analytics' : 'Chưa có dữ liệu analytics'}
+              description={
+                analyticsError ||
+                (process.env.NODE_ENV === 'development'
+                  ? 'Local: kiểm tra API đang chạy (port 3002), MongoDB có dữ liệu, và đăng nhập admin. Deploy có dữ liệu thật nên thường đầy hơn môi trường dev.'
+                  : 'Hệ thống sẽ hiển thị biểu đồ khi có dữ liệu hành vi và giao dịch đủ để tổng hợp.')
+              }
+              className="m-4"
+            />
           ) : (
             <div className="p-4 space-y-5">
               {analyticsTab === 'overview' && analytics && (

@@ -2,6 +2,7 @@
 
 import { useMemo, useState, type ReactNode } from 'react'
 import { ShowcaseMediaUrlField } from '@/app/studio/showcase-entities/ShowcaseMediaUrlField'
+import type { UploadMediaContext } from '@/features/courses/public'
 import { getBeatFieldValue, setBeatFieldValue } from '@/features/content3d/narrative/panel-schema/beatPath'
 import {
   registryEntryForPath,
@@ -19,12 +20,22 @@ const TAB_SECTION_IDS: Record<BeatFormTab, string[]> = {
 }
 
 type Props = {
+  entityId: string
   beat: NarrativeBeat
   schema: NarrativePanelSchema
   onChange: (beat: NarrativeBeat) => void
 }
 
-export function NarrativeBeatFieldsForm({ beat, schema, onChange }: Props) {
+function beatMediaContext(entityId: string, beatId: string, fieldPath: string): UploadMediaContext {
+  const field = String(fieldPath).replace(/[^a-zA-Z0-9._-]/g, '-').replace(/\./g, '-')
+  return {
+    purpose: 'showcase-entity',
+    entityId,
+    variant: `narrative/beats/${beatId}/${field}`,
+  }
+}
+
+export function NarrativeBeatFieldsForm({ entityId, beat, schema, onChange }: Props) {
   const [formTab, setFormTab] = useState<BeatFormTab>('identity')
 
   const patchPath = (path: string, value: unknown) => {
@@ -189,6 +200,7 @@ function SectionFields({
                   value={String(value ?? '')}
                   onChange={(url) => patchPath(slot.path, url)}
                   accept="image/*"
+                  uploadContext={beatMediaContext(entityId, beat.id, slot.path)}
                 />
               </div>
             )

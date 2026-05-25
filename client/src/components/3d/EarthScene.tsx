@@ -3,7 +3,7 @@
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import type { ThreeEvent } from '@react-three/fiber'
 import { OrbitControls, Stars, Preload } from '@react-three/drei'
-import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import React, { Suspense, useCallback, useEffect, useMemo, useRef } from 'react'
 import * as THREE from 'three'
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib'
 import { Earth, globeSurfaceRaycast } from './Earth'
@@ -13,7 +13,6 @@ import { Moon } from './Moon'
 import { StageHotspots } from './StageHotspots'
 import { FossilFocusHighlight } from './FossilFocusHighlight'
 import { useEarthHistoryStore, useSceneCommandStore } from '@/features/content3d/earth/public'
-import { fetchFossilsForStage } from '@/features/content3d/earth/api/earthApi'
 import { latLngToVector3 } from '@/lib/geo'
 import type { EarthStage } from '@/types'
 import type { Fossil } from '@/types'
@@ -321,17 +320,13 @@ function Scene({ overrideStage, overrideFossils }: SceneProps = {}) {
     earthRotationPaused,
     flyToTarget,
     effectTags,
-    setFossils,
-    setFossilStats,
-    setFossilsLoading,
     setFlyToTarget,
     clearAllGlobeFossilUi,
     loadPhylumMetadata,
   } = useSceneCommandStore()
 
-  const [courseFossils, setCourseFossils] = useState<Fossil[]>([])
   const stage = overrideStage ?? currentStage
-  const fossils = overrideStage != null ? courseFossils : null
+  const fossils = overrideStage != null ? (overrideFossils ?? []) : null
   const renderFlyToTarget = overrideStage != null ? null : flyToTarget
   /** Nền không theo màu khí quyển từng kỷ — tránh cả scene “cam lè”; trời sao đọc rõ. */
   const spaceBackground = useMemo(() => new THREE.Color(0x03050c), [])
@@ -354,41 +349,6 @@ function Scene({ overrideStage, overrideFossils }: SceneProps = {}) {
     currentStage.minMa,
     clearAllGlobeFossilUi,
   ])
-
-  // Khi có overrideStage (khóa học): load fossils cho thời kỳ đó
-  useEffect(() => {
-    if (overrideStage == null) return
-    let cancelled = false
-    fetchFossilsForStage(overrideStage).then(({ fossils: list }) => {
-      if (!cancelled) setCourseFossils(list)
-    })
-    return () => { cancelled = true }
-  }, [overrideStage?.id, overrideStage?.time, overrideStage?.name])
-
-  // Khi không override: load fossils theo store (explore). Refetch khi stage hoặc time range thay đổi.
-  useEffect(() => {
-    if (overrideStage != null) return
-    let cancelled = false
-    const loadFossils = async () => {
-      setFossilsLoading(true)
-      const { fossils: list, total } = await fetchFossilsForStage(currentStage)
-      if (cancelled) return
-      setFossils(list)
-      if (list.length > 0 || total > 0) {
-        const byPhylum = list.reduce((acc, f) => {
-          const p = f.phylum || 'Unknown'
-          acc[p] = (acc[p] || 0) + 1
-          return acc
-        }, {} as Record<string, number>)
-        setFossilStats({ total, byPhylum })
-      } else {
-        setFossilStats({ total: 0, byPhylum: {} })
-      }
-      setFossilsLoading(false)
-    }
-    loadFossils()
-    return () => { cancelled = true }
-  }, [overrideStage, currentStage.id, currentStage.time, currentStage.maxMa, currentStage.minMa, setFossils, setFossilStats, setFossilsLoading])
 
   return (
     <>
@@ -457,11 +417,13 @@ function SmoothFillLight({ targetColor }: { targetColor: THREE.Color }) {
 }
 
 export interface EarthSceneProps {
-  /** Dùng trong khóa học: hiển thị Trái Đất ở đúng thời kỳ này (và load fossils tương ứng) */
+  /** Dùng trong khóa học: hiển thị Trái Đất ở đúng thời kỳ này */
   overrideStage?: EarthStage | null
+  /** Fossils cho overrideStage — parent gọi `useCourseStageFossils` (explore dùng `useExploreStageFossils` + store). */
+  overrideFossils?: Fossil[] | null
 }
 
-export default function EarthScene({ overrideStage }: EarthSceneProps = {}) {
+export default function EarthScene({ overrideStage, overrideFossils }: EarthSceneProps = {}) {
   const onPointerMissed = useCallback(() => {
     useSceneCommandStore.getState().clearAllGlobeFossilUi()
   }, [])
@@ -483,7 +445,7 @@ export default function EarthScene({ overrideStage }: EarthSceneProps = {}) {
       }}
     >
       <Suspense fallback={null}>
-        <Scene overrideStage={overrideStage} />
+        <Scene overrideStage={overrideStage} overrideFossils={overrideFossils} />
         <Preload all />
       </Suspense>
     </Canvas>

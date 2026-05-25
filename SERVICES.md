@@ -76,19 +76,11 @@ Xem chi tiết trong [docs/ARCHITECTURE_MERGED.md](docs/ARCHITECTURE_MERGED.md#d
 - **services/community**: copy `services/community/.env.example` → `.env`  
   - `JWT_SECRET`: trùng với auth
 
-- **VNPay (in-app QR + IPN)** — biến môi trường thêm vào `services/api/.env`:
-  - `VNPAY_TMN_CODE`: lấy từ sandbox merchant portal (https://sandbox.vnpayment.vn).
-  - `VNPAY_HASH_SECRET`: Secret key cho HMAC-SHA512.
-  - `VNPAY_HOST` (optional, mặc định `https://sandbox.vnpayment.vn`).
-  - `VNPAY_TEST_MODE` (optional, mặc định `true`; đổi `false` cho production).
-  - **Cấu hình URL IPN trên VNPay merchant portal**:
-    https://sandbox.vnpayment.vn/merchantv2/Account/TerminalEdit.htm
-    → IPN URL: `https://YOUR_PUBLIC_API_HOST/api/payments/ipn`
-  - Flow: client mở `PaymentQRModal` → backend gọi `vnpay.generateQr` → render
-    `qrcontent` bằng `qrcode.react`. Khi user trả tiền, VNPay GET sang
-    `/api/payments/ipn`; modal poll `/api/payments/status/:txnRef` để biết.
-    Nếu merchant chưa bật Merchant-hosted QR, modal rớt về redirect URL
-    (`buildPaymentUrl`) và dùng trang `/payment/return` để confirm.
+- **Thanh toán khóa học (checkout nội bộ, demo)** — không cần VNPay:
+  - `GET /api/payments/checkout-quote` → báo giá + voucher gem
+  - `POST /api/payments/checkout` → tạo đơn `pending`
+  - `POST /api/payments/checkout/:txnRef/confirm` → xác nhận (demo thẻ), enroll + trừ gem
+  - Client: `/courses/[slug]/checkout` — form thẻ validate trên browser, không gửi số thẻ lên server
 
 - **services/courses**: thêm `INTERNAL_API_SECRET` (trùng payment) vào `.env` nếu dùng payment.
 

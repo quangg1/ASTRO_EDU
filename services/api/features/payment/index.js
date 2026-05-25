@@ -1,236 +1,218 @@
 /**
- * Payment routes — VNPay only.
+ * Payment routes — checkout nội bộ (demo, không cổng bên thứ ba).
  *
- * Endpoints:
- *   POST   /payments/create-qr        (auth)   → in-app VietQR via VNPay `generateQr`
- *   POST   /payments/create-url       (auth)   → hosted-redirect URL (fallback)
- *   GET    /payments/ipn              (none)   → server-to-server IPN callback
- *   GET    /payments/return           (none)   → browser redirect return URL
- *   GET    /payments/status/:txnRef   (auth)   → frontend poll until 'completed'
- *   GET    /payments/orders           (auth)   → user order history
- *   GET    /payments/admin/overview   (admin)  → admin stats + recent orders
- *
- * Why both `/create-qr` and `/create-url`?  Merchant-hosted QR requires a
- * specific VNPay agreement (`vnp_Command=genqr`). If the sandbox/production
- * merchant doesn't have it, `generateQr` returns `code !== '00'` and the
- * frontend falls back to the hosted redirect URL so checkout still works.
- *
- * Refs:
- *   • https://vnpay.js.org/create-payment-url
- *   • https://vnpay.js.org/generate-qr
- *   • https://vnpay.js.org/ipn/verify-ipn-call
- *   • https://vnpay.js.org/ipn/config-ipn          ← where to paste the URL
+ *   GET  /payments/checkout-quote          → báo giá + voucher gem (Model B)
+ *   POST /payments/checkout                  → tạo đơn pending
+ *   POST /payments/checkout/:txnRef/confirm  → xác nhận thanh toán (demo card)
+ *   GET  /payments/status/:txnRef          → trạng thái đơn
+ *   GET  /payments/orders                  → lịch sử đơn
  */
 
 const express = require('express')
 const crypto = require('crypto')
-const {
-  IpnSuccess,
-  IpnFailChecksum,
-  IpnOrderNotFound,
-  IpnInvalidAmount,
-  IpnUnknownError,
-  InpOrderAlreadyConfirmed,
-} = require('vnpay')
 
 const Order = require('./models/Order')
 const Course = require('../courses/models/Course')
-const {
-  buildPaymentUrl,
-  generateQrContent,
-  verifyIpnCall,
-  verifyReturnUrl,
-} = require('./lib/vnpay')
 const { authMiddleware } = require('../../shared/jwtAuth')
 const { completeOrderAndEnroll } = require('./services/paymentFulfillmentService')
+const { getCheckoutQuote } = require('./services/courseCheckoutService')
 const { requireString } = require('../../shared/validation')
 const { AppError } = require('../../shared/errors')
-const { toClientMessage, sanitizeClientText } = require('../../shared/publicError')
-const { getRuntimeEnv } = require('../../config/runtimeEnv')
-const APP_PATHS = require('../../../../shared/appPaths')
+const { toClientMessage } = require('../../shared/publicError')
 
 const router = express.Router()
 
-/* ───────────────────────── helpers ────────────────────────────────── */
+const PENDING_TTL_MS = 30 * 60 * 1000
 
-function clientIp(req) {
-  const fwd = req.headers['x-forwarded-for']
-  if (typeof fwd === 'string' && fwd.length > 0) return fwd.split(',')[0].trim()
-  return req.ip || req.socket?.remoteAddress || '127.0.0.1'
+function mintTxnRef() {
+  return `GAL${Date.now()}${crypto.randomBytes(3).toString('hex').toUpperCase()}`
 }
 
-function publicReturnUrl(courseSlug) {
-  const base = getRuntimeEnv().clientUrl
-  return `${base}${APP_PATHS.paymentReturn}?slug=${encodeURIComponent(courseSlug || '')}`
+function mintTransactionId() {
+  return `TXN${Date.now()}${crypto.randomBytes(4).toString('hex').toUpperCase()}`
 }
 
 /**
- * Validate the request and mint a fresh pending Order. Shared by
- * /create-qr and /create-url so the two endpoints stay in lockstep on
- * pricing + txnRef format. Returns { course, order } or throws AppError.
+ * Tạo đơn pending — chưa trừ gem, chưa enroll.
  */
-async function mintPendingOrder({ userId, courseId }) {
-  const course = await Course.findOne({ _id: courseId, published: true })
+async function mintPendingOrder({ userId, courseId, voucherTierId, promoCode }) {
+  const quote = await getCheckoutQuote({
+    userId,
+    courseId,
+    voucherTierId: voucherTierId || null,
+    promoCode: promoCode || null,
+  })
+  const course = await Course.findOne({ _id: courseId, published: true }).lean()
   if (!course) throw new AppError(404, 'COURSE_NOT_FOUND', 'Không tìm thấy khóa học')
-  if (!course.isPaid || !(course.price > 0)) {
-    throw new AppError(400, 'NOT_PAID_COURSE', 'Khóa học không yêu cầu thanh toán')
-  }
-  // Timestamp + random hex prevents collisions on double-click within the
-  // same millisecond. VNPay also requires uniqueness per day.
-  const txnRef = `GAL${Date.now()}${crypto.randomBytes(3).toString('hex').toUpperCase()}`
+
+  const selected = quote.selected
+  const txnRef = mintTxnRef()
   const order = await Order.create({
     userId,
     courseId: String(course._id),
     courseSlug: course.slug,
-    amount: course.price,
-    currency: course.currency || 'VND',
+    listPrice: quote.listPrice,
+    discountPct: selected.discountPct,
+    discountAmount: selected.discountAmount,
+    amount: selected.finalAmount,
+    voucherTierId: selected.tierId,
+    learnerTierId: selected.learnerTierId,
+    promoCodeId: selected.promoCodeId,
+    promoCode: selected.promoCode,
+    discountSource:
+      quote.discountSource ||
+      (selected.promoCode
+        ? 'promo'
+        : selected.tierId
+          ? 'gem_voucher'
+          : selected.learnerTierId
+            ? 'learner_tier'
+            : 'none'),
+    gemsCommitted: selected.gemCost,
+    currency: quote.currency || 'VND',
     status: 'pending',
-    gateway: 'vnpay',
+    gateway: 'demo',
     txnRef,
+    metadata: { demoMode: true },
   })
-  return { course, order }
+  return { course, order, quote }
 }
 
-/* ───────────────────────── /create-qr ─────────────────────────────── */
-router.post('/create-qr', authMiddleware, async (req, res) => {
+router.get('/checkout-quote', authMiddleware, async (req, res) => {
+  try {
+    const courseId = requireString(req.query?.courseId, 'courseId')
+    const voucherTierId = String(req.query?.voucherTierId || '').trim() || null
+    const promoCode = String(req.query?.promoCode || '').trim() || null
+    const quote = await getCheckoutQuote({
+      userId: req.userId,
+      courseId,
+      voucherTierId,
+      promoCode,
+    })
+    return res.json({ success: true, data: quote })
+  } catch (err) {
+    if (err instanceof AppError) {
+      return res.status(err.status).json({ success: false, code: err.code, error: err.message })
+    }
+    req.logger?.error('checkout_quote_failed', { error: err.message })
+    return res.status(500).json({
+      success: false,
+      error: toClientMessage(err, 'Không tải được thông tin thanh toán.'),
+    })
+  }
+})
+
+router.post('/checkout', authMiddleware, async (req, res) => {
   try {
     const courseId = requireString(req.body?.courseId, 'courseId')
-    const { course, order } = await mintPendingOrder({ userId: req.userId, courseId })
-
-    const qr = await generateQrContent({
-      amount: order.amount,
-      ipAddr: clientIp(req),
-      txnRef: order.txnRef,
-      orderInfo: `Thanh toan khoa hoc ${course.slug}`,
-      returnUrl: publicReturnUrl(course.slug),
+    const voucherTierId = String(req.body?.voucherTierId || '').trim() || null
+    const promoCode = String(req.body?.promoCode || '').trim() || null
+    const { course, order, quote } = await mintPendingOrder({
+      userId: req.userId,
+      courseId,
+      voucherTierId,
+      promoCode,
     })
 
-    if (qr.code !== '00' || !qr.qrContent) {
-      // QR not enabled for this merchant — surface the message and let the
-      // frontend fall back to /create-url (or show the error).
-      return res.status(200).json({
-        success: false,
-        code: qr.code,
-        error: sanitizeClientText(
-          qr.message,
-          'Không tạo được mã thanh toán. Bạn có thể thử thanh toán trên trang VNPay.',
-        ),
-        txnRef: order.txnRef,
-      })
-    }
+    const expiresAt = new Date(Date.now() + PENDING_TTL_MS).toISOString()
 
     return res.json({
       success: true,
       data: {
-        qrContent: qr.qrContent,
         txnRef: order.txnRef,
         amount: order.amount,
+        listPrice: order.listPrice,
+        discountAmount: order.discountAmount,
+        discountPct: order.discountPct,
         currency: order.currency,
-        expiresInSec: 15 * 60,
+        courseSlug: course.slug,
+        courseTitle: quote.courseTitle,
+        gemsCommitted: order.gemsCommitted,
+        promoCode: order.promoCode,
+        discountSource: order.discountSource,
+        learnerTierId: order.learnerTierId,
+        expiresAt,
+        demoMode: true,
       },
     })
   } catch (err) {
-    req.logger?.error('create_qr_failed', { error: err.message })
     if (err instanceof AppError) {
       return res.status(err.status).json({ success: false, code: err.code, error: err.message })
     }
+    req.logger?.error('checkout_create_failed', { error: err.message })
     return res.status(500).json({
       success: false,
-      error: toClientMessage(err, 'Không tạo được mã thanh toán. Vui lòng thử lại sau.'),
+      error: toClientMessage(err, 'Không tạo được đơn hàng. Vui lòng thử lại.'),
     })
   }
 })
 
-/* ───────────────────────── /create-url (fallback) ─────────────────── */
-router.post('/create-url', authMiddleware, async (req, res) => {
+router.post('/checkout/:txnRef/confirm', authMiddleware, async (req, res) => {
   try {
-    const courseId = requireString(req.body?.courseId, 'courseId')
-    const { course, order } = await mintPendingOrder({ userId: req.userId, courseId })
+    const txnRef = requireString(req.params.txnRef, 'txnRef')
+    const paymentMethod = String(req.body?.paymentMethod || 'card').trim().toLowerCase()
+    if (paymentMethod !== 'card') {
+      throw new AppError(400, 'INVALID_PAYMENT_METHOD', 'Phương thức thanh toán không hợp lệ')
+    }
 
-    const paymentUrl = buildPaymentUrl({
-      amount: order.amount,
-      ipAddr: clientIp(req),
-      txnRef: order.txnRef,
-      orderInfo: `Thanh toan khoa hoc ${course.slug}`,
-      returnUrl: publicReturnUrl(course.slug),
+    const order = await Order.findOne({ txnRef, userId: req.userId })
+    if (!order) {
+      throw new AppError(404, 'ORDER_NOT_FOUND', 'Không tìm thấy đơn hàng')
+    }
+    if (order.status === 'completed') {
+      return res.json({
+        success: true,
+        data: {
+          status: 'completed',
+          courseSlug: order.courseSlug,
+          txnRef: order.txnRef,
+          alreadyCompleted: true,
+        },
+      })
+    }
+    if (order.status !== 'pending') {
+      throw new AppError(400, 'ORDER_NOT_PAYABLE', 'Đơn hàng không thể thanh toán')
+    }
+
+    const ageMs = Date.now() - new Date(order.createdAt).getTime()
+    if (ageMs > PENDING_TTL_MS) {
+      order.status = 'cancelled'
+      await order.save()
+      throw new AppError(400, 'ORDER_EXPIRED', 'Đơn hàng đã hết hạn. Vui lòng tạo đơn mới.')
+    }
+
+    const transactionId = mintTransactionId()
+    const result = await completeOrderAndEnroll({ txnRef, transactionId })
+
+    req.logger?.info('checkout_confirmed', {
+      txnRef,
+      transactionId,
+      userId: req.userId,
+      courseSlug: result.courseSlug,
     })
 
     return res.json({
       success: true,
-      data: { paymentUrl, txnRef: order.txnRef, amount: order.amount, currency: order.currency },
+      data: {
+        status: 'completed',
+        courseSlug: result.courseSlug,
+        txnRef,
+        transactionId,
+        paidAt: new Date().toISOString(),
+      },
     })
   } catch (err) {
-    req.logger?.error('create_url_failed', { error: err.message })
     if (err instanceof AppError) {
       return res.status(err.status).json({ success: false, code: err.code, error: err.message })
     }
+    req.logger?.error('checkout_confirm_failed', { error: err.message })
     return res.status(500).json({
       success: false,
-      error: toClientMessage(err, 'Không mở được trang thanh toán. Vui lòng thử lại sau.'),
+      error: toClientMessage(err, 'Thanh toán thất bại. Vui lòng thử lại.'),
     })
   }
 })
 
-/* ───────────────────────── /ipn ───────────────────────────────────── */
-/**
- * VNPay IPN handler. Configure this URL in your VNPay merchant dashboard
- * (https://sandbox.vnpayment.vn/merchantv2/Account/TerminalEdit.htm).
- *
- * Response codes follow VNPay convention (RspCode 00 = OK). We use the
- * SDK's sentinel objects so re-keyed RspCodes can't drift.
- */
-router.get('/ipn', async (req, res) => {
-  try {
-    const verify = verifyIpnCall(req.query)
-    if (!verify.isVerified) return res.json(IpnFailChecksum)
-    if (!verify.isSuccess) return res.json(IpnUnknownError)
-
-    const order = await Order.findOne({ txnRef: verify.vnp_TxnRef })
-    if (!order) return res.json(IpnOrderNotFound)
-    if (Number(verify.vnp_Amount) !== Number(order.amount)) return res.json(IpnInvalidAmount)
-    if (order.status === 'completed') return res.json(InpOrderAlreadyConfirmed)
-
-    await completeOrderAndEnroll({
-      txnRef: order.txnRef,
-      transactionId: String(verify.vnp_TransactionNo || ''),
-    })
-    req.logger?.info('vnpay_ipn_fulfilled', {
-      txnRef: order.txnRef,
-      transactionNo: verify.vnp_TransactionNo,
-      orderId: String(order._id),
-    })
-    return res.json(IpnSuccess)
-  } catch (err) {
-    req.logger?.error('vnpay_ipn_error', { error: err.message })
-    return res.json(IpnUnknownError)
-  }
-})
-
-/* ───────────────────────── /return ────────────────────────────────── */
-/**
- * Browser return URL after the hosted redirect flow. The IPN above is the
- * source of truth — this handler only computes a UI-friendly status string
- * the `/payment/return` Next page can render.
- */
-router.get('/return', async (req, res) => {
-  try {
-    const verify = verifyReturnUrl(req.query)
-    const base = getRuntimeEnv().clientUrl
-    const slug = String(req.query.slug || '')
-    const params = new URLSearchParams({
-      slug,
-      txn: String(req.query.vnp_TxnRef || ''),
-      status: verify.isVerified ? (verify.isSuccess ? 'success' : 'failed') : 'invalid',
-    })
-    return res.redirect(`${base}${APP_PATHS.paymentReturn}?${params.toString()}`)
-  } catch (err) {
-    req.logger?.error('vnpay_return_error', { error: err.message })
-    const base = getRuntimeEnv().clientUrl
-    return res.redirect(`${base}${APP_PATHS.paymentReturn}?status=error`)
-  }
-})
-
-/* ───────────────────────── /status/:txnRef ────────────────────────── */
 router.get('/status/:txnRef', authMiddleware, async (req, res) => {
   try {
     const order = await Order.findOne({
@@ -240,7 +222,12 @@ router.get('/status/:txnRef', authMiddleware, async (req, res) => {
     if (!order) return res.status(404).json({ success: false, error: 'Không tìm thấy đơn hàng' })
     return res.json({
       success: true,
-      data: { status: order.status, courseSlug: order.courseSlug, paidAt: order.paidAt || null },
+      data: {
+        status: order.status,
+        courseSlug: order.courseSlug,
+        paidAt: order.paidAt || null,
+        transactionId: order.transactionId || null,
+      },
     })
   } catch (err) {
     req.logger?.error('payment_status_failed', { error: err.message })
@@ -248,7 +235,6 @@ router.get('/status/:txnRef', authMiddleware, async (req, res) => {
   }
 })
 
-/* ───────────────────────── /orders ────────────────────────────────── */
 router.get('/orders', authMiddleware, async (req, res) => {
   try {
     const orders = await Order.find({ userId: req.userId })
@@ -261,7 +247,5 @@ router.get('/orders', authMiddleware, async (req, res) => {
     res.status(500).json({ success: false, error: 'Lỗi server' })
   }
 })
-
-// Admin overview lives in features/admin (mounted at /api/admin/orders/overview).
 
 module.exports = router

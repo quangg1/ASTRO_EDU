@@ -2,7 +2,15 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { useAuthStore } from '@/features/auth/public'
 import { fetchCourse, type Course, type CourseLessonOutline, type CourseModule, type Lesson } from '@/features/courses/api/coursesApi'
+import { resolveMediaUrl } from '@/lib/apiConfig'
+import { courseLevelLabel, courseRequiresPayment, formatCatalogPrice } from '@/components/courses/courseCatalogMeta'
+import { trackEvent } from '@/lib/analytics'
+import { fetchCoursePromoBanner, type CoursePromoBanner as PromoBanner } from '@/features/promotions/api/promoApi'
+import { CoursePromoBanner } from '@/components/courses/CoursePromoBanner'
+import { CommunityAskButton } from '@/components/community/learning/CommunityAskButton'
 
 function isOutlineEntry(l: Lesson | CourseLessonOutline): l is CourseLessonOutline {
   return !('content' in l)
@@ -60,7 +68,10 @@ export function CourseLandingClient({
   initialCourse: Course
   enrolledFlash?: boolean
 }) {
+  const router = useRouter()
+  const { user, checked } = useAuthStore()
   const [course, setCourse] = useState(initialCourse)
+  const [promoBanner, setPromoBanner] = useState<PromoBanner | null>(null)
 
   useEffect(() => setCourse(initialCourse), [initialCourse])
 
@@ -74,6 +85,18 @@ export function CourseLandingClient({
     }
   }, [slug])
 
+  useEffect(() => {
+    if (!course.id || course.enrollment) return
+    if (!courseRequiresPayment(course)) return
+    let cancelled = false
+    void fetchCoursePromoBanner(course.id).then((b) => {
+      if (!cancelled) setPromoBanner(b)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [course.id, course.enrollment, course.isPaid, course.price, course.requiresPayment])
+
   const isEnrolled = course.enrollment != null
   const lessons = course.lessons ?? []
   const courseModules = (course.modules ?? []).sort((a, b) => a.order - b.order)
@@ -85,14 +108,31 @@ export function CourseLandingClient({
 
   const crossHref = course.crossSellTutorialHref?.trim() || '/tutorial'
 
-  const levelLabel =
-    course.level === 'beginner'
-      ? 'Cơ bản'
-      : course.level === 'intermediate'
-        ? 'Trung cấp'
-        : course.level === 'advanced'
-          ? 'Nâng cao'
-          : course.level
+  const levelLabel = courseLevelLabel(course.level)
+  const isPaid = courseRequiresPayment(course)
+  const checkoutHref = `/courses/${slug}/checkout`
+  const priceLabel = formatCatalogPrice(
+    course.price,
+    course.currency,
+    course.isPaid,
+    course.requiresPayment,
+  )
+  const thumbSrc = course.thumbnail ? resolveMediaUrl(course.thumbnail) : null
+
+  const handleBuyNow = () => {
+    if (!checked) return
+    if (!user) {
+      router.push(`/login?redirect=${encodeURIComponent(checkoutHref)}`)
+      return
+    }
+    trackEvent('checkout_started', {
+      course_slug: slug,
+      amount: course.price ?? 0,
+      currency: course.currency || 'VND',
+      surface: 'course_landing',
+    })
+    router.push(checkoutHref)
+  }
 
   return (
     <div className="min-h-screen bg-ds-base">
@@ -108,14 +148,22 @@ export function CourseLandingClient({
           ← Danh sách khóa học
         </Link>
 
+        {!isEnrolled && isPaid && promoBanner && (
+          <CoursePromoBanner banner={promoBanner} checkoutHref={checkoutHref} />
+        )}
+
         <div className="rounded-2xl border border-ds-border bg-ds-overlay overflow-hidden mb-8">
-          {course.thumbnail && (
-            <div className="relative h-44 w-full overflow-hidden">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={course.thumbnail} alt="" className="absolute inset-0 h-full w-full object-cover opacity-85" />
-              <div className="absolute inset-0 bg-gradient-to-t from-ds-surface to-transparent" />
-            </div>
-          )}
+          <div className="relative aspect-[21/9] w-full overflow-hidden bg-ds-elevated">
+            {thumbSrc ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={thumbSrc} alt="" className="absolute inset-0 h-full w-full object-cover" />
+            ) : (
+              <div className="absolute inset-0 bg-gradient-to-br from-cyan-950/80 via-ds-base to-violet-950/50 flex items-center justify-center text-5xl opacity-50">
+                🌌
+              </div>
+            )}
+            <div className="absolute inset-0 bg-gradient-to-t from-ds-surface via-ds-surface/40 to-transparent" />
+          </div>
           <div className="p-6 -mt-6 relative">
             <div className="flex flex-wrap items-center gap-2 text-[11px] text-ds-subtle mb-2">
               <span className="px-2 py-0.5 rounded-full bg-white/5 border border-ds-border text-gray-300">{levelLabel}</span>
@@ -135,12 +183,29 @@ export function CourseLandingClient({
             <p className="text-gray-300 text-sm leading-relaxed whitespace-pre-wrap">{course.description}</p>
 
             <div className="mt-6 flex flex-wrap gap-3">
-              {learnHref && (
+              {isEnrolled && learnHref && (
                 <Link
                   href={learnHref}
                   className="inline-flex items-center justify-center px-5 py-2.5 rounded-xl bg-cyan-600 text-white text-sm font-medium hover:bg-cyan-500 transition-colors"
                 >
-                  {isEnrolled ? 'Vào học' : 'Xem nội dung khóa học'}
+                  Vào học
+                </Link>
+              )}
+              {!isEnrolled && isPaid && (
+                <button
+                  type="button"
+                  onClick={handleBuyNow}
+                  className="inline-flex items-center justify-center px-5 py-2.5 rounded-xl bg-cyan-600 text-white text-sm font-medium hover:bg-cyan-500 transition-colors"
+                >
+                  Mua ngay · {priceLabel}
+                </button>
+              )}
+              {!isEnrolled && learnHref && (
+                <Link
+                  href={learnHref}
+                  className="inline-flex items-center justify-center px-5 py-2.5 rounded-xl border border-ds-border-strong text-gray-200 text-sm hover:bg-white/5 transition-colors"
+                >
+                  {isPaid ? 'Xem trước nội dung' : 'Xem nội dung khóa học'}
                 </Link>
               )}
               <Link
@@ -149,14 +214,42 @@ export function CourseLandingClient({
               >
                 Lộ trình miễn phí
               </Link>
+              <CommunityAskButton
+                variant="outline"
+                className="!w-auto"
+                context={{
+                  pathSource: 'course',
+                  courseSlug: slug,
+                  courseId: course.id,
+                  courseTitle: course.title,
+                }}
+              >
+                Hỏi cộng đồng về khóa này
+              </CommunityAskButton>
             </div>
-            {!isEnrolled && course.isPaid && (course.price ?? 0) > 0 && (
-              <p className="mt-4 text-xs text-ds-subtle">
-                Nội dung chi tiết từng bài có thể bị ẩn cho tới khi bạn mua khóa. Đăng nhập trên trang học để thanh toán và mở khóa.
+            {!isEnrolled && isPaid && (
+              <p className="mt-4 text-xs text-ds-subtle leading-relaxed">
+                Thanh toán trên trang checkout (demo thẻ — không trừ tiền thật). Gem chỉ dùng để giảm giá.
               </p>
             )}
           </div>
         </div>
+
+        {!isEnrolled && isPaid && (
+          <aside className="rounded-2xl border border-amber-500/25 bg-amber-500/5 p-5 mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <p className="text-sm font-semibold text-amber-100">Một lần mua — truy cập trọn khóa</p>
+              <p className="text-2xl font-bold text-white mt-1 tabular-nums">{priceLabel}</p>
+            </div>
+            <button
+              type="button"
+              onClick={handleBuyNow}
+              className="shrink-0 px-6 py-3 rounded-xl bg-cyan-600 text-white text-sm font-medium hover:bg-cyan-500 transition-colors"
+            >
+              Mua ngay
+            </button>
+          </aside>
+        )}
 
         <section className="rounded-2xl border border-ds-border bg-ds-surface p-6 mb-8">
           <h2 className="text-lg font-semibold text-white mb-1">Chương trình (syllabus)</h2>

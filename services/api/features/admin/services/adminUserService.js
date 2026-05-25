@@ -1,5 +1,5 @@
-const User = require('../features/auth/models/User');
-const { AppError } = require('../shared/errors');
+const User = require('../../auth/models/User');
+const { AppError } = require('../../../shared/errors');
 
 const ROLES = ['student', 'teacher', 'moderator', 'admin'];
 

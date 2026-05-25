@@ -3,8 +3,10 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { fetchCoursesForEditor, createCourse, type Course } from '@/features/courses/api/coursesApi'
+import { fetchCoursesForEditor, createCourse, type Course } from '@/features/courses/public'
 import { useAuthStore } from '@/features/auth/public'
+import { canEnterStudio } from '@/lib/roles'
+import { CourseCatalogCard, CourseCatalogCardSkeleton } from '@/components/courses/CourseCatalogCard'
 
 export default function StudioHomePage() {
   const router = useRouter()
@@ -18,7 +20,7 @@ export default function StudioHomePage() {
 
   useEffect(() => {
     if (checked && !user) router.replace('/login?redirect=/studio')
-    if (checked && user && user.role !== 'teacher' && user.role !== 'admin') router.replace('/')
+    if (checked && user && !canEnterStudio(user)) router.replace('/')
   }, [checked, user, router])
 
   useEffect(() => {
@@ -32,13 +34,13 @@ export default function StudioHomePage() {
 
   return (
     <div className="min-h-screen bg-black pt-16 px-4 pb-10">
-      <main className="max-w-6xl mx-auto space-y-6">
+      <main className="max-w-7xl mx-auto space-y-6">
         <section className="rounded-2xl border border-ds-accent-strong bg-gradient-to-r from-cyan-500/20 via-blue-500/15 to-purple-500/20 p-6">
           <p className="text-xs uppercase tracking-wide text-cyan-200">Teacher Studio</p>
           <h1 className="text-2xl md:text-3xl font-bold text-white mt-2">Cosmo Learn Studio</h1>
           <p className="text-sm text-gray-200 mt-2">
-            <strong>Learning Path</strong> – Lộ trình 6 module, bài học theo block (cùng kit với khóa học).{' '}
-            <strong>Course</strong> – Khóa học có curriculum &amp; thanh toán tùy chọn.
+            <strong>Learning Path</strong> – Lộ trình 6 module.{' '}
+            <strong>Course</strong> – Chỉnh curriculum, ảnh bìa, giá — thẻ catalog đồng bộ với học viên.
           </p>
           <div className="mt-4 flex flex-wrap gap-2">
             <Link
@@ -60,20 +62,22 @@ export default function StudioHomePage() {
               Mở 3D Studio
             </Link>
             <Link
-              href="/tutorial"
+              href="/courses"
               target="_blank"
               rel="noopener noreferrer"
               className="text-sm text-cyan-200/90 hover:underline self-center"
             >
-              Xem lộ trình (học viên) →
+              Xem catalog học viên →
             </Link>
           </div>
         </section>
 
-        {/* Courses */}
-        <section className="rounded-2xl border border-ds-border bg-ds-surface p-4">
-          <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-            <h2 className="text-white font-semibold">Courses (curriculum & payments)</h2>
+        <section className="rounded-2xl border border-ds-border bg-ds-surface p-4 sm:p-6">
+          <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+            <div>
+              <h2 className="text-white font-semibold">Khóa học của bạn</h2>
+              <p className="text-xs text-ds-subtle mt-1">Cùng thẻ như trang /courses — mở Studio để sửa ảnh bìa &amp; mô tả.</p>
+            </div>
             <div className="flex items-center gap-2">
               {!showCreateCourse ? (
                 <button
@@ -81,7 +85,7 @@ export default function StudioHomePage() {
                   onClick={() => setShowCreateCourse(true)}
                   className="text-xs min-h-10 px-3 py-1.5 rounded-lg bg-green-600/80 text-white hover:bg-green-500"
                 >
-                  + Create course
+                  + Tạo khóa học
                 </button>
               ) : (
                 <div className="flex items-center gap-2 flex-wrap">
@@ -89,7 +93,7 @@ export default function StudioHomePage() {
                     type="text"
                     value={newCourseTitle}
                     onChange={(e) => setNewCourseTitle(e.target.value)}
-                    placeholder="Course title"
+                    placeholder="Tên khóa học"
                     className="rounded-lg bg-black/50 border border-ds-border-strong px-3 py-1.5 text-sm text-white placeholder-gray-500 focus:border-ds-accent focus:outline-none w-48"
                   />
                   <button
@@ -103,16 +107,15 @@ export default function StudioHomePage() {
                       if (res.success && res.slug) {
                         setShowCreateCourse(false)
                         setNewCourseTitle('')
-                        setCourses((prev) => [...prev, { id: '', title: newCourseTitle.trim(), slug: res.slug!, description: '', thumbnail: null, level: 'beginner' }])
                         router.push(`/studio/${res.slug}`)
                       } else {
-                        setCreateError(res.error || 'Error')
+                        setCreateError(res.error || 'Lỗi tạo khóa học')
                       }
                     }}
                     disabled={creating || !newCourseTitle.trim()}
                     className="text-xs min-h-10 px-3 py-1.5 rounded-lg bg-cyan-600 text-white hover:bg-cyan-500 disabled:opacity-50"
                   >
-                    {creating ? '...' : 'Create'}
+                    {creating ? '...' : 'Tạo'}
                   </button>
                   <button
                     type="button"
@@ -123,45 +126,64 @@ export default function StudioHomePage() {
                     }}
                     className="text-xs min-h-10 px-2 text-ds-muted hover:text-white"
                   >
-                    Cancel
+                    Huỷ
                   </button>
                 </div>
               )}
-              <Link href="/courses" className="text-xs text-ds-accent hover:text-cyan-200">
-                Student view
-              </Link>
             </div>
           </div>
-          {createError && <p className="text-sm text-red-400 mb-2">{createError}</p>}
+          {createError && <p className="text-sm text-red-400 mb-3">{createError}</p>}
           {loadingCourses ? (
-            <p className="text-sm text-ds-muted">Loading courses...</p>
+            <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <CourseCatalogCardSkeleton key={i} />
+              ))}
+            </div>
           ) : courses.length === 0 && !showCreateCourse ? (
-            <p className="text-sm text-ds-muted">No courses yet. Click “Create course” to get started.</p>
+            <p className="text-sm text-ds-muted">Chưa có khóa học. Bấm «Tạo khóa học» để bắt đầu.</p>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {courses.map((c) => (
-                <div key={c.id} className="rounded-xl border border-ds-border bg-white/5 p-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <h3 className="text-white font-semibold">{c.title}</h3>
-                      <p className="text-xs text-ds-subtle mt-1">
-                        {c.lessonCount ?? 0} lessons &middot; {c.level}
-                        {c.isPaid && (c.price ?? 0) > 0 && (
-                          <>
-                            {' '}
-                            &middot; {c.currency === 'USD' ? `$${c.price}` : `${(c.price ?? 0).toLocaleString('en-US')} ₫`}
-                          </>
-                        )}
-                      </p>
-                    </div>
+                <div key={c.id || c.slug} className="relative group">
+                  {!c.published && (
+                    <span className="absolute top-2 left-2 z-10 px-2 py-0.5 rounded-md text-[10px] font-medium bg-amber-500/90 text-amber-950">
+                      Nháp
+                    </span>
+                  )}
+                  <CourseCatalogCard
+                    href={`/studio/${c.slug}`}
+                    course={{
+                      slug: c.slug,
+                      title: c.title,
+                      description: c.description,
+                      thumbnail: c.thumbnail,
+                      level: c.level,
+                      lessonCount: c.lessonCount,
+                      durationWeeks: c.durationWeeks,
+                      isPaid: c.isPaid,
+                      requiresPayment: c.requiresPayment,
+                      price: c.price,
+                      currency: c.currency,
+                    }}
+                  />
+                  <div className="mt-2 flex gap-2">
                     <Link
                       href={`/studio/${c.slug}`}
-                      className="shrink-0 px-3 py-1.5 rounded-lg bg-cyan-500 text-white text-sm hover:bg-cyan-400"
+                      className="flex-1 text-center text-xs py-2 rounded-lg bg-cyan-600 text-white hover:bg-cyan-500"
                     >
-                      Open Studio
+                      Mở Studio
                     </Link>
+                    {c.published && (
+                      <Link
+                        href={`/courses/${c.slug}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-3 py-2 rounded-lg text-xs border border-ds-border text-ds-muted hover:text-ds-accent"
+                      >
+                        Xem
+                      </Link>
+                    )}
                   </div>
-                  <p className="text-sm text-ds-muted mt-2 line-clamp-2">{c.description}</p>
                 </div>
               ))}
             </div>

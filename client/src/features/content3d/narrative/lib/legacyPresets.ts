@@ -3,7 +3,7 @@
  */
 import { earthStagesToBundle, ensureBeatVisual } from '@/features/content3d/narrative/adapters'
 import type { PlanetNarrativeBundle } from '@/features/content3d/narrative/types'
-import { earthHistoryData } from '@/features/content3d/earth/lib/earthHistoryData'
+import { earthHistoryData } from '@/features/content3d/earth/public'
 import {
   buildLegacyBundleForEntity,
   hasLegacySeedEntity,

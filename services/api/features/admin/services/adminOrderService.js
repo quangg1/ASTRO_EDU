@@ -1,4 +1,4 @@
-const Order = require('../features/payment/models/Order');
+const Order = require('../../payment/models/Order');
 
 async function getAdminOrderOverview() {
   const totalOrders = await Order.countDocuments({});

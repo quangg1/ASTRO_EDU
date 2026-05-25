@@ -71,8 +71,25 @@ function canEditTutorial(tutorial, actor) {
   return !tutorial.authorId || String(tutorial.authorId) === String(actor.id);
 }
 
+/** Kiểm duyệt diễn đàn — chỉ moderator (admin dùng override riêng). */
 function canModerate(actor) {
-  return !!actor && ['admin', 'moderator'].includes(actor.role);
+  return !!actor && actor.role === 'moderator';
+}
+
+function canModerateOrAdminOverride(actor) {
+  return !!actor && (actor.role === 'moderator' || actor.role === 'admin');
+}
+
+function canManagePlatform(actor) {
+  return !!actor && actor.role === 'admin';
+}
+
+function canEditContentAsTeacher(actor) {
+  return !!actor && actor.role === 'teacher';
+}
+
+function canEditContentWithAdminOverride(actor) {
+  return !!actor && actor.role === 'admin';
 }
 
 function requirePolicy(check, code = 'FORBIDDEN', message = 'Không có quyền truy cập') {
@@ -85,4 +102,17 @@ function requirePolicy(check, code = 'FORBIDDEN', message = 'Không có quyền 
   };
 }
 
-module.exports = { authMiddleware, optionalAuth, requireRole, requireAdmin, canEditCourse, canEditTutorial, canModerate, requirePolicy };
+module.exports = {
+  authMiddleware,
+  optionalAuth,
+  requireRole,
+  requireAdmin,
+  canEditCourse,
+  canEditTutorial,
+  canModerate,
+  canModerateOrAdminOverride,
+  canManagePlatform,
+  canEditContentAsTeacher,
+  canEditContentWithAdminOverride,
+  requirePolicy,
+};

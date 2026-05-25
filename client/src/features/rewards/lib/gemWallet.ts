@@ -50,9 +50,14 @@ export function loadGemWallet(userId?: string | null): GemWalletState {
     const tx = Array.isArray(parsed?.transactions) ? parsed.transactions : []
     const balance = typeof parsed?.balance === 'number' ? parsed.balance : 0
     const level = typeof parsed?.level === 'number' ? parsed.level : undefined
+    const totalGemsEarned =
+      typeof parsed?.totalGemsEarned === 'number' ? parsed.totalGemsEarned : undefined
+    const learnerTier = parsed?.learnerTier
     return {
       balance,
       level,
+      totalGemsEarned,
+      learnerTier,
       transactions: tx
         .filter((item): item is GemTransaction => !!item && typeof item.id === 'string')
         .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt)),

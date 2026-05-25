@@ -2,36 +2,73 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { fetchForums, fetchNews, fetchNewsCategories, type Forum, type Post } from '@/features/community/public'
+import { fetchForums, fetchNews, fetchNewsCategories, fetchPopularTags, type Forum, type Post } from '@/features/community/public'
+import { DEFAULT_COURSE_QUESTION_FORUM, isNewsForum, NEWS_FORUM_SLUG } from '@/features/community/lib/forumKinds'
 import { NewsHeroSlider } from '@/components/community/NewsHeroSlider'
 import { NewsHotRow } from '@/components/community/NewsHotRow'
 import { NewsTopicChips } from '@/components/community/NewsTopicChips'
+import { CommunitySearchBar } from '@/components/community/shared/CommunitySearchBar'
+import { TagChips } from '@/components/community/shared/TagChips'
+import { readRouteCache, writeRouteCache } from '@/lib/clientRouteCache'
+
+type CommunityHubCache = {
+  forums: Forum[]
+  latest: Post[]
+  hot: Post[]
+  categories: string[]
+  popularTags: { tag: string; count: number }[]
+}
+
+const HUB_CACHE_KEY = 'community:hub'
 
 export default function CommunityPage() {
-  const [forums, setForums] = useState<Forum[]>([])
-  const [latest, setLatest] = useState<Post[]>([])
-  const [hot, setHot] = useState<Post[]>([])
-  const [categories, setCategories] = useState<string[]>([])
-  const [loading, setLoading] = useState(true)
+  const cached = readRouteCache<CommunityHubCache>(HUB_CACHE_KEY)
+  const [forums, setForums] = useState<Forum[]>(cached?.forums ?? [])
+  const [latest, setLatest] = useState<Post[]>(cached?.latest ?? [])
+  const [hot, setHot] = useState<Post[]>(cached?.hot ?? [])
+  const [categories, setCategories] = useState<string[]>(cached?.categories ?? [])
+  const [popularTags, setPopularTags] = useState<{ tag: string; count: number }[]>(cached?.popularTags ?? [])
+  const [loading, setLoading] = useState(!cached)
 
   useEffect(() => {
+    const hit = readRouteCache<CommunityHubCache>(HUB_CACHE_KEY)
+    if (hit) {
+      setForums(hit.forums)
+      setLatest(hit.latest)
+      setHot(hit.hot)
+      setCategories(hit.categories)
+      setPopularTags(hit.popularTags)
+      setLoading(false)
+    } else if (!forums.length) {
+      setLoading(true)
+    }
     Promise.all([
       fetchForums(),
       fetchNews({ limit: 10, sort: 'newest' }),
       fetchNews({ limit: 10, sort: 'hot' }),
       fetchNewsCategories(),
+      fetchPopularTags(16),
     ])
-      .then(([f, newestRes, hotRes, cats]) => {
-        setForums(f)
-        setLatest(newestRes.data)
-        setHot(hotRes.data)
-        setCategories(cats)
+      .then(([f, newestRes, hotRes, cats, tags]) => {
+        const payload: CommunityHubCache = {
+          forums: f,
+          latest: newestRes.data,
+          hot: hotRes.data,
+          categories: cats,
+          popularTags: tags,
+        }
+        writeRouteCache(HUB_CACHE_KEY, payload)
+        setForums(payload.forums)
+        setLatest(payload.latest)
+        setHot(payload.hot)
+        setCategories(payload.categories)
+        setPopularTags(payload.popularTags)
       })
       .finally(() => setLoading(false))
   }, [])
 
-  const newsForum = forums.find((f) => f.slug === 'tin-thien-van' || f.isNews)
-  const otherForums = forums.filter((f) => f.slug !== 'tin-thien-van' && !f.isNews)
+  const newsForum = forums.find((f) => isNewsForum(f))
+  const discussionForums = forums.filter((f) => !isNewsForum(f))
   const totalPosts = forums.reduce((acc, forum) => acc + (forum.postCount || 0), 0)
 
   return (
@@ -48,8 +85,11 @@ export default function CommunityPage() {
               Diễn đàn thiên văn cho người học nghiêm túc
             </h1>
             <p className="mt-3 max-w-3xl text-sm md:text-base text-slate-300 leading-relaxed">
-              Thảo luận bài học, hỏi đáp, và tin thiên văn được tổ chức rõ ràng — slider tin mới, khu vực đang hot, lọc theo chủ đề.
+              Tin thiên văn tự cập nhật mỗi ngày; thảo luận theo chuyên mục với tìm kiếm và hashtag.
             </p>
+            <div className="mt-5 max-w-xl">
+              <CommunitySearchBar scope="all" placeholder="Tìm toàn bộ cộng đồng…" />
+            </div>
             <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3">
                 <p className="text-xs uppercase tracking-wide text-slate-400">Chuyên mục</p>
@@ -86,6 +126,30 @@ export default function CommunityPage() {
 
             {categories.length > 0 && <NewsTopicChips categories={categories} />}
 
+            <section className="rounded-2xl border border-violet-500/30 bg-gradient-to-r from-violet-500/15 to-cyan-500/10 p-5 md:p-6">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-violet-200/90">Học tập</p>
+                  <h2 className="mt-1 text-lg font-semibold text-white">Hỏi đáp học tập</h2>
+                  <p className="mt-2 text-sm text-slate-300 max-w-xl leading-relaxed">
+                    Đặt câu hỏi gắn với khóa học hoặc bài trên lộ trình — từ trang bài học bấm &quot;Hỏi về bài này&quot; để cộng đồng trả lời đúng ngữ cảnh.
+                  </p>
+                </div>
+                <Link
+                  href={`/community/${DEFAULT_COURSE_QUESTION_FORUM}`}
+                  className="shrink-0 inline-flex items-center justify-center rounded-xl bg-violet-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-violet-500 transition-colors"
+                >
+                  Vào Hỏi đáp học tập →
+                </Link>
+              </div>
+            </section>
+
+            {popularTags.length > 0 && (
+              <section className="rounded-2xl border border-violet-500/20 bg-[#0a0818]/80 p-5">
+                <TagChips tags={popularTags} title="Hashtag thảo luận" />
+              </section>
+            )}
+
             <section className="rounded-2xl border border-cyan-400/20 bg-[#060d18]/90 overflow-hidden">
               <div className="px-5 py-4 border-b border-white/10 flex items-center justify-between gap-4">
                 <h2 className="text-base font-semibold text-cyan-100 flex items-center gap-2">
@@ -95,7 +159,7 @@ export default function CommunityPage() {
                   Tất cả tin thiên văn
                 </h2>
                 <Link
-                  href="/community/tin-thien-van"
+                  href={`/community/${NEWS_FORUM_SLUG}`}
                   className="text-sm font-medium text-cyan-300 hover:text-cyan-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/60 rounded-md px-2 py-1"
                 >
                   Lọc & tìm kiếm →
@@ -111,23 +175,10 @@ export default function CommunityPage() {
             <section className="rounded-2xl border border-white/10 bg-[#070d16]/85 overflow-hidden">
               <h2 className="px-5 py-4 border-b border-white/10 text-base font-semibold text-white flex items-center gap-2">
                 <span aria-hidden>💬</span>
-                Diễn đàn
+                Thảo luận
               </h2>
               <div className="p-4 grid gap-3 md:grid-cols-2">
-                {newsForum && (
-                  <Link
-                    href={`/community/${newsForum.slug}`}
-                    className="flex items-center gap-4 p-4 rounded-xl border border-cyan-300/25 bg-cyan-500/10 hover:bg-cyan-500/18 transition-colors"
-                  >
-                    <span className="text-2xl">{newsForum.icon || '🌌'}</span>
-                    <div className="min-w-0">
-                      <h3 className="font-medium text-white">{newsForum.title}</h3>
-                      <p className="text-sm text-gray-400 line-clamp-1">{newsForum.description}</p>
-                      <p className="text-xs text-cyan-200/90 mt-1">{newsForum.postCount} bài</p>
-                    </div>
-                  </Link>
-                )}
-                {otherForums.map((f) => (
+                {discussionForums.map((f) => (
                   <Link
                     key={f._id}
                     href={`/community/${f.slug}`}

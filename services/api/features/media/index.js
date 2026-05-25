@@ -3,7 +3,8 @@ const path = require('path');
 const fs = require('fs');
 const multer = require('multer');
 const { authMiddleware, requireRole } = require('../../shared/jwtAuth');
-const { persistUploadedFile, getMulterStorage, safeFilename } = require('./uploadStorage');
+const { persistUploadedFile, getMulterStorage } = require('./uploadStorage');
+const { buildMediaStorageKey, extFromFile } = require('./mediaStorageKeys');
 const { slugifyCategory } = require('../rewards/lib/decorationSlugs');
 const { bulkImportOverlays } = require('../rewards/services/avatarDecorationBulkService');
 
@@ -55,9 +56,18 @@ router.post('/upload', authMiddleware, requireRole('teacher', 'admin'), upload.s
         error: 'Chưa tải tệp lên hoặc định dạng tệp không hợp lệ',
       });
     }
-    const filename = req.file.filename || safeFilename(req.file.originalname);
-    const { url, filename: storedName } = await persistUploadedFile(req.file, `files/${filename}`);
-    res.json({ success: true, url, filename: storedName });
+    const storageKey = buildMediaStorageKey(
+      {
+        purpose: req.body?.purpose,
+        entityId: req.body?.entityId,
+        slug: req.body?.slug,
+        lessonSlug: req.body?.lessonSlug,
+        variant: req.body?.variant,
+      },
+      req.file,
+    );
+    const { url, filename: storedName, storageKey: key } = await persistUploadedFile(req.file, storageKey);
+    res.json({ success: true, url, filename: storedName, storageKey: key });
   } catch (err) {
     console.error('[media] upload error:', err);
     res.status(err.status || 500).json({
@@ -82,8 +92,8 @@ router.post('/upload/avatar', authMiddleware, avatarUpload.single('file'), async
     if (!userId) {
       return res.status(401).json({ success: false, error: 'Phiên đăng nhập không hợp lệ' });
     }
-    const filename = safeFilename(req.file.originalname);
-    const storageKey = `avatars/${userId}/${filename}`;
+    const ext = extFromFile(req.file);
+    const storageKey = `avatars/${userId}/avatar${ext}`;
     const { url, cdn } = await persistUploadedFile(req.file, storageKey);
     res.json({ success: true, url, cdn: Boolean(cdn) });
   } catch (err) {

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useAuthStore } from '@/features/auth/public'
+import { canEnterStudio } from '@/lib/roles'
 import type { LearningConcept, LearningModule, DepthLevel } from '@/data/learningPathCurriculum'
 import { DEPTH_META, DEPTH_ORDER } from '@/data/learningPathCurriculum'
 import {
@@ -159,7 +160,7 @@ export default function StudioConceptsPage() {
 
   useEffect(() => {
     if (checked && !user) router.replace('/login?redirect=/studio/concepts')
-    if (checked && user && user.role !== 'teacher' && user.role !== 'admin') router.replace('/')
+    if (checked && user && !canEnterStudio(user)) router.replace('/')
   }, [checked, user, router])
 
   useEffect(() => {

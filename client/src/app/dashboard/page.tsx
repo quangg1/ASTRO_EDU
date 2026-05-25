@@ -14,45 +14,101 @@ import {
 import { loadCompletedMilestoneIds, syncSolarJourneyProgress } from '@/features/rewards/public'
 import { getLessonById } from '@/data/learningPathCurriculum'
 import { loadGemWallet, syncGemWallet } from '@/features/rewards/public'
+import { readRouteCache, writeRouteCache } from '@/lib/clientRouteCache'
+
+type DashboardOverviewCache = {
+  gemBalance: number
+  learningPathPct: number
+  learningPathDoneCount: number
+  solarDoneCount: number
+  lastLessonId: string | null
+}
+
+function dashboardCacheKey(userId: string | null) {
+  return `dashboard:overview:${userId ?? 'guest'}`
+}
 
 /** Tổng quan: chỉ số chung + 2 cột Khóa học / Hoạt động (cấu trúc giống ảnh). */
 export default function DashboardOverviewPage() {
   const { user, checked, loading } = useAuthStore()
   const userId = user?.id ?? null
+  const cacheKey = dashboardCacheKey(userId)
+  const cached = readRouteCache<DashboardOverviewCache>(cacheKey)
   const { modules } = useLearningPath()
-  const [learningPathPct, setLearningPathPct] = useState(0)
-  const [learningPathDoneCount, setLearningPathDoneCount] = useState(0)
-  const [solarDoneCount, setSolarDoneCount] = useState(0)
-  const [lastLessonId, setLastLessonId] = useState<string | null>(null)
-  const [gemBalance, setGemBalance] = useState(0)
+  const [learningPathPct, setLearningPathPct] = useState(cached?.learningPathPct ?? 0)
+  const [learningPathDoneCount, setLearningPathDoneCount] = useState(cached?.learningPathDoneCount ?? 0)
+  const [solarDoneCount, setSolarDoneCount] = useState(cached?.solarDoneCount ?? 0)
+  const [lastLessonId, setLastLessonId] = useState<string | null>(cached?.lastLessonId ?? null)
+  const [gemBalance, setGemBalance] = useState(cached?.gemBalance ?? 0)
+  const [statsReady, setStatsReady] = useState(Boolean(cached))
 
   const gemNextMilestone = 100
   const gemProgressPct = Math.min(100, Math.round((gemBalance / gemNextMilestone) * 100))
   const gemToNext = Math.max(0, gemNextMilestone - gemBalance)
 
   useEffect(() => {
+    const hit = readRouteCache<DashboardOverviewCache>(cacheKey)
+    if (hit) {
+      setGemBalance(hit.gemBalance)
+      setLearningPathPct(hit.learningPathPct)
+      setLearningPathDoneCount(hit.learningPathDoneCount)
+      setSolarDoneCount(hit.solarDoneCount)
+      setLastLessonId(hit.lastLessonId)
+      setStatsReady(true)
+    }
+
     const refreshGems = () => setGemBalance(loadGemWallet(userId).balance)
     refreshGems()
     void syncGemWallet(userId).then((w) => setGemBalance(w.balance))
     window.addEventListener('gem-wallet-changed', refreshGems)
     return () => window.removeEventListener('gem-wallet-changed', refreshGems)
-  }, [userId])
+  }, [userId, cacheKey])
 
   useEffect(() => {
     const localMap = loadLessonCompletion(userId)
-    setLearningPathPct(computeProgressPercent(localMap, modules))
-    setLearningPathDoneCount(Object.keys(localMap).filter((id) => !!localMap[id]).length)
-    setLastLessonId(loadLastLearningPathLessonId(userId))
-    void syncLearningPathCompletion(userId).then((synced) => {
-      setLearningPathPct(computeProgressPercent(synced, modules))
-      setLearningPathDoneCount(Object.keys(synced).filter((id) => !!synced[id]).length)
-      setLastLessonId(loadLastLearningPathLessonId(userId))
-    })
+    const pct = computeProgressPercent(localMap, modules)
+    const doneCount = Object.keys(localMap).filter((id) => !!localMap[id]).length
+    const lessonId = loadLastLearningPathLessonId(userId)
+    setLearningPathPct(pct)
+    setLearningPathDoneCount(doneCount)
+    setLastLessonId(lessonId)
 
     const localMilestones = loadCompletedMilestoneIds(userId)
     setSolarDoneCount(localMilestones.size)
-    void syncSolarJourneyProgress(userId).then((synced) => setSolarDoneCount(synced.size))
-  }, [userId, modules])
+    setStatsReady(true)
+
+    const writeSnapshot = (patch: Partial<DashboardOverviewCache>) => {
+      const hit = readRouteCache<DashboardOverviewCache>(cacheKey)
+      writeRouteCache(cacheKey, {
+        gemBalance: loadGemWallet(userId).balance,
+        learningPathPct: pct,
+        learningPathDoneCount: doneCount,
+        solarDoneCount: localMilestones.size,
+        lastLessonId: lessonId,
+        ...hit,
+        ...patch,
+      })
+    }
+
+    void syncLearningPathCompletion(userId).then((synced) => {
+      const syncedPct = computeProgressPercent(synced, modules)
+      const syncedDone = Object.keys(synced).filter((id) => !!synced[id]).length
+      const syncedLesson = loadLastLearningPathLessonId(userId)
+      setLearningPathPct(syncedPct)
+      setLearningPathDoneCount(syncedDone)
+      setLastLessonId(syncedLesson)
+      writeSnapshot({
+        learningPathPct: syncedPct,
+        learningPathDoneCount: syncedDone,
+        lastLessonId: syncedLesson,
+      })
+    })
+
+    void syncSolarJourneyProgress(userId).then((synced) => {
+      setSolarDoneCount(synced.size)
+      writeSnapshot({ solarDoneCount: synced.size })
+    })
+  }, [userId, modules, cacheKey])
 
   const currentLearningPathModule = useMemo(() => {
     if (!lastLessonId) return null
@@ -79,7 +135,7 @@ export default function DashboardOverviewPage() {
   const pathTitle = currentLearningPathModule?.module.titleVi ?? 'Lộ trình học'
   const pathSubtitle = 'Tiến độ lộ trình học và khóa đã ghi danh'
 
-  if (!checked && loading) {
+  if (!checked && loading && !statsReady) {
     return (
       <div className="rounded-2xl border border-white/10 bg-[#0c0a12] p-6 text-sm text-slate-400">
         Đang đồng bộ thông tin học tập...

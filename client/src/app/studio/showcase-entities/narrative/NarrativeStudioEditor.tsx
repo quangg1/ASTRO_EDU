@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import Link from 'next/link'
@@ -9,7 +9,7 @@ import { NarrativePanelSchemaEditor } from '@/app/studio/showcase-entities/narra
 import { NarrativeGlobeMapPicker } from '@/app/studio/showcase-entities/narrative/NarrativeGlobeMapPicker'
 import { StageMultiSelect } from '@/app/studio/showcase-entities/narrative/StageMultiSelect'
 import { getStudioGlobeDisplayName, getStudioGlobeTextureUrl } from '@/features/content3d/narrative/lib/studioGlobeTexture'
-import type { ShowcaseEntityContentDTO } from '@/features/content3d/showcase/api/showcaseEntitiesApi'
+import type { ShowcaseEntityContentDTO } from '@/features/content3d/showcase/public'
 import { useShowcaseCatalogGen } from '@/components/showcase/ShowcaseCatalogProvider'
 import {
   entityExploreHref,
@@ -23,14 +23,14 @@ import { createEmptyBeat } from '@/features/content3d/narrative/lib/narrativeDef
 import { hasLegacyPreset, studioFallbackBundle } from '@/features/content3d/narrative/lib/legacyPresets'
 import { resolvePanelSchema } from '@/features/content3d/narrative/panel-schema/mergeSchema'
 import type { NarrativePanelSchema } from '@/features/content3d/narrative/panel-schema/types'
-import { fetchEditorPlanetNarrative, savePlanetNarrative } from '@/features/content3d/planet-narrative/api/planetNarrativeApi'
+import { fetchEditorPlanetNarrative, savePlanetNarrative } from '@/features/content3d/narrative/public'
 import { notifyShowcaseCatalogChanged } from '@/lib/showcaseCatalogRefresh'
 
 type SubTab = 'beat' | 'design' | 'sites' | 'fossils'
 
 type Props = {
   entityId: string
-  /** CMS showcase rows — cùng nguồn merge texture với globe 3D. */
+  /** CMS showcase rows � c�ng ngu?n merge texture v?i globe 3D. */
   showcaseContent?: ShowcaseEntityContentDTO[]
 }
 
@@ -169,14 +169,14 @@ export function NarrativeStudioEditor({ entityId, showcaseContent }: Props) {
     setSelectedBeatId(fallback.beats[0]?.id ?? null)
     setSelectedSiteId(fallback.sites[0]?.id ?? '')
     setDataSource('legacy')
-    setMessage('Đã khôi phục dữ liệu mẫu — bấm Lưu để ghi DB.')
+    setMessage('�� kh�i ph?c d? li?u m?u � b?m Luu d? ghi DB.')
   }
 
   const addSite = () => {
     const id = `site-${Date.now()}`
     const neu: NarrativeSite = {
       id,
-      nameVi: 'Địa điểm mới',
+      nameVi: '�?a di?m m?i',
       nameEn: 'New site',
       kind: 'plain',
       lat: 0,
@@ -193,11 +193,11 @@ export function NarrativeStudioEditor({ entityId, showcaseContent }: Props) {
   const onSave = async () => {
     const token = typeof window !== 'undefined' ? localStorage.getItem('galaxies_token') : null
     if (!token) {
-      setMessage('Cần đăng nhập teacher/admin')
+      setMessage('C?n dang nh?p teacher/admin')
       return
     }
     if (!bundle.beats.length) {
-      setMessage('Thêm ít nhất một thời kỳ trước khi lưu.')
+      setMessage('Th�m �t nh?t m?t th?i k? tru?c khi luu.')
       return
     }
     setSaving(true)
@@ -212,18 +212,18 @@ export function NarrativeStudioEditor({ entityId, showcaseContent }: Props) {
     const r = await savePlanetNarrative(token, payload)
     if (!r.ok) {
       setSaving(false)
-      setMessage(r.error || 'Lưu thất bại')
+      setMessage(r.error || 'Luu th?t b?i')
       return
     }
     applyPlanetNarrativeBundle(payload)
     setSaving(false)
     setDataSource('db')
-    setMessage('Đã lưu — Explore Deep History đọc từ planet-narratives.')
+    setMessage('�� luu � Explore Deep History d?c t? planet-narratives.')
     notifyShowcaseCatalogChanged()
   }
 
   if (loading) {
-    return <p className="text-xs text-ds-muted py-4">Đang tải Deep History…</p>
+    return <p className="text-xs text-ds-muted py-4">�ang t?i Deep History�</p>
   }
 
   return (
@@ -231,28 +231,28 @@ export function NarrativeStudioEditor({ entityId, showcaseContent }: Props) {
       <header className="flex flex-wrap justify-between gap-2">
         <div>
           <p className="text-[10px] font-medium uppercase tracking-[0.2em] text-violet-300">
-            Deep History · CMS entity
+            Deep History � CMS entity
           </p>
           <p className="text-xs text-ds-muted mt-1">
-            {entityId} Â·{' '}
+            {entityId} ·{' '}
             {dataSource === 'db'
-              ? 'cơ sở dữ liệu'
+              ? 'co s? d? li?u'
               : dataSource === 'legacy'
-                ? 'dữ liệu mẫu legacy (chưa lưu DB — bấm Lưu để ghi)'
-                : 'trống (chưa có thời kỳ)'}
+                ? 'd? li?u m?u legacy (chua luu DB � b?m Luu d? ghi)'
+                : 'tr?ng (chua c� th?i k?)'}
             {!entityHasExploreHistoryViewer(entityId) ? (
-              <span className="text-amber-200/90"> · Explore chưa có viewer 3D cho entity này</span>
+              <span className="text-amber-200/90"> � Explore chua c� viewer 3D cho entity n�y</span>
             ) : null}
           </p>
         </div>
         <Link href={exploreHref} target="_blank" rel="noopener noreferrer" className="text-[11px] text-cyan-300 hover:underline">
-          Explore →
+          Explore ?
         </Link>
       </header>
 
       <label className="block text-xs text-ds-muted">
-        Bài Learning Path liên quan{' '}
-        <span className="text-ds-subtle">(lesson id, cách nhau bằng dấu phẩy — hiện trên Explore Deep History)</span>
+        B�i Learning Path li�n quan{' '}
+        <span className="text-ds-subtle">(lesson id, c�ch nhau b?ng d?u ph?y � hi?n tr�n Explore Deep History)</span>
         <input
           value={(bundle.linkedLessonIds ?? []).join(', ')}
           onChange={(e) => {
@@ -274,10 +274,10 @@ export function NarrativeStudioEditor({ entityId, showcaseContent }: Props) {
       <div className="flex gap-1 rounded-lg border border-ds-border p-1">
         {(
           [
-            ['beat', 'Thời kỳ & panel'],
-            ['design', 'Thiết kế panel'],
-            ['sites', 'Pin / địa điểm'],
-            ...(showFossilsTab ? ([['fossils', 'Hóa thạch']] as const) : []),
+            ['beat', 'Th?i k? & panel'],
+            ['design', 'Thi?t k? panel'],
+            ['sites', 'Pin / d?a di?m'],
+            ...(showFossilsTab ? ([['fossils', 'H�a th?ch']] as const) : []),
           ] as const
         ).map(([id, label]) => (
           <button
@@ -297,17 +297,17 @@ export function NarrativeStudioEditor({ entityId, showcaseContent }: Props) {
 
       {subTab === 'beat' && !beat ? (
         <div className="rounded-lg border border-dashed border-violet-500/40 bg-black/20 p-8 text-center space-y-3">
-          <p className="text-sm text-slate-300">Chưa có thời kỳ nào cho entity này.</p>
+          <p className="text-sm text-slate-300">Chua c� th?i k? n�o cho entity n�y.</p>
           <p className="text-xs text-ds-muted max-w-md mx-auto">
-            Thêm thời kỳ mới — một số entity có preset mẫu khi chưa lưu DB.
+            Th�m th?i k? m?i � m?t s? entity c� preset m?u khi chua luu DB.
           </p>
           <div className="flex flex-wrap justify-center gap-2">
             <button type="button" onClick={addBeat} className="rounded-lg bg-violet-600 px-4 py-2 text-sm text-white">
-              + Tạo thời kỳ đầu tiên
+              + T?o th?i k? d?u ti�n
             </button>
             {hasLegacyPreset(entityId) ? (
               <button type="button" onClick={importLegacy} className="rounded-lg border border-ds-border px-4 py-2 text-sm text-slate-300 hover:bg-white/5">
-                Nhập dữ liệu mẫu (legacy)
+                Nh?p d? li?u m?u (legacy)
               </button>
             ) : null}
           </div>
@@ -322,7 +322,7 @@ export function NarrativeStudioEditor({ entityId, showcaseContent }: Props) {
                 {panelSchema.timelineTitleVi ?? 'Timeline'}
               </span>
               <button type="button" onClick={addBeat} className="text-[10px] text-cyan-400 hover:underline">
-                + {panelSchema.addBeatLabelVi ?? 'Thời kỳ'}
+                + {panelSchema.addBeatLabelVi ?? 'Th?i k?'}
               </button>
             </div>
             {bundle.beats.map((b) => (
@@ -343,10 +343,10 @@ export function NarrativeStudioEditor({ entityId, showcaseContent }: Props) {
             ))}
           </aside>
 
-          <NarrativeBeatFieldsForm beat={beat} schema={panelSchema} onChange={updateBeat} />
+          <NarrativeBeatFieldsForm entityId={entityId} beat={beat} schema={panelSchema} onChange={updateBeat} />
 
           <aside className="lg:sticky lg:top-2">
-            <p className="text-[10px] uppercase text-slate-500 mb-2">Xem trước panel</p>
+            <p className="text-[10px] uppercase text-slate-500 mb-2">Xem tru?c panel</p>
             <NarrativePanelPreview beat={beat} schema={panelSchema} />
           </aside>
         </div>
@@ -355,9 +355,9 @@ export function NarrativeStudioEditor({ entityId, showcaseContent }: Props) {
       {subTab === 'sites' ? (
         bundle.sites.length === 0 && !site ? (
           <div className="rounded-lg border border-dashed border-ds-border p-6 text-center space-y-2">
-            <p className="text-xs text-ds-muted">Chưa có pin — thêm địa điểm trên bề mặt entity.</p>
+            <p className="text-xs text-ds-muted">Chua c� pin � th�m d?a di?m tr�n b? m?t entity.</p>
             <button type="button" onClick={addSite} className="text-sm text-cyan-400 hover:underline">
-              + Pin mới
+              + Pin m?i
             </button>
           </div>
         ) : site ? (
@@ -371,14 +371,14 @@ export function NarrativeStudioEditor({ entityId, showcaseContent }: Props) {
                 ))}
               </select>
               <button type="button" onClick={addSite} className="text-xs text-cyan-400">
-                + Pin mới
+                + Pin m?i
               </button>
             </div>
             <div className="space-y-2">
-              <Field label="Tên VI" value={site.nameVi} onChange={(v) => patchSite(site.id, { nameVi: v })} />
-              <Field label="Tên EN" value={site.nameEn} onChange={(v) => patchSite(site.id, { nameEn: v })} />
+              <Field label="T�n VI" value={site.nameVi} onChange={(v) => patchSite(site.id, { nameVi: v })} />
+              <Field label="T�n EN" value={site.nameEn} onChange={(v) => patchSite(site.id, { nameEn: v })} />
               <label className="block space-y-1">
-                <span className="text-[11px] text-slate-400">Loại địa hình</span>
+                <span className="text-[11px] text-slate-400">Lo?i d?a h�nh</span>
                 <select
                   value={site.kind}
                   onChange={(e) => patchSite(site.id, { kind: e.target.value })}
@@ -393,12 +393,12 @@ export function NarrativeStudioEditor({ entityId, showcaseContent }: Props) {
               </label>
               <div className="grid grid-cols-2 gap-2">
                 <Field
-                  label="Lat (-90…90)"
+                  label="Lat (-90�90)"
                   value={String(site.lat)}
                   onChange={(v) => patchSite(site.id, { lat: clampLat(Number(v)) })}
                 />
                 <Field
-                  label="Lng (-180…180)"
+                  label="Lng (-180�180)"
                   value={String(site.lng)}
                   onChange={(v) => patchSite(site.id, { lng: clampLng(Number(v)) })}
                 />
@@ -412,13 +412,13 @@ export function NarrativeStudioEditor({ entityId, showcaseContent }: Props) {
                 />
               ) : (
                 <p className="text-[10px] text-amber-200/80 rounded-lg border border-amber-500/25 bg-amber-950/20 px-2 py-1.5">
-                  Chưa có texture equirectangular trong catalog — thêm <code className="text-amber-100">texturePath</code> cho entity
-                  hoặc nhập lat/lng tay.
+                  Chua c� texture equirectangular trong catalog � th�m <code className="text-amber-100">texturePath</code> cho entity
+                  ho?c nh?p lat/lng tay.
                 </p>
               )}
               <TextArea label="Blurb" value={site.blurbVi} onChange={(v) => patchSite(site.id, { blurbVi: v })} rows={2} />
               <StageMultiSelect
-                label="Hiện trong các thời kỳ"
+                label="Hi?n trong c�c th?i k?"
                 options={stageOptions}
                 value={site.validStageIds}
                 onChange={(ids) =>
@@ -427,10 +427,10 @@ export function NarrativeStudioEditor({ entityId, showcaseContent }: Props) {
                     visibleFromStageId: undefined,
                   })
                 }
-                placeholder="Để trống = hiện tất cả thời kỳ (hoặc quy tắc legacy)."
+                placeholder="�? tr?ng = hi?n t?t c? th?i k? (ho?c quy t?c legacy)."
               />
               <label className="block space-y-1">
-                <span className="text-[11px] text-slate-400">Loại ảnh (badge Explore)</span>
+                <span className="text-[11px] text-slate-400">Lo?i ?nh (badge Explore)</span>
                 <select
                   value={site.coverImageType ?? 'orbital_modern'}
                   onChange={(e) =>
@@ -440,12 +440,22 @@ export function NarrativeStudioEditor({ entityId, showcaseContent }: Props) {
                   }
                   className="studio-field w-full"
                 >
-                  <option value="orbital_modern">Orbital hiện đại</option>
-                  <option value="surface_modern">Bề mặt hiện đại (rover)</option>
-                  <option value="artistic">Minh họa / tái dựng</option>
+                  <option value="orbital_modern">Orbital hi?n d?i</option>
+                  <option value="surface_modern">B? m?t hi?n d?i (rover)</option>
+                  <option value="artistic">Minh h?a / t�i d?ng</option>
                 </select>
               </label>
-              <ShowcaseMediaUrlField label="Ảnh" value={site.coverImageUrl} onChange={(url) => patchSite(site.id, { coverImageUrl: url })} accept="image/*" />
+              <ShowcaseMediaUrlField
+                label="?nh"
+                value={site.coverImageUrl}
+                onChange={(url) => patchSite(site.id, { coverImageUrl: url })}
+                accept="image/*"
+                uploadContext={{
+                  purpose: 'showcase-entity',
+                  entityId,
+                  variant: `narrative/sites/${site.id}/cover`,
+                }}
+              />
             </div>
           </div>
         ) : null
@@ -457,20 +467,20 @@ export function NarrativeStudioEditor({ entityId, showcaseContent }: Props) {
 
       {subTab === 'fossils' ? (
         <p className="text-xs text-amber-100/90 rounded-lg border border-amber-500/30 bg-amber-950/20 p-3">
-          Hóa thạch Earth: hard-code + API /fossils — chưa trong NarrativeBeat. Timeline ở tab «Thời kỳ & panel».
+          H�a th?ch Earth: hard-code + API /fossils � chua trong NarrativeBeat. Timeline ? tab �Th?i k? & panel�.
         </p>
       ) : null}
 
       <footer className="flex flex-wrap gap-2 border-t border-ds-border pt-3">
         <button type="button" disabled={saving} onClick={() => void onSave()} className="rounded-lg bg-violet-600 px-4 py-2 text-sm text-white disabled:opacity-50">
-          {saving ? 'Đang lưu…' : 'Lưu Deep History'}
+          {saving ? '�ang luu�' : 'Luu Deep History'}
         </button>
         <button type="button" onClick={() => void load()} className="rounded-lg border border-ds-border px-3 py-2 text-xs">
-          Tải lại
+          T?i l?i
         </button>
         {hasLegacyPreset(entityId) && bundle.beats.length > 0 ? (
           <button type="button" onClick={importLegacy} className="rounded-lg border border-amber-500/40 px-3 py-2 text-xs text-amber-200/90">
-            Ghi đè bằng mẫu legacy
+            Ghi d� b?ng m?u legacy
           </button>
         ) : null}
         {message ? <span className="text-xs text-ds-muted self-center">{message}</span> : null}

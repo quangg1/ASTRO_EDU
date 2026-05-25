@@ -7,10 +7,11 @@ import { useAuthStore } from '@/features/auth/public'
 import { clearToken } from '@/features/auth/public'
 import { SiteLogo } from '@/components/ui/SiteLogo'
 import { viText } from '@/messages/vi'
-import { canModerate } from '@/lib/roles'
+import { canAccessStudio, canAdminContentOverride, canModerate, canManagePlatform } from '@/lib/roles'
 import { AvatarWithDecoration } from '@/components/profile/AvatarWithDecoration'
 import { useEquippedDecoration } from '@/features/rewards/hooks/useEquippedDecoration'
 import { navItemsForSurface, navLabel } from '@/lib/navigationConfig'
+import { NotificationBell } from '@/components/notifications/NotificationBell'
 import {
   BookOpen,
   ChevronDown,
@@ -62,9 +63,10 @@ export function AppHeader() {
     window.location.href = '/'
   }
 
-  const isTeacher = !!user && (user.role === 'teacher' || user.role === 'admin')
-  const isAdmin = !!user && user.role === 'admin'
+  const showStudio = !!user && canAccessStudio(user)
+  const showStudioOverride = !!user && canAdminContentOverride(user)
   const showModerate = !!user && canModerate(user)
+  const showAdmin = !!user && canManagePlatform(user)
   const headerDesktopItems = navItemsForSurface('headerDesktop')
   const headerMobileItems = navItemsForSurface('headerMobileMenu')
   const desktopIconById = {
@@ -117,6 +119,8 @@ export function AppHeader() {
                   )
                 })}
 
+              <NotificationBell />
+
               <div className="relative ml-1" ref={userMenuRef}>
                 <button
                   type="button"
@@ -164,7 +168,7 @@ export function AppHeader() {
                         )
                       })}
                     <div className="my-1 h-px bg-white/[0.06]" />
-                    {isTeacher && (
+                    {showStudio && (
                       <>
                         <p className="px-3 py-1.5 text-[10px] uppercase tracking-wider text-slate-500">Giảng viên</p>
                         <Link
@@ -178,6 +182,17 @@ export function AppHeader() {
                         </Link>
                       </>
                     )}
+                    {showStudioOverride && (
+                      <Link
+                        href="/studio"
+                        role="menuitem"
+                        className="flex items-center gap-2 px-3 py-2 text-sm text-amber-200/80 hover:bg-amber-500/10"
+                        onClick={() => setUserMenuOpen(false)}
+                      >
+                        <Clapperboard className="w-4 h-4 text-amber-400/70" />
+                        Studio (override)
+                      </Link>
+                    )}
                     {showModerate && (
                       <Link
                         href="/dashboard/moderate"
@@ -189,7 +204,7 @@ export function AppHeader() {
                         {viText.nav.moderate}
                       </Link>
                     )}
-                    {isAdmin && (
+                    {showAdmin && (
                       <Link
                         href="/admin"
                         role="menuitem"
@@ -239,6 +254,7 @@ export function AppHeader() {
         </div>
 
         <div className="flex items-center gap-2 md:hidden shrink-0">
+          {user ? <NotificationBell /> : null}
           <Link
             href="/search"
             className="h-10 w-10 inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-slate-300 hover:bg-white/[0.08] hover:text-white active:scale-[0.98] transition"
@@ -297,9 +313,14 @@ export function AppHeader() {
                       {navLabel(item)}
                     </Link>
                   ))}
-                {isTeacher && (
+                {showStudio && (
                   <Link href="/studio" className="block rounded-xl px-3 py-2.5 text-sm text-slate-300 hover:bg-white/[0.06]">
                     Studio
+                  </Link>
+                )}
+                {showStudioOverride && (
+                  <Link href="/studio" className="block rounded-xl px-3 py-2.5 text-sm text-amber-200/80 hover:bg-amber-500/10">
+                    Studio (override)
                   </Link>
                 )}
                 {showModerate && (
@@ -311,7 +332,7 @@ export function AppHeader() {
                     {viText.nav.moderate}
                   </Link>
                 )}
-                {isAdmin && (
+                {showAdmin && (
                   <Link href="/admin" className="block rounded-xl px-3 py-2.5 text-sm text-amber-200/90 hover:bg-amber-500/10">
                     {viText.nav.admin}
                   </Link>

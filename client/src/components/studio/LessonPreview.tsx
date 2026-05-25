@@ -8,9 +8,27 @@ import type { LearningConcept, LessonConceptAnchor } from '@/data/learningPathCu
 import { lessonPreviewFromCourseLesson, type LessonPreviewContract } from '@/components/studio/lessonPreviewTypes'
 import { applyConceptAnchorsToHtml } from '@/features/concepts/public'
 import { resolveMediaUrl } from '@/lib/apiConfig'
-import { earthHistoryData, findStageByTime } from '@/features/content3d/earth/public'
+import { earthHistoryData, findStageByTime, useCourseStageFossils } from '@/features/content3d/earth/public'
 
 const EarthScene = dynamic(() => import('@/components/3d/EarthScene'), { ssr: false, loading: () => <div className="h-full flex items-center justify-center text-ds-subtle text-sm">Loading 3D scene...</div> })
+
+function CourseEarthSceneBlock({ stageTime }: { stageTime: number }) {
+  const stage = findStageByTime(earthHistoryData, stageTime)
+  const fossils = useCourseStageFossils(stage ?? null)
+  return (
+    <div className="rounded-xl border border-ds-accent-strong bg-ds-surface overflow-hidden">
+      <div className="px-4 py-3 border-b border-ds-border">
+        <h3 className="text-sm font-semibold text-ds-accent">3D Earth Simulation</h3>
+        <p className="text-xs text-ds-muted mt-1">
+          {stage ? `${stage.timeDisplay} · ${stage.description}` : `Stage ${stageTime} Ma`}
+        </p>
+      </div>
+      <div className="h-[380px]">
+        <EarthScene overrideStage={stage} overrideFossils={fossils} />
+      </div>
+    </div>
+  )
+}
 const ModelViewer = dynamic(() => import('@/components/studio/ModelViewer'), { ssr: false, loading: () => <div className="h-full flex items-center justify-center text-ds-subtle text-sm">Loading 3D model...</div> })
 const MathBlock = dynamic(() => import('@/components/studio/blocks/MathBlock'), { ssr: false })
 const ChartBlock = dynamic(() => import('@/components/studio/blocks/ChartBlock'), { ssr: false })
@@ -309,22 +327,7 @@ export default function LessonPreview({ lesson, conceptAnchors, concepts }: Less
       )}
 
       {/* Earth History 3D Simulation */}
-      {lesson.stageTime != null && (() => {
-        const stage = findStageByTime(earthHistoryData, lesson.stageTime ?? 0)
-        return (
-          <div className="rounded-xl border border-ds-accent-strong bg-ds-surface overflow-hidden">
-            <div className="px-4 py-3 border-b border-ds-border">
-              <h3 className="text-sm font-semibold text-ds-accent">3D Earth Simulation</h3>
-              <p className="text-xs text-ds-muted mt-1">
-                {stage ? `${stage.timeDisplay} \u00B7 ${stage.description}` : `Stage ${lesson.stageTime} Ma`}
-              </p>
-            </div>
-            <div className="h-[380px]">
-              <EarthScene overrideStage={stage} />
-            </div>
-          </div>
-        )
-      })()}
+      {lesson.stageTime != null && <CourseEarthSceneBlock stageTime={lesson.stageTime} />}
 
       {/* Sections */}
       {sections.length > 0 ? (

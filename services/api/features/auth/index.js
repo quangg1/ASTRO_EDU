@@ -5,11 +5,11 @@ const { issueToken, verifyToken } = require('./lib/jwt');
 const { findOrLinkFirebaseUser } = require('./lib/oauthUser');
 const { getFirebaseAdmin } = require('./lib/firebaseAdmin');
 const { authMiddleware, requireRole } = require('../../shared/jwtAuth');
-const { listAdminUsers, updateAdminUserRole } = require('../../services/adminUserService');
+const { listAdminUsers, updateAdminUserRole } = require('../admin/services/adminUserService');
 const {
   submitTeacherApplication,
   getMyApplicationStatus,
-} = require('../../services/teacherApplicationService');
+} = require('./services/teacherApplicationService');
 const { requireString } = require('../../shared/validation');
 const { AppError } = require('../../shared/errors');
 const { getRuntimeEnv } = require('../../config/runtimeEnv');

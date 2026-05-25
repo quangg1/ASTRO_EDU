@@ -7,6 +7,10 @@ const commentSchema = new mongoose.Schema({
   content: { type: String, required: true },
   parentId: { type: mongoose.Schema.Types.ObjectId, ref: 'Comment', default: null },
   voteCount: { type: Number, default: 0 },
+  isHidden: { type: Boolean, default: false },
+  hiddenAt: { type: Date, default: null },
+  hiddenBy: { type: String, default: null },
+  reportCount: { type: Number, default: 0 },
 }, { timestamps: true });
 
 commentSchema.index({ postId: 1, createdAt: 1 });

@@ -26,10 +26,6 @@ function validateApiEnv() {
     jwtSecret: required(ENV.JWT_SECRET),
     internalApiSecret: required(ENV.INTERNAL_API_SECRET),
     apiPublicUrl: optional(ENV.API_PUBLIC_URL).replace(/\/$/, ''),
-    vnpayTmnCode: optional(ENV.VNPAY_TMN_CODE),
-    vnpayHashSecret: optional(ENV.VNPAY_HASH_SECRET),
-    vnpayHost: optional(ENV.VNPAY_HOST),
-    vnpayTestMode: optional(ENV.VNPAY_TEST_MODE) !== 'false',
   };
 }
 
