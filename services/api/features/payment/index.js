@@ -35,7 +35,7 @@ function mintTransactionId() {
 /**
  * Tạo đơn pending — chưa trừ gem, chưa enroll.
  */
-async function mintPendingOrder({ userId, courseId, voucherTierId, promoCode }) {
+async function mintPendingOrder({ userId, courseId, voucherTierId, promoCode, cohortId }) {
   const quote = await getCheckoutQuote({
     userId,
     courseId,
@@ -45,12 +45,20 @@ async function mintPendingOrder({ userId, courseId, voucherTierId, promoCode }) 
   const course = await Course.findOne({ _id: courseId, published: true }).lean()
   if (!course) throw new AppError(404, 'COURSE_NOT_FOUND', 'Không tìm thấy khóa học')
 
+  let resolvedCohortId = null
+  if (cohortId) {
+    const { loadEnrollableCohort } = require('../courses/services/cohortEnrollmentService')
+    const cohort = await loadEnrollableCohort({ courseId: course._id, cohortId: String(cohortId).trim() })
+    resolvedCohortId = String(cohort._id)
+  }
+
   const selected = quote.selected
   const txnRef = mintTxnRef()
   const order = await Order.create({
     userId,
     courseId: String(course._id),
     courseSlug: course.slug,
+    cohortId: resolvedCohortId,
     listPrice: quote.listPrice,
     discountPct: selected.discountPct,
     discountAmount: selected.discountAmount,
@@ -107,11 +115,13 @@ router.post('/checkout', authMiddleware, async (req, res) => {
     const courseId = requireString(req.body?.courseId, 'courseId')
     const voucherTierId = String(req.body?.voucherTierId || '').trim() || null
     const promoCode = String(req.body?.promoCode || '').trim() || null
+    const cohortId = String(req.body?.cohortId || '').trim() || null
     const { course, order, quote } = await mintPendingOrder({
       userId: req.userId,
       courseId,
       voucherTierId,
       promoCode,
+      cohortId,
     })
 
     const expiresAt = new Date(Date.now() + PENDING_TTL_MS).toISOString()

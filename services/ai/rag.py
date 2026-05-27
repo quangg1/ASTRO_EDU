@@ -61,10 +61,23 @@ def _cosine_similarity(a: list[float], b: list[float]) -> float:
     return float(np.dot(va, vb) / n) if n > 0 else 0.0
 
 
-async def retrieve(query: str, top_k: int = RAG_TOP_K) -> list[str]:
+def _source_lesson_id(source: str | None) -> str | None:
+    if not source:
+        return None
+    s = str(source).strip()
+    if s.startswith("lp/"):
+        return s[3:].split("/")[0] or None
+    return None
+
+
+async def retrieve(
+    query: str,
+    top_k: int = RAG_TOP_K,
+    lesson_id: str | None = None,
+) -> list[str]:
     """
     Embed query, tìm top_k đoạn giống nhất trong index, trả về list text.
-    Nếu không có index hoặc embedding lỗi → trả về [].
+    Nếu lesson_id được set, ưu tiên chunk có source lp/{lesson_id}; fallback toàn index nếu không đủ.
     """
     docs = _load_index()
     if not docs:
@@ -72,12 +85,37 @@ async def retrieve(query: str, top_k: int = RAG_TOP_K) -> list[str]:
     embedding = await embed_query(query)
     if not embedding:
         return []
-    scored = []
-    for d in docs:
+
+    focus = str(lesson_id).strip() if lesson_id else ""
+
+    def score_doc(d: dict) -> tuple[float, str]:
         emb = d.get("embedding")
         if not emb:
-            continue
-        score = _cosine_similarity(embedding, emb)
-        scored.append((score, d.get("text", "")))
+            return (-1.0, "")
+        sim = _cosine_similarity(embedding, emb)
+        if focus:
+            src_lesson = _source_lesson_id(d.get("source"))
+            if src_lesson == focus:
+                sim += 0.15
+        return (sim, d.get("text", ""))
+
+    scored = [score_doc(d) for d in docs]
+    scored = [(s, t) for s, t in scored if s >= 0 and t]
     scored.sort(key=lambda x: -x[0])
+
+    if focus:
+        focused = []
+        for d in docs:
+            if _source_lesson_id(d.get("source")) != focus:
+                continue
+            s, t = score_doc(d)
+            if t:
+                focused.append((s, t))
+        focused.sort(key=lambda x: -x[0])
+        if len(focused) >= top_k:
+            return [t for _, t in focused[:top_k]]
+        seen = {t for _, t in focused}
+        merged = focused + [(s, t) for s, t in scored if t not in seen]
+        return [t for _, t in merged[:top_k]]
+
     return [text for _, text in scored[:top_k] if text]

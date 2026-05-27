@@ -85,3 +85,26 @@ export async function updateUserStatus(
   if (data.success && data.user) return { success: true, user: data.user }
   return { success: false, error: data.error || 'Cập nhật trạng thái tài khoản thất bại' }
 }
+
+export async function deleteUserPermanently(
+  userId: string,
+  confirmEmail: string,
+  reason: string
+): Promise<{ success: boolean; error?: string; message?: string; emailSent?: boolean; code?: string }> {
+  const token = getToken()
+  if (!token) return { success: false, error: 'Not signed in' }
+  const res = await authFetch(`${AUTH_BASE}/api/admin/users/${encodeURIComponent(userId)}`, {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ confirmEmail, reason }),
+  })
+  const data = await res.json()
+  if (data.success) {
+    return { success: true, message: data.message, emailSent: data.emailSent }
+  }
+  return {
+    success: false,
+    error: data.error || 'Xóa tài khoản thất bại',
+    code: data.code,
+  }
+}

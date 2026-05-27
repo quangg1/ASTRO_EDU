@@ -2,6 +2,7 @@ const express = require('express');
 const Course = require('../models/Course');
 const Enrollment = require('../models/Enrollment');
 const { authMiddleware, optionalAuth, requireRole, canEditCourse } = require('../../../shared/jwtAuth');
+const { findCourseForLearnerOrEditor } = require('../services/courseAccess');
 const { requireString } = require('../../../shared/validation');
 const { AppError } = require('../../../shared/errors');
 const {
@@ -83,6 +84,7 @@ function buildCourseDetailPayload(course, enrollment, outlineOnly) {
     currency: course.currency ?? 'VND',
     isPaid: Boolean(course.isPaid),
     requiresPayment: courseRequiresPayment(course),
+    catalogEnabled: course.catalogEnabled !== false,
     modules: mods,
     lessons,
     enrollment: enrollment
@@ -103,12 +105,14 @@ function buildCourseDetailPayload(course, enrollment, outlineOnly) {
         : 'Học thêm miễn phí · Lộ trình',
     crossSellTutorialBodyVi:
       typeof course.crossSellTutorialBodyVi === 'string' ? course.crossSellTutorialBodyVi : '',
+    published: Boolean(course.published),
+    editorPreview: Boolean(!course.published),
   };
 }
 
 router.get('/', optionalAuth, async (req, res) => {
   try {
-    const pieces = [{ published: true }];
+    const pieces = [{ published: true }, { catalogEnabled: { $ne: false } }];
     const q = (req.query.q || '').toString().trim();
     if (q) {
       pieces.push({
@@ -273,7 +277,7 @@ router.post('/', authMiddleware, requireRole('teacher', 'admin'), async (req, re
 
 router.get('/:slug', optionalAuth, async (req, res) => {
   try {
-    const course = await Course.findOne({ slug: req.params.slug, published: true }).lean();
+    const course = await findCourseForLearnerOrEditor(req.params.slug, req);
     if (!course) {
       return res.status(404).json({ success: false, error: 'Không tìm thấy khóa học' });
     }
@@ -302,6 +306,13 @@ router.post('/:slug/enroll', authMiddleware, async (req, res) => {
     const course = await Course.findOne({ slug: req.params.slug, published: true });
     if (!course) {
       return res.status(404).json({ success: false, error: 'Không tìm thấy khóa học' });
+    }
+    if (course.catalogEnabled === false) {
+      return res.status(403).json({
+        success: false,
+        code: 'catalog_disabled',
+        error: 'Khóa học chỉ mở qua lớp theo kỳ. Dùng mã lớp để tham gia.',
+      });
     }
     if (course.isPaid && (course.price ?? 0) > 0) {
       return res.status(400).json({
@@ -417,6 +428,7 @@ router.get('/:slug/editor', authMiddleware, requireRole('teacher', 'admin'), asy
         currency: data.currency ?? 'VND',
         isPaid: Boolean(data.isPaid),
         requiresPayment: courseRequiresPayment(data),
+        catalogEnabled: data.catalogEnabled !== false,
         crossSellTutorialHref: data.crossSellTutorialHref ?? '/tutorial',
         crossSellTutorialLabelVi: data.crossSellTutorialLabelVi ?? '',
         crossSellTutorialBodyVi: data.crossSellTutorialBodyVi ?? '',
@@ -447,6 +459,7 @@ router.put('/:slug/editor', authMiddleware, requireRole('teacher', 'admin'), asy
       crossSellTutorialHref,
       crossSellTutorialLabelVi,
       crossSellTutorialBodyVi,
+      catalogEnabled,
     } = req.body || {};
     const course = await Course.findOne({ slug: req.params.slug });
     if (!course) {
@@ -475,6 +488,7 @@ router.put('/:slug/editor', authMiddleware, requireRole('teacher', 'admin'), asy
     if (price != null) course.price = Math.max(0, Math.floor(Number(price)) || 0);
     if (['VND', 'USD'].includes(currency)) course.currency = currency;
     if (typeof isPaid === 'boolean') course.isPaid = isPaid;
+    if (typeof catalogEnabled === 'boolean') course.catalogEnabled = catalogEnabled;
     normalizeCoursePricingFields(course);
     if (typeof crossSellTutorialHref === 'string' && crossSellTutorialHref.trim()) {
       course.crossSellTutorialHref = crossSellTutorialHref.trim().slice(0, 512);
@@ -492,6 +506,15 @@ router.put('/:slug/editor', authMiddleware, requireRole('teacher', 'admin'), asy
         description: m?.description || '',
         icon: m?.icon || '',
         order: m?.order != null ? Number(m.order) : idx,
+        materials: Array.isArray(m?.materials)
+          ? m.materials.map((mat) => ({
+              id: mat?.id || `mat-${idx}-${Date.now()}`,
+              label: mat?.label || '',
+              kind: ['pdf', 'slides', 'link', 'video'].includes(mat?.kind) ? mat.kind : 'pdf',
+              url: mat?.url || '',
+              uploadedAt: mat?.uploadedAt ? new Date(mat.uploadedAt) : null,
+            }))
+          : [],
       }));
     }
 
@@ -500,7 +523,13 @@ router.put('/:slug/editor', authMiddleware, requireRole('teacher', 'admin'), asy
         title: l?.title || `Lesson ${idx + 1}`,
         slug: l?.slug || `lesson-${idx + 1}`,
         description: l?.description || '',
-        type: ['text', 'visualization', 'quiz'].includes(l?.type) ? l.type : 'text',
+        type: ['text', 'visualization', 'quiz', 'assignment', 'live_session'].includes(l?.type)
+          ? l.type
+          : 'text',
+        quizSettings: l?.quizSettings || null,
+        assignmentSettings: l?.assignmentSettings || null,
+        meetingUrl: l?.meetingUrl || null,
+        liveScheduledAt: l?.liveScheduledAt ? new Date(l.liveScheduledAt) : null,
         visualizationId: l?.visualizationId || null,
         stageTime: l?.stageTime != null ? Number(l.stageTime) : null,
         videoUrl: l?.videoUrl || null,

@@ -208,6 +208,8 @@ export function CourseCheckoutClient({ slug, courseId, courseTitle }: CourseChec
     await loadQuote({ tierId: null, promoCode: null })
   }, [loadQuote])
 
+  const cohortIdFromUrl = searchParams.get('cohortId')?.trim() || null
+
   const continueToPayment = useCallback(async () => {
     setPhase('processing')
     setErrorMsg('')
@@ -215,6 +217,7 @@ export function CourseCheckoutClient({ slug, courseId, courseTitle }: CourseChec
       courseId,
       voucherTierId: promoLocked ? null : selectedTierId,
       promoCode: appliedPromoCode,
+      cohortId: cohortIdFromUrl,
     })
     if (!result.success) {
       setErrorMsg(forUserFacingError(result.error, userMessages.checkoutSessionFailed))
@@ -223,7 +226,7 @@ export function CourseCheckoutClient({ slug, courseId, courseTitle }: CourseChec
     }
     setSession(result.data)
     setPhase('payment')
-  }, [courseId, selectedTierId, appliedPromoCode, promoLocked])
+  }, [courseId, selectedTierId, appliedPromoCode, promoLocked, cohortIdFromUrl])
 
   const completePurchase = useCallback(async () => {
     if (!session) return
@@ -246,10 +249,11 @@ export function CourseCheckoutClient({ slug, courseId, courseTitle }: CourseChec
       course_slug: result.data.courseSlug,
       status: 'success',
     })
+    const placed = cohortIdFromUrl ? '&cohortPlaced=1' : ''
     window.setTimeout(() => {
-      router.push(`/courses/${result.data.courseSlug}?enrolled=1`)
+      router.push(`/courses/${result.data.courseSlug}?enrolled=1${placed}`)
     }, 1000)
-  }, [session, card, toast, router])
+  }, [session, card, toast, router, cohortIdFromUrl])
 
   if (!checked || !user) {
     return (
@@ -286,6 +290,11 @@ export function CourseCheckoutClient({ slug, courseId, courseTitle }: CourseChec
               'Mỗi khóa học chỉ một mã giảm: coupon hoặc voucher gem.'}{' '}
             {quote?.gemPolicyVi || ''}
           </p>
+          {cohortIdFromUrl && (
+            <p className="mt-3 text-sm text-emerald-200/90 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 max-w-2xl">
+              Đăng ký kèm lớp đã chọn. Sau thanh toán, mã lớp gửi qua email — không hiển thị trên web.
+            </p>
+          )}
         </header>
 
         {(phase === 'loading' || phase === 'processing') && (

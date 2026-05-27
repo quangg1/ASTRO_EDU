@@ -6,6 +6,8 @@ const KNOWN_PURPOSES = new Set([
   'course-thumbnail',
   'course-lesson',
   'course-block',
+  'course-module-material',
+  'assignment-staging',
   'showcase-entity',
   'learning-path-lesson',
 ]);
@@ -89,6 +91,14 @@ function buildMediaStorageKey(ctx, file) {
         throw invalidContextError('course-block cần entityId và lessonSlug');
       }
       return `courses/${entityId}/lessons/${lessonSlug}/blocks/${variant}${ext}`;
+    }
+    case 'course-module-material': {
+      if (!entityId) throw invalidContextError('course-module-material cần entityId');
+      return `courses/${entityId}/modules/${variant}${ext}`;
+    }
+    case 'assignment-staging': {
+      if (!entityId) throw invalidContextError('assignment-staging cần entityId (submission id)');
+      return `assignments/staging/${entityId}/${variant}${ext}`;
     }
     case 'showcase-entity': {
       if (!entityId) throw invalidContextError('showcase-entity cần entityId');

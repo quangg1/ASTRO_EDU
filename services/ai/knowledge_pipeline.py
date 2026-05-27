@@ -193,3 +193,16 @@ async def append_chunk(text: str, source: str) -> dict:
     docs.append({"text": text, "embedding": emb, "source": source})
     atomic_write_json(path, {"version": 1, "documents": docs})
     return {"ok": True, "total_chunks": len(docs)}
+
+
+def delete_chunks_by_source_prefix(source_prefix: str) -> dict:
+    """Xóa mọi chunk có source bắt đầu bằng prefix (vd. lp/lesson-id)."""
+    prefix = str(source_prefix or "").strip()
+    if not prefix:
+        return {"ok": False, "error": "source_prefix required"}
+    path = Path(RAG_INDEX_PATH)
+    docs = load_existing_documents(path)
+    kept = [d for d in docs if not str(d.get("source", "")).startswith(prefix)]
+    removed = len(docs) - len(kept)
+    atomic_write_json(path, {"version": 1, "documents": kept})
+    return {"ok": True, "removed": removed, "total_chunks": len(kept)}

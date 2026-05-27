@@ -18,7 +18,9 @@
     "apply:concept-difficulty-ai": "node scripts/assign-concept-difficulty-ai.js --apply",
     "patch:topic-weights-json": "node scripts/patch-learning-path-topic-weights.js",
     "crawl-news": "node scripts/crawl-news.js",
-    "purge-news": "node scripts/purge-news-posts.js"
+    "purge-news": "node scripts/purge-news-posts.js",
+    "cleanup:assignment-staging": "node features/courses/workers/cleanupOrphanUploads.js",
+    "index:lp-rag": "node scripts/index-lp-lessons-rag.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1009.0",
@@ -26,8 +28,10 @@
     "@mozilla/readability": "^0.6.0",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
+    "date-fns-tz": "^3.2.0",
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
+    "file-type": "^16.5.4",
     "firebase-admin": "^13.0.0",
     "jsdom": "^25.0.1",
     "jsonwebtoken": "^9.0.2",

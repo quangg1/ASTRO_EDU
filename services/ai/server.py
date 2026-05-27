@@ -4,6 +4,7 @@ LLM: Groq Cloud (OpenAI-compatible). Chạy: uvicorn server:app --host 0.0.0.0 -
 """
 import asyncio
 import os
+import time
 from pathlib import Path
 from typing import Annotated, Any
 
@@ -75,11 +76,37 @@ Từ chối: Nếu câu hỏi vi phạm, chỉ trả lời: "{REFUSAL_MESSAGE_VI
     )
 
 
+def build_learning_path_system(lp: dict) -> str:
+    title = lp.get("currentLessonTitle") or "bài hiện tại"
+    sections = lp.get("sectionTitles") or []
+    sec_txt = ", ".join(str(s) for s in sections[:6]) if sections else ""
+    core = f"""Bạn là AI Learning Agent trên lộ trình học Galaxies.
+Người học đang xem bài: "{title}" (id={lp.get("currentLessonId", "")}).
+Mục lục: {sec_txt or "(chưa có)"}.
+Depth: {lp.get("depth") or "beginner"}.
+Trả lời tiếng Việt, bám nội dung bài đang học.
+Khi người học vừa trượt quiz ôn tập: coach Socratic — hỏi gợi mở, không nêu thẳng đáp án trắc nghiệm."""
+    if USE_AGENT_TOOLS:
+        return (
+            core
+            + "\nTool: open_learning_path_lesson(lesson_id), navigate_to_narrative / go_to_explore(stage_time_ma), "
+            "suggest_depth_switch(suggested_depth, reason) — depth chỉ gợi ý, không tự đổi."
+        )
+    return core
+
+
+def build_explore_system() -> str:
+    base = SYSTEM_GENERAL + "\n\nNgười dùng đang ở màn Khám phá 3D / timeline."
+    if USE_AGENT_TOOLS:
+        return base + "\nTool: navigate_to_narrative(planet, stage_time_ma), go_to_explore — khi cần điều hướng timeline."
+    return base
+
+
 def build_general_system() -> str:
     if USE_AGENT_TOOLS:
         return (
             SYSTEM_GENERAL
-            + "\n\nBạn có tool: go_to_explore(stage_time_ma), open_courses, open_dashboard, open_my_courses — "
+            + "\n\nBạn có tool: navigate_to_narrative / go_to_explore, open_courses, open_dashboard, open_my_courses — "
             "chỉ gọi khi người dùng rõ ràng muốn mở trang tương ứng; nếu chỉ hỏi kiến thức thì không cần tool."
         )
     return SYSTEM_GENERAL
@@ -95,9 +122,59 @@ def augment_system_with_agent_state(system: str, state: "AgentStateBody | None")
         parts.append(f"Query URL: {state.search}")
     if state.route_label:
         parts.append(f"Màn hình: {state.route_label}")
+    if state.lesson_id:
+        parts.append(f"Bài học: {state.lesson_title or state.lesson_id}")
+    active = getattr(state, "active_section", None)
+    if isinstance(active, dict) and active.get("title"):
+        excerpt = active.get("excerpt") or ""
+        parts.append(
+            f"Mục đang đọc: {active.get('title')}"
+            + (f" — {excerpt[:280]}" if excerpt else "")
+        )
+    narrative = getattr(state, "narrative_context", None)
+    if isinstance(narrative, dict) and narrative.get("entity_id"):
+        beat = narrative.get("beat_title") or narrative.get("entity_id")
+        summary = narrative.get("beat_summary") or ""
+        parts.append(f"Khám phá / narrative: {beat}" + (f" — {summary[:200]}" if summary else ""))
+    spaced = getattr(state, "spaced_review_due", None)
+    if isinstance(spaced, list) and spaced:
+        titles = [
+            str(x.get("title") or x.get("lessonId"))
+            for x in spaced[:3]
+            if isinstance(x, dict)
+        ]
+        if titles:
+            parts.append(f"Bài nên ôn lại (spaced review): {', '.join(titles)}")
+    depth_sug = getattr(state, "depth_suggestion", None)
+    if isinstance(depth_sug, dict) and depth_sug.get("suggested_depth"):
+        parts.append(
+            f"Gợi ý depth (chờ user xác nhận): {depth_sug.get('suggested_depth')} — {depth_sug.get('reason', '')[:120]}"
+        )
+    if state.weak_lessons:
+        weak_ids = [w.get("lessonId") for w in state.weak_lessons[:3] if isinstance(w, dict)]
+        if weak_ids:
+            parts.append(f"Bài đang khó / cần ôn (tín hiệu hệ thống): {', '.join(str(x) for x in weak_ids)}")
+    if state.misconceptions:
+        tags = [m.get("tag") for m in state.misconceptions[-5:] if isinstance(m, dict) and m.get("tag")]
+        if tags:
+            parts.append(f"Hiểu lầm đã ghi nhận: {'; '.join(str(t) for t in tags)}")
     if not parts:
         return system
-    return system.rstrip() + "\n\n[Hành vi / vị trí trên web]\n" + "\n".join(parts) + "\n"
+    block = "\n".join(parts)
+    extra = ""
+    coach_trigger = getattr(state, "coach_trigger", None)
+    if coach_trigger == "quiz_failed":
+        extra = (
+            "\nChế độ coach: người học VỪA trượt quiz ôn trong phiên này. "
+            "Dùng phong cách Socratic — gợi ý từng bước, không đưa đáp án MCQ trực tiếp. "
+            "Không nói họ đã trượt nếu họ chưa làm quiz.\n"
+        )
+    elif state.misconceptions or state.weak_lessons:
+        extra = (
+            "\nCó tín hiệu học tập từ các phiên trước; không giả định vừa trượt quiz "
+            "trừ khi học viên nói rõ hoặc coach_trigger là quiz_failed.\n"
+        )
+    return system.rstrip() + "\n\n[Hành vi / ngữ cảnh học]\n" + block + extra + "\n"
 
 
 class ChatMessage(BaseModel):
@@ -111,20 +188,45 @@ class AgentStateBody(BaseModel):
     pathname: str | None = None
     search: str | None = None
     route_label: str | None = None
+    lesson_id: str | None = None
+    lesson_title: str | None = None
+    module_id: str | None = None
+    node_id: str | None = None
+    depth: str | None = None
+    planet: str | None = None
+    stage_time_ma: float | None = None
+    current_lesson: dict | None = None
+    weak_lessons: list[dict] | None = None
+    misconceptions: list[dict] | None = None
+    coach_trigger: str | None = None
+    recall_quiz_available: bool | None = None
+    active_section: dict | None = None
+    narrative_context: dict | None = None
+    spaced_review_due: list[dict] | None = None
+    depth_suggestion: dict | None = None
+    entity_id: str | None = None
 
 
 class ChatRequestBody(BaseModel):
     messages: list[ChatMessage] = Field(..., min_length=1)
     context: str = "general"
     course: dict | None = None
+    learning_path: dict | None = None
     image_base64: str | None = None
     image_media_type: str = "image/jpeg"
     agent_state: AgentStateBody | None = None
+    allowed_tools: list[str] | None = None
+    rag_timeout_ms: int = Field(default=3000, ge=500, le=15000)
+    rag_lesson_id: str | None = Field(None, max_length=120)
 
 
 class KnowledgeAppendBody(BaseModel):
     text: str = Field(..., min_length=8, max_length=32000)
     source: str | None = Field(None, max_length=240)
+
+
+class KnowledgeDeletePrefixBody(BaseModel):
+    source_prefix: str = Field(..., min_length=2, max_length=240)
 
 
 class QuizGenerateRequestBody(BaseModel):
@@ -461,14 +563,33 @@ async def knowledge_append(
     return {"ok": True, "total_chunks": result.get("total_chunks")}
 
 
+@app.post("/knowledge/delete-prefix")
+async def knowledge_delete_prefix(
+    body: KnowledgeDeletePrefixBody,
+    _: Annotated[None, Depends(require_knowledge_admin)],
+):
+    """Xóa chunk theo source prefix (vd. lp/{lessonId} trước khi re-append)."""
+    async with _knowledge_lock:
+        result = kp.delete_chunks_by_source_prefix(body.source_prefix)
+        if not result.get("ok"):
+            raise HTTPException(status_code=400, detail=result.get("error", "delete failed"))
+        reload_index()
+    return result
+
+
 @app.post("/chat")
 async def chat(body: ChatRequestBody):
     messages = [m.model_dump() for m in body.messages]
     if is_request_blocked(messages):
         return {"message": {"role": "assistant", "content": REFUSAL_MESSAGE_VI}}
 
+    rag_ms: float | None = None
     if body.context == "course" and body.course:
         base_system = build_course_system(body.course)
+    elif body.context == "learning_path" and body.learning_path:
+        base_system = build_learning_path_system(body.learning_path)
+    elif body.context == "explore":
+        base_system = build_explore_system()
     else:
         base_system = build_general_system()
 
@@ -477,7 +598,23 @@ async def chat(body: ChatRequestBody):
     if USE_RAG:
         query = _last_user_text(messages)
         if query:
-            chunks = await retrieve(query)
+            timeout_s = body.rag_timeout_ms / 1000.0
+            try:
+                t_rag = time.perf_counter()
+                lesson_id = body.rag_lesson_id
+                if not lesson_id and body.agent_state:
+                    lesson_id = body.agent_state.lesson_id
+                chunks = await asyncio.wait_for(
+                    retrieve(query, lesson_id=lesson_id),
+                    timeout=timeout_s,
+                )
+                rag_ms = (time.perf_counter() - t_rag) * 1000.0
+            except asyncio.TimeoutError:
+                chunks = []
+                system_content = (
+                    system_content.rstrip()
+                    + "\n\n[RAG timeout — trả lời từ ngữ cảnh bài học và kiến thức chung, không bịa số liệu cụ thể.]\n"
+                )
             if chunks:
                 rag_block = (
                     "Tài liệu tham khảo (ưu tiên khi liên quan; có thể là cập nhật mới hơn kiến thức cut-off của model):\n"
@@ -492,7 +629,9 @@ async def chat(body: ChatRequestBody):
         body.image_media_type,
     )
     use_tools = USE_AGENT_TOOLS and not body.image_base64
-    tools = tools_for_context(body.context) if use_tools else None
+    tools = (
+        tools_for_context(body.context, body.allowed_tools) if use_tools else None
+    )
     temp = 0.7 if body.context == "general" else 0.6
     provider_errors: list[str] = []
     r = None
@@ -537,7 +676,11 @@ async def chat(body: ChatRequestBody):
 
     raw_tc = extract_tool_calls_from_response(data)
     validated = (
-        validate_and_normalize_tool_calls(body.context, body.course, raw_tc) if raw_tc else []
+        validate_and_normalize_tool_calls(
+            body.context, body.course, raw_tc, body.learning_path
+        )
+        if raw_tc
+        else []
     )
 
     if not content and validated:
@@ -548,6 +691,8 @@ async def chat(body: ChatRequestBody):
     out: dict[str, Any] = {"message": {"role": "assistant", "content": content}}
     if validated:
         out["tool_calls"] = validated
+    if rag_ms is not None:
+        out["rag_ms"] = round(rag_ms, 1)
     return out
 
 

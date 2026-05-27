@@ -5,6 +5,7 @@ const multer = require('multer');
 const { authMiddleware, requireRole } = require('../../shared/jwtAuth');
 const { persistUploadedFile, getMulterStorage } = require('./uploadStorage');
 const { buildMediaStorageKey, extFromFile } = require('./mediaStorageKeys');
+const { detectAssignmentMime } = require('../courses/lib/assignmentMime');
 const { slugifyCategory } = require('../rewards/lib/decorationSlugs');
 const { bulkImportOverlays } = require('../rewards/services/avatarDecorationBulkService');
 
@@ -45,6 +46,17 @@ const decorationBulkUpload = multer({
   fileFilter: decorationOverlayFilter,
 });
 
+const assignmentStagingFilter = (_req, file, cb) => {
+  const allowed = /\.(pdf|jpe?g|png|webp|docx?|zip)$/i;
+  cb(null, allowed.test(path.extname(file.originalname)));
+};
+
+const assignmentStagingUpload = multer({
+  storage: getMulterStorage(),
+  limits: { fileSize: 20 * 1024 * 1024 },
+  fileFilter: assignmentStagingFilter,
+});
+
 const router = express.Router();
 
 router.post('/upload', authMiddleware, requireRole('teacher', 'admin'), upload.single('file'), async (req, res) => {
@@ -77,6 +89,41 @@ router.post('/upload', authMiddleware, requireRole('teacher', 'admin'), upload.s
     });
   }
 });
+
+/** Assignment staging — học viên đã đăng nhập; magic-byte MIME. */
+router.post(
+  '/upload/assignment-staging',
+  authMiddleware,
+  assignmentStagingUpload.single('file'),
+  async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ success: false, error: 'Chọn file PDF, Word, ảnh hoặc ZIP.' });
+      }
+      const entityId = String(req.body?.entityId || '').trim();
+      if (!entityId) {
+        return res.status(400).json({ success: false, error: 'Thiếu entityId (submission id)' });
+      }
+      const buffer = req.file.buffer || null;
+      const safeMime = await detectAssignmentMime(buffer, req.file.originalname, req.file.mimetype);
+      if (!safeMime) {
+        return res.status(400).json({ success: false, error: 'Định dạng file không được phép' });
+      }
+      const storageKey = buildMediaStorageKey(
+        { purpose: 'assignment-staging', entityId, variant: req.body?.variant || 'file' },
+        req.file,
+      );
+      const { url, filename: storedName, storageKey: key } = await persistUploadedFile(req.file, storageKey);
+      res.json({ success: true, url, filename: storedName, storageKey: key, mime: safeMime });
+    } catch (err) {
+      console.error('[media] assignment-staging error:', err);
+      res.status(err.status || 500).json({
+        success: false,
+        error: err.message || 'Tải tệp lên thất bại',
+      });
+    }
+  },
+);
 
 /** Ảnh đại diện — mọi user đã đăng nhập; lưu S3/CDN `avatars/{userId}/...` khi có bucket. */
 router.post('/upload/avatar', authMiddleware, avatarUpload.single('file'), async (req, res) => {

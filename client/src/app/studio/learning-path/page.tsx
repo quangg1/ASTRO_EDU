@@ -1,13 +1,12 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState, type Dispatch, type SetStateAction } from 'react'
+import { useCallback, useEffect, useMemo, useState, type CSSProperties, type Dispatch, type SetStateAction } from 'react'
 import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
   DEPTH_ORDER,
   DEPTH_META,
-  LEARNING_MODULES,
   createEmptyLessonItem,
   createEmptyModule,
   createEmptyNode,
@@ -24,11 +23,7 @@ import {
   type LessonItem,
   type TopicWeight,
 } from '@/data/learningPathCurriculum'
-import {
-  fetchEditorLearningPath,
-  generateRecallQuizForLesson,
-  saveEditorLearningPath,
-} from '@/features/learning-path/public'
+import { fetchEditorLearningPath, saveEditorLearningPath } from '@/features/learning-path/public'
 import {
   FALLBACK_TAXONOMY_REGISTRY,
   fetchEditorConcepts,
@@ -37,7 +32,6 @@ import {
 } from '@/features/concepts/public'
 import type { Lesson } from '@/features/courses/public'
 import { useAuthStore } from '@/features/auth/public'
-import { canEnterStudio } from '@/lib/roles'
 import {
   BookOpen,
   ChevronDown,
@@ -46,7 +40,6 @@ import {
   Copy,
   GripVertical,
   Layers,
-  ClipboardList,
   ListTree,
   Plus,
   Save,
@@ -54,22 +47,39 @@ import {
   Trash2,
 } from 'lucide-react'
 import { NodeTopicWeightsEditor } from '@/components/studio/NodeTopicWeightsEditor'
-import { LearningPathRecallQuizEditor } from '@/components/studio/LearningPathRecallQuizEditor'
-import { NASA_SHOWCASE_ITEMS } from '@/lib/showcaseEntities'
-import { useShowcaseCatalogGen } from '@/components/showcase/ShowcaseCatalogProvider'
-import { mergeNasaCatalog, type ResolvedNasaCatalogItem } from '@/lib/mergeShowcaseCatalog'
-import { fetchPublicShowcaseEntityContents, type ShowcaseEntityContentDTO } from '@/features/content3d/showcase/public'
-import { entityHasExploreHistoryViewer } from '@/app/studio/showcase-entities/entityHistoryCapability'
-import { studioFallbackBundle } from '@/features/content3d/narrative/lib/legacyPresets'
-import { narrativeSitesForBeat } from '@/features/content3d/narrative/lib/siteVisibility'
-import { cloneLessonSection, useBlockEditorActions } from '@/components/studio/hooks/useBlockEditorActions'
 
 const BlockEditor = dynamic(() => import('@/components/studio/BlockEditor'), { ssr: false })
 const BlockPalette = dynamic(() => import('@/components/studio/BlockPalette'), { ssr: false })
 const LessonPreview = dynamic(() => import('@/components/studio/LessonPreview'), { ssr: false })
 
+function cloneJson<T>(obj: T): T {
+  return JSON.parse(JSON.stringify(obj))
+}
+
 function safeLower(value: unknown): string {
   return typeof value === 'string' ? value.toLowerCase() : ''
+}
+
+// ── HUD chrome helpers ──────────────────────────────────
+function _pr(seed: number) { const x = Math.sin(seed + 1) * 10000; return x - Math.floor(x) }
+const STUDIO_STARS = Array.from({ length: 100 }, (_, i) => ({
+  x: _pr(i * 7 + 1) * 100, y: _pr(i * 7 + 2) * 100,
+  r: _pr(i * 7 + 3) * 1.2 + 0.4, o: _pr(i * 7 + 4) * 0.5 + 0.15,
+  d: _pr(i * 7 + 5) * 4 + 2,
+  c: _pr(i * 7 + 6) > 0.9 ? '#7ee7ff' : _pr(i * 7 + 1) > 0.88 ? '#f5a524' : '#ffffff',
+}))
+
+function SCorner({ color = '#7ee7ff', size = 12, thick = 1.5 }: { color?: string; size?: number; thick?: number }) {
+  const b = `${thick}px solid ${color}`
+  const s: CSSProperties = { position: 'absolute', width: size, height: size, pointerEvents: 'none' }
+  return (
+    <>
+      <span style={{ ...s, top: 0, left: 0, borderTop: b, borderLeft: b }} />
+      <span style={{ ...s, top: 0, right: 0, borderTop: b, borderRight: b }} />
+      <span style={{ ...s, bottom: 0, left: 0, borderBottom: b, borderLeft: b }} />
+      <span style={{ ...s, bottom: 0, right: 0, borderBottom: b, borderRight: b }} />
+    </>
+  )
 }
 
 type ConceptUsageItem = {
@@ -129,40 +139,8 @@ function buildConceptUsage(modules: LearningModule[]): ConceptUsageItem[] {
   return out
 }
 
-function collectLearningPathIssues(modules: LearningModule[]): string[] {
-  const issues: string[] = []
-  if (modules.length === 0) return ['Chưa có module nào để lưu.']
-  for (const module of modules) {
-    if (!module.titleVi?.trim()) issues.push(`Module ${module.id}: thiếu tiêu đề tiếng Việt`)
-    if (module.nodes.length === 0) issues.push(`Module ${module.id}: chưa có chủ đề`)
-    for (const node of module.nodes) {
-      if (!node.titleVi?.trim()) issues.push(`Chủ đề ${node.id}: thiếu tiêu đề tiếng Việt`)
-      for (const depth of DEPTH_ORDER) {
-        const lessons = node.depths[depth] ?? []
-        const seenLessonIds = new Set<string>()
-        for (const lesson of lessons) {
-          if (!lesson.id?.trim()) issues.push(`Bài ở ${node.id}/${depth}: thiếu lesson id`)
-          if (!lesson.titleVi?.trim()) issues.push(`Bài ${lesson.id || '(không id)'}: thiếu tiêu đề tiếng Việt`)
-          if (lesson.id && seenLessonIds.has(lesson.id)) {
-            issues.push(`Chủ đề ${node.id}/${depth}: trùng lesson id "${lesson.id}"`)
-          }
-          if (lesson.id) seenLessonIds.add(lesson.id)
-        }
-      }
-    }
-  }
-  return issues
-}
-
-function parseSaveIssuesFromError(errorText: string): string[] {
-  const raw = String(errorText || '').trim()
-  if (!raw) return []
-  return raw
-    .split(/[\n;]+/g)
-    .map((s) => s.trim())
-    .filter(Boolean)
-    .slice(0, 8)
-}
+const inputCls =
+  'w-full rounded bg-[#030a14] border border-white/10 px-3 py-2 text-white text-sm focus:border-cyan-500/40 focus:outline-none transition-colors placeholder:text-slate-600'
 
 function updateLesson(
   modules: LearningModule[],
@@ -244,7 +222,7 @@ function LearningPathLessonEditor({
   setEditorTab,
   updateLesson: applyPatch,
   setModules,
-  resolvedShowcaseCatalog,
+  inputCls,
 }: {
   activeLesson: LessonItem
   concepts: LearningConcept[]
@@ -252,21 +230,18 @@ function LearningPathLessonEditor({
   moduleId: string
   nodeId: string
   depth: DepthLevel
-  editorTab: 'blocks' | 'preview' | 'lesson-page' | 'quiz'
-  setEditorTab: (t: 'blocks' | 'preview' | 'lesson-page' | 'quiz') => void
+  editorTab: 'blocks' | 'preview' | 'lesson-page'
+  setEditorTab: (t: 'blocks' | 'preview' | 'lesson-page') => void
   updateLesson: typeof updateLesson
   setModules: Dispatch<SetStateAction<LearningModule[]>>
-  resolvedShowcaseCatalog: ResolvedNasaCatalogItem[]
+  inputCls: string
 }) {
   const sections = activeLesson.sections ?? []
   const selectedConceptIds = activeLesson.conceptIds ?? []
   const [previewConceptId, setPreviewConceptId] = useState<string | null>(null)
-  const [quizGenerating, setQuizGenerating] = useState(false)
-  const [quizGenerateError, setQuizGenerateError] = useState<string | null>(null)
   const [conceptQuery, setConceptQuery] = useState('')
   const [conceptDomain, setConceptDomain] = useState('all')
   const [conceptSubdomain, setConceptSubdomain] = useState('all')
-  const [selectedBlockIndex, setSelectedBlockIndex] = useState<number | null>(null)
 
   const conceptDomains = useMemo(() => {
     return Object.keys(taxonomyRegistry).sort((a, b) => a.localeCompare(b, 'vi'))
@@ -321,18 +296,6 @@ function LearningPathLessonEditor({
     [filteredConceptCandidates, selectedConceptIds],
   )
   const conceptById = useMemo(() => new Map(concepts.map((c) => [c.id, c])), [concepts])
-  const primaryEntityId = (activeLesson.sceneContext?.primaryEntityId || '').trim()
-  const narrativePreset = useMemo(
-    () => (primaryEntityId ? studioFallbackBundle(primaryEntityId) : null),
-    [primaryEntityId],
-  )
-  const historyBeatOptions = narrativePreset?.beats ?? []
-  const historyFocus = activeLesson.sceneContext?.historyFocus
-  const historyPinOptions = useMemo(() => {
-    if (!historyFocus?.beatId || !narrativePreset) return []
-    const beatIds = historyBeatOptions.map((b) => b.id)
-    return narrativeSitesForBeat(primaryEntityId, historyFocus.beatId, narrativePreset.sites, beatIds)
-  }, [historyFocus?.beatId, narrativePreset, primaryEntityId, historyBeatOptions])
   const anchoredConceptIds = useMemo(
     () =>
       new Set(
@@ -393,38 +356,6 @@ function LearningPathLessonEditor({
     setModules((prev) => applyPatch(prev, moduleId, nodeId, depth, activeLesson.id, patch))
   }
 
-  const blockActions = useBlockEditorActions(sections, (next) => patchLesson({ sections: next }))
-
-  const generateQuizByAi = async () => {
-    if (quizGenerating) return
-    const token = typeof window !== 'undefined' ? localStorage.getItem('galaxies_token') : null
-    if (!token) {
-      setQuizGenerateError('Thiếu token đăng nhập. Vui lòng đăng nhập lại.')
-      return
-    }
-    setQuizGenerating(true)
-    setQuizGenerateError(null)
-    const r = await generateRecallQuizForLesson(token, activeLesson)
-    if (!r.ok || !Array.isArray(r.recallQuiz)) {
-      setQuizGenerateError(r.error || 'Không thể sinh quiz lúc này')
-      setQuizGenerating(false)
-      return
-    }
-    patchLesson({ recallQuiz: r.recallQuiz })
-    setQuizGenerating(false)
-  }
-
-  useEffect(() => {
-    if (sections.length === 0) {
-      setSelectedBlockIndex(null)
-      return
-    }
-    if (selectedBlockIndex == null) return
-    if (selectedBlockIndex >= sections.length) {
-      setSelectedBlockIndex(sections.length - 1)
-    }
-  }, [sections.length, selectedBlockIndex])
-
   const previewLesson: Lesson = useMemo(
     () => ({
       title: activeLesson.titleVi,
@@ -475,209 +406,53 @@ function LearningPathLessonEditor({
     return groups
   }, [sectionOutline])
 
+  const moveSection = (from: number, to: number) => {
+    if (to < 0 || to >= sections.length || from === to) return
+    const next = [...sections]
+    const [picked] = next.splice(from, 1)
+    next.splice(to, 0, picked)
+    patchLesson({ sections: next })
+  }
+
   return (
     <div className="w-full max-w-none space-y-4">
       <div>
         <p className="text-[10px] text-slate-600 font-mono break-all mb-2">{activeLesson.id}</p>
-        <h2 className="text-lg font-semibold text-white">Soạn bài học</h2>
-        <p className="text-xs text-ds-subtle mt-1">
+        <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 10, letterSpacing: '0.2em', color: '#7ee7ff', textTransform: 'uppercase', marginBottom: 8 }}>
+          // lesson editor
+        </div>
+        <h2 style={{ fontFamily: "'Space Grotesk',sans-serif", fontSize: 18, fontWeight: 600, color: '#eaf6ff' }}>
+          Soạn <em style={{ fontStyle: 'italic', fontWeight: 300, color: '#f5a524' }}>bài học</em>
+        </h2>
+        <p className="text-xs text-slate-500 mt-1">
           Cùng block kit với Course Studio — &quot;Lưu toàn bộ&quot; sau khi sửa xong (có thể nhiều bài).
         </p>
       </div>
 
-      <label className="block text-xs text-ds-muted">
+      <label className="block text-xs text-slate-400">
         Tiêu đề (VI)
         <input
           value={activeLesson.titleVi}
           onChange={(e) => patchLesson({ titleVi: e.target.value })}
-          className={`mt-1 studio-field`}
+          className={`mt-1 ${inputCls}`}
         />
       </label>
-      <label className="block text-xs text-ds-muted">
+      <label className="block text-xs text-slate-400">
         Title (EN)
         <input
           value={activeLesson.title}
           onChange={(e) => patchLesson({ title: e.target.value })}
-          className={`mt-1 studio-field`}
+          className={`mt-1 ${inputCls}`}
         />
       </label>
 
-      <div className="rounded-xl border border-violet-500/25 bg-violet-500/5 p-3 space-y-2">
-        <p className="text-xs font-medium text-violet-200">Showcase 3D — sceneContext (Layer 3)</p>
-        <p className="text-[11px] text-ds-subtle">
-          Gắn bài với entity trong Explore; gộp với lesson tìm được qua concept (Layer 2). Để trống nếu bài không nhắm showcase.
-        </p>
-        <label className="block text-xs text-ds-muted">
-          Entity chính (catalog)
-          <select
-            value={activeLesson.sceneContext?.primaryEntityId ?? ''}
-            onChange={(e) => {
-              const v = e.target.value.trim()
-              const extras = (activeLesson.sceneContext?.entityIds || []).filter(Boolean)
-              const hf = activeLesson.sceneContext?.historyFocus
-              if (!v && extras.length === 0 && !hf) {
-                patchLesson({ sceneContext: undefined })
-                return
-              }
-              patchLesson({
-                sceneContext: {
-                  ...(v ? { primaryEntityId: v } : {}),
-                  ...(extras.length ? { entityIds: extras } : {}),
-                  ...(v && hf ? { historyFocus: hf } : {}),
-                },
-              })
-            }}
-            className={`mt-1 studio-field`}
-          >
-            <option value="">— Không chọn —</option>
-            {resolvedShowcaseCatalog.map((it) => (
-              <option key={it.id} value={it.id}>
-                {it.displayName} ({it.id})
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="block text-xs text-ds-muted">
-          Entity phụ (id, cách nhau bằng dấu phẩy)
-          <input
-            value={(activeLesson.sceneContext?.entityIds || []).join(', ')}
-            onChange={(e) => {
-              const parts = e.target.value
-                .split(',')
-                .map((s) => s.trim())
-                .filter(Boolean)
-              const primary = (activeLesson.sceneContext?.primaryEntityId || '').trim()
-              const unique = [...new Set(parts)].filter((id) => id !== primary)
-              const hf = activeLesson.sceneContext?.historyFocus
-              if (!primary && unique.length === 0 && !hf) {
-                patchLesson({ sceneContext: undefined })
-                return
-              }
-              patchLesson({
-                sceneContext: {
-                  ...(primary ? { primaryEntityId: primary } : {}),
-                  ...(unique.length ? { entityIds: unique } : {}),
-                  ...(primary && hf ? { historyFocus: hf } : {}),
-                },
-              })
-            }}
-            placeholder="vd: moon-europa, sc-cassini"
-            className={`mt-1 studio-field`}
-          />
-        </label>
-        {primaryEntityId && entityHasExploreHistoryViewer(primaryEntityId) && historyBeatOptions.length > 0 ? (
-          <div className="mt-3 space-y-2 rounded-lg border border-violet-500/30 bg-violet-950/20 p-2.5">
-            <p className="text-[11px] font-medium text-violet-200">Deep History (Layer 4)</p>
-            <p className="text-[10px] text-ds-subtle">
-              Cùng entity — mở Explore timeline + beat (tùy chọn pin). Beat lấy từ preset/CMS entity.
-            </p>
-            <label className="block text-xs text-ds-muted">
-              Thời kỳ (beat)
-              <select
-                value={historyFocus?.beatId ?? ''}
-                onChange={(e) => {
-                  const raw = e.target.value
-                  const extras = (activeLesson.sceneContext?.entityIds || []).filter(Boolean)
-                  if (!raw) {
-                    if (!primaryEntityId && extras.length === 0) {
-                      patchLesson({ sceneContext: undefined })
-                      return
-                    }
-                    patchLesson({
-                      sceneContext: {
-                        primaryEntityId,
-                        ...(extras.length ? { entityIds: extras } : {}),
-                      },
-                    })
-                    return
-                  }
-                  const beatId = Number(raw)
-                  patchLesson({
-                    sceneContext: {
-                      primaryEntityId,
-                      ...(extras.length ? { entityIds: extras } : {}),
-                      historyFocus: {
-                        beatId,
-                        ...(historyFocus?.labelVi ? { labelVi: historyFocus.labelVi } : {}),
-                        ...(historyFocus?.pinId ? { pinId: historyFocus.pinId } : {}),
-                      },
-                    },
-                  })
-                }}
-                className="mt-1 studio-field"
-              >
-                <option value="">— Không deep-link —</option>
-                {historyBeatOptions.map((b) => (
-                  <option key={b.id} value={b.id}>
-                    {b.icon} {b.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            {historyFocus?.beatId ? (
-              <>
-                <label className="block text-xs text-ds-muted">
-                  Pin (tuỳ chọn)
-                  <select
-                    value={historyFocus.pinId ?? ''}
-                    onChange={(e) => {
-                      const pinId = e.target.value.trim()
-                      const extras = activeLesson.sceneContext?.entityIds || []
-                      patchLesson({
-                        sceneContext: {
-                          primaryEntityId,
-                          ...(extras.length ? { entityIds: extras } : {}),
-                          historyFocus: {
-                            beatId: historyFocus.beatId,
-                            ...(pinId ? { pinId } : {}),
-                            ...(historyFocus.labelVi ? { labelVi: historyFocus.labelVi } : {}),
-                          },
-                        },
-                      })
-                    }}
-                    className="mt-1 studio-field"
-                  >
-                    <option value="">— Không chọn pin —</option>
-                    {historyPinOptions.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.nameVi}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="block text-xs text-ds-muted">
-                  Nhãn nút LP
-                  <input
-                    value={historyFocus.labelVi ?? ''}
-                    onChange={(e) => {
-                      const labelVi = e.target.value.trim()
-                      const extras = activeLesson.sceneContext?.entityIds || []
-                      patchLesson({
-                        sceneContext: {
-                          primaryEntityId,
-                          ...(extras.length ? { entityIds: extras } : {}),
-                          historyFocus: {
-                            beatId: historyFocus.beatId,
-                            ...(historyFocus.pinId ? { pinId: historyFocus.pinId } : {}),
-                            ...(labelVi ? { labelVi } : {}),
-                          },
-                        },
-                      })
-                    }}
-                    placeholder="vd: Xem Noachian trên 3D"
-                    className="mt-1 studio-field"
-                  />
-                </label>
-              </>
-            ) : null}
-          </div>
-        ) : null}
-      </div>
-
-      <div className="rounded-xl border border-ds-accent-strong bg-ds-accent-soft p-3">
-        <p className="text-xs font-medium text-cyan-200 mb-2">Concept mapping + highlight</p>
+      <div style={{ position: 'relative', background: 'rgba(3,7,14,0.95)', border: '1px solid rgba(126,231,255,0.22)', clipPath: 'polygon(12px 0%,100% 0%,100% calc(100% - 12px),calc(100% - 12px) 100%,0% 100%,0% 12px)', padding: 16 }}>
+        <SCorner color="#7ee7ff" size={10} thick={1} />
+        <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 10, letterSpacing: '0.2em', color: '#7ee7ff', textTransform: 'uppercase' as const, marginBottom: 12 }}>
+          // concept mapping + highlight
+        </div>
         {concepts.length === 0 ? (
-          <p className="text-xs text-ds-subtle">
+          <p className="text-xs text-slate-500">
             Chưa có concept. Tạo concept ở panel bên trái rồi quay lại map cho bài này.
           </p>
         ) : (
@@ -687,12 +462,12 @@ function LearningPathLessonEditor({
                 value={conceptQuery}
                 onChange={(e) => setConceptQuery(e.target.value)}
                 placeholder="Tìm concept theo id/title/aliases..."
-                className="studio-field"
+                className={inputCls}
               />
               <select
                 value={conceptDomain}
                 onChange={(e) => setConceptDomain(e.target.value)}
-                className="studio-field"
+                className={inputCls}
               >
                 <option value="all">Tất cả domain</option>
                 {conceptDomains.map((d) => (
@@ -704,7 +479,7 @@ function LearningPathLessonEditor({
               <select
                 value={conceptSubdomain}
                 onChange={(e) => setConceptSubdomain(e.target.value)}
-                className="studio-field"
+                className={inputCls}
               >
                 <option value="all">Tất cả subdomain</option>
                 {conceptSubdomains.map((d) => (
@@ -714,16 +489,16 @@ function LearningPathLessonEditor({
                 ))}
               </select>
             </div>
-            <p className="text-[11px] text-ds-subtle mb-2">
+            <p className="text-[11px] text-slate-500 mb-2">
               Đang chọn {selectedConcepts.length}/{concepts.length} concept
             </p>
-            <div className="rounded-lg border border-ds-border bg-black/25 p-2.5 mb-2">
-              <p className="text-[11px] text-ds-muted mb-2">Concept đã gắn vào bài</p>
+            <div className="rounded-lg border border-white/10 bg-black/25 p-2.5 mb-2">
+              <p className="text-[11px] text-slate-400 mb-2">Concept đã gắn vào bài</p>
               {selectedConcepts.length > 0 ? (
                 <div className="flex flex-wrap gap-2">
                   {selectedConcepts.map((c) => (
                     <div key={`selected-${c.id}`} className="inline-flex items-center gap-1">
-                      <span className="inline-flex items-center gap-2 rounded-full border border-ds-accent-strong bg-ds-accent-soft px-3 py-1 text-xs text-cyan-100">
+                      <span className="inline-flex items-center gap-2 rounded-full border border-cyan-500/40 bg-cyan-500/15 px-3 py-1 text-xs text-cyan-100">
                         #{c.id}
                       </span>
                       <button
@@ -731,7 +506,7 @@ function LearningPathLessonEditor({
                         onClick={() =>
                           patchLesson({ conceptIds: selectedConceptIds.filter((id) => id !== c.id) })
                         }
-                        className="rounded-full border border-ds-border-strong px-2 py-1 text-[11px] text-slate-300 hover:bg-white/10"
+                        className="rounded-full border border-white/15 px-2 py-1 text-[11px] text-slate-300 hover:bg-white/10"
                         title="Bỏ concept khỏi bài"
                       >
                         ×
@@ -740,17 +515,17 @@ function LearningPathLessonEditor({
                   ))}
                 </div>
               ) : (
-                <p className="text-[11px] text-ds-subtle">Chưa gắn concept nào cho bài này.</p>
+                <p className="text-[11px] text-slate-500">Chưa gắn concept nào cho bài này.</p>
               )}
             </div>
             {previewConcept ? (
-              <div className="rounded-lg border border-ds-accent-strong bg-ds-accent-soft p-3 mb-2">
+              <div className="rounded-lg border border-cyan-500/25 bg-cyan-500/5 p-3 mb-2">
                 <div className="flex items-start justify-between gap-2">
-                  <p className="text-[11px] text-ds-muted">Preview concept trước khi thêm</p>
+                  <p className="text-[11px] text-slate-400">Preview concept trước khi thêm</p>
                   <button
                     type="button"
                     onClick={() => setPreviewConceptId(null)}
-                    className="text-[11px] rounded border border-ds-border-strong px-2 py-0.5 text-slate-300 hover:bg-white/10"
+                    className="text-[11px] rounded border border-white/15 px-2 py-0.5 text-slate-300 hover:bg-white/10"
                   >
                     Đóng preview
                   </button>
@@ -781,7 +556,7 @@ function LearningPathLessonEditor({
                 </div>
               </div>
             ) : null}
-            <p className="text-[11px] text-ds-muted mb-2">
+            <p className="text-[11px] text-slate-400 mb-2">
               Thêm nhanh từ danh sách ({unselectedFilteredConcepts.length} concept phù hợp bộ lọc)
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1">
@@ -792,29 +567,29 @@ function LearningPathLessonEditor({
                   onClick={() => setPreviewConceptId(c.id)}
                   className={`text-left rounded-lg border px-2.5 py-2 text-xs transition-colors ${
                     previewConceptId === c.id
-                      ? 'border-ds-accent-strong bg-ds-accent-soft'
-                      : 'border-ds-border bg-black/30 hover:border-ds-accent-strong hover:bg-ds-accent-soft'
+                      ? 'border-cyan-400/70 bg-cyan-500/15'
+                      : 'border-white/10 bg-black/30 hover:border-cyan-500/40 hover:bg-cyan-500/10'
                   }`}
                   title={c.short_description || c.explanation}
                 >
                   <span className="text-cyan-200 block">+ #{c.id}</span>
                   <span className="text-slate-200 block">{c.title || c.id}</span>
-                  <span className="text-[10px] text-ds-subtle block">
+                  <span className="text-[10px] text-slate-500 block">
                     {c.domain || 'no-domain'}
                     {c.subdomain ? ` / ${c.subdomain}` : ''}
                   </span>
                 </button>
               ))}
             </div>
-            <div className="mt-3 pt-3 border-t border-ds-accent-strong">
+            <div className="mt-3 pt-3 border-t border-cyan-500/20">
               <p className="text-xs font-medium text-violet-200 mb-1">Highlight trong nội dung (cụm văn bản → concept)</p>
-              <p className="text-[11px] text-ds-subtle mb-3">
+              <p className="text-[11px] text-slate-500 mb-3">
                 Gõ đúng cụm xuất hiện trong nội dung bài (khớp ngữ nghĩa do bạn chọn, không auto theo title concept). Cụm dài được ưu tiên nếu trùng phần.
               </p>
               <div className="space-y-2">
                 {(activeLesson.conceptAnchors ?? []).map((row, idx) => (
                   <div key={idx} className="flex flex-wrap gap-2 items-end">
-                    <label className="flex-1 min-w-[140px] text-[10px] text-ds-muted">
+                    <label className="flex-1 min-w-[140px] text-[10px] text-slate-400">
                       Cụm trong bài
                       <input
                         value={row.phrase}
@@ -823,11 +598,11 @@ function LearningPathLessonEditor({
                           next[idx] = { ...next[idx], phrase: e.target.value }
                           patchLesson({ conceptAnchors: next })
                         }}
-                        className={`mt-1 studio-field`}
+                        className={`mt-1 ${inputCls}`}
                         placeholder="Đúng đoạn văn cần gắn (vd: quỹ đạo elip)"
                       />
                     </label>
-                    <label className="flex-1 min-w-[120px] text-[10px] text-ds-muted">
+                    <label className="flex-1 min-w-[120px] text-[10px] text-slate-400">
                       Concept
                       <select
                         value={row.conceptId}
@@ -836,7 +611,7 @@ function LearningPathLessonEditor({
                           next[idx] = { ...next[idx], conceptId: e.target.value }
                           patchLesson({ conceptAnchors: next })
                         }}
-                        className={`mt-1 studio-field`}
+                        className={`mt-1 ${inputCls}`}
                       >
                         <option value="">— Chọn —</option>
                         {selectedConcepts.map((c) => (
@@ -886,8 +661,11 @@ function LearningPathLessonEditor({
         )}
       </div>
 
-      <div className="rounded-xl border border-emerald-500/25 bg-emerald-500/5 p-3">
-        <p className="text-xs font-medium text-emerald-200 mb-2">Checklist map concept (không cần AI)</p>
+      <div style={{ position: 'relative', background: 'rgba(3,7,14,0.95)', border: '1px solid rgba(109,255,176,0.2)', clipPath: 'polygon(12px 0%,100% 0%,100% calc(100% - 12px),calc(100% - 12px) 100%,0% 100%,0% 12px)', padding: 16 }}>
+        <SCorner color="#6dffb0" size={10} thick={1} />
+        <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 10, letterSpacing: '0.2em', color: '#6dffb0', textTransform: 'uppercase' as const, marginBottom: 12 }}>
+          // concept checklist
+        </div>
         <div className="space-y-2 text-[11px] text-slate-300">
           <p>
             Budget tầng <span className="text-emerald-200 font-semibold">{DEPTH_META[depth].labelVi}</span>:{' '}
@@ -926,7 +704,7 @@ function LearningPathLessonEditor({
             <p className="text-emerald-300">Prerequisite nhất quán.</p>
           )}
           {conceptChecklist.overBudget > 0 && conceptChecklist.removalCandidates.length > 0 && (
-            <div className="rounded border border-ds-border-strong bg-black/25 px-2 py-1.5">
+            <div className="rounded border border-white/15 bg-black/25 px-2 py-1.5">
               <p className="text-slate-300 mb-1">Gợi ý bỏ trước (ít liên kết/anchor):</p>
               <div className="flex flex-wrap gap-1.5">
                 {conceptChecklist.removalCandidates.map((id) => (
@@ -947,101 +725,63 @@ function LearningPathLessonEditor({
         </div>
       </div>
 
-      <div className="rounded-xl border border-ds-border bg-black/20 overflow-hidden">
-        <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-ds-border">
-          <div className="flex gap-0.5">
+      <div style={{ position: 'relative', background: 'rgba(3,7,14,0.95)', border: '1px solid rgba(255,255,255,0.08)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '8px 12px', borderBottom: '1px solid rgba(255,255,255,0.08)', background: 'rgba(0,0,0,0.5)' }}>
           <button
             type="button"
             onClick={() => setEditorTab('blocks')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-              editorTab === 'blocks'
-                ? 'bg-cyan-600/90 text-white'
-                : 'text-ds-subtle hover:text-white hover:bg-white/5'
-            }`}
+            style={{
+              padding: '5px 14px',
+              clipPath: 'polygon(6px 0%,100% 0%,calc(100% - 6px) 100%,0% 100%)',
+              background: editorTab === 'blocks' ? 'rgba(126,231,255,0.12)' : 'transparent',
+              border: editorTab === 'blocks' ? '1px solid rgba(126,231,255,0.45)' : '1px solid rgba(255,255,255,0.07)',
+              color: editorTab === 'blocks' ? '#7ee7ff' : '#4a5568',
+              fontFamily: "'JetBrains Mono',monospace", fontSize: 11, letterSpacing: '0.08em',
+              cursor: 'pointer', transition: 'all 0.2s',
+            }}
           >
             Blocks ({sections.length})
           </button>
           <button
             type="button"
             onClick={() => setEditorTab('preview')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-              editorTab === 'preview'
-                ? 'bg-emerald-600/90 text-white'
-                : 'text-ds-subtle hover:text-white hover:bg-white/5'
-            }`}
+            style={{
+              padding: '5px 14px',
+              clipPath: 'polygon(6px 0%,100% 0%,calc(100% - 6px) 100%,0% 100%)',
+              background: editorTab === 'preview' ? 'rgba(109,255,176,0.1)' : 'transparent',
+              border: editorTab === 'preview' ? '1px solid rgba(109,255,176,0.45)' : '1px solid rgba(255,255,255,0.07)',
+              color: editorTab === 'preview' ? '#6dffb0' : '#4a5568',
+              fontFamily: "'JetBrains Mono',monospace", fontSize: 11, letterSpacing: '0.08em',
+              cursor: 'pointer', transition: 'all 0.2s',
+            }}
           >
             Preview
           </button>
           <button
             type="button"
             onClick={() => setEditorTab('lesson-page')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-              editorTab === 'lesson-page'
-                ? 'bg-violet-600/90 text-white'
-                : 'text-ds-subtle hover:text-white hover:bg-white/5'
-            }`}
+            style={{
+              padding: '5px 14px',
+              clipPath: 'polygon(6px 0%,100% 0%,calc(100% - 6px) 100%,0% 100%)',
+              background: editorTab === 'lesson-page' ? 'rgba(139,92,246,0.12)' : 'transparent',
+              border: editorTab === 'lesson-page' ? '1px solid rgba(139,92,246,0.45)' : '1px solid rgba(255,255,255,0.07)',
+              color: editorTab === 'lesson-page' ? '#c4b5fd' : '#4a5568',
+              fontFamily: "'JetBrains Mono',monospace", fontSize: 11, letterSpacing: '0.08em',
+              cursor: 'pointer', transition: 'all 0.2s',
+            }}
           >
             Full Lesson Page
           </button>
-          <button
-            type="button"
-            onClick={() => setEditorTab('quiz')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-              editorTab === 'quiz'
-                ? 'bg-amber-600/90 text-white'
-                : 'text-ds-subtle hover:text-white hover:bg-white/5'
-            }`}
-          >
-            <span className="inline-flex items-center gap-1.5">
-              <ClipboardList className="w-3.5 h-3.5" />
-              Quiz mastery
-            </span>
-          </button>
-          </div>
         </div>
 
-        {editorTab === 'quiz' && (
-          <LearningPathRecallQuizEditor
-            lessonId={activeLesson.id}
-            recallQuiz={activeLesson.recallQuiz}
-            onChange={(next) => patchLesson({ recallQuiz: next })}
-            onAutoGenerate={generateQuizByAi}
-            generating={quizGenerating}
-            generateError={quizGenerateError}
-          />
-        )}
-
         {editorTab === 'blocks' && (
-          <div className="p-4">
-          <div className="mb-3 flex items-center justify-end">
-            <button
-              type="button"
-              disabled={!blockActions.hasClipboard}
-              onClick={() => {
-                const insertAt = blockActions.pasteAfter(selectedBlockIndex)
-                if (insertAt == null) {
-                  window.alert('Chưa có block nào được copy.')
-                  return
-                }
-                setSelectedBlockIndex(insertAt)
-              }}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-ds-accent-strong bg-ds-accent-soft px-3 py-1.5 text-xs text-cyan-200 hover:bg-ds-accent-strong disabled:opacity-40"
-            >
-              <Copy className="w-3.5 h-3.5" />
-              Dán block đã copy
-            </button>
-          </div>
-            <div className="space-y-3 min-w-0">
+          <div className="p-4 grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(220px,280px)] gap-4 items-start">
+            <div className="space-y-3 min-w-0 order-2 lg:order-1">
               {sections.map((sec, bi) => (
                 <div
                   key={bi}
                   id={`lp-studio-block-${bi}`}
-                  onClick={() => setSelectedBlockIndex(bi)}
-                  className={`rounded-2xl bg-ds-overlay p-4 space-y-3 group/block relative scroll-mt-24 cursor-pointer ${
-                    selectedBlockIndex === bi
-                      ? 'border border-ds-accent-strong shadow-[0_0_0_1px_rgba(34,211,238,0.18)]'
-                      : 'border border-ds-border'
-                  }`}
+                  className="rounded-2xl border border-white/10 bg-[#0a0f17]/80 p-4 space-y-3 group/block relative scroll-mt-24"
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -1051,7 +791,7 @@ function LearningPathLessonEditor({
                     <div className="flex items-center gap-1 opacity-0 group-hover/block:opacity-100 transition-opacity">
                       <button
                         type="button"
-                        onClick={() => blockActions.moveUp(bi)}
+                        onClick={() => moveSection(bi, bi - 1)}
                         disabled={bi === 0}
                         className="text-[10px] text-slate-600 hover:text-white disabled:opacity-20 px-1"
                       >
@@ -1059,7 +799,7 @@ function LearningPathLessonEditor({
                       </button>
                       <button
                         type="button"
-                        onClick={() => blockActions.moveDown(bi)}
+                        onClick={() => moveSection(bi, bi + 1)}
                         disabled={bi === sections.length - 1}
                         className="text-[10px] text-slate-600 hover:text-white disabled:opacity-20 px-1"
                       >
@@ -1067,24 +807,23 @@ function LearningPathLessonEditor({
                       </button>
                       <button
                         type="button"
-                        onClick={() => blockActions.copyAt(bi)}
-                        className="text-[10px] text-slate-600 hover:text-ds-accent px-1"
-                        title="Copy block"
-                        aria-label="Copy block"
-                      >
-                        <Copy className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => blockActions.duplicateAt(bi)}
-                        className="text-[10px] text-slate-600 hover:text-ds-accent px-1"
+                        onClick={() => {
+                          const s = [...sections]
+                          s.splice(bi + 1, 0, cloneJson(s[bi]))
+                          patchLesson({ sections: s })
+                        }}
+                        className="text-[10px] text-slate-600 hover:text-cyan-300 px-1"
                         title="Nhân đôi block"
                       >
                         ⧉
                       </button>
                       <button
                         type="button"
-                        onClick={() => blockActions.removeAt(bi)}
+                        onClick={() => {
+                          const s = [...sections]
+                          s.splice(bi, 1)
+                          patchLesson({ sections: s })
+                        }}
                         className="text-[10px] text-red-500/50 hover:text-red-400 px-1"
                       >
                         ×
@@ -1093,50 +832,46 @@ function LearningPathLessonEditor({
                   </div>
                   <BlockEditor
                     section={sec}
-                    onChange={(updated) => blockActions.updateAt(bi, updated)}
-                    uploadContext={{
-                      purpose: 'learning-path-lesson',
-                      entityId: activeLesson.id,
-                      variant:
-                        sec.type === 'image' || sec.type === 'gif'
-                          ? `blocks/image-${bi}`
-                          : sec.type === 'video'
-                            ? `blocks/video-${bi}`
-                            : sec.type === '3d'
-                              ? `blocks/model-${bi}`
-                              : `blocks/block-${bi}`,
+                    onChange={(updated) => {
+                      const s = [...sections]
+                      s[bi] = updated
+                      patchLesson({ sections: s })
                     }}
                   />
                 </div>
               ))}
-              <BlockPalette onAdd={(sec) => blockActions.append(sec)} />
+              <BlockPalette onAdd={(sec) => patchLesson({ sections: [...sections, sec] })} />
             </div>
-            <aside className="hidden xl:block fixed right-4 top-24 w-[300px] z-30">
-                <div className="rounded-xl border border-ds-border bg-ds-overlay p-3 shadow-xl">
-                  <p className="text-[11px] uppercase tracking-wider text-ds-subtle mb-2">TOC (theo lesson view)</p>
-                  <div className="space-y-1.5 max-h-[65vh] overflow-y-auto pr-1">
+            <aside className="order-1 lg:order-2 w-full lg:sticky lg:top-6 lg:z-20 self-start lg:max-h-[calc(100vh-6.5rem)]">
+                <div
+                  className="flex max-h-[inherit] flex-col"
+                  style={{ position: 'relative', background: 'rgba(4,8,18,0.97)', border: '1px solid rgba(126,231,255,0.14)', clipPath: 'polygon(10px 0%,100% 0%,100% calc(100% - 10px),calc(100% - 10px) 100%,0% 100%,0% 10px)', padding: 12, backdropFilter: 'blur(12px)' }}
+                >
+                  <SCorner color="#7ee7ff" size={8} thick={1} />
+                  <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 10, letterSpacing: '0.2em', color: '#7ee7ff', textTransform: 'uppercase', marginBottom: 10 }}>// toc · lesson view</div>
+                  <div className="min-h-0 flex-1 space-y-1.5 overflow-y-auto overscroll-contain pr-1">
                     {tocGroups.map((group) => {
                       return (
                         <div key={`studio-toc-${group.parent.id}`} className="space-y-1">
                           <button
                             type="button"
                             onClick={() =>
-                              document.getElementById(group.parent.id)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                              document.getElementById(group.parent.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
                             }
-                            className="w-full text-left rounded-md px-2.5 py-2 text-xs transition-colors border border-transparent text-slate-300 hover:bg-white/5 hover:border-ds-accent-strong"
+                            className="w-full text-left rounded-md px-2.5 py-2 text-xs transition-colors border border-transparent text-slate-300 hover:bg-white/5 hover:border-cyan-500/30"
                           >
                             {group.parent.title}
                           </button>
                           {group.children.length > 0 ? (
-                            <div className="ml-2 pl-2 border-l border-ds-border space-y-1">
+                            <div className="ml-2 pl-2 border-l border-white/10 space-y-1">
                               {group.children.map((child) => (
                                 <button
                                   key={child.id}
                                   type="button"
                                   onClick={() =>
-                                    document.getElementById(child.id)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                                    document.getElementById(child.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
                                   }
-                                  className="w-full text-left rounded-md px-2 py-1 text-[11px] transition-colors text-ds-subtle hover:text-slate-300 hover:bg-white/5 border border-transparent hover:border-ds-accent-strong"
+                                  className="w-full text-left rounded-md px-2 py-1 text-[11px] transition-colors text-slate-500 hover:text-slate-300 hover:bg-white/5 border border-transparent hover:border-cyan-500/20"
                                 >
                                   {child.title}
                                 </button>
@@ -1153,10 +888,10 @@ function LearningPathLessonEditor({
         )}
 
         {editorTab === 'preview' && (
-          <div className="border-t border-emerald-500/10 bg-ds-surface">
-            <div className="px-4 py-2 border-b border-emerald-500/10 bg-emerald-500/5 flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span className="text-[11px] font-medium text-emerald-300">Preview (như học viên thấy)</span>
+          <div style={{ borderTop: '1px solid rgba(109,255,176,0.12)', background: '#020a06' }}>
+            <div style={{ padding: '8px 16px', borderBottom: '1px solid rgba(109,255,176,0.1)', background: 'rgba(109,255,176,0.05)', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#6dffb0', boxShadow: '0 0 6px #6dffb0', animation: 'studio-pulse 2s ease-in-out infinite' }} />
+              <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 11, letterSpacing: '0.14em', color: '#6dffb0', textTransform: 'uppercase' }}>// preview · như học viên thấy</span>
             </div>
             <div className="p-5 max-w-4xl mx-auto">
               <LessonPreview
@@ -1169,23 +904,20 @@ function LearningPathLessonEditor({
         )}
 
         {editorTab === 'lesson-page' && (
-          <div className="border-t border-violet-500/10 bg-ds-surface">
-            <div className="px-4 py-2 border-b border-violet-500/10 bg-violet-500/5 flex items-center gap-2">
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-violet-400 animate-pulse" />
-                <span className="text-[11px] font-medium text-violet-300">
-                  Preview toàn trang bài học (render cục bộ)
-                </span>
-              </div>
+          <div style={{ borderTop: '1px solid rgba(139,92,246,0.12)', background: '#030208' }}>
+            <div style={{ padding: '8px 16px', borderBottom: '1px solid rgba(139,92,246,0.1)', background: 'rgba(139,92,246,0.06)', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#c4b5fd', boxShadow: '0 0 6px #c4b5fd', animation: 'studio-pulse 2s ease-in-out infinite' }} />
+              <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 11, letterSpacing: '0.14em', color: '#c4b5fd', textTransform: 'uppercase' }}>// full lesson · render cục bộ</span>
             </div>
-            <div className="p-4 md:p-6 bg-ds-base">
+            <div className="p-4 md:p-6" style={{ background: '#02040a' }}>
               <div className="max-w-3xl mx-auto space-y-4">
-                <div className="rounded-2xl border border-ds-border bg-ds-overlay p-4 md:p-5">
-                  <p className="text-[10px] uppercase tracking-wider text-ds-subtle mb-2">
-                    Learning Path / Studio Preview
+                <div style={{ position: 'relative', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(7,11,20,0.9)', padding: '16px 20px', clipPath: 'polygon(10px 0%,100% 0%,100% calc(100% - 10px),calc(100% - 10px) 100%,0% 100%,0% 10px)' }}>
+                  <SCorner color="#7ee7ff" size={8} thick={1} />
+                  <p style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 10, letterSpacing: '0.18em', color: '#3a4a6a', textTransform: 'uppercase', marginBottom: 8 }}>
+                    // learning path · studio preview
                   </p>
-                  <h2 className="text-xl md:text-2xl font-bold text-white">{activeLesson.titleVi}</h2>
-                  {activeLesson.title ? <p className="text-ds-subtle text-sm mt-1">{activeLesson.title}</p> : null}
+                  <h2 style={{ fontFamily: "'Space Grotesk',sans-serif", fontSize: 20, fontWeight: 700, color: '#eaf6ff' }}>{activeLesson.titleVi}</h2>
+                  {activeLesson.title ? <p className="text-slate-500 text-sm mt-1">{activeLesson.title}</p> : null}
                 </div>
                 <LessonPreview
                   lesson={previewLesson}
@@ -1211,21 +943,7 @@ export default function StudioLearningPathPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
-  const [saveIssues, setSaveIssues] = useState<string[]>([])
-  const [undoDelete, setUndoDelete] = useState<{ label: string; modules: LearningModule[] } | null>(null)
-  const [editorTab, setEditorTab] = useState<'blocks' | 'preview' | 'lesson-page' | 'quiz'>('blocks')
-  const [baselineSnapshot, setBaselineSnapshot] = useState('')
-  const [showcaseContent, setShowcaseContent] = useState<ShowcaseEntityContentDTO[]>([])
-  const showcaseCatalogGen = useShowcaseCatalogGen()
-
-  const resolvedShowcaseCatalog = useMemo(
-    () => mergeNasaCatalog(NASA_SHOWCASE_ITEMS, showcaseContent),
-    [showcaseContent, showcaseCatalogGen],
-  )
-
-  useEffect(() => {
-    void fetchPublicShowcaseEntityContents().then(setShowcaseContent)
-  }, [])
+  const [editorTab, setEditorTab] = useState<'blocks' | 'preview' | 'lesson-page'>('blocks')
 
   /** Điều hướng phân cấp */
   const [moduleId, setModuleId] = useState<string | null>(null)
@@ -1238,7 +956,7 @@ export default function StudioLearningPathPage() {
 
   useEffect(() => {
     if (checked && !user) router.replace('/login?redirect=/studio/learning-path')
-    if (checked && user && !canEnterStudio(user)) router.replace('/')
+    if (checked && user && user.role !== 'teacher' && user.role !== 'admin') router.replace('/')
   }, [checked, user, router])
 
   useEffect(() => {
@@ -1250,40 +968,15 @@ export default function StudioLearningPathPage() {
     }
     Promise.all([fetchEditorLearningPath(token), fetchEditorConcepts(token), fetchTaxonomyRegistryEditor(token)])
       .then(([d, cs, tx]) => {
-        const dbModules = d?.modules && d.modules.length > 0 ? d.modules : null
-        const nextModules =
-          dbModules ??
-          (LEARNING_MODULES.length > 0
-            ? (JSON.parse(JSON.stringify(LEARNING_MODULES)) as LearningModule[])
-            : [])
-        const nextConcepts =
-          cs && cs.length > 0
-            ? cs
-            : d?.concepts && d.concepts.length > 0
-              ? d.concepts
-              : []
-        const publishedVal = d?.published ?? true
-        if (!dbModules && LEARNING_MODULES.length > 0) {
-          setMessage(
-            d == null
-              ? 'Chưa có bản ghi LearningPath trên Mongo (hoặc API lỗi). Đang tải lộ trình mặc định từ code — bấm Lưu để ghi vào database.'
-              : 'Mongo đang có LearningPath nhưng danh sách module rỗng. Đang tải lộ trình mặc định từ code — bấm Lưu để khôi phục.',
-          )
-        }
-        setModules(nextModules)
-        setConcepts(nextConcepts)
-        setBaselineSnapshot(
-          JSON.stringify({
-            modules: nextModules,
-            published: publishedVal,
-          }),
-        )
+        if (!d) return
+        setModules(d.modules || [])
+        setConcepts(cs || [])
         if (tx) setTaxonomyRegistry(tx)
-        setPublished(publishedVal)
+        setPublished(d.published)
 
         // Preserve current editing selection when data refreshes (e.g. tab blur/focus auth refresh).
-        if (!nextModules.length) return
-        const sorted = [...nextModules].sort((a, b) => a.order - b.order)
+        if (!d.modules?.length) return
+        const sorted = [...d.modules].sort((a, b) => a.order - b.order)
         const hasModule = moduleId && sorted.some((m) => m.id === moduleId)
         const selectedModule = hasModule
           ? sorted.find((m) => m.id === moduleId) || sorted[0]
@@ -1308,16 +1001,6 @@ export default function StudioLearningPathPage() {
       })
       .finally(() => setLoading(false))
   }, [user?.id])
-
-  const isDirty = useMemo(() => {
-    if (loading) return false
-    const current = JSON.stringify({ modules, published })
-    return baselineSnapshot !== '' && current !== baselineSnapshot
-  }, [loading, modules, published, baselineSnapshot])
-  const confirmLeaveIfDirty = useCallback(() => {
-    if (!isDirty || saving) return true
-    return window.confirm('Bạn có thay đổi chưa lưu. Rời trang và bỏ thay đổi?')
-  }, [isDirty, saving])
 
   const sortedModules = useMemo(
     () => [...modules].sort((a, b) => a.order - b.order),
@@ -1456,7 +1139,6 @@ export default function StudioLearningPathPage() {
     if (!currentModule) return
     if (!confirm(`Xóa module "${currentModule.titleVi}" và toàn bộ chủ đề / bài bên trong?`)) return
     const mid = currentModule.id
-    setUndoDelete({ label: `Đã xóa module "${currentModule.titleVi}"`, modules: cloneLessonSection(modules) })
     setModules((prev) => {
       const next = renumberModuleOrders(prev.filter((x) => x.id !== mid))
       queueMicrotask(() => {
@@ -1507,7 +1189,6 @@ export default function StudioLearningPathPage() {
       return
     }
     if (!confirm(`Xóa chủ đề "${currentNode.titleVi}" và mọi bài trong 3 tầng?`)) return
-    setUndoDelete({ label: `Đã xóa chủ đề "${currentNode.titleVi}"`, modules: cloneLessonSection(modules) })
     const mid = currentModule.id
     const nid = currentNode.id
     const remaining = currentModule.nodes.filter((n) => n.id !== nid)
@@ -1535,7 +1216,6 @@ export default function StudioLearningPathPage() {
   const removeCurrentLesson = () => {
     if (!currentModule || !currentNode || !depth || !activeLesson) return
     if (!confirm(`Xóa bài "${activeLesson.titleVi}"?`)) return
-    setUndoDelete({ label: `Đã xóa bài "${activeLesson.titleVi}"`, modules: cloneLessonSection(modules) })
     const lid = activeLesson.id
     setModules((prev) =>
       updateLessonList(prev, currentModule.id, currentNode.id, depth, (list) => list.filter((l) => l.id !== lid)),
@@ -1578,8 +1258,6 @@ export default function StudioLearningPathPage() {
   const save = useCallback(async () => {
     const token = localStorage.getItem('galaxies_token')
     if (!token) return
-    const localIssues = collectLearningPathIssues(modules)
-    setSaveIssues(localIssues)
     setSaving(true)
     setMessage('')
     const rPath = await saveEditorLearningPath(token, modules, published)
@@ -1588,31 +1266,9 @@ export default function StudioLearningPathPage() {
       setModules(rPath.modules)
       if (typeof rPath.published === 'boolean') setPublished(rPath.published)
       setInvalidConceptIds(rPath.invalidConceptIds || [])
-      setBaselineSnapshot(
-        JSON.stringify({
-          modules: rPath.modules,
-          published: typeof rPath.published === 'boolean' ? rPath.published : published,
-        }),
-      )
-      setSaveIssues([])
-      setUndoDelete(null)
-    }
-    if (!rPath.ok) {
-      const serverIssues = parseSaveIssuesFromError(rPath.error || '')
-      setSaveIssues((prev) => (serverIssues.length > 0 ? [...prev, ...serverIssues] : prev))
     }
     setMessage(rPath.ok ? 'Đã lưu Learning Path.' : rPath.error || 'Lỗi lưu')
   }, [modules, published])
-
-  useEffect(() => {
-    const onBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (!isDirty || saving) return
-      e.preventDefault()
-      e.returnValue = ''
-    }
-    window.addEventListener('beforeunload', onBeforeUnload)
-    return () => window.removeEventListener('beforeunload', onBeforeUnload)
-  }, [isDirty, saving])
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -1627,54 +1283,113 @@ export default function StudioLearningPathPage() {
   }, [loading, save, saving])
 
   if (!checked || !user) {
-    return <div className="min-h-screen bg-black pt-20 px-4 text-ds-muted">Đang kiểm tra đăng nhập...</div>
+    return (
+      <div style={{ minHeight: '100vh', background: '#03060f', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 11, letterSpacing: '0.2em', color: '#3a4a6a', textTransform: 'uppercase', animation: 'studio-pulse 2s infinite' }}>
+          // đang kiểm tra đăng nhập...
+        </div>
+      </div>
+    )
   }
 
   return (
-    <div className="min-h-screen bg-ds-base pt-14 pb-10 px-3 md:px-6">
-      <div className="max-w-7xl mx-auto flex flex-col gap-4">
-        <nav className="text-sm shrink-0">
-          <Link
-            href="/studio"
-            onClick={(e) => {
-              if (confirmLeaveIfDirty()) return
-              e.preventDefault()
-            }}
-            className="text-ds-accent hover:text-ds-accent"
-          >
+    <div style={{ minHeight: '100vh', background: '#03060f', position: 'relative', fontFamily: "'Space Grotesk',sans-serif" }}>
+
+      {/* ── Animations ── */}
+      <style>{`
+        @keyframes studio-scan   { from { transform: translateY(-4px) } to { transform: translateY(100vh) } }
+        @keyframes studio-pulse  { 0%,100% { opacity: 1 } 50% { opacity: 0.35 } }
+        .studio-mod-item { transition: background 0.2s, border-color 0.2s; }
+        .studio-btn-amber { transition: box-shadow 0.2s, transform 0.15s; }
+        .studio-btn-amber:hover { box-shadow: 0 0 20px rgba(245,165,36,0.5) !important; transform: translateY(-1px); }
+        .studio-btn-ghost { transition: background 0.2s, border-color 0.2s, box-shadow 0.2s; }
+        .studio-btn-ghost:hover { background: rgba(126,231,255,0.08) !important; border-color: rgba(126,231,255,0.5) !important; box-shadow: 0 0 12px rgba(126,231,255,0.2) !important; }
+        .studio-mod-sel-item { transition: background 0.2s, border-color 0.2s, box-shadow 0.2s; }
+        .studio-mod-sel-item:hover { border-color: rgba(126,231,255,0.4) !important; background: rgba(126,231,255,0.06) !important; }
+        .studio-lesson-btn { transition: background 0.2s, border-color 0.2s; }
+        .studio-lesson-btn:hover { background: rgba(126,231,255,0.06) !important; }
+        @media (max-width: 1100px) { .studio-edge { display: none !important; } }
+      `}</style>
+
+      {/* ── Starfield ── */}
+      <svg aria-hidden style={{ position: 'fixed', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 0 }}>
+        {STUDIO_STARS.map((s, i) => (
+          <circle key={i} cx={`${s.x}%`} cy={`${s.y}%`} r={s.r} fill={s.c} opacity={s.o}>
+            <animate attributeName="opacity" values={`${s.o.toFixed(2)};${(s.o * 0.2).toFixed(2)};${s.o.toFixed(2)}`} dur={`${s.d.toFixed(1)}s`} repeatCount="indefinite" />
+          </circle>
+        ))}
+      </svg>
+
+      {/* ── Grid overlay ── */}
+      <div aria-hidden style={{
+        position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0,
+        backgroundImage: 'linear-gradient(rgba(255,255,255,0.015) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.015) 1px,transparent 1px)',
+        backgroundSize: '80px 80px',
+        maskImage: 'radial-gradient(ellipse 80% 80% at 50% 50%,black 10%,transparent 100%)',
+        WebkitMaskImage: 'radial-gradient(ellipse 80% 80% at 50% 50%,black 10%,transparent 100%)',
+      }} />
+
+      {/* ── Scanline ── */}
+      <div aria-hidden style={{
+        position: 'fixed', left: 0, right: 0, top: 0, height: 2,
+        background: 'linear-gradient(90deg,transparent,#7ee7ff,transparent)',
+        boxShadow: '0 0 8px #7ee7ff', opacity: 0.4,
+        animation: 'studio-scan 14s linear infinite',
+        pointerEvents: 'none', zIndex: 2,
+      }} />
+
+      {/* ── Ambient glow ── */}
+      <div aria-hidden style={{
+        position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0,
+        background: 'radial-gradient(ellipse 50% 30% at 5% 70%,rgba(245,165,36,0.04) 0%,transparent 60%),radial-gradient(ellipse 50% 30% at 95% 30%,rgba(126,231,255,0.04) 0%,transparent 60%)',
+      }} />
+
+      {/* ── Edge labels ── */}
+      <div className="studio-edge" style={{ position: 'fixed', left: 6, top: 0, bottom: 0, display: 'flex', alignItems: 'center', pointerEvents: 'none', zIndex: 2 }}>
+        <span style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', fontFamily: "'JetBrains Mono',monospace", fontSize: 10, letterSpacing: '0.14em', color: '#1e2d40', whiteSpace: 'nowrap', textTransform: 'uppercase' }}>
+          COSMOLEARN · STUDIO · LEARNING PATH EDITOR
+        </span>
+      </div>
+      <div className="studio-edge" style={{ position: 'fixed', right: 6, top: 0, bottom: 0, display: 'flex', alignItems: 'center', pointerEvents: 'none', zIndex: 2 }}>
+        <span style={{ writingMode: 'vertical-rl', fontFamily: "'JetBrains Mono',monospace", fontSize: 10, letterSpacing: '0.14em', color: '#1e2d40', whiteSpace: 'nowrap', textTransform: 'uppercase' }}>
+          CTRL+S TO SAVE · MODULE / NODE / DEPTH / LESSON
+        </span>
+      </div>
+
+      {/* ── Main content ── */}
+      <div style={{ position: 'relative', zIndex: 10, paddingTop: 72, paddingBottom: 40, paddingLeft: 'clamp(16px,3vw,24px)', paddingRight: 'clamp(16px,3vw,24px)', maxWidth: 1440, margin: '0 auto' }}>
+        <nav className="text-sm shrink-0 mb-4">
+          <Link href="/studio" style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 11, letterSpacing: '0.12em', color: '#7ee7ff', textDecoration: 'none', textTransform: 'uppercase' }}>
             ← Studio
           </Link>
         </nav>
 
-        {/* Thanh công cụ cố định */}
-        <header className="rounded-2xl border border-ds-border bg-gradient-to-r from-violet-950/50 to-cyan-950/30 px-4 py-4 md:px-6 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        {/* ── Header ── */}
+        <header style={{ position: 'relative', background: 'linear-gradient(120deg,rgba(126,231,255,0.05) 0%,rgba(6,9,26,0.96) 50%,rgba(3,6,15,0.97) 100%)', border: '1px solid rgba(126,231,255,0.2)', clipPath: 'polygon(18px 0%,100% 0%,100% calc(100% - 18px),calc(100% - 18px) 100%,0% 100%,0% 18px)', padding: '20px 28px', marginBottom: 24, display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 20 }}>
+          <SCorner color="#7ee7ff" size={14} thick={1.5} />
+          {/* Left accent bar */}
+          <span aria-hidden style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, background: 'linear-gradient(180deg,transparent 0%,#7ee7ff 38%,#7ee7ff 62%,transparent 100%)', boxShadow: '2px 0 10px rgba(126,231,255,0.45)' }} />
           <div>
-            <h1 className="text-xl md:text-2xl font-bold text-white flex items-center gap-2">
-              <ListTree className="w-6 h-6 text-violet-400" />
-              Learning Path Studio
+            <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 10, letterSpacing: '0.22em', color: '#7ee7ff', textTransform: 'uppercase', marginBottom: 10 }}>
+              // learning path · studio editor
+            </div>
+            <h1 style={{ fontFamily: "'Space Grotesk',sans-serif", fontSize: 'clamp(20px,3vw,28px)', fontWeight: 600, color: '#eaf6ff', display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8, lineHeight: 1.1 }}>
+              <ListTree style={{ width: 24, height: 24, color: '#7ee7ff', flexShrink: 0 }} />
+              Learning <em style={{ fontStyle: 'italic', fontWeight: 300, color: '#f5a524' }}>Path</em> Studio
             </h1>
-            <p className="text-xs text-ds-muted mt-1 max-w-xl">
-              <strong className="text-slate-300">Tạo mới</strong> module / chủ đề / bài, hoặc chọn{' '}
-              <strong className="text-slate-300">Module → Chủ đề → Tầng → Bài</strong> để soạn. Nội dung bài dùng{' '}
-              <strong className="text-cyan-200/90">cùng block kit với khóa học</strong> — không nhập HTML một ô.
+            <p style={{ fontSize: 12, color: '#9aa8c4', maxWidth: 520, lineHeight: 1.6, margin: 0 }}>
+              Tạo mới module / chủ đề / bài, hoặc chọn{' '}
+              <span style={{ color: '#eaf6ff' }}>Module → Chủ đề → Tầng → Bài</span> để soạn. Nội dung dùng{' '}
+              <span style={{ color: '#7ee7ff' }}>cùng block kit với khóa học</span>.
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <span
-              className={`text-[11px] rounded-full border px-2.5 py-1 ${
-                isDirty
-                  ? 'border-amber-400/45 bg-amber-500/15 text-amber-200'
-                  : 'border-emerald-400/35 bg-emerald-500/10 text-emerald-200'
-              }`}
-            >
-              {isDirty ? 'Chưa lưu' : 'Đã lưu'}
-            </span>
-            <label className="flex items-center gap-2 text-xs text-slate-300 cursor-pointer">
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 14 }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontFamily: "'JetBrains Mono',monospace", fontSize: 11, letterSpacing: '0.12em', color: '#9aa8c4', textTransform: 'uppercase' }}>
               <input
                 type="checkbox"
                 checked={published}
                 onChange={(e) => setPublished(e.target.checked)}
-                className="rounded border-ds-border-strong"
+                className="rounded border-white/20"
               />
               Published
             </label>
@@ -1682,102 +1397,114 @@ export default function StudioLearningPathPage() {
               type="button"
               onClick={save}
               disabled={saving || loading}
-              className="inline-flex items-center gap-2 min-h-10 px-4 rounded-xl bg-cyan-600 text-white text-sm font-medium hover:bg-cyan-500 disabled:opacity-50"
+              className="studio-btn-amber"
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 8,
+                padding: '10px 22px',
+                clipPath: 'polygon(10px 0%,100% 0%,100% calc(100% - 10px),calc(100% - 10px) 100%,0% 100%,0% 10px)',
+                background: saving || loading ? 'rgba(245,165,36,0.4)' : '#f5a524',
+                color: '#1a0e00', border: 'none', cursor: saving || loading ? 'not-allowed' : 'pointer',
+                fontFamily: "'JetBrains Mono',monospace", fontSize: 12, fontWeight: 700, letterSpacing: '0.1em',
+                boxShadow: '0 0 16px rgba(245,165,36,0.35)',
+              }}
             >
-              <Save className="w-4 h-4" />
-              {saving ? 'Đang lưu...' : 'Lưu toàn bộ'}
+              <Save style={{ width: 14, height: 14 }} />
+              {saving ? 'ĐANG LƯU...' : 'LƯU TOÀN BỘ'}
             </button>
-            <span className="text-[11px] text-ds-muted">Ctrl+S / Cmd+S</span>
+            <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 10, letterSpacing: '0.14em', color: '#3a4a6a', textTransform: 'uppercase' }}>Ctrl+S</span>
             <Link
               href="/tutorial"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-xs text-ds-accent hover:underline"
+              style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 11, letterSpacing: '0.1em', color: '#7ee7ff', textDecoration: 'none', textTransform: 'uppercase' }}
             >
               Xem học viên →
             </Link>
           </div>
         </header>
-        {message ? <p className="text-sm text-emerald-400/90 px-1">{message}</p> : null}
-        {undoDelete ? (
-          <div className="rounded-xl border border-amber-400/35 bg-amber-500/10 px-3 py-2 flex flex-wrap items-center justify-between gap-2">
-            <p className="text-xs text-amber-200">{undoDelete.label}</p>
-            <button
-              type="button"
-              onClick={() => {
-                setModules(cloneLessonSection(undoDelete.modules))
-                setUndoDelete(null)
-                setMessage('Đã hoàn tác thao tác xóa.')
-              }}
-              className="rounded-md border border-amber-300/40 px-2.5 py-1 text-[11px] text-amber-100 hover:bg-amber-500/20"
-            >
-              Hoàn tác
-            </button>
-          </div>
-        ) : null}
-        {saveIssues.length > 0 ? (
-          <div className="rounded-xl border border-rose-400/35 bg-rose-500/10 p-3">
-            <p className="text-xs font-semibold text-rose-200">Các mục cần kiểm tra trước/sau khi lưu</p>
-            <ul className="mt-2 space-y-1">
-              {saveIssues.slice(0, 8).map((issue, idx) => (
-                <li key={`${issue}-${idx}`} className="text-[11px] text-rose-100/90">
-                  - {issue}
-                </li>
-              ))}
-            </ul>
+        {message ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 14px', background: 'rgba(109,255,176,0.07)', border: '1px solid rgba(109,255,176,0.25)', clipPath: 'polygon(8px 0%,100% 0%,calc(100% - 8px) 100%,0% 100%)' }}>
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#6dffb0', flexShrink: 0 }} />
+            <p style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 11, color: '#6dffb0', letterSpacing: '0.08em', margin: 0 }}>{message}</p>
           </div>
         ) : null}
         {invalidConceptIds.length > 0 ? (
-          <p className="text-sm text-amber-300/90 px-1">
-            Đã loại bỏ concept không tồn tại khỏi lesson:{' '}
-            <span className="font-mono">{invalidConceptIds.join(', ')}</span>
-          </p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 14px', background: 'rgba(245,165,36,0.07)', border: '1px solid rgba(245,165,36,0.25)', clipPath: 'polygon(8px 0%,100% 0%,calc(100% - 8px) 100%,0% 100%)' }}>
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#f5a524', flexShrink: 0 }} />
+            <p style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 11, color: '#f5a524', letterSpacing: '0.08em', margin: 0 }}>
+              Đã loại bỏ concept không tồn tại: <span style={{ color: '#ffd27a' }}>{invalidConceptIds.join(', ')}</span>
+            </p>
+          </div>
         ) : null}
 
         {loading ? (
-          <p className="text-ds-subtle py-12 text-center">Đang tải...</p>
+          <div style={{ textAlign: 'center', padding: '64px 0' }}>
+            <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 11, letterSpacing: '0.2em', color: '#3a4a6a', textTransform: 'uppercase', animation: 'studio-pulse 2s infinite' }}>
+              // đang tải...
+            </div>
+          </div>
         ) : modules.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-ds-border-strong bg-white/[0.03] p-10 text-center max-w-lg mx-auto">
-            <p className="text-slate-300 font-medium">Chưa có module nào trong Learning Path.</p>
-            <p className="text-xs text-ds-subtle mt-2 mb-6">
-              Tạo module đầu tiên (có sẵn một chủ đề và một bài Cơ bản để bạn soạn), sau đó bấm &quot;Lưu toàn bộ&quot; để
-              ghi lên server.
+          <div style={{ position: 'relative', border: '1px dashed rgba(255,255,255,0.15)', background: 'rgba(255,255,255,0.02)', clipPath: 'polygon(18px 0%,100% 0%,100% calc(100% - 18px),calc(100% - 18px) 100%,0% 100%,0% 18px)', padding: '48px 32px', textAlign: 'center', maxWidth: 520, margin: '0 auto' }}>
+            <SCorner color="#7ee7ff" size={14} thick={1} />
+            <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 10, letterSpacing: '0.2em', color: '#7ee7ff', textTransform: 'uppercase', marginBottom: 16 }}>
+              // empty · no modules
+            </div>
+            <p style={{ fontFamily: "'Space Grotesk',sans-serif", fontSize: 16, fontWeight: 500, color: '#eaf6ff', marginBottom: 8 }}>Chưa có module nào trong Learning Path.</p>
+            <p style={{ fontSize: 12, color: '#9aa8c4', lineHeight: 1.6, marginBottom: 28 }}>
+              Tạo module đầu tiên (có sẵn một chủ đề và một bài Cơ bản để bạn soạn), sau đó bấm &quot;Lưu toàn bộ&quot; để ghi lên server.
             </p>
             <button
               type="button"
               onClick={addFirstModule}
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white text-sm font-medium"
+              className="studio-btn-amber"
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 8,
+                padding: '12px 28px',
+                clipPath: 'polygon(10px 0%,100% 0%,100% calc(100% - 10px),calc(100% - 10px) 100%,0% 100%,0% 10px)',
+                background: '#f5a524', color: '#1a0e00', border: 'none', cursor: 'pointer',
+                fontFamily: "'JetBrains Mono',monospace", fontSize: 12, fontWeight: 700, letterSpacing: '0.1em',
+                boxShadow: '0 0 16px rgba(245,165,36,0.35)',
+              }}
             >
-              <Plus className="w-4 h-4" />
-              Tạo module đầu tiên
+              <Plus style={{ width: 16, height: 16 }} />
+              TẠO MODULE ĐẦU TIÊN
             </button>
-            <p className="text-[11px] text-slate-600 mt-6">
-              Hoặc chạy API và seed từ <code className="text-ds-muted">learningPathDefault.json</code> rồi tải lại
-              trang.
+            <p style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 10, color: '#263042', marginTop: 24, letterSpacing: '0.1em' }}>
+              Hoặc seed từ <span style={{ color: '#4a5568' }}>learningPathDefault.json</span> rồi tải lại.
             </p>
           </div>
         ) : (
           <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 lg:items-stretch min-h-[calc(100vh-12rem)]">
             {/* Cột trái: 3 bước điều hướng */}
             <aside className="w-full lg:w-[300px] shrink-0 flex flex-col gap-4">
-              <section className="rounded-2xl border border-ds-border bg-ds-surface p-4">
-                <p className="text-[10px] uppercase tracking-wider text-ds-subtle font-semibold mb-1 flex items-center gap-1">
-                  <Layers className="w-3.5 h-3.5" /> 1. Module
-                </p>
-                <p className="text-[10px] text-slate-600 mb-2 leading-snug">
-                  Kéo thả từ cột trái · nút ↑↓ đổi chỗ · nút copy nhân đôi (id & URL bài mới).
+              <section style={{ position: 'relative', background: 'rgba(4,8,18,0.95)', border: '1px solid rgba(126,231,255,0.15)', clipPath: 'polygon(12px 0%,100% 0%,100% calc(100% - 12px),calc(100% - 12px) 100%,0% 100%,0% 12px)', padding: 16 }}>
+                <SCorner color="#7ee7ff" size={10} thick={1} />
+                <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 10, letterSpacing: '0.22em', color: '#7ee7ff', textTransform: 'uppercase', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <Layers style={{ width: 12, height: 12 }} />
+                  // 01 · modules
+                </div>
+                <p style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 10, color: '#263042', letterSpacing: '0.1em', marginBottom: 12, lineHeight: 1.5 }}>
+                  kéo thả · ↑↓ đổi chỗ · copy nhân đôi
                 </p>
                 <div className="space-y-1.5 max-h-[280px] overflow-y-auto pr-1">
                   {sortedModules.map((m, mi) => (
                     <div
                       key={m.id}
-                      className={`flex items-stretch gap-0.5 rounded-xl border transition-colors ${
-                        moduleId === m.id
-                          ? 'bg-ds-accent-soft border-ds-accent-strong'
+                      className="studio-mod-item"
+                      style={{
+                        display: 'flex', alignItems: 'stretch', gap: 2,
+                        border: moduleId === m.id
+                          ? '1px solid rgba(126,231,255,0.5)'
                           : dragOverModuleId === m.id
-                            ? 'border-ds-accent-strong bg-ds-accent-soft'
-                            : 'border-ds-border bg-black/20 hover:border-ds-border-strong'
-                      }`}
+                            ? '1px solid rgba(126,231,255,0.4)'
+                            : '1px solid rgba(255,255,255,0.07)',
+                        background: moduleId === m.id
+                          ? 'rgba(126,231,255,0.1)'
+                          : dragOverModuleId === m.id
+                            ? 'rgba(126,231,255,0.07)'
+                            : 'rgba(0,0,0,0.3)',
+                        clipPath: 'polygon(8px 0%,100% 0%,100% calc(100% - 8px),calc(100% - 8px) 100%,0% 100%,0% 8px)',
+                      }}
                       onDragOver={(e) => {
                         e.preventDefault()
                         e.dataTransfer.dropEffect = 'move'
@@ -1806,7 +1533,7 @@ export default function StudioLearningPathPage() {
                           setDragOverModuleId(null)
                         }}
                         onDragEnd={() => setDragOverModuleId(null)}
-                        className="shrink-0 flex items-center px-1 text-ds-subtle hover:text-slate-300 cursor-grab active:cursor-grabbing rounded-lg hover:bg-white/5 border-0 bg-transparent"
+                        className="shrink-0 flex items-center px-1 text-slate-500 hover:text-slate-300 cursor-grab active:cursor-grabbing rounded-lg hover:bg-white/5 border-0 bg-transparent"
                       >
                         <GripVertical className="w-4 h-4" />
                       </button>
@@ -1814,12 +1541,12 @@ export default function StudioLearningPathPage() {
                         type="button"
                         onClick={() => onSelectModule(m.id)}
                         className={`flex-1 min-w-0 text-left rounded-lg px-2 py-2 text-sm transition-colors ${
-                          moduleId === m.id ? 'text-white' : 'text-ds-muted hover:text-slate-200'
+                          moduleId === m.id ? 'text-white' : 'text-slate-400 hover:text-slate-200'
                         }`}
                       >
                         <span className="mr-1">{m.emoji}</span>
                         <span className="font-medium line-clamp-2">{m.titleVi}</span>
-                        <span className="block text-[10px] text-ds-subtle mt-0.5">
+                        <span className="block text-[10px] text-slate-500 mt-0.5">
                           #{m.order} · {m.id}
                         </span>
                       </button>
@@ -1832,7 +1559,7 @@ export default function StudioLearningPathPage() {
                             e.stopPropagation()
                             moveModuleUp(m.id)
                           }}
-                          className="rounded p-0.5 text-ds-subtle hover:text-white hover:bg-white/10 disabled:opacity-25 disabled:pointer-events-none"
+                          className="rounded p-0.5 text-slate-500 hover:text-white hover:bg-white/10 disabled:opacity-25 disabled:pointer-events-none"
                         >
                           <ChevronUp className="w-4 h-4" />
                         </button>
@@ -1844,7 +1571,7 @@ export default function StudioLearningPathPage() {
                             e.stopPropagation()
                             moveModuleDown(m.id)
                           }}
-                          className="rounded p-0.5 text-ds-subtle hover:text-white hover:bg-white/10 disabled:opacity-25 disabled:pointer-events-none"
+                          className="rounded p-0.5 text-slate-500 hover:text-white hover:bg-white/10 disabled:opacity-25 disabled:pointer-events-none"
                         >
                           <ChevronDown className="w-4 h-4" />
                         </button>
@@ -1855,7 +1582,7 @@ export default function StudioLearningPathPage() {
                             e.stopPropagation()
                             duplicateModuleAt(m.id)
                           }}
-                          className="rounded p-0.5 text-ds-subtle hover:text-ds-accent hover:bg-ds-accent-soft"
+                          className="rounded p-0.5 text-slate-500 hover:text-cyan-300 hover:bg-cyan-500/15"
                           title="Nhân đôi (id & nội dung mới)"
                         >
                           <Copy className="w-4 h-4" />
@@ -1867,15 +1594,23 @@ export default function StudioLearningPathPage() {
                 <button
                   type="button"
                   onClick={appendModule}
-                  className="mt-3 w-full inline-flex items-center justify-center gap-1.5 rounded-xl border border-ds-accent-strong bg-ds-accent-soft text-cyan-200 text-xs font-medium py-2 hover:bg-ds-accent-strong"
+                  className="studio-btn-ghost"
+                  style={{
+                    marginTop: 10, width: '100%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                    padding: '8px 0',
+                    clipPath: 'polygon(8px 0%,100% 0%,calc(100% - 8px) 100%,0% 100%)',
+                    background: 'rgba(126,231,255,0.05)', border: '1px solid rgba(126,231,255,0.3)',
+                    color: '#7ee7ff', cursor: 'pointer',
+                    fontFamily: "'JetBrains Mono',monospace", fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase',
+                  }}
                 >
                   <Plus className="w-3.5 h-3.5" />
                   Thêm module
                 </button>
                 {currentModule && (
-                  <div className="mt-3 pt-3 border-t border-ds-border space-y-2">
-                    <p className="text-[10px] text-ds-subtle uppercase font-semibold">Chỉnh module đang chọn</p>
-                    <label className="block text-[11px] text-ds-muted">
+                  <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid rgba(255,255,255,0.07)' }} className="space-y-2">
+                    <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 10, letterSpacing: '0.2em', color: '#4a5568', textTransform: 'uppercase' }}>// chỉnh module đang chọn</div>
+                    <label className="block text-[11px] text-slate-400">
                       Tiêu đề (VI)
                       <input
                         value={currentModule.titleVi}
@@ -1884,10 +1619,10 @@ export default function StudioLearningPathPage() {
                             updateModuleFields(prev, currentModule.id, { titleVi: e.target.value }),
                           )
                         }
-                        className={`mt-0.5 studio-field`}
+                        className={`mt-0.5 ${inputCls}`}
                       />
                     </label>
-                    <label className="block text-[11px] text-ds-muted">
+                    <label className="block text-[11px] text-slate-400">
                       Emoji
                       <input
                         value={currentModule.emoji}
@@ -1896,11 +1631,11 @@ export default function StudioLearningPathPage() {
                             updateModuleFields(prev, currentModule.id, { emoji: e.target.value }),
                           )
                         }
-                        className={`mt-0.5 studio-field`}
+                        className={`mt-0.5 ${inputCls}`}
                         maxLength={8}
                       />
                     </label>
-                    <label className="block text-[11px] text-ds-muted">
+                    <label className="block text-[11px] text-slate-400">
                       Mục tiêu (VI)
                       <textarea
                         value={currentModule.goalVi}
@@ -1910,25 +1645,27 @@ export default function StudioLearningPathPage() {
                           )
                         }
                         rows={2}
-                        className={`mt-0.5 studio-field resize-y min-h-[48px]`}
+                        className={`mt-0.5 ${inputCls} resize-y min-h-[48px]`}
                       />
                     </label>
                     <button
                       type="button"
                       onClick={removeCurrentModule}
-                      className="w-full inline-flex items-center justify-center gap-1.5 rounded-lg border border-red-500/30 text-red-300/90 text-xs py-1.5 hover:bg-red-500/10"
+                      style={{ width: '100%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '6px 0', background: 'transparent', border: '1px solid rgba(239,68,68,0.3)', color: 'rgba(252,165,165,0.8)', cursor: 'pointer', fontFamily: "'JetBrains Mono',monospace", fontSize: 11, letterSpacing: '0.08em' }}
                     >
-                      <Trash2 className="w-3.5 h-3.5" />
+                      <Trash2 style={{ width: 12, height: 12 }} />
                       Xóa module này
                     </button>
                   </div>
                 )}
               </section>
 
-              <section className="rounded-2xl border border-ds-border bg-ds-surface p-4">
-                <p className="text-[10px] uppercase tracking-wider text-ds-subtle font-semibold mb-2 flex items-center gap-1">
-                  <BookOpen className="w-3.5 h-3.5" /> 2. Chủ đề (node)
-                </p>
+              <section style={{ position: 'relative', background: 'rgba(4,8,18,0.95)', border: '1px solid rgba(139,92,246,0.18)', clipPath: 'polygon(12px 0%,100% 0%,100% calc(100% - 12px),calc(100% - 12px) 100%,0% 100%,0% 12px)', padding: 16 }}>
+                <SCorner color="#a78bfa" size={10} thick={1} />
+                <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 10, letterSpacing: '0.22em', color: '#a78bfa', textTransform: 'uppercase', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <BookOpen style={{ width: 12, height: 12 }} />
+                  // 02 · nodes
+                </div>
                 {!currentModule ? (
                   <p className="text-xs text-slate-600">Chọn module trước.</p>
                 ) : (
@@ -1938,28 +1675,40 @@ export default function StudioLearningPathPage() {
                         key={n.id}
                         type="button"
                         onClick={() => onSelectNode(n.id)}
-                        className={`w-full text-left rounded-xl px-3 py-2 text-sm transition-colors ${
-                          nodeId === n.id
-                            ? 'bg-violet-500/20 border border-violet-500/40 text-white'
-                            : 'border border-transparent text-ds-muted hover:bg-white/5'
-                        }`}
+                        className="studio-mod-sel-item"
+                        style={{
+                          width: '100%', textAlign: 'left', padding: '8px 12px', cursor: 'pointer',
+                          clipPath: 'polygon(6px 0%,100% 0%,100% calc(100% - 6px),calc(100% - 6px) 100%,0% 100%,0% 6px)',
+                          background: nodeId === n.id ? 'rgba(139,92,246,0.15)' : 'rgba(0,0,0,0.2)',
+                          border: nodeId === n.id ? '1px solid rgba(139,92,246,0.5)' : '1px solid rgba(255,255,255,0.06)',
+                          color: nodeId === n.id ? '#eaf6ff' : '#9aa8c4',
+                          fontFamily: "'Space Grotesk',sans-serif", fontSize: 13,
+                        }}
                       >
-                        <span className="text-ds-subtle text-xs mr-1">{i + 1}.</span>
+                        <span className="text-slate-500 text-xs mr-1">{i + 1}.</span>
                         {n.titleVi}
                       </button>
                     ))}
                     <button
                       type="button"
                       onClick={appendNode}
-                      className="mt-2 w-full inline-flex items-center justify-center gap-1.5 rounded-xl border border-violet-500/35 bg-violet-500/10 text-violet-200 text-xs font-medium py-2 hover:bg-violet-500/20"
+                      className="studio-btn-ghost"
+                      style={{
+                        marginTop: 8, width: '100%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                        padding: '8px 0',
+                        clipPath: 'polygon(8px 0%,100% 0%,calc(100% - 8px) 100%,0% 100%)',
+                        background: 'rgba(139,92,246,0.06)', border: '1px solid rgba(139,92,246,0.3)',
+                        color: '#a78bfa', cursor: 'pointer',
+                        fontFamily: "'JetBrains Mono',monospace", fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase',
+                      }}
                     >
                       <Plus className="w-3.5 h-3.5" />
                       Thêm chủ đề
                     </button>
                     {currentNode && (
-                      <div className="mt-3 pt-3 border-t border-ds-border space-y-2">
-                        <p className="text-[10px] text-ds-subtle uppercase font-semibold">Chỉnh chủ đề</p>
-                        <label className="block text-[11px] text-ds-muted">
+                      <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid rgba(255,255,255,0.07)' }} className="space-y-2">
+                        <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 10, letterSpacing: '0.2em', color: '#4a5568', textTransform: 'uppercase' }}>// chỉnh chủ đề</div>
+                        <label className="block text-[11px] text-slate-400">
                           Tiêu đề (VI)
                           <input
                             value={currentNode.titleVi}
@@ -1970,10 +1719,10 @@ export default function StudioLearningPathPage() {
                                 }),
                               )
                             }
-                            className={`mt-0.5 studio-field`}
+                            className={`mt-0.5 ${inputCls}`}
                           />
                         </label>
-                        <label className="block text-[11px] text-ds-muted">
+                        <label className="block text-[11px] text-slate-400">
                           Title (EN)
                           <input
                             value={currentNode.title}
@@ -1984,15 +1733,15 @@ export default function StudioLearningPathPage() {
                                 }),
                               )
                             }
-                            className={`mt-0.5 studio-field`}
+                            className={`mt-0.5 ${inputCls}`}
                           />
                         </label>
                         <button
                           type="button"
                           onClick={removeCurrentNode}
-                          className="w-full inline-flex items-center justify-center gap-1.5 rounded-lg border border-red-500/30 text-red-300/90 text-xs py-1.5 hover:bg-red-500/10"
+                          style={{ width: '100%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '6px 0', background: 'transparent', border: '1px solid rgba(239,68,68,0.3)', color: 'rgba(252,165,165,0.8)', cursor: 'pointer', fontFamily: "'JetBrains Mono',monospace", fontSize: 11, letterSpacing: '0.08em' }}
                         >
-                          <Trash2 className="w-3.5 h-3.5" />
+                          <Trash2 style={{ width: 12, height: 12 }} />
                           Xóa chủ đề này
                         </button>
                       </div>
@@ -2012,87 +1761,74 @@ export default function StudioLearningPathPage() {
                 />
               )}
 
-              <section className="rounded-2xl border border-ds-border bg-ds-surface p-4">
-                <p className="text-[10px] uppercase tracking-wider text-ds-subtle font-semibold mb-2">
-                  Concept Library
-                </p>
-                <p className="text-xs text-ds-muted mb-3">
+              <section style={{ position: 'relative', background: 'rgba(4,8,18,0.95)', border: '1px solid rgba(126,231,255,0.12)', clipPath: 'polygon(12px 0%,100% 0%,100% calc(100% - 12px),calc(100% - 12px) 100%,0% 100%,0% 12px)', padding: 16 }}>
+                <SCorner color="#7ee7ff" size={10} thick={1} />
+                <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 10, letterSpacing: '0.22em', color: '#7ee7ff', textTransform: 'uppercase', marginBottom: 8 }}>
+                  // concept library
+                </div>
+                <p style={{ fontSize: 12, color: '#9aa8c4', lineHeight: 1.5, marginBottom: 14 }}>
                   Concept được quản lý ở Studio riêng. Ở đây chỉ dùng để map vào lesson.
                 </p>
                 <Link
                   href="/studio/concepts"
-                  onClick={(e) => {
-                    if (confirmLeaveIfDirty()) return
-                    e.preventDefault()
+                  className="studio-btn-ghost"
+                  style={{
+                    display: 'inline-flex', alignItems: 'center',
+                    padding: '7px 16px',
+                    clipPath: 'polygon(8px 0%,100% 0%,calc(100% - 8px) 100%,0% 100%)',
+                    background: 'rgba(126,231,255,0.07)', border: '1px solid rgba(126,231,255,0.3)',
+                    color: '#7ee7ff', textDecoration: 'none',
+                    fontFamily: "'JetBrains Mono',monospace", fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase',
                   }}
-                  className="inline-flex items-center rounded-lg bg-cyan-600/80 hover:bg-cyan-500 text-white text-xs font-medium px-3 py-2"
                 >
-                  Mở Concept Studio
+                  Mở Concept Studio →
                 </Link>
               </section>
 
-              <details className="rounded-2xl border border-ds-border bg-ds-surface p-4" open={false}>
-                <summary className="cursor-pointer text-[10px] uppercase tracking-wider text-ds-subtle font-semibold">
-                  Concept Usage Report (nâng cao)
-                </summary>
-                <div className="mt-3">
-                  {concepts.length === 0 ? (
-                    <p className="text-xs text-slate-600">Chưa có concept để thống kê.</p>
-                  ) : (
-                    <div className="space-y-2 max-h-[280px] overflow-y-auto pr-1">
-                      {concepts.map((c) => {
-                        const rows = conceptUsageById.get(c.id) || []
-                        return (
-                          <details
-                            key={`usage-${c.id}`}
-                            className="rounded-lg border border-ds-border bg-black/30 px-2.5 py-2"
-                          >
-                            <summary className="cursor-pointer text-xs text-cyan-200">
-                              #{c.id} · {c.title || c.id} ({rows.length})
-                            </summary>
-                            <div className="mt-2 space-y-1">
-                              {rows.length === 0 ? (
-                                <p className="text-[11px] text-ds-subtle">Chưa được gắn vào lesson nào.</p>
-                              ) : (
-                                rows.map((r) => (
-                                  <p key={`${r.lessonId}-${r.depth}`} className="text-[11px] text-slate-300 leading-snug">
-                                    <span className="text-ds-subtle">{r.moduleTitle}</span> → {r.nodeTitle} →{' '}
-                                    <span className="text-ds-accent">{DEPTH_META[r.depth].labelVi}</span> → {r.lessonTitle}
-                                  </p>
-                                ))
-                              )}
-                            </div>
-                          </details>
-                        )
-                      })}
-                    </div>
-                  )}
+              <section style={{ position: 'relative', background: 'rgba(4,8,18,0.95)', border: '1px solid rgba(126,231,255,0.12)', clipPath: 'polygon(12px 0%,100% 0%,100% calc(100% - 12px),calc(100% - 12px) 100%,0% 100%,0% 12px)', padding: 16 }}>
+                <SCorner color="#7ee7ff" size={10} thick={1} />
+                <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 10, letterSpacing: '0.22em', color: '#7ee7ff', textTransform: 'uppercase', marginBottom: 12 }}>
+                  // concept usage report
                 </div>
-              </details>
+                {concepts.length === 0 ? (
+                  <p className="text-xs text-slate-600">Chưa có concept để thống kê.</p>
+                ) : (
+                  <div className="space-y-2 max-h-[280px] overflow-y-auto pr-1">
+                    {concepts.map((c) => {
+                      const rows = conceptUsageById.get(c.id) || []
+                      return (
+                        <details
+                          key={`usage-${c.id}`}
+                          className="rounded-lg border border-white/10 bg-black/30 px-2.5 py-2"
+                        >
+                          <summary className="cursor-pointer text-xs text-cyan-200">
+                            #{c.id} · {c.title || c.id} ({rows.length})
+                          </summary>
+                          <div className="mt-2 space-y-1">
+                            {rows.length === 0 ? (
+                              <p className="text-[11px] text-slate-500">Chưa được gắn vào lesson nào.</p>
+                            ) : (
+                              rows.map((r) => (
+                                <p key={`${r.lessonId}-${r.depth}`} className="text-[11px] text-slate-300 leading-snug">
+                                  <span className="text-slate-500">{r.moduleTitle}</span> → {r.nodeTitle} →{' '}
+                                  <span className="text-cyan-300">{DEPTH_META[r.depth].labelVi}</span> → {r.lessonTitle}
+                                </p>
+                              ))
+                            )}
+                          </div>
+                        </details>
+                      )
+                    })}
+                  </div>
+                )}
+              </section>
 
-              <details className="rounded-2xl border border-ds-border bg-ds-surface p-4">
-                <summary className="cursor-pointer text-[10px] uppercase tracking-wider text-ds-subtle font-semibold">
-                  Learning Bridge (Layer 1–3)
-                </summary>
-                <div className="mt-3 text-[11px] text-ds-muted space-y-2 leading-relaxed">
-                  <p>
-                    <span className="text-slate-200">Layer 1</span> — nhãn museum trên Explore theo catalog entity (không cần cấu hình
-                    thêm).
-                  </p>
-                  <p>
-                    <span className="text-slate-200">Layer 2</span> — map entity → concept trong code; lesson khớp qua concept gắn bài.
-                  </p>
-                  <p>
-                    <span className="text-slate-200">Layer 3</span> — dùng khối &quot;Showcase 3D — sceneContext&quot; ở form bài để gắn entity
-                    trực tiếp (ưu tiên gợi ý bài trên Explore).
-                  </p>
+              <section style={{ position: 'relative', background: 'rgba(4,8,18,0.95)', border: '1px solid rgba(245,165,36,0.18)', clipPath: 'polygon(12px 0%,100% 0%,100% calc(100% - 12px),calc(100% - 12px) 100%,0% 100%,0% 12px)', padding: 16 }}>
+                <SCorner color="#f5a524" size={10} thick={1} />
+                <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 10, letterSpacing: '0.22em', color: '#f5a524', textTransform: 'uppercase', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <Sparkles style={{ width: 12, height: 12 }} />
+                  // 03 · depth
                 </div>
-              </details>
-
-              <section className="rounded-2xl border border-ds-border bg-ds-surface p-4">
-                <p className="text-[10px] uppercase tracking-wider text-ds-subtle font-semibold mb-2 flex items-center gap-1">
-                  <Sparkles className="w-3.5 h-3.5" /> 3. Tầng độ sâu
-                </p>
                 {!currentNode ? (
                   <p className="text-xs text-slate-600">Chọn chủ đề trước.</p>
                 ) : (
@@ -2100,21 +1836,29 @@ export default function StudioLearningPathPage() {
                     {DEPTH_ORDER.map((d) => {
                       const count = currentNode.depths[d]?.length ?? 0
                       const meta = DEPTH_META[d]
+                      const isSelected = depth === d
+                      const depthColor = d === 'beginner' ? '#f5a524' : d === 'explorer' ? '#7ee7ff' : '#eaf6ff'
+                      const depthColorRgb = d === 'beginner' ? '245,165,36' : d === 'explorer' ? '126,231,255' : '234,246,255'
                       return (
                         <button
                           key={d}
                           type="button"
                           onClick={() => onSelectDepth(d)}
-                          className={`rounded-xl px-3 py-2.5 text-left text-sm border transition-all ${
-                            depth === d
-                              ? `bg-gradient-to-r ${meta.gradient} border-ds-border-strong text-white shadow-lg`
-                              : 'border-ds-border text-ds-muted hover:border-ds-border-strong hover:bg-white/5'
-                          }`}
+                          className="studio-mod-sel-item"
+                          style={{
+                            padding: '10px 14px', textAlign: 'left', cursor: 'pointer',
+                            clipPath: 'polygon(8px 0%,100% 0%,100% calc(100% - 8px),calc(100% - 8px) 100%,0% 100%,0% 8px)',
+                            background: isSelected ? `rgba(${depthColorRgb},0.12)` : 'rgba(0,0,0,0.3)',
+                            border: isSelected ? `1px solid rgba(${depthColorRgb},0.5)` : '1px solid rgba(255,255,255,0.07)',
+                            color: isSelected ? depthColor : '#9aa8c4',
+                            boxShadow: isSelected ? `0 0 16px rgba(${depthColorRgb},0.15)` : 'none',
+                            fontFamily: "'Space Grotesk',sans-serif", fontSize: 13,
+                          }}
                         >
-                          <span className="mr-1">{meta.short}</span>
+                          <span style={{ marginRight: 6 }}>{meta.short}</span>
                           {meta.labelVi}
-                          <span className="float-right text-[10px] opacity-80">
-                            {count === 0 ? 'chưa có bài' : `${count} bài`}
+                          <span style={{ float: 'right', fontFamily: "'JetBrains Mono',monospace", fontSize: 10, letterSpacing: '0.1em', color: isSelected ? depthColor : '#3a4a6a' }}>
+                            {count === 0 ? 'no lessons' : `${count} bài`}
                           </span>
                         </button>
                       )
@@ -2125,23 +1869,23 @@ export default function StudioLearningPathPage() {
             </aside>
 
             {/* Cột phải: danh sách bài trong tầng + form một bài */}
-            <div className="flex-1 min-w-0 flex flex-col rounded-2xl border border-ds-border bg-ds-surface overflow-hidden">
+            <div className="flex-1 min-w-0 flex flex-col min-h-0" style={{ background: 'rgba(3,7,14,0.97)', border: '1px solid rgba(255,255,255,0.08)' }}>
               {/* Breadcrumb */}
-              <div className="px-4 py-3 border-b border-ds-border bg-black/20 flex flex-wrap items-center gap-2 text-xs text-ds-muted">
-                <span>Đang sửa:</span>
-                <span className="text-cyan-300/90">{currentModule?.titleVi ?? '—'}</span>
-                <ChevronRight className="w-3 h-3 opacity-50" />
-                <span className="text-violet-300/90">{currentNode?.titleVi ?? '—'}</span>
-                <ChevronRight className="w-3 h-3 opacity-50" />
-                <span className="text-slate-200">
+              <div style={{ padding: '10px 20px', borderBottom: '1px solid rgba(255,255,255,0.07)', background: 'rgba(0,0,0,0.4)', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 10, letterSpacing: '0.14em', color: '#263042', textTransform: 'uppercase' }}>// editing:</span>
+                <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 11, color: '#7ee7ff' }}>{currentModule?.titleVi ?? '—'}</span>
+                <ChevronRight style={{ width: 10, height: 10, color: '#263042' }} />
+                <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 11, color: '#a78bfa' }}>{currentNode?.titleVi ?? '—'}</span>
+                <ChevronRight style={{ width: 10, height: 10, color: '#263042' }} />
+                <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 11, color: '#eaf6ff' }}>
                   {depth ? `${DEPTH_META[depth].short} ${DEPTH_META[depth].labelVi}` : '—'}
                 </span>
               </div>
 
               <div className="flex flex-col xl:flex-row flex-1 min-h-0">
                 {/* Danh sách bài (chỉ tiêu đề) */}
-                <div className="w-full xl:w-[200px] 2xl:w-[220px] shrink-0 border-b xl:border-b-0 xl:border-r border-ds-border p-3 max-h-[40vh] xl:max-h-none overflow-y-auto">
-                  <p className="text-[10px] uppercase text-ds-subtle font-semibold mb-2 px-1">4. Chọn bài</p>
+                <div className="w-full xl:w-[200px] 2xl:w-[220px] shrink-0 border-b xl:border-b-0 xl:border-r border-white/10 p-3 max-h-[40vh] xl:max-h-none overflow-y-auto" style={{ borderColor: 'rgba(255,255,255,0.07)' }}>
+                  <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 10, letterSpacing: '0.2em', color: '#4a5568', textTransform: 'uppercase', marginBottom: 10, paddingLeft: 4 }}>// 04 · lessons</div>
                   {lessonsAtDepth.length === 0 ? (
                     <div className="px-2 space-y-2">
                       <p className="text-xs text-slate-600">Chưa có bài ở tầng này.</p>
@@ -2149,10 +1893,17 @@ export default function StudioLearningPathPage() {
                         <button
                           type="button"
                           onClick={appendLesson}
-                          className="w-full inline-flex items-center justify-center gap-1.5 rounded-lg border border-ds-accent-strong bg-ds-accent-soft text-cyan-200 text-xs py-2 hover:bg-ds-accent-strong"
+                          className="studio-btn-ghost"
+                          style={{
+                            width: '100%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '8px 0',
+                            clipPath: 'polygon(8px 0%,100% 0%,calc(100% - 8px) 100%,0% 100%)',
+                            background: 'rgba(126,231,255,0.05)', border: '1px solid rgba(126,231,255,0.3)',
+                            color: '#7ee7ff', cursor: 'pointer',
+                            fontFamily: "'JetBrains Mono',monospace", fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase',
+                          }}
                         >
-                          <Plus className="w-3.5 h-3.5" />
-                          Thêm bài đầu tiên
+                          <Plus style={{ width: 12, height: 12 }} />
+                          + Bài đầu tiên
                         </button>
                       ) : null}
                     </div>
@@ -2164,11 +1915,15 @@ export default function StudioLearningPathPage() {
                             <button
                               type="button"
                               onClick={() => setActiveLessonId(le.id)}
-                              className={`min-w-0 flex-1 text-left rounded-lg px-3 py-2 text-sm transition-colors ${
-                                activeLessonId === le.id
-                                  ? 'bg-white/10 text-white border border-ds-accent-strong'
-                                  : 'text-ds-muted hover:bg-white/5 border border-transparent'
-                              }`}
+                              className="studio-lesson-btn"
+                              style={{
+                                minWidth: 0, flex: 1, textAlign: 'left', padding: '8px 10px', cursor: 'pointer',
+                                clipPath: 'polygon(6px 0%,100% 0%,100% calc(100% - 6px),calc(100% - 6px) 100%,0% 100%,0% 6px)',
+                                background: activeLessonId === le.id ? 'rgba(126,231,255,0.1)' : 'rgba(0,0,0,0.25)',
+                                border: activeLessonId === le.id ? '1px solid rgba(126,231,255,0.4)' : '1px solid rgba(255,255,255,0.06)',
+                                color: activeLessonId === le.id ? '#eaf6ff' : '#9aa8c4',
+                                fontFamily: "'Space Grotesk',sans-serif", fontSize: 12,
+                              }}
                             >
                               <span className="text-slate-600 text-xs mr-1">{idx + 1}.</span>
                               <span className="line-clamp-2">{le.titleVi}</span>
@@ -2178,7 +1933,7 @@ export default function StudioLearningPathPage() {
                                 type="button"
                                 onClick={() => moveLessonBy(le.id, -1)}
                                 disabled={idx === 0}
-                                className="h-6 w-6 inline-flex items-center justify-center rounded border border-ds-border text-ds-muted hover:text-white hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed"
+                                className="h-6 w-6 inline-flex items-center justify-center rounded border border-white/10 text-slate-400 hover:text-white hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed"
                                 title="Đưa lên"
                                 aria-label="Đưa bài lên"
                               >
@@ -2188,7 +1943,7 @@ export default function StudioLearningPathPage() {
                                 type="button"
                                 onClick={() => moveLessonBy(le.id, 1)}
                                 disabled={idx === lessonsAtDepth.length - 1}
-                                className="h-6 w-6 inline-flex items-center justify-center rounded border border-ds-border text-ds-muted hover:text-white hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed"
+                                className="h-6 w-6 inline-flex items-center justify-center rounded border border-white/10 text-slate-400 hover:text-white hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed"
                                 title="Đưa xuống"
                                 aria-label="Đưa bài xuống"
                               >
@@ -2201,19 +1956,31 @@ export default function StudioLearningPathPage() {
                       <button
                         type="button"
                         onClick={appendLesson}
-                        className="mt-2 w-full inline-flex items-center justify-center gap-1.5 rounded-lg border border-ds-border-strong text-slate-300 text-xs py-2 hover:bg-white/5"
+                        className="studio-btn-ghost"
+                        style={{
+                          marginTop: 6, width: '100%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '7px 0',
+                          clipPath: 'polygon(6px 0%,100% 0%,calc(100% - 6px) 100%,0% 100%)',
+                          background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.12)',
+                          color: '#9aa8c4', cursor: 'pointer',
+                          fontFamily: "'JetBrains Mono',monospace", fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase',
+                        }}
                       >
-                        <Plus className="w-3.5 h-3.5" />
-                        Thêm bài
+                        <Plus style={{ width: 10, height: 10 }} />
+                        + Bài mới
                       </button>
                       {activeLesson ? (
                         <button
                           type="button"
                           onClick={removeCurrentLesson}
-                          className="mt-2 w-full inline-flex items-center justify-center gap-1.5 rounded-lg border border-red-500/25 text-red-300/80 text-xs py-1.5 hover:bg-red-500/10"
+                          style={{
+                            marginTop: 4, width: '100%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '6px 0',
+                            background: 'transparent', border: '1px solid rgba(239,68,68,0.25)',
+                            color: 'rgba(252,165,165,0.7)', cursor: 'pointer',
+                            fontFamily: "'JetBrains Mono',monospace", fontSize: 10, letterSpacing: '0.08em',
+                          }}
                         >
-                          <Trash2 className="w-3.5 h-3.5" />
-                          Xóa bài đang chọn
+                          <Trash2 style={{ width: 10, height: 10 }} />
+                          Xóa bài này
                         </button>
                       ) : null}
                     </>
@@ -2221,9 +1988,9 @@ export default function StudioLearningPathPage() {
                 </div>
 
                 {/* Form chi tiết — một bài (block kit như Course) */}
-                <div className="flex-1 p-4 md:p-6 overflow-y-auto min-h-[320px]">
+                <div className="flex-1 p-4 md:p-6 overflow-visible min-h-[320px]">
                   {!currentModule || !currentNode || !depth || !activeLesson ? (
-                    <p className="text-ds-subtle text-sm">Chọn đủ Module → Chủ đề → Tầng → Bài để soạn nội dung.</p>
+                    <p className="text-slate-500 text-sm">Chọn đủ Module → Chủ đề → Tầng → Bài để soạn nội dung.</p>
                   ) : (
                     <LearningPathLessonEditor
                       activeLesson={activeLesson}
@@ -2236,7 +2003,7 @@ export default function StudioLearningPathPage() {
                       setEditorTab={setEditorTab}
                       updateLesson={updateLesson}
                       setModules={setModules}
-                      resolvedShowcaseCatalog={resolvedShowcaseCatalog}
+                      inputCls={inputCls}
                     />
                   )}
                 </div>

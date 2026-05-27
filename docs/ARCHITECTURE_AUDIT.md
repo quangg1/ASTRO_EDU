@@ -7,6 +7,7 @@
 > - `client/src/design-system/README.md` — 3-layer design system spec.
 > - `client/src/components/3d/showcase/SHOWCASE_TECH_NOTES.md` — note kỹ thuật 3D showcase.
 > - `docs/ARCHITECTURE_MERGED.md`, `docs/EDU_ARCHITECTURE.md`, `docs/AI_TUTOR_PLAN.md` — context lịch sử.
+- `docs/plans/learning-agent-system.md`, `docs/plans/agent-entitlement-guardrails.md` — Learning Agent + entitlement audit.
 >
 > Audit này KHÔNG thay thế các spec trên — nó kiểm tra xem **code thật có khớp spec không**, và liệt kê drift.
 
@@ -15,11 +16,12 @@
 | Hạng mục | Trạng thái | Ghi chú |
 |----------|-----------|---------|
 | Hygiene `app/` → `public` | **Done** | `check:app-public` trong `check:guards` + CI `client-guards.yml`; `app/` không còn `@/features/*/api/*` |
-| `courses` SSR tách `server-only` | **Done** | RSC: `@/features/courses/server`; client: `@/features/courses/public` (tránh kéo `server-only` vào `AITutor`) |
+| `courses` SSR tách `server-only` | **Done** | RSC: `@/features/courses/server`; client: `@/features/courses/public` (tránh kéo `server-only` vào widget AI) |
 | Earth fossil / 3D boundary | **Done** | `useStageFossils`; `EarthScene` presentational; boundary script bắt nested `content3d/*/api` |
 | Explore orchestrator | **Done** | `app/explore/{hooks,components}/` + `ExplorePageContent.tsx`; xem `app/explore/README.md` |
 | Backend `services/api/services/*` | **Done** | Colocated `features/admin|auth/services/` |
 | §2.3 / §2.4 / §3.3 narrative cũ | **Doc refreshed** | Bảng dưới phản ánh `usePlanetNarrativeStore` + xoá `useNarrativeStore` / NarrativeStudioMode |
+| Agent entitlement + guardrails | **Planned** | `docs/plans/agent-entitlement-guardrails.md`; parent §3.5–3.7 `learning-agent-system.md`; P0.8–0.10 |
 | **Còn mở** (Part 4) | P1/P2 | `cosmic-*` marketing, DS primitives thiếu, `components/` import sâu `api/`, `learning-path/public` re-export `server`, studio showcase-entities dày |
 
 ### Hygiene wave (2026-05) — resolved in repo
@@ -294,7 +296,7 @@ Studio editor UI: `BlockEditor`, `BlockPalette`, `LessonPreview`, `RichTextEdito
 - `components/community/` (5) — News* slider/row/chips, PostMarkdown, NewsCardLink
 - `components/landing/` (7) — Hero, CTA, Categories, Courses, Footer, Stats, Testimonials sections
 - `components/knowledge/` (1) — `KnowledgeStarMap` (38KB, force-graph 2D)
-- `components/ai-tutor/` (2) — `AITutor`, `parseTutorActions`
+- `components/ai-tutor/` (3) — `CosmoAssistantWidget`, `AssistantMarkdown`, `parseTutorActions`
 - `components/showcase/` (1) — `ShowcaseCatalogProvider` (context provider cho showcase data)
 - `components/layout/` (1) — `DashboardShell`
 
@@ -620,12 +622,12 @@ RootLayout
                ├─ AppChrome                        (đọc useLayoutChrome → AppHeader + AppShell)
                │  └─ AppShell                      (starfield overlay + MobileBottomNav)
                │     └─ {children}                 (route segment)
-               └─ Suspense → AITutor               (component-level state, không trong AppChrome)
+               └─ Suspense → CosmoAssistantWidget    (global FAB; portal z-index 1001)
 ```
 
 **Quan sát**:
 - `AuthProvider` + `ShowcaseCatalogProvider` cùng đứng *trên* `AppChrome` → mọi route đều có đủ user + showcase catalog ngay khi mount, không phải refetch theo route.
-- `AITutor` mount **toàn cục** ngoài `AppChrome` → tutor luôn sẵn ở mọi page (kể cả 3D/explore). Logic ngữ cảnh chuyển đổi qua `useTutorContextStore` (xem §3.4).
+- **`CosmoAssistantWidget`** mount **toàn cục** ngoài `AppChrome` → AI luôn sẵn ở mọi page (kể cả 3D/explore). Ngữ cảnh LP/Explore qua `AgentPageProvider`; course qua `useTutorContextStore` + `buildSessionContext` (xem §3.4).
 - `LayoutChromeProvider` + `LayoutChromeBoundary` là pattern rõ ràng: **route con khai báo "tôi cần ẩn header/nav"**, root layout đáp ứng. Đang dùng ở `app/{login,register,admin,studio}/layout.tsx`.
 
 **Drift 3.1.A — `LayoutChromeBoundary` thiếu cho area edu/courses/tutorial**: Edu surfaces hiện chỉ wrap `surface-edu` mà không truyền options layout chrome. Nếu sau này muốn “explore mode” ẩn header → cần thêm `LayoutChromeBoundary` giống `studio/layout.tsx`.
@@ -687,7 +689,7 @@ Spec đề xuất Button/Card/Badge/Input + Dialog/Tabs/Tooltip/Select/Popover/T
 | Store | Module | Owner write | Consumer read |
 |---|---|---|---|
 | `useAuthStore` | `features/auth/stores` | `AuthProvider` | `app/*`, `AppHeader`, … |
-| `useTutorContextStore` | `features/courses/stores` | course learn pages | `components/ai-tutor/AITutor` (root) |
+| `useTutorContextStore` | `features/courses/stores` | course learn pages | `CosmoAssistantWidget` (root) |
 | `useEarthHistoryStore` | `features/content3d/earth/stores` | `loadStages`, timeline | `InfoPanel`, `Timeline`, `Controls`, lessons (`findStageByTime`) |
 | `useSceneCommandStore` | `features/content3d/earth/stores` | fossils, phylum, UI flags | `EarthScene`, `FossilPanel`, `FossilDetailOverlay`, … |
 | `usePlaybackStore` | `features/content3d/earth/stores` | `Controls` / Timeline | `EarthScene`, `Controls` |
@@ -699,7 +701,7 @@ Spec đề xuất Button/Card/Badge/Input + Dialog/Tabs/Tooltip/Select/Popover/T
 **Quan sát**:
 - Earth timeline SSOT = `useEarthHistoryStore` + `/api/earth-history` (không qua generic narrative wrapper).
 - Planet deep-history = `usePlanetNarrativeStore` + `/api/planet-narratives` (Mars, studio CMS beats).
-- `useTutorContextStore` + global `AITutor` — chưa có domain `features/ai/` riêng (xem `AI_TUTOR_PLAN.md`).
+- `useTutorContextStore` + global **`CosmoAssistantWidget`** — domain `features/agent` + `components/ai-tutor` (xem `docs/plans/learning-agent-system.md` §4.1).
 
 **Drift 3.3.B — Store call API trực tiếp**  
 `sceneCommandStore.loadPhylumMetadata` dynamic import `earth/api/earthApi` ngay trong action; **mới**: `earthHistoryStore.loadStages` cũng gọi `earth/api/earthHistoryApi` trực tiếp (đã đơn giản hoá chain so với narrative trước đây). Pattern này phá nguyên tắc "store chỉ giữ state" nhưng được giữ lại cho ergonomics — giảm boilerplate cho consumer page. Ghi nhận để biết shape.
@@ -897,6 +899,25 @@ useTutorContextStore                  ← AI tutor mode (general/course)
 ```
 
 → Mọi route nhận **đúng 1 user, 1 catalog gen, 1 chrome state** từ root, **1 surface theme** từ layout, và route 3D thì cộng thêm 4 store con.
+
+---
+
+## 3.10 Learning Agent — entitlement & guardrails (2026-05-21)
+
+**Spec:** `docs/plans/learning-agent-system.md` (§3.5–§3.7), audit annex `docs/plans/agent-entitlement-guardrails.md`.
+
+| Khía cạnh | Hiện trạng code | Target |
+|-----------|-----------------|--------|
+| Chat / RAG | `services/ai` (`server.py`, `agent_tools.py`), client **`CosmoAssistantWidget`** + `/api/agent/message` | Giữ; bọc LangGraph |
+| Orchestrator Node | **Chưa có** `services/api/features/agent` | `POST /api/agent/message`, `entitlementResolver`, rate limit theo tier |
+| Tool authority | Python shape-validate; client `parseTutorActions` navigate | **Node executors** — enrollment + trial scope + showcase unlock (dual check 3D) |
+| Enrollment trial | `Enrollment` model: chỉ `progress[]` | Thêm `status`, `trialModuleId`, `trialExpiresAt` |
+| Tiers | Plan cũ: guest / LP / enrolled | **+ Trial (gem), Teacher** — matrix 5 cột |
+| Context snapshot | Tutor context store ad-hoc | Structured summary — **không** embed full lesson blocks |
+| Out-of-syllabus | Undefined | Hybrid RAG: course first, general + disclaimer |
+| Orchestration pattern | Linear handler | **LangGraph**: entitlement → RAG branch → LLM → authorize_tools (Node) |
+
+**P0 blockers trước khi mở tool navigation rộng:** 0.8 entitlement, 0.9 server executors, lesson API enrollment gate không được bypass qua agent.
 
 ---
 

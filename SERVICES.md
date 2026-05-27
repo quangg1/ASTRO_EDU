@@ -84,10 +84,11 @@ Xem chi tiết trong [docs/ARCHITECTURE_MERGED.md](docs/ARCHITECTURE_MERGED.md#d
 
 - **services/courses**: thêm `INTERNAL_API_SECRET` (trùng payment) vào `.env` nếu dùng payment.
 
-- **services/api** (API gộp): ngoài `MONGODB_URI`, `JWT_SECRET`, `CLIENT_URL`, `INTERNAL_API_SECRET`, có thể bật **email thông báo** (đơn giảng viên duyệt/từ chối) bằng SMTP tùy chọn:
+- **services/api** (API gộp): ngoài `MONGODB_URI`, `JWT_SECRET`, `CLIENT_URL`, `INTERNAL_API_SECRET`, có thể bật **email SMTP** (tùy chọn, `services/api/shared/mailer.js`):
   - `SMTP_HOST`, `SMTP_USER`, `SMTP_PASS`, `MAIL_FROM` (ví dụ `Cosmo Learn <noreply@example.com>`)
   - `SMTP_PORT` (mặc định `587`), `SMTP_SECURE=true` nếu dùng cổng 465 (SSL)
-  - Nếu không cấu hình, API vẫn chạy bình thường; chỉ bỏ qua gửi email.
+  - Nếu không cấu hình, API vẫn chạy; email bị bỏ qua (quên MK: dev non-production vẫn trả `resetLink` trong JSON để test).
+  - Luồng gửi mail: **đăng ký** (chào mừng), **quên mật khẩu** (link reset), **thanh toán khóa** (hóa đơn), **mã lớp cohort**, **duyệt/từ chối đơn giảng viên**.
 
 - **client**: khi dùng **API gộp**, tạo `client/.env.local` với (copy từ `client/.env.local.example`):
   - `NEXT_PUBLIC_API_BASE_URL=http://localhost:3002`

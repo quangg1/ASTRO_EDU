@@ -29,6 +29,8 @@ export { useAuthStore } from './stores/useAuthStore'
 export {
   login,
   register,
+  verifyRegistrationEmail,
+  resendRegistrationVerification,
   fetchMe,
   loginWithFirebaseIdToken,
   updateProfile,
@@ -37,6 +39,7 @@ export {
   resetPassword,
   deactivateMyAccount,
 } from './api/authApi'
+export type { RegisterStartResponse } from './api/authApi'
 
 // 3. Teacher-application — user-facing side ------------------------------------
 // Admin-side review APIs live in `features/admin/public` to keep the audience

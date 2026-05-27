@@ -43,16 +43,11 @@ export function useExploreShowcaseCatalog(planetHistoryEntityId: string | null) 
     }
 
     window.addEventListener(SHOWCASE_CATALOG_CHANGED_EVENT, schedule)
-    const onVis = () => {
-      if (document.visibilityState === 'visible') schedule()
-    }
-    document.addEventListener('visibilitychange', onVis)
 
     return () => {
       cancelled = true
       if (debounceRef.current) clearTimeout(debounceRef.current)
       window.removeEventListener(SHOWCASE_CATALOG_CHANGED_EVENT, schedule)
-      document.removeEventListener('visibilitychange', onVis)
     }
   }, [])
 

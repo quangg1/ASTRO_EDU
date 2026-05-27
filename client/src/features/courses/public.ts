@@ -33,6 +33,15 @@ export type {
   UploadMediaContext,
   MediaUploadPurpose,
   QuizQuestion,
+  QuizSettings,
+  ModuleMaterial,
 } from './api/coursesApi'
+
+export { ExamRunner } from './exam/ExamRunner'
+export { CohortHub } from './cohort/CohortHub'
+export { CohortStudioManager } from './cohort/CohortStudioManager'
+export { CourseCohortsJoin } from './cohort/CourseCohortsJoin'
+export { fetchCohortSyllabus } from './api/cohortApi'
+export { AssignmentSubmit } from './assignments/AssignmentSubmit'
 
 /** SSR/RSC fetchers: import from features/courses/server (server-only). */

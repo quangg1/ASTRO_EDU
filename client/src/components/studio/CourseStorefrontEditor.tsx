@@ -21,6 +21,7 @@ type StorefrontCourse = Pick<
   | 'price'
   | 'currency'
   | 'requiresPayment'
+  | 'catalogEnabled'
 >
 
 export function CourseStorefrontEditor({
@@ -125,6 +126,17 @@ export function CourseStorefrontEditor({
             </label>
           </div>
 
+          <label className="flex items-center gap-2 text-xs text-ds-muted cursor-pointer">
+            <input
+              type="checkbox"
+              checked={course.catalogEnabled !== false}
+              onChange={(e) => onChange({ catalogEnabled: e.target.checked })}
+            />
+            Mở catalog (tự học / ghi danh quanh năm)
+          </label>
+          <p className="text-[10px] text-ds-subtle">
+            Tắt nếu khóa chỉ mở theo kỳ — học viên chọn lớp trên landing; mã lớp gửi email sau đăng ký.
+          </p>
           <p className="text-[10px] text-ds-subtle">
             Giá hiển thị:{' '}
             <span className="text-ds-accent font-medium">

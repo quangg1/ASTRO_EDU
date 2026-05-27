@@ -14,6 +14,15 @@ const { requireString } = require('../../shared/validation');
 const { AppError } = require('../../shared/errors');
 const { getRuntimeEnv } = require('../../config/runtimeEnv');
 const APP_PATHS = require('../../../../shared/appPaths');
+const { sendWelcomeEmail, sendPasswordResetEmail } = require('../../shared/mailer');
+const {
+  isLocalEmailVerified,
+  isLocalUserPendingVerification,
+  createPendingLocalUser,
+  refreshPendingLocalUser,
+  verifyEmailCode,
+  resendVerificationCode,
+} = require('./services/emailVerificationService');
 
 const ROLES = ['student', 'teacher', 'moderator', 'admin'];
 
@@ -28,6 +37,7 @@ function normalizeAuthUser(user) {
     provider: user.provider,
     role: user.role || 'student',
     accountStatus: user.accountStatus || 'active',
+    emailVerified: user.provider !== 'local' ? true : isLocalEmailVerified(user),
   };
 }
 
@@ -46,13 +56,24 @@ router.post('/register', async (req, res) => {
     if (password.length < 6) {
       return res.status(400).json({ success: false, error: 'Mật khẩu tối thiểu 6 ký tự' });
     }
-    const existing = await User.findOne({ email: email.trim().toLowerCase() });
+    const emailNorm = email.trim().toLowerCase();
+    const existing = await User.findOne({ email: emailNorm });
     if (existing) {
       if (existing.accountStatus === 'deactivated') {
         return res.status(409).json({
           success: false,
           code: 'ACCOUNT_DEACTIVATED',
           error: 'Email này thuộc về tài khoản đã ngừng hoạt động. Liên hệ quản trị viên để khôi phục.',
+        });
+      }
+      if (isLocalUserPendingVerification(existing)) {
+        const sendMeta = await refreshPendingLocalUser(existing, { password, displayName });
+        return res.status(200).json({
+          success: true,
+          needsVerification: true,
+          email: emailNorm,
+          message: 'Nhập mã 6 số đã gửi tới email để hoàn tất đăng ký.',
+          ...sendMeta,
         });
       }
       const socialOnly = !existing.password;
@@ -63,24 +84,72 @@ router.post('/register', async (req, res) => {
           : 'Email đã được sử dụng',
       });
     }
-    const user = await User.create({
-      email: email.trim().toLowerCase(),
+    const user = await createPendingLocalUser({
+      emailNorm,
       password,
-      displayName: (displayName || '').trim() || undefined,
-      provider: 'local',
+      displayName,
     });
-    const token = issueToken(user);
+    const sendMeta = await refreshPendingLocalUser(user, {});
     res.status(201).json({
       success: true,
-      token,
-      user: normalizeAuthUser(user),
+      needsVerification: true,
+      email: emailNorm,
+      message: 'Đã gửi mã xác nhận tới email. Nhập mã để kích hoạt tài khoản.',
+      ...sendMeta,
     });
   } catch (err) {
     console.error('Register error:', err);
     if (err instanceof AppError) {
       return res.status(err.status).json({ success: false, code: err.code, error: err.message, details: err.details });
     }
+    if (err?.code === 11000) {
+      return res.status(409).json({ success: false, error: 'Email đã được sử dụng' });
+    }
     res.status(500).json({ success: false, error: 'Lỗi đăng ký' });
+  }
+});
+
+router.post('/register/verify-email', async (req, res) => {
+  try {
+    const email = requireString(req.body?.email, 'email', 'Email');
+    const code = requireString(req.body?.code, 'code', 'Mã xác nhận');
+    const { user, alreadyVerified } = await verifyEmailCode({ email, code });
+    if (!alreadyVerified) {
+      void sendWelcomeEmail({ to: user.email, displayName: user.displayName }).catch((e) => {
+        console.error('[auth] welcome email:', e?.message || e);
+      });
+    }
+    const token = issueToken(user);
+    res.json({
+      success: true,
+      token,
+      user: normalizeAuthUser(user),
+      message: 'Xác nhận email thành công.',
+    });
+  } catch (err) {
+    console.error('Verify email error:', err);
+    if (err instanceof AppError) {
+      return res.status(err.status).json({ success: false, code: err.code, error: err.message });
+    }
+    res.status(500).json({ success: false, error: 'Lỗi xác nhận' });
+  }
+});
+
+router.post('/register/resend-verification', async (req, res) => {
+  try {
+    const email = requireString(req.body?.email, 'email', 'Email');
+    const sendMeta = await resendVerificationCode(email);
+    res.json({
+      success: true,
+      message: 'Nếu email đang chờ xác nhận, mã mới đã được gửi.',
+      ...sendMeta,
+    });
+  } catch (err) {
+    console.error('Resend verification error:', err);
+    if (err instanceof AppError) {
+      return res.status(err.status).json({ success: false, code: err.code, error: err.message });
+    }
+    res.status(500).json({ success: false, error: 'Lỗi gửi lại mã' });
   }
 });
 
@@ -104,6 +173,14 @@ router.post('/login', async (req, res) => {
     const ok = await user.comparePassword(password);
     if (!ok) {
       return res.status(401).json({ success: false, error: 'Email hoặc mật khẩu không đúng' });
+    }
+    if (!isLocalEmailVerified(user)) {
+      return res.status(403).json({
+        success: false,
+        code: 'EMAIL_NOT_VERIFIED',
+        error: 'Email chưa xác nhận. Kiểm tra hộp thư hoặc đăng ký lại để nhận mã.',
+        email: user.email,
+      });
     }
     user.password = undefined;
     const token = issueToken(user);
@@ -182,6 +259,14 @@ router.get('/me', (req, res) => {
       }
       if (user.accountStatus === 'deactivated') {
         return res.status(403).json({ success: false, code: 'ACCOUNT_DEACTIVATED', error: 'Tài khoản đã ngừng hoạt động' });
+      }
+      if (!isLocalEmailVerified(user)) {
+        return res.status(403).json({
+          success: false,
+          code: 'EMAIL_NOT_VERIFIED',
+          error: 'Email chưa xác nhận.',
+          email: user.email,
+        });
       }
       const dbRole = user.role || 'student';
       const tokenRole = payload.role || 'student';
@@ -291,7 +376,21 @@ router.post('/forgot-password', async (req, res) => {
     await user.save({ validateBeforeSave: false });
     const clientUrl = getRuntimeEnv().clientUrl;
     const resetLink = `${clientUrl}${APP_PATHS.resetPassword}?token=${token}`;
-    res.json({ success: true, message: 'Kiểm tra email của bạn.', resetLink });
+    const emailResult = await sendPasswordResetEmail({
+      to: user.email,
+      displayName: user.displayName,
+      resetLink,
+    });
+    const payload = {
+      success: true,
+      message: 'Nếu email tồn tại, bạn sẽ nhận được link đặt lại mật khẩu.',
+      emailSent: !!emailResult.sent,
+    };
+    if (!emailResult.sent && process.env.NODE_ENV !== 'production') {
+      payload.resetLink = resetLink;
+      payload.devHint = 'SMTP chưa cấu hình — link hiển thị để dev test.';
+    }
+    res.json(payload);
   } catch (err) {
     console.error('Forgot password error:', err);
     if (err instanceof AppError) {

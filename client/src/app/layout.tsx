@@ -4,13 +4,9 @@ import './globals.css'
 import { getStaticAssetUrl } from '@/lib/apiConfig'
 import { AuthProvider } from '@/components/auth/AuthProvider'
 import { AppChrome } from '@/components/layout/AppChrome'
-import { AITutor } from '@/components/ai-tutor/AITutor'
+import { CosmoAssistantWidget } from '@/components/ai-tutor/CosmoAssistantWidget'
 import { ErrorBoundaryWrap } from '@/components/system/ErrorBoundaryWrap'
 import { Analytics } from '@/components/system/Analytics'
-import { PwaRegister } from '@/components/system/PwaRegister'
-import { PwaInstallPrompt } from '@/components/system/PwaInstallPrompt'
-import { PwaStatusBadge } from '@/components/system/PwaStatusBadge'
-import { HybridBootstrap } from '@/components/system/HybridBootstrap'
 import { ChunkLoadRecovery } from '@/components/system/ChunkLoadRecovery'
 import { RuntimePublicConfigScript } from '@/components/system/RuntimePublicConfigScript'
 import { LayoutChromeProvider } from '@/components/layout/LayoutChromeContext'
@@ -32,11 +28,6 @@ export const metadata: Metadata = {
     icon: getStaticAssetUrl('/images/web_icon.png'),
     shortcut: getStaticAssetUrl('/images/web_icon.png'),
     apple: getStaticAssetUrl('/images/web_icon.png'),
-  },
-  appleWebApp: {
-    capable: true,
-    title: 'Cosmo Learn',
-    statusBarStyle: 'black-translucent',
   },
 }
 
@@ -60,18 +51,14 @@ export default function RootLayout({
           <Analytics />
         </Suspense>
         <ChunkLoadRecovery />
-        <PwaRegister />
-        <HybridBootstrap />
         <AuthProvider>
           <ShowcaseCatalogProvider>
             <LayoutChromeProvider>
               <ToastProvider>
                 <ErrorBoundaryWrap>
-                  <PwaInstallPrompt />
-                  <PwaStatusBadge />
                   <AppChrome>{children}</AppChrome>
                   <Suspense fallback={null}>
-                    <AITutor />
+                    <CosmoAssistantWidget />
                   </Suspense>
                 </ErrorBoundaryWrap>
               </ToastProvider>

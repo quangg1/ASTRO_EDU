@@ -10,6 +10,8 @@ type Props = {
   questions: RecallQuestion[]
   passed: boolean
   onPassed: () => void
+  /** Gọi khi nộp bài nhưng chưa đúng hết (Phase 1 coach). */
+  onQuizFailed?: () => void
   variant?: 'card' | 'overlay'
   onContinue?: () => void
 }
@@ -18,6 +20,7 @@ export function LessonRecallQuiz({
   questions,
   passed,
   onPassed,
+  onQuizFailed,
   variant = 'card',
   onContinue,
 }: Props) {
@@ -87,6 +90,7 @@ export function LessonRecallQuiz({
         setPhase('idle')
       } else {
         setPhase('wrong')
+        onQuizFailed?.()
       }
     }, 380)
   }
@@ -162,14 +166,29 @@ export function LessonRecallQuiz({
               className="flex flex-col items-center justify-center py-8 text-center"
             >
               <p className="text-rose-300 text-sm font-medium">Chưa đúng hết các câu</p>
-              <p className="mt-2 max-w-sm text-xs text-ds-muted">Xem lại từng ý rồi thử lại — đáp án đúng phải khớp toàn bộ.</p>
-              <button
-                type="button"
-                onClick={retry}
-                className="mt-5 rounded-xl border border-ds-border-strong bg-white/5 px-5 py-2.5 text-sm font-medium text-ds-text hover:bg-white/10"
-              >
-                Làm lại từ đầu
-              </button>
+              <p className="mt-2 max-w-sm text-xs text-ds-muted">
+                Xem lại từng ý rồi thử lại — hoặc hỏi trợ lý theo hướng gợi mở (không cần nhớ đáp án ngay).
+              </p>
+              <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
+                <button
+                  type="button"
+                  onClick={retry}
+                  className="rounded-xl border border-ds-border-strong bg-white/5 px-5 py-2.5 text-sm font-medium text-ds-text hover:bg-white/10"
+                >
+                  Làm lại từ đầu
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (typeof window !== 'undefined') {
+                      window.dispatchEvent(new CustomEvent('galaxies:agent-open'))
+                    }
+                  }}
+                  className="rounded-xl border border-violet-400/40 bg-violet-500/15 px-5 py-2.5 text-sm font-medium text-violet-100 hover:bg-violet-500/25"
+                >
+                  Hỏi trợ lý (gợi mở)
+                </button>
+              </div>
             </motion.div>
           ) : current ? (
             <motion.div

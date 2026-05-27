@@ -18,6 +18,7 @@ export {
   fetchAdminUsers,
   updateUserRole,
   updateUserStatus,
+  deleteUserPermanently,
 } from './api/adminUsersApi'
 export type {
   AdminUser,
@@ -26,13 +27,13 @@ export type {
 } from './api/adminUsersApi'
 
 // Teacher applications — admin-side review --------------------------------------
-// User-side submit/status live in `features/auth/public`. The DTOs are shared,
-// so we re-export them here as well for ergonomic typing in admin views.
+// User-side submit/status live in `features/auth/public`. Admin list/review
+// stays on the auth API module but is exported here only (not auth/public).
 export {
   fetchAdminTeacherApplications,
   reviewTeacherApplication,
-} from '@/features/auth/public'
-export type { TeacherApplication, TeacherApplicationWithUser } from '@/features/auth/public'
+} from '@/features/auth/api/teacherApplicationsApi'
+export type { TeacherApplication, TeacherApplicationWithUser } from '@/features/auth/api/teacherApplicationsApi'
 
 // Analytics (cross-domain reporting) -------------------------------------------
 export {
@@ -41,6 +42,7 @@ export {
   fetchAdminAnalyticsRetention,
   fetchAdminAnalyticsCohort,
   fetchAdminLearningPathAnalytics,
+  fetchAdminAgentAnalytics,
 } from './api/adminAnalyticsApi'
 export type {
   AnalyticsRange,
@@ -50,6 +52,7 @@ export type {
   AdminAnalyticsCohort,
   AdminLearningPathFunnelItem,
   AdminLearningPathAnalytics,
+  AdminAgentAnalytics,
 } from './api/adminAnalyticsApi'
 
 // Gem economy (bounded config + metrics) --------------------------------------

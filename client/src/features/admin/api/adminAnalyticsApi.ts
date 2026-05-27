@@ -241,3 +241,48 @@ export async function fetchAdminLearningPathAnalytics(
     return { success: false, error: 'Không kết nối được API learning path analytics' }
   }
 }
+
+export type AdminAgentAnalytics = {
+  range: string
+  summary: {
+    agentSessions: number
+    agentUsers: number
+    agentMessages: number
+    learnerProfiles: number
+  }
+  daily: Array<{ date: string; sessions: number; messages: number }>
+  struggleHeatmap: Array<{
+    lessonId: string
+    lessonTitle: string
+    signal: string
+    uniqueUsers: number
+    totalDwellSec: number
+    quizFailProfiles: number
+  }>
+}
+
+export async function fetchAdminAgentAnalytics(
+  range: AnalyticsRange = '30d',
+): Promise<{ success: boolean; data?: AdminAgentAnalytics; error?: string }> {
+  try {
+    const res = await fetch(`${API_BASE}/admin/analytics/agent?range=${encodeURIComponent(range)}`, {
+      headers: authHeaders(),
+      cache: 'no-store',
+    })
+    const data = await res.json()
+    if (!res.ok || !data.success) {
+      return { success: false, error: data.error || 'Không tải được agent analytics' }
+    }
+    return {
+      success: true,
+      data: {
+        range: data.range,
+        summary: data.summary,
+        daily: data.daily,
+        struggleHeatmap: data.struggleHeatmap,
+      },
+    }
+  } catch {
+    return { success: false, error: 'Không kết nối được API agent analytics' }
+  }
+}

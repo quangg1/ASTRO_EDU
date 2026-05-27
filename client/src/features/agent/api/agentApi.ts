@@ -1,0 +1,319 @@
+import { getApiPathBase } from '@/lib/apiConfig'
+import { getToken } from '@/features/auth/public'
+import type { AgentMessageResponse, LearnerSnapshot, SessionContext } from '../types'
+
+const GUEST_KEY = 'galaxies_agent_guest_session'
+
+export function getAgentGuestSessionId(): string {
+  if (typeof window === 'undefined') return ''
+  try {
+    let id = localStorage.getItem(GUEST_KEY)
+    if (!id) {
+      id = crypto.randomUUID()
+      localStorage.setItem(GUEST_KEY, id)
+    }
+    return id
+  } catch {
+    return ''
+  }
+}
+
+function agentHeaders(stream: boolean): HeadersInit {
+  const h: Record<string, string> = { 'Content-Type': 'application/json' }
+  if (stream) {
+    h.Accept = 'text/event-stream'
+  } else {
+    h.Accept = 'application/json'
+  }
+  const token = getToken()
+  if (token) h.Authorization = `Bearer ${token}`
+  else {
+    const guest = getAgentGuestSessionId()
+    if (guest) h['X-Agent-Guest-Session'] = guest
+  }
+  return h
+}
+
+export function getAgentApiBase(): string {
+  const base = getApiPathBase()
+  return base ? `${base}/agent` : '/api/agent'
+}
+
+export type AgentStreamEvent =
+  | { event: 'session'; data: AgentMessageResponse['session'] }
+  | { event: 'token'; data: { content: string } }
+  | { event: 'tool_calls'; data: { tool_calls: unknown } }
+  | { event: 'tool_results'; data: { tool_results: AgentMessageResponse['tool_results'] } }
+  | { event: 'fallback'; data: { chips?: Array<{ label: string; action: string }> } }
+  | { event: 'done'; data: { ok?: boolean; fallback?: boolean } }
+  | { event: 'error'; data: { error?: string } }
+
+async function consumeSse(
+  res: Response,
+  onEvent: (ev: AgentStreamEvent) => void,
+): Promise<void> {
+  const reader = res.body?.getReader()
+  if (!reader) throw new Error('No response body')
+  const dec = new TextDecoder()
+  let buf = ''
+  for (;;) {
+    const { done, value } = await reader.read()
+    if (done) break
+    buf += dec.decode(value, { stream: true })
+    const parts = buf.split('\n\n')
+    buf = parts.pop() || ''
+    for (const block of parts) {
+      const lines = block.split('\n')
+      let event = 'message'
+      let dataLine = ''
+      for (const line of lines) {
+        if (line.startsWith('event:')) event = line.slice(6).trim()
+        if (line.startsWith('data:')) dataLine = line.slice(5).trim()
+      }
+      if (!dataLine) continue
+      try {
+        const data = JSON.parse(dataLine) as AgentStreamEvent['data']
+        onEvent({ event, data } as AgentStreamEvent)
+      } catch {
+        /* ignore malformed */
+      }
+    }
+  }
+}
+
+export async function postAgentMessage(params: {
+  messages: Array<{ role: string; content: string }>
+  sessionContext: SessionContext
+  learnerSnapshot?: LearnerSnapshot
+  sessionId?: string
+  image_base64?: string
+  image_media_type?: string
+  /** Default true — SSE per Phase 0.6 */
+  stream?: boolean
+  onStreamEvent?: (ev: AgentStreamEvent) => void
+}): Promise<AgentMessageResponse> {
+  const useStream = params.stream !== false
+  const url = `${getAgentApiBase()}/message${useStream ? '?stream=1' : '?stream=0'}`
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: agentHeaders(useStream),
+    body: JSON.stringify({
+      messages: params.messages,
+      session_context: params.sessionContext,
+      learner_snapshot: params.learnerSnapshot,
+      sessionId: params.sessionId,
+      image_base64: params.image_base64,
+      image_media_type: params.image_media_type,
+    }),
+  })
+
+  if (!res.ok) {
+    const data = (await res.json().catch(() => ({}))) as { error?: string; code?: string }
+    return {
+      success: false,
+      error: typeof data.error === 'string' ? data.error : 'Agent request failed',
+      code: data.code,
+    }
+  }
+
+  if (useStream && params.onStreamEvent) {
+    let content = ''
+    let session: AgentMessageResponse['session']
+    let tool_calls: unknown
+    let tool_results: AgentMessageResponse['tool_results']
+    let fallback = false
+    let chips: AgentMessageResponse['chips']
+
+    await consumeSse(res, (ev) => {
+      params.onStreamEvent?.(ev)
+      if (ev.event === 'session') session = ev.data
+      if (ev.event === 'token') content += ev.data.content || ''
+      if (ev.event === 'tool_calls') tool_calls = ev.data.tool_calls
+      if (ev.event === 'tool_results') tool_results = ev.data.tool_results
+      if (ev.event === 'fallback') {
+        fallback = true
+        chips = ev.data.chips
+      }
+      if (ev.event === 'done' && ev.data.fallback) fallback = true
+    })
+
+    if (session?.guestSessionId && typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(GUEST_KEY, session.guestSessionId)
+      } catch {
+        /* ignore */
+      }
+    }
+
+    return {
+      success: true,
+      session,
+      message: { role: 'assistant', content },
+      tool_calls: tool_calls as AgentMessageResponse['tool_calls'],
+      tool_results,
+      fallback,
+      chips,
+    }
+  }
+
+  const data = (await res.json().catch(() => ({}))) as AgentMessageResponse & {
+    error?: string
+    code?: string
+  }
+  if (data.session?.guestSessionId && typeof window !== 'undefined') {
+    try {
+      localStorage.setItem(GUEST_KEY, data.session.guestSessionId)
+    } catch {
+      /* ignore */
+    }
+  }
+  return { ...data, success: true }
+}
+
+export async function prefetchAgentContext(
+  sessionContext: SessionContext,
+  learnerSnapshot?: LearnerSnapshot,
+): Promise<void> {
+  const token = getToken()
+  if (!token) return
+  await fetch(`${getAgentApiBase()}/context/prefetch`, {
+    method: 'POST',
+    headers: agentHeaders(false),
+    body: JSON.stringify({
+      session_context: sessionContext,
+      learner_snapshot: learnerSnapshot,
+    }),
+  }).catch(() => {})
+}
+
+export async function fetchAgentSnapshot(): Promise<LearnerSnapshot | null> {
+  const token = getToken()
+  if (!token) return null
+  const res = await fetch(`${getAgentApiBase()}/snapshot`, {
+    headers: agentHeaders(false),
+  })
+  if (!res.ok) return null
+  const data = (await res.json()) as { snapshot?: LearnerSnapshot }
+  return data.snapshot ?? null
+}
+
+export async function fetchAgentCoachNudge(params: {
+  lessonId?: string
+  sessionId?: string
+}): Promise<{
+  allowed: boolean
+  message?: string
+  chips?: Array<{ label: string; action: string; lessonId?: string }>
+  reason?: string
+} | null> {
+  const token = getToken()
+  if (!token) return null
+  const q = new URLSearchParams()
+  if (params.lessonId) q.set('lessonId', params.lessonId)
+  if (params.sessionId) q.set('sessionId', params.sessionId)
+  const res = await fetch(`${getAgentApiBase()}/coach-nudge?${q}`, {
+    headers: agentHeaders(false),
+  })
+  if (!res.ok) return null
+  const data = (await res.json()) as {
+    allowed?: boolean
+    message?: string
+    chips?: Array<{ label: string; action: string; lessonId?: string }>
+    reason?: string
+  }
+  return {
+    allowed: Boolean(data.allowed),
+    message: data.message,
+    chips: data.chips,
+    reason: data.reason,
+  }
+}
+
+export async function dismissAgentCoach(): Promise<void> {
+  const token = getToken()
+  if (!token) return
+  await fetch(`${getAgentApiBase()}/coach/dismiss`, {
+    method: 'POST',
+    headers: agentHeaders(false),
+  }).catch(() => {})
+}
+
+export async function postAgentQuizOutcome(body: {
+  lessonId: string
+  passed: boolean
+  misconceptionTag?: string
+}): Promise<void> {
+  const token = getToken()
+  if (!token) return
+  await fetch(`${getAgentApiBase()}/quiz-outcome`, {
+    method: 'POST',
+    headers: agentHeaders(false),
+    body: JSON.stringify(body),
+  }).catch(() => {})
+}
+
+export async function fetchSpacedReviewDue(limit = 5): Promise<{
+  dueLessons: Array<{
+    lessonId: string
+    title: string
+    moduleId?: string
+    nodeId?: string
+    dueReason?: string
+  }>
+  totalDue: number
+} | null> {
+  const token = getToken()
+  if (!token) return null
+  const res = await fetch(`${getAgentApiBase()}/spaced-review?limit=${limit}`, {
+    headers: agentHeaders(false),
+  })
+  if (!res.ok) return null
+  const data = (await res.json()) as {
+    dueLessons?: Array<{
+      lessonId: string
+      title: string
+      moduleId?: string
+      nodeId?: string
+    }>
+    totalDue?: number
+  }
+  return {
+    dueLessons: data.dueLessons || [],
+    totalDue: data.totalDue ?? 0,
+  }
+}
+
+export async function postSpacedReviewComplete(lessonId: string): Promise<void> {
+  const token = getToken()
+  if (!token) return
+  await fetch(`${getAgentApiBase()}/spaced-review/complete`, {
+    method: 'POST',
+    headers: agentHeaders(false),
+    body: JSON.stringify({ lessonId }),
+  }).catch(() => {})
+}
+
+export async function postDepthPreference(depth: string): Promise<void> {
+  const token = getToken()
+  if (!token) return
+  await fetch(`${getAgentApiBase()}/depth-preference`, {
+    method: 'POST',
+    headers: agentHeaders(false),
+    body: JSON.stringify({ depth }),
+  }).catch(() => {})
+}
+
+export async function postAgentSessionSummary(body: {
+  sessionId: string
+  lessonId?: string
+  lessonTitle?: string
+  messageCount?: number
+}): Promise<void> {
+  const token = getToken()
+  if (!token) return
+  await fetch(`${getAgentApiBase()}/session-summary`, {
+    method: 'POST',
+    headers: agentHeaders(false),
+    body: JSON.stringify(body),
+  }).catch(() => {})
+}

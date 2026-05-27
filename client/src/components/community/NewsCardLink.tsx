@@ -7,11 +7,12 @@ import { newsPostHref, newsPostOpensNewTab, recordPostSourceOpen } from '@/featu
 type Props = {
   post: Post
   className?: string
+  style?: React.CSSProperties
   children: React.ReactNode
 }
 
 /** Tin link-out: mở sourceUrl trong tab mới; còn lại: trang chi tiết trong app. */
-export function NewsCardLink({ post, className, children }: Props) {
+export function NewsCardLink({ post, className, style, children }: Props) {
   const href = newsPostHref(post)
   if (newsPostOpensNewTab(post)) {
     return (
@@ -20,6 +21,7 @@ export function NewsCardLink({ post, className, children }: Props) {
         target="_blank"
         rel="noopener noreferrer"
         className={className}
+        style={style}
         onClick={() => {
           void recordPostSourceOpen(post._id)
         }}
@@ -29,7 +31,7 @@ export function NewsCardLink({ post, className, children }: Props) {
     )
   }
   return (
-    <Link href={href} className={className}>
+    <Link href={href} className={className} style={style}>
       {children}
     </Link>
   )

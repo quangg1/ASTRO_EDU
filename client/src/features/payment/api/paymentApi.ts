@@ -116,6 +116,7 @@ export async function createCheckoutSession(params: {
   courseId: string
   voucherTierId?: string | null
   promoCode?: string | null
+  cohortId?: string | null
 }): Promise<CreateCheckoutSessionResult> {
   const res = await fetch(`${PAYMENT_BASE}/payments/checkout`, {
     method: 'POST',
@@ -124,6 +125,7 @@ export async function createCheckoutSession(params: {
       courseId: params.courseId,
       voucherTierId: params.voucherTierId || undefined,
       promoCode: params.promoCode || undefined,
+      cohortId: params.cohortId || undefined,
     }),
   })
   const data = await res.json()

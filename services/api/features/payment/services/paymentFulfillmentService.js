@@ -9,6 +9,10 @@ const {
   notifyCoursePurchase,
   pushNotificationRealtime,
 } = require('../../notifications/services/notificationService');
+const Cohort = require('../../courses/models/Cohort');
+const User = require('../../auth/models/User');
+const { placeStudentInCohort } = require('../../courses/services/cohortEnrollmentService');
+const { sendPaymentReceiptEmail } = require('../../../shared/mailer');
 
 async function completeOrderAndEnroll({ txnRef, transactionId }) {
   const session = await mongoose.startSession();
@@ -16,6 +20,7 @@ async function completeOrderAndEnroll({ txnRef, transactionId }) {
   try {
     let result = null;
     let purchaseNotification = null;
+    let receiptContext = null;
     await session.withTransaction(async () => {
       const order = await Order.findOne({ txnRef }).session(session);
       if (!order) {
@@ -55,7 +60,8 @@ async function completeOrderAndEnroll({ txnRef, transactionId }) {
         ).then((docs) => docs[0]);
       }
 
-      if (order.status !== 'completed') {
+      const completingNow = order.status !== 'completed';
+      if (completingNow) {
         if ((order.gemsCommitted || 0) > 0 && !order.gemsBurnedAt) {
           await burnCommittedGemsForOrder(order, session);
           order.gemsBurnedAt = new Date();
@@ -91,16 +97,73 @@ async function completeOrderAndEnroll({ txnRef, transactionId }) {
         );
       }
 
+      let cohortPlacement = null;
+      let cohortDoc = null;
+      if (order.cohortId) {
+        cohortDoc = await Cohort.findById(order.cohortId).session(session);
+        if (cohortDoc && cohortDoc.status === 'open') {
+          cohortPlacement = await placeStudentInCohort({
+            userId: order.userId,
+            course,
+            cohort: cohortDoc,
+            session,
+          });
+        }
+      }
+
+      if (completingNow) {
+        receiptContext = {
+          order,
+          course,
+          cohortTitle: cohortDoc?.title || null,
+          cohortEmailSent: cohortPlacement?.emailSent || false,
+        };
+      }
+
       result = {
         orderId: String(order._id),
         courseSlug: order.courseSlug,
         enrollmentId: String(enrollment._id),
+        cohortId: cohortPlacement?.cohortId || null,
+        cohortEmailSent: cohortPlacement?.emailSent || false,
       };
     });
 
     if (purchaseNotification) {
       pushNotificationRealtime(purchaseNotification);
     }
+
+    if (receiptContext) {
+      const buyer = await User.findById(receiptContext.order.userId)
+        .select('email displayName')
+        .lean();
+      if (buyer?.email) {
+        let cohortInviteNote = null;
+        if (receiptContext.cohortTitle) {
+          cohortInviteNote = receiptContext.cohortEmailSent
+            ? `Lớp «${receiptContext.cohortTitle}»: mã lớp đã gửi trong email riêng (không hiển thị trên web).`
+            : `Lớp «${receiptContext.cohortTitle}»: kiểm tra thông báo trên app hoặc liên hệ giáo viên nếu chưa nhận mã qua email.`;
+        }
+        void sendPaymentReceiptEmail({
+          to: buyer.email,
+          displayName: buyer.displayName,
+          courseTitle: receiptContext.course.title,
+          courseSlug: receiptContext.order.courseSlug,
+          txnRef: receiptContext.order.txnRef,
+          listPrice: receiptContext.order.listPrice,
+          discountAmount: receiptContext.order.discountAmount,
+          amount: receiptContext.order.amount,
+          currency: receiptContext.order.currency,
+          paidAt: receiptContext.order.paidAt,
+          promoCode: receiptContext.order.promoCode,
+          cohortTitle: receiptContext.cohortTitle,
+          cohortInviteNote,
+        }).catch((e) => {
+          console.error('[payment] receipt email:', e?.message || e);
+        });
+      }
+    }
+
     return { success: true, ...result };
   } finally {
     await session.endSession();

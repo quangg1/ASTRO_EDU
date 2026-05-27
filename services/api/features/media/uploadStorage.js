@@ -99,9 +99,56 @@ function getMulterStorage() {
   });
 }
 
+function resolveLocalPath(storageKey) {
+  const relativePath = String(storageKey || '').replace(/\\/g, '/');
+  return path.join(UPLOAD_DIR, relativePath);
+}
+
+async function storageObjectExists(storageKey) {
+  if (!storageKey) return false;
+  if (s3Client && S3_BUCKET) {
+    const { HeadObjectCommand } = require('@aws-sdk/client-s3');
+    try {
+      await s3Client.send(new HeadObjectCommand({ Bucket: S3_BUCKET, Key: storageKey }));
+      return true;
+    } catch (e) {
+      if (e.name === 'NotFound' || e.$metadata?.httpStatusCode === 404) return false;
+      throw e;
+    }
+  }
+  return fs.existsSync(resolveLocalPath(storageKey));
+}
+
+async function deleteStorageObject(storageKey) {
+  if (!storageKey) return false;
+  if (s3Client && S3_BUCKET) {
+    const { DeleteObjectCommand } = require('@aws-sdk/client-s3');
+    await s3Client.send(new DeleteObjectCommand({ Bucket: S3_BUCKET, Key: storageKey }));
+    return true;
+  }
+  const dest = resolveLocalPath(storageKey);
+  if (fs.existsSync(dest)) {
+    fs.unlinkSync(dest);
+    return true;
+  }
+  return false;
+}
+
+function readStorageBuffer(storageKey) {
+  if (!storageKey) return null;
+  if (s3Client && S3_BUCKET) return null;
+  const dest = resolveLocalPath(storageKey);
+  if (!fs.existsSync(dest)) return null;
+  return fs.readFileSync(dest);
+}
+
 module.exports = {
   persistUploadedFile,
   getMulterStorage,
   safeFilename,
   hasS3: Boolean(s3Client && S3_BUCKET),
+  storageObjectExists,
+  deleteStorageObject,
+  readStorageBuffer,
+  UPLOAD_DIR,
 };

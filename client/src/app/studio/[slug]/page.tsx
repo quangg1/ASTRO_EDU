@@ -20,7 +20,13 @@ import { useAuthStore } from '@/features/auth/public'
 import { canEnterStudio } from '@/lib/roles'
 import { useBlockEditorActions } from '@/components/studio/hooks/useBlockEditorActions'
 import { CourseStorefrontEditor } from '@/components/studio/CourseStorefrontEditor'
+import { ModuleMaterialsEditor } from '@/components/studio/ModuleMaterialsEditor'
 import { courseRequiresPayment } from '@/components/courses/courseCatalogMeta'
+import {
+  loadStudioEditorDraft,
+  saveStudioEditorDraft,
+  studioDraftIsDirty,
+} from '@/features/courses/lib/studioEditorDraft'
 import { emptyMcqQuestion, mcqAnswerIndex, mcqOptionTexts, patchMcqOption, setMcqAnswer } from '@/shared/types/quizQuestion'
 
 const BlockEditor = dynamic(() => import('@/components/studio/BlockEditor'), { ssr: false })
@@ -37,25 +43,40 @@ function genId() { return `m${Date.now()}-${Math.random().toString(36).slice(2, 
 
 function makeModule(n: number): CourseModule {
   const id = genId()
-  return { _id: id, title: `Module ${n + 1}`, slug: `module-${n + 1}`, description: '', icon: '', order: n }
+  return { _id: id, title: `Module ${n + 1}`, slug: `module-${n + 1}`, description: '', icon: '', order: n, materials: [] }
 }
 
 function makeLesson(n: number, moduleId?: string): Lesson {
-  return { title: `New Lesson ${n + 1}`, slug: `lesson-${Date.now()}-${n}`, description: '', type: 'text', visualizationId: null, stageTime: null, videoUrl: null, coverImage: null, galleryImages: [], week: null, moduleId: moduleId || null, content: '', learningGoals: [], sections: [], quizQuestions: [], resourceLinks: [], sourcePdf: null, sourcePageCount: null, order: n }
+  return { title: `New Lesson ${n + 1}`, slug: `lesson-${Date.now()}-${n}`, description: '', type: 'text', visualizationId: null, stageTime: null, videoUrl: null, coverImage: null, galleryImages: [], week: null, moduleId: moduleId || null, content: '', learningGoals: [], sections: [], quizQuestions: [], quizSettings: { revealMode: 'after_submit', timeLimitMinutes: null, maxAttempts: null }, resourceLinks: [], sourcePdf: null, sourcePageCount: null, order: n }
 }
 
 function makeQuiz(): QuizQuestion {
   return emptyMcqQuestion('course')
 }
 
+function normalizeEditorCourse(c: CourseEditorPayload): EditorCourse {
+  return {
+    ...c,
+    id: String(c.id ?? c.slug),
+    modules: (c.modules ?? []) as CourseModule[],
+    lessons: c.lessons ?? [],
+  }
+}
+
+function courseUploadEntityId(course: EditorCourse): string {
+  return String(course.id || course.slug)
+}
+
 function UploadBtn({
   accept,
   onUrl,
+  onError,
   label,
   uploadContext,
 }: {
   accept: string
   onUrl: (u: string) => void
+  onError?: (message: string) => void
   label: string
   uploadContext?: UploadMediaContext
 }) {
@@ -63,9 +84,17 @@ function UploadBtn({
   const [busy, setBusy] = useState(false)
   const handle = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0]; if (!f) return
-    setBusy(true); const r = await uploadMedia(f, uploadContext); setBusy(false)
-    if (r.success && r.url) onUrl(r.url)
-    if (ref.current) ref.current.value = ''
+    setBusy(true)
+    try {
+      const r = await uploadMedia(f, uploadContext)
+      if (r.success && r.url) onUrl(r.url)
+      else onError?.(r.error || 'Tải tệp thất bại')
+    } catch {
+      onError?.('Tải tệp thất bại — kiểm tra kết nối API')
+    } finally {
+      setBusy(false)
+      if (ref.current) ref.current.value = ''
+    }
   }
   return (
     <>
@@ -91,40 +120,70 @@ export default function StudioEditorPage() {
   const [tab, setTab] = useState<Tab>('blocks')
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({})
   const [editingModId, setEditingModId] = useState<string | null>(null)
+  const [materialsModId, setMaterialsModId] = useState<string | null>(null)
+  const editorLoadKeyRef = useRef('')
 
   useEffect(() => {
     if (checked && !user) router.replace(`/login?redirect=/studio/${slug}`)
     if (checked && user && !canEnterStudio(user)) router.replace('/')
-  }, [checked, user, slug, router])
+  }, [checked, user?.id, slug, router])
 
   useEffect(() => {
-    if (!slug || !user) return
+    if (!slug || !user?.id) return
+    const loadKey = `${slug}:${user.id}`
+    if (editorLoadKeyRef.current === loadKey) return
+
+    const draft = loadStudioEditorDraft(slug)
+    if (draft) {
+      editorLoadKeyRef.current = loadKey
+      setCourse(normalizeEditorCourse(draft.course))
+      setBaselineSnapshot(draft.baseline)
+      setLoading(false)
+      if (studioDraftIsDirty(draft)) return
+    }
+
+    editorLoadKeyRef.current = loadKey
+    let cancelled = false
+    if (!draft) setLoading(true)
     fetchCourseForEditor(slug).then((c) => {
-      if (c?.lessons) {
-        const modules = (c.modules ?? []) as CourseModule[]
-        if (modules.length === 0 && c.lessons.length > 0) {
-          const weekSet = new Set(c.lessons.map((l) => l.week ?? 1))
-          const autoModules: CourseModule[] = Array.from(weekSet).sort((a, b) => a - b).map((w, i) => ({
-            _id: `auto-w${w}`,
-            title: `Module ${w}`,
-            slug: `module-${w}`,
-            description: '',
-            icon: '',
-            order: i,
-          }))
-          const fixedLessons = c.lessons.map((l) => ({ ...l, moduleId: l.moduleId || `auto-w${l.week ?? 1}` }))
-          const nextCourse = { ...c, modules: autoModules, lessons: fixedLessons }
-          setCourse(nextCourse)
-          setBaselineSnapshot(JSON.stringify(nextCourse))
-        } else {
-          const nextCourse = { ...c, modules, lessons: c.lessons }
-          setCourse(nextCourse)
-          setBaselineSnapshot(JSON.stringify(nextCourse))
-        }
+      if (cancelled || !c?.lessons) {
+        if (!cancelled) setLoading(false)
+        return
       }
+      const base = normalizeEditorCourse(c)
+      const modules = base.modules
+      let nextCourse: EditorCourse
+      if (modules.length === 0 && base.lessons.length > 0) {
+        const weekSet = new Set(base.lessons.map((l) => l.week ?? 1))
+        const autoModules: CourseModule[] = Array.from(weekSet).sort((a, b) => a - b).map((w, i) => ({
+          _id: `auto-w${w}`,
+          title: `Module ${w}`,
+          slug: `module-${w}`,
+          description: '',
+          icon: '',
+          order: i,
+        }))
+        const fixedLessons = base.lessons.map((l) => ({ ...l, moduleId: l.moduleId || `auto-w${l.week ?? 1}` }))
+        nextCourse = { ...base, modules: autoModules, lessons: fixedLessons }
+      } else {
+        nextCourse = base
+      }
+      setCourse(nextCourse)
+      const snap = JSON.stringify(nextCourse)
+      setBaselineSnapshot(snap)
+      saveStudioEditorDraft(slug, nextCourse, snap)
       setLoading(false)
     })
-  }, [slug, user])
+    return () => { cancelled = true }
+  }, [slug, user?.id])
+
+  useEffect(() => {
+    if (!slug || !course) return
+    const t = window.setTimeout(() => {
+      saveStudioEditorDraft(slug, course, baselineSnapshot)
+    }, 400)
+    return () => clearTimeout(t)
+  }, [slug, course, baselineSnapshot])
 
   const lesson = useMemo(() => course?.lessons?.[si] ?? null, [course, si])
   const isDirty = useMemo(() => {
@@ -147,6 +206,7 @@ export default function StudioEditorPage() {
   const renameModule = (id: string, title: string) => { uc((p) => ({ ...p, modules: p.modules.map((m) => m._id === id ? { ...m, title, slug: slugify(title) } : m) })); setEditingModId(null) }
   const deleteModule = (id: string) => {
     if (!confirm('Delete this module and unassign its lessons?')) return
+    if (materialsModId === id) setMaterialsModId(null)
     if (course) setUndoSnapshot({ label: 'Đã xóa module.', course: clone(course) })
     uc((p) => ({
       ...p,
@@ -187,12 +247,15 @@ export default function StudioEditorPage() {
       crossSellTutorialHref: course.crossSellTutorialHref ?? '/tutorial',
       crossSellTutorialLabelVi: course.crossSellTutorialLabelVi ?? '',
       crossSellTutorialBodyVi: course.crossSellTutorialBodyVi ?? '',
+      catalogEnabled: course.catalogEnabled !== false,
       modules: course.modules.map((m, i) => ({ ...m, order: i })),
       lessons: course.lessons.map((l, i) => ({ ...l, order: i })),
     })
     setSaving(false); setMsg(r.success ? 'Saved!' : r.error || 'Failed')
     if (r.success && course) {
-      setBaselineSnapshot(JSON.stringify(course))
+      const snap = JSON.stringify(course)
+      setBaselineSnapshot(snap)
+      saveStudioEditorDraft(slug, course, snap)
       setTimeout(() => setMsg(null), 2500)
     }
   }
@@ -207,8 +270,12 @@ export default function StudioEditorPage() {
     return () => window.removeEventListener('beforeunload', onBeforeUnload)
   }, [isDirty, saving])
 
-  if (!checked || !user || loading) return <div className="min-h-screen bg-ds-base pt-24 text-center text-ds-subtle">Loading studio...</div>
+  if (!checked || !user) return <div className="min-h-screen bg-ds-base pt-24 text-center text-ds-subtle">Loading studio...</div>
+  if (loading && !course) return <div className="min-h-screen bg-ds-base pt-24 text-center text-ds-subtle">Loading studio...</div>
   if (!course) return <div className="min-h-screen bg-ds-base pt-24 text-center text-ds-subtle">Course not found.</div>
+
+  const uploadEntityId = courseUploadEntityId(course)
+  const uploadErr = (message: string) => setMsg(message)
 
   const pubCls = course.published ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' : 'bg-amber-500/20 text-amber-300 border-amber-500/30'
   const unassigned = course.lessons.filter((l) => !l.moduleId || !modules.find((m) => m._id === l.moduleId))
@@ -242,6 +309,12 @@ export default function StudioEditorPage() {
             <p className={`text-[11px] ${isDirty ? 'text-amber-300' : 'text-emerald-300'}`}>{isDirty ? 'Chưa lưu' : 'Đã lưu'}</p>
             <h2 className="text-sm font-semibold text-white truncate">{course.title}</h2>
             <p className="text-[11px] text-ds-subtle mt-0.5">{modules.length} modules &middot; {course.lessons.length} lessons</p>
+            <Link
+              href={`/studio/${slug}/cohorts`}
+              className="mt-2 block text-center text-[11px] py-2 rounded-lg border border-purple-500/30 text-purple-200 hover:bg-purple-500/10"
+            >
+              Lớp học theo kỳ →
+            </Link>
           </div>
 
           <div className="rounded-2xl border border-ds-border bg-ds-overlay backdrop-blur p-2 space-y-1">
@@ -275,11 +348,33 @@ export default function StudioEditorPage() {
                         </span>
                       )}
                       <span className="text-[10px] text-ds-subtle">{modLessons.length}</span>
-                      <div className="flex items-center gap-0.5 opacity-0 group-hover/mod:opacity-100 transition-opacity">
-                        <button onClick={() => moveModule(mi, mi - 1)} disabled={mi === 0} className="text-[10px] text-ds-subtle hover:text-white disabled:opacity-20">&uarr;</button>
-                        <button onClick={() => moveModule(mi, mi + 1)} disabled={mi === modules.length - 1} className="text-[10px] text-ds-subtle hover:text-white disabled:opacity-20">&darr;</button>
-                        <button onClick={() => setEditingModId(mod._id!)} className="text-[10px] text-ds-subtle hover:text-ds-accent" title="Rename">&#x270E;</button>
-                        <button onClick={() => deleteModule(mod._id!)} className="text-[10px] text-red-500/50 hover:text-red-400">&times;</button>
+                      {(mod.materials?.length ?? 0) > 0 && (
+                        <span className="text-[9px] min-w-[1rem] text-center px-1 rounded-full bg-cyan-500/20 text-cyan-200" title="Số tài liệu">
+                          {mod.materials!.length}
+                        </span>
+                      )}
+                      <div className="flex items-center gap-0.5 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setMaterialsModId(mod._id!)
+                            setEditingModId(null)
+                          }}
+                          className={`text-[10px] px-1.5 py-0.5 rounded shrink-0 ${
+                            materialsModId === mod._id
+                              ? 'text-cyan-200 bg-cyan-500/20 border border-cyan-500/30'
+                              : 'text-ds-muted hover:text-ds-accent border border-transparent'
+                          }`}
+                          title="Tài liệu module (PDF, liên kết)"
+                        >
+                          Tài liệu
+                        </button>
+                        <div className="flex items-center gap-0.5 opacity-0 group-hover/mod:opacity-100 transition-opacity">
+                          <button onClick={() => moveModule(mi, mi - 1)} disabled={mi === 0} className="text-[10px] text-ds-subtle hover:text-white disabled:opacity-20">&uarr;</button>
+                          <button onClick={() => moveModule(mi, mi + 1)} disabled={mi === modules.length - 1} className="text-[10px] text-ds-subtle hover:text-white disabled:opacity-20">&darr;</button>
+                          <button onClick={() => setEditingModId(mod._id!)} className="text-[10px] text-ds-subtle hover:text-ds-accent" title="Đổi tên">&#x270E;</button>
+                          <button onClick={() => deleteModule(mod._id!)} className="text-[10px] text-red-500/50 hover:text-red-400">&times;</button>
+                        </div>
                       </div>
                     </div>
                     {/* Lessons in module */}
@@ -338,8 +433,37 @@ export default function StudioEditorPage() {
             </button>
           </div>
 
+          {materialsModId && (() => {
+            const mod = modules.find((m) => m._id === materialsModId)
+            if (!mod) return null
+            return (
+              <ModuleMaterialsEditor
+                moduleTitle={mod.title}
+                moduleSlug={mod.slug}
+                materials={mod.materials ?? []}
+                courseSlug={course.slug}
+                uploadEntityId={uploadEntityId}
+                onError={uploadErr}
+                onClose={() => setMaterialsModId(null)}
+                onChange={(materials) => uc((p) => ({
+                  ...p,
+                  modules: p.modules.map((m) => (m._id === materialsModId ? { ...m, materials } : m)),
+                }))}
+              />
+            )
+          })()}
+
           <div className="flex gap-2">
-            <Link href={`/courses/${course.slug}`} className="flex-1 text-center text-[11px] py-2 rounded-xl border border-ds-border text-ds-muted hover:bg-white/5 transition-colors">Student View</Link>
+            <Link
+              href={`/courses/${course.slug}?preview=1`}
+              onClick={(e) => {
+                if (!confirmLeaveIfDirty()) e.preventDefault()
+              }}
+              className="flex-1 text-center text-[11px] py-2 rounded-xl border border-ds-border text-ds-muted hover:bg-white/5 transition-colors"
+              title="Xem trang khóa như học viên (mở cùng cửa sổ để giữ đăng nhập)"
+            >
+              Xem như HV
+            </Link>
             <button onClick={save} disabled={saving} className="flex-1 text-center text-[11px] py-2 rounded-xl bg-cyan-600 text-white hover:bg-cyan-500 disabled:opacity-60 font-medium transition-colors">
               {saving ? 'Saving...' : 'Save Course'}
             </button>
@@ -390,6 +514,7 @@ export default function StudioEditorPage() {
 
           <CourseStorefrontEditor
             courseId={course.id}
+            lessonCount={course.lessons.length}
             course={{
               slug: course.slug,
               title: course.title,
@@ -402,8 +527,8 @@ export default function StudioEditorPage() {
               price: course.price,
               currency: course.currency,
               requiresPayment: courseRequiresPayment(course),
+              catalogEnabled: course.catalogEnabled !== false,
             }}
-            lessonCount={course.lessons.length}
             onChange={(patch) => uc((p) => ({ ...p, ...patch }))}
           />
 
@@ -504,7 +629,7 @@ export default function StudioEditorPage() {
                         onChange={(updated) => blockActions.updateAt(bi, updated)}
                         uploadContext={{
                           purpose: 'course-block',
-                          entityId: course.id,
+                          entityId: uploadEntityId,
                           slug: course.slug,
                           lessonSlug: lesson.slug,
                           variant:
@@ -558,12 +683,103 @@ export default function StudioEditorPage() {
                     <label className="text-xs text-ds-muted">Slug<input value={lesson.slug} onChange={(e) => ul((l) => ({ ...l, slug: e.target.value }))} className={`mt-1 studio-field`} /></label>
                     <label className="text-xs text-ds-muted">Type
                       <select value={lesson.type} onChange={(e) => ul((l) => ({ ...l, type: e.target.value as Lesson['type'] }))} className={`mt-1 studio-field`}>
-                        <option value="text">Text</option><option value="visualization">Visualization</option><option value="quiz">Quiz</option>
+                        <option value="text">Text</option><option value="visualization">Visualization</option><option value="quiz">Quiz</option><option value="assignment">Assignment</option><option value="live_session">Live session</option>
                       </select>
                     </label>
+                    {lesson.type === 'quiz' && (
+                      <>
+                        <label className="text-xs text-ds-muted">Reveal đáp án
+                          <select
+                            value={lesson.quizSettings?.revealMode ?? 'after_submit'}
+                            onChange={(e) => ul((l) => ({
+                              ...l,
+                              quizSettings: { ...(l.quizSettings ?? { revealMode: 'after_submit' }), revealMode: e.target.value as 'after_submit' | 'after_each_question' | 'never' },
+                            }))}
+                            className="mt-1 studio-field"
+                          >
+                            <option value="after_submit">Sau khi nộp bài</option>
+                            <option value="after_each_question">Sau từng câu (xác nhận)</option>
+                            <option value="never">Không hiện đáp án</option>
+                          </select>
+                        </label>
+                        <label className="text-xs text-ds-muted">Giới hạn phút
+                          <input type="number" min={0} value={lesson.quizSettings?.timeLimitMinutes ?? ''} onChange={(e) => ul((l) => ({
+                            ...l,
+                            quizSettings: { ...(l.quizSettings ?? { revealMode: 'after_submit' }), timeLimitMinutes: e.target.value ? Number(e.target.value) : null },
+                          }))} className="mt-1 studio-field" />
+                        </label>
+                        <label className="text-xs text-ds-muted">Số lần làm tối đa
+                          <input type="number" min={1} value={lesson.quizSettings?.maxAttempts ?? ''} onChange={(e) => ul((l) => ({
+                            ...l,
+                            quizSettings: { ...(l.quizSettings ?? { revealMode: 'after_submit' }), maxAttempts: e.target.value ? Number(e.target.value) : null },
+                          }))} className="mt-1 studio-field" />
+                        </label>
+                        <label className="text-xs text-ds-muted flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={!!lesson.quizSettings?.shuffleOptions}
+                            onChange={(e) => ul((l) => ({
+                              ...l,
+                              quizSettings: { ...(l.quizSettings ?? { revealMode: 'after_submit' }), shuffleOptions: e.target.checked },
+                            }))}
+                          />
+                          Xáo trộn đáp án
+                        </label>
+                        <label className="text-xs text-ds-muted">Điểm đạt (%)
+                          <input
+                            type="number"
+                            min={0}
+                            max={100}
+                            value={lesson.quizSettings?.passingScorePct ?? ''}
+                            onChange={(e) => ul((l) => ({
+                              ...l,
+                              quizSettings: {
+                                ...(l.quizSettings ?? { revealMode: 'after_submit' }),
+                                passingScorePct: e.target.value ? Number(e.target.value) : null,
+                              },
+                            }))}
+                            className="mt-1 studio-field"
+                          />
+                        </label>
+                      </>
+                    )}
+                    {lesson.type === 'assignment' && (
+                      <>
+                        <label className="text-xs text-ds-muted md:col-span-2">Đề bài (brief)
+                          <textarea
+                            value={lesson.content || ''}
+                            onChange={(e) => ul((l) => ({ ...l, content: e.target.value }))}
+                            rows={4}
+                            className="mt-1 studio-field"
+                            placeholder="Yêu cầu nộp bài, rubric ngắn..."
+                          />
+                        </label>
+                        <label className="text-xs text-ds-muted">Số file tối đa
+                          <input
+                            type="number"
+                            min={1}
+                            max={10}
+                            value={lesson.assignmentSettings?.maxFiles ?? 5}
+                            onChange={(e) => ul((l) => ({
+                              ...l,
+                              assignmentSettings: {
+                                ...(l.assignmentSettings ?? {}),
+                                maxFiles: Number(e.target.value) || 5,
+                              },
+                            }))}
+                            className="mt-1 studio-field"
+                          />
+                        </label>
+                      </>
+                    )}
+                    {lesson.type === 'live_session' && (
+                      <label className="text-xs text-ds-muted md:col-span-2">Link học online
+                        <input value={lesson.meetingUrl ?? ''} onChange={(e) => ul((l) => ({ ...l, meetingUrl: e.target.value || null }))} className="mt-1 studio-field" placeholder="https://zoom.us/..." />
+                      </label>
+                    )}
                     <div className="text-xs text-ds-muted">3D Earth Simulation<div className="mt-1"><StageTimePicker value={lesson.stageTime ?? null} onChange={(v) => ul((l) => ({ ...l, stageTime: v }))} /></div></div>
-                    <div className="text-xs text-ds-muted">Video URL<div className="flex gap-2 mt-1"><input value={lesson.videoUrl ?? ''} onChange={(e) => ul((l) => ({ ...l, videoUrl: e.target.value || null }))} placeholder="YouTube or upload" className="studio-field" /><UploadBtn accept="video/*" onUrl={(u) => ul((l) => ({ ...l, videoUrl: u }))} label="Upload" uploadContext={{ purpose: 'course-lesson', entityId: course.id, slug: course.slug, lessonSlug: lesson.slug, variant: 'video' }} /></div></div>
-                    <div className="text-xs text-ds-muted">Cover Image<div className="flex gap-2 mt-1"><input value={lesson.coverImage ?? ''} onChange={(e) => ul((l) => ({ ...l, coverImage: e.target.value || null }))} placeholder="URL or upload" className="studio-field" /><UploadBtn accept="image/*" onUrl={(u) => ul((l) => ({ ...l, coverImage: u }))} label="Upload" uploadContext={{ purpose: 'course-lesson', entityId: course.id, slug: course.slug, lessonSlug: lesson.slug, variant: 'cover' }} /></div>{lesson.coverImage && <img src={lesson.coverImage} alt="" className="mt-2 h-20 rounded-lg object-cover border border-ds-border" />}</div>
+                    <div className="text-xs text-ds-muted">Video URL<div className="flex gap-2 mt-1"><input value={lesson.videoUrl ?? ''} onChange={(e) => ul((l) => ({ ...l, videoUrl: e.target.value || null }))} placeholder="YouTube or upload" className="studio-field" /><UploadBtn accept="video/*" onUrl={(u) => ul((l) => ({ ...l, videoUrl: u }))} onError={uploadErr} label="Upload" uploadContext={{ purpose: 'course-lesson', entityId: uploadEntityId, slug: course.slug, lessonSlug: lesson.slug, variant: 'video' }} /></div></div>
+                    <div className="text-xs text-ds-muted">Cover Image<div className="flex gap-2 mt-1"><input value={lesson.coverImage ?? ''} onChange={(e) => ul((l) => ({ ...l, coverImage: e.target.value || null }))} placeholder="URL or upload" className="studio-field" /><UploadBtn accept="image/*" onUrl={(u) => ul((l) => ({ ...l, coverImage: u }))} onError={uploadErr} label="Upload" uploadContext={{ purpose: 'course-lesson', entityId: uploadEntityId, slug: course.slug, lessonSlug: lesson.slug, variant: 'cover' }} /></div>{lesson.coverImage && <img src={lesson.coverImage} alt="" className="mt-2 h-20 rounded-lg object-cover border border-ds-border" />}</div>
                     <label className="text-xs text-ds-muted md:col-span-2">Description<textarea value={lesson.description} onChange={(e) => ul((l) => ({ ...l, description: e.target.value }))} rows={2} className={`mt-1 studio-field`} /></label>
                     <label className="text-xs text-ds-muted md:col-span-2">Learning Goals (one per line)<textarea rows={3} value={(lesson.learningGoals ?? []).join('\n')} onChange={(e) => ul((l) => ({ ...l, learningGoals: e.target.value.split('\n').filter(Boolean) }))} className={`mt-1 studio-field`} placeholder="Each line = one goal" /></label>
                   </div>

@@ -28,7 +28,21 @@ export interface AuthResponse {
   token?: string
   user?: AuthUser
   error?: string
+  code?: string
 }
+
+export type RegisterStartResponse =
+  | {
+      success: true
+      needsVerification: true
+      email: string
+      message?: string
+      emailSent?: boolean
+      devVerificationCode?: string
+      devHint?: string
+    }
+  | { success: true; token: string; user: AuthUser }
+  | { success: false; error: string; code?: string }
 
 const TOKEN_KEY = 'galaxies_token'
 
@@ -127,25 +141,75 @@ export async function login(email: string, password: string): Promise<AuthRespon
     setToken(data.token)
     return { success: true, token: data.token, user: data.user }
   }
-  return { success: false, error: data.error || 'Đăng nhập thất bại' }
+  return { success: false, error: data.error || 'Đăng nhập thất bại', code: data.code }
 }
 
 export async function register(
   email: string,
   password: string,
   displayName?: string
-): Promise<AuthResponse> {
+): Promise<RegisterStartResponse> {
   const res = await authFetch(`${AUTH_BASE}/auth/register`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password, displayName }),
   })
   const data = await res.json()
+  if (data.success && data.needsVerification) {
+    return {
+      success: true,
+      needsVerification: true,
+      email: data.email || email.trim().toLowerCase(),
+      message: data.message,
+      emailSent: data.emailSent,
+      devVerificationCode: data.devVerificationCode,
+      devHint: data.devHint,
+    }
+  }
   if (data.success && data.token) {
     setToken(data.token)
     return { success: true, token: data.token, user: data.user }
   }
-  return { success: false, error: data.error || 'Đăng ký thất bại' }
+  return { success: false, error: data.error || 'Đăng ký thất bại', code: data.code }
+}
+
+export async function verifyRegistrationEmail(
+  email: string,
+  code: string
+): Promise<AuthResponse> {
+  const res = await authFetch(`${AUTH_BASE}/auth/register/verify-email`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, code }),
+  })
+  const data = await res.json()
+  if (data.success && data.token) {
+    setToken(data.token)
+    return { success: true, token: data.token, user: data.user }
+  }
+  return { success: false, error: data.error || 'Mã xác nhận không hợp lệ', code: data.code }
+}
+
+export async function resendRegistrationVerification(email: string): Promise<{
+  success: boolean
+  error?: string
+  devVerificationCode?: string
+  devHint?: string
+}> {
+  const res = await authFetch(`${AUTH_BASE}/auth/register/resend-verification`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email }),
+  })
+  const data = await res.json()
+  if (data.success) {
+    return {
+      success: true,
+      devVerificationCode: data.devVerificationCode,
+      devHint: data.devHint,
+    }
+  }
+  return { success: false, error: data.error || 'Không gửi lại được mã' }
 }
 
 export async function fetchMe(): Promise<AuthResponse> {

@@ -4,6 +4,8 @@ const orderSchema = new mongoose.Schema({
   userId: { type: String, required: true, index: true },
   courseId: { type: String, required: true, index: true },
   courseSlug: { type: String, required: true },
+  /** Lớp theo kỳ học viên chọn khi checkout — sau thanh toán tự gán + email mã. */
+  cohortId: { type: String, default: null, index: true },
   /** Số tiền thu (sau giảm giá voucher gem). */
   amount: { type: Number, required: true },
   listPrice: { type: Number, default: 0 },

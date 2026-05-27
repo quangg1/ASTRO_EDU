@@ -19,10 +19,20 @@ import { earthHistoryData, findStageByTime, useCourseStageFossils } from '@/feat
 import { FeaturedOrganisms } from '@/features/content3d/earth/ui/FeaturedOrganisms'
 import { Loading } from '@/components/ui/Loading'
 import { LessonContentBody } from '@/components/courses/LessonContentBody'
-import { QuizLessonBlock } from '@/components/courses/QuizLessonBlock'
 import { trackEvent } from '@/lib/analytics'
 
 const EarthScene = dynamic(() => import('@/components/3d/EarthScene'), { ssr: false, loading: () => <Loading /> })
+
+function HudBrackets() {
+  return (
+    <>
+      <span className="absolute pointer-events-none" style={{ top: 6, left: 6, width: 12, height: 12, borderTop: '1px solid #7ee7ff', borderLeft: '1px solid #7ee7ff', opacity: 0.5 }} />
+      <span className="absolute pointer-events-none" style={{ top: 6, right: 6, width: 12, height: 12, borderTop: '1px solid #7ee7ff', borderRight: '1px solid #7ee7ff', opacity: 0.5 }} />
+      <span className="absolute pointer-events-none" style={{ bottom: 6, left: 6, width: 12, height: 12, borderBottom: '1px solid #7ee7ff', borderLeft: '1px solid #7ee7ff', opacity: 0.5 }} />
+      <span className="absolute pointer-events-none" style={{ bottom: 6, right: 6, width: 12, height: 12, borderBottom: '1px solid #7ee7ff', borderRight: '1px solid #7ee7ff', opacity: 0.5 }} />
+    </>
+  )
+}
 
 function ModuleSidebar({
   courseModules,
@@ -82,34 +92,39 @@ function ModuleSidebar({
         const hasActive = g.lessons.some((l) => l.slug === selectedLesson?.slug)
 
         return (
-          <div key={g.key} className="rounded-xl border border-ds-border overflow-hidden">
+          <div
+            key={g.key}
+            className="hud-chamfer overflow-hidden border"
+            style={{ borderColor: hasActive ? 'rgba(126,231,255,0.3)' : 'rgba(126,231,255,0.08)' }}
+          >
             <button
               type="button"
               onClick={() => toggle(g.key)}
-              className={`w-full text-left px-3.5 py-3 flex items-center gap-3 transition-colors ${
-                hasActive ? 'bg-cyan-500/10' : 'hover:bg-white/5'
-              }`}
+              className="w-full text-left px-3.5 py-3 flex items-center gap-3 transition-all"
+              style={{ background: hasActive ? 'rgba(126,231,255,0.06)' : 'transparent' }}
             >
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[10px] text-ds-accent font-semibold">Module {g.index + 1}</span>
+                <div className="flex items-center gap-2">
+                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9, letterSpacing: '0.15em', color: hasActive ? '#7ee7ff' : '#5c6886', textTransform: 'uppercase' }}>
+                    // {String(g.index + 1).padStart(2, '0')}
+                  </span>
                   {doneCount === g.lessons.length && g.lessons.length > 0 && (
-                    <span className="text-[10px] text-emerald-400">&#x2713;</span>
+                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: '#6dffb0' }}>✓ done</span>
                   )}
                 </div>
-                <p className="text-sm font-medium text-white mt-0.5 truncate">{g.label}</p>
+                <p className="text-sm font-medium mt-0.5 truncate" style={{ color: hasActive ? '#eaf6ff' : '#9aa8c4' }}>{g.label}</p>
                 {g.description && !isOpen && (
-                  <p className="text-[11px] text-ds-subtle mt-0.5 truncate">{g.description}</p>
+                  <p className="truncate mt-0.5" style={{ fontSize: 11, color: '#5c6886' }}>{g.description}</p>
                 )}
               </div>
               <div className="flex items-center gap-2 shrink-0">
-                <span className="text-[10px] text-ds-subtle">{doneCount}/{g.lessons.length}</span>
-                <span className="text-ds-subtle text-xs">{isOpen ? '\u25B2' : '\u25BC'}</span>
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: '#5c6886' }}>{doneCount}/{g.lessons.length}</span>
+                <span style={{ color: '#5c6886', fontSize: 10 }}>{isOpen ? '▲' : '▼'}</span>
               </div>
             </button>
 
             {isOpen && (
-              <div className="border-t border-white/5 px-2 py-1.5 space-y-0.5 bg-black/20">
+              <div className="border-t px-2 py-1.5 space-y-0.5" style={{ borderColor: 'rgba(126,231,255,0.06)', background: 'rgba(0,0,0,0.25)' }}>
                 {g.lessons.map((lesson) => {
                   const done = progressBySlug.get(lesson.slug)
                   const active = selectedLesson?.slug === lesson.slug
@@ -117,6 +132,8 @@ function ModuleSidebar({
                     lesson.type === 'visualization' ? '3D'
                     : lesson.type === 'quiz'
                       ? lesson.slug === 'midterm' ? 'Midterm' : lesson.slug === 'final' ? 'Final' : 'Quiz'
+                    : lesson.type === 'assignment' ? 'Bài tập'
+                    : lesson.type === 'live_session' ? 'Live'
                     : lesson.videoUrl ? 'Video' : 'Reading'
 
                   return (
@@ -124,18 +141,28 @@ function ModuleSidebar({
                       key={lesson.slug}
                       type="button"
                       onClick={() => onSelectLesson(lesson)}
-                      className={`w-full text-left px-3 py-2 rounded-lg text-xs transition-colors flex items-center gap-2 ${
-                        active ? 'bg-ds-accent-strong text-cyan-100' : 'text-ds-muted hover:bg-white/5 hover:text-white'
-                      }`}
+                      className="hud-chamfer-sm w-full text-left px-3 py-2 text-xs transition-all flex items-center gap-2 border"
+                      style={{
+                        borderColor: active ? 'rgba(126,231,255,0.28)' : 'transparent',
+                        background: active ? 'rgba(126,231,255,0.08)' : 'transparent',
+                        boxShadow: active ? '0 0 14px -4px rgba(126,231,255,0.25)' : 'none',
+                      }}
                     >
-                      <span className={`w-4 h-4 rounded-full border flex items-center justify-center text-[10px] shrink-0 ${
-                        done ? 'bg-emerald-500 border-emerald-500 text-white' : active ? 'border-ds-accent text-ds-accent' : 'border-gray-700'
-                      }`}>
-                        {done ? '\u2713' : ''}
+                      <span
+                        className="flex items-center justify-center shrink-0"
+                        style={{
+                          width: 16, height: 16, fontSize: 9,
+                          clipPath: 'polygon(4px 0,100% 0,100% calc(100% - 4px),calc(100% - 4px) 100%,0 100%,0 4px)',
+                          background: done ? 'rgba(109,255,176,0.15)' : 'transparent',
+                          border: `1px solid ${done ? 'rgba(109,255,176,0.55)' : active ? '#7ee7ff' : '#2a3450'}`,
+                          color: done ? '#6dffb0' : 'transparent',
+                        }}
+                      >
+                        {done ? '✓' : ''}
                       </span>
                       <div className="flex-1 min-w-0">
-                        <p className="truncate">{lesson.title}</p>
-                        <p className="text-[10px] text-ds-subtle mt-0.5">{chip}</p>
+                        <p className="truncate" style={{ color: active ? '#eaf6ff' : done ? '#9aa8c4' : '#7c8db0' }}>{lesson.title}</p>
+                        <p style={{ fontFamily: 'var(--font-mono)', fontSize: 9, letterSpacing: '0.1em', color: '#5c6886', marginTop: 2, textTransform: 'uppercase' }}>{chip}</p>
                       </div>
                     </button>
                   )
@@ -263,8 +290,16 @@ export function CoursePageClient({
   }, [checked, user, course, slug, router, initialLessonSlug, lessons, selectedLesson?.slug])
 
   const handleSelectLesson = (lesson: Lesson) => {
-    setSelectedLesson(lesson)
     setShowMobileLessons(false)
+    if (lesson.type === 'quiz') {
+      router.push(`/courses/${slug}/exam/${encodeURIComponent(lesson.slug)}`)
+      return
+    }
+    if (lesson.type === 'assignment') {
+      router.push(`/courses/${slug}/assignment/${encodeURIComponent(lesson.slug)}`)
+      return
+    }
+    setSelectedLesson(lesson)
     router.replace(`/courses/${slug}/learn/${encodeURIComponent(lesson.slug)}`, { scroll: false })
   }
 
@@ -342,35 +377,45 @@ export function CoursePageClient({
   const nextLesson = currentIndex >= 0 && currentIndex < lessons.length - 1 ? lessons[currentIndex + 1] : null
 
   return (
-    <div className="min-h-screen bg-ds-base flex flex-col">
-      <main className="pt-14 flex-1 flex flex-col md:flex-row gap-0 md:gap-3">
-        <aside className="w-full md:w-80 shrink-0 border-b md:border-b-0 md:border-r border-ds-border bg-ds-surface">
-          <div className="p-4 border-b border-ds-border">
-            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm mb-4">
-              <Link href="/courses" className="text-ds-accent hover:text-ds-accent">
-                ← Courses
-              </Link>
-              <span className="text-ds-subtle hidden sm:inline">·</span>
-              <Link href={`/courses/${slug}`} className="text-ds-muted hover:text-ds-accent">
-                Trang khóa học
-              </Link>
-            </div>
-            <h1 className="font-bold text-white text-lg mb-2">{course.title}</h1>
-            <p className="text-sm text-ds-muted mb-4 line-clamp-3">{course.description}</p>
-            <div className="mb-4 rounded-xl border border-ds-border bg-white/5 p-3">
-              <div className="flex items-center justify-between text-xs text-ds-muted mb-2">
-                <span>Progress</span>
-                <span>{completedCount}/{lessons.length} lessons</span>
+    <div className="min-h-screen flex flex-col" style={{ background: '#030509' }}>
+      <main className="pt-14 flex-1 flex flex-col md:flex-row gap-0">
+        <aside className="w-full md:w-80 shrink-0 border-b md:border-b-0 md:border-r" style={{ borderColor: 'rgba(126,231,255,0.08)', background: '#06091a' }}>
+          <div className="p-4 border-b" style={{ borderColor: 'rgba(126,231,255,0.08)' }}>
+            <Link
+              href="/courses"
+              className="inline-flex items-center gap-1 mb-3 transition-colors"
+              style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#4dd2ff' }}
+            >
+              ← courses
+            </Link>
+            <div className="relative mb-3">
+              <div className="hud-chamfer-md border p-4" style={{ borderColor: 'rgba(126,231,255,0.18)', background: '#0a1024' }}>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#5c6886', marginBottom: 6 }}>
+                  // mission · course
+                </div>
+                <h1 className="font-semibold leading-snug" style={{ color: '#eaf6ff', fontSize: 15 }}>{course.title}</h1>
+                <p className="line-clamp-3 leading-relaxed mt-1.5" style={{ fontSize: 12, color: '#9aa8c4' }}>{course.description}</p>
               </div>
-              <div className="h-2 bg-white/10 rounded-full overflow-hidden">
-                <div className="h-full bg-cyan-500" style={{ width: `${progressPercent}%` }} />
+              <HudBrackets />
+            </div>
+            <div className="hud-chamfer border p-3 mb-4" style={{ borderColor: 'rgba(126,231,255,0.1)', background: 'rgba(0,0,0,0.2)' }}>
+              <div className="flex items-center justify-between mb-2">
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#5c6886' }}>// progress</span>
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: '#7ee7ff' }}>{completedCount}/{lessons.length}</span>
+              </div>
+              <div className="hud-chamfer-sm overflow-hidden" style={{ height: 3, background: 'rgba(126,231,255,0.08)' }}>
+                <div className="h-full transition-all duration-500" style={{ width: `${progressPercent}%`, background: 'linear-gradient(90deg, #4dd2ff, #7ee7ff)' }} />
+              </div>
+              <div className="text-right mt-1.5">
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: '#5c6886' }}>{progressPercent}% complete</span>
               </div>
             </div>
             {!isEnrolled && user && (
               course.isPaid && (course.price ?? 0) > 0 ? (
                 <Link
                   href={`/courses/${slug}/checkout`}
-                  className="block w-full py-2 rounded-xl bg-cyan-600 text-white text-sm font-medium hover:bg-cyan-500 text-center"
+                  className="block w-full py-2.5 hud-chamfer-sm font-semibold text-sm text-center transition-all"
+                  style={{ background: '#f5a524', color: '#1a0e00', boxShadow: '0 0 20px rgba(245,165,36,0.3)' }}
                 >
                   Mua khóa học ·{' '}
                   {course.currency === 'USD' ? `$${course.price}` : `${(course.price ?? 0).toLocaleString('vi-VN')} ₫`}
@@ -380,13 +425,18 @@ export function CoursePageClient({
                   type="button"
                   onClick={handleEnroll}
                   disabled={enrolling}
-                  className="w-full py-2 rounded-xl bg-cyan-600 text-white text-sm font-medium hover:bg-cyan-500 disabled:opacity-50"
+                  className="w-full py-2.5 hud-chamfer-sm font-semibold text-sm transition-all disabled:opacity-50"
+                  style={{ background: '#f5a524', color: '#1a0e00', boxShadow: enrolling ? 'none' : '0 0 20px rgba(245,165,36,0.3)' }}
                 >
-                  {enrolling ? 'Đang ghi danh…' : 'Ghi danh miễn phí'}
+                  {enrolling ? '// processing...' : 'Ghi danh ngay →'}
                 </button>
               )
             )}
-            {!user && <p className="text-sm text-ds-subtle">Đăng nhập để ghi danh khóa học này.</p>}
+            {!user && (
+              <p className="mt-1" style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '0.12em', color: '#5c6886' }}>
+                // đăng nhập để ghi danh
+              </p>
+            )}
             <CommunityAskButton
               className="mt-3 w-full"
               variant="outline"
@@ -403,9 +453,18 @@ export function CoursePageClient({
             <button
               type="button"
               onClick={() => setShowMobileLessons((v) => !v)}
-              className="md:hidden mt-3 w-full min-h-11 rounded-xl border border-ds-border bg-white/5 text-sm text-gray-200"
+              className="md:hidden mt-3 w-full min-h-11 hud-chamfer-sm border text-sm transition-all"
+              style={{
+                borderColor: 'rgba(126,231,255,0.2)',
+                color: '#9aa8c4',
+                background: 'transparent',
+                fontFamily: 'var(--font-mono)',
+                fontSize: 10,
+                letterSpacing: '0.1em',
+                textTransform: 'uppercase',
+              }}
             >
-              {showMobileLessons ? 'Ẩn danh sách bài học' : 'Hiện danh sách bài học'}
+              {showMobileLessons ? '// ẩn danh sách bài học' : '// hiện danh sách bài học'}
             </button>
           </div>
           <div className={showMobileLessons ? 'block md:block' : 'hidden md:block'}>
@@ -419,20 +478,25 @@ export function CoursePageClient({
           </div>
         </aside>
 
-        <div className="flex-1 min-h-0 flex flex-col bg-ds-base border-l border-white/5">
+        <div className="flex-1 min-h-0 flex flex-col border-l" style={{ background: '#030509', borderColor: 'rgba(126,231,255,0.05)' }}>
           {selectedLesson ? (
             <>
-              <div className="px-5 py-3 border-b border-ds-border flex items-center gap-2 text-sm text-ds-muted bg-ds-surface">
-                <Link href="/courses" className="hover:text-ds-accent">Courses</Link>
-                <span>/</span>
-                <Link href={`/courses/${slug}`} className="text-white hover:text-ds-accent truncate max-w-[40vw]">
+              <div className="px-5 py-2.5 border-b flex items-center gap-2 flex-wrap text-sm" style={{ borderColor: 'rgba(126,231,255,0.08)', background: '#06091a' }}>
+                <Link href="/courses" className="hover:text-[#7ee7ff] transition-colors" style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#5c6886' }}>courses</Link>
+                <span style={{ color: '#5c6886' }}>/</span>
+                <Link href={`/courses/${slug}`} className="truncate max-w-[40vw] hover:text-[#7ee7ff] transition-colors" style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '0.1em', color: '#9aa8c4' }}>
                   {course.title}
                 </Link>
-                <span>/</span>
-                <span className="text-ds-accent truncate">{selectedLesson.title}</span>
+                <span style={{ color: '#5c6886' }}>/</span>
+                <span className="truncate" style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '0.1em', color: '#7ee7ff' }}>{selectedLesson.title}</span>
               </div>
-              <div className="px-5 py-4 border-b border-ds-border flex items-center justify-between flex-wrap gap-2 bg-ds-surface">
-                <h2 className="font-semibold text-white text-lg">{selectedLesson.title}</h2>
+              <div className="px-5 py-4 border-b flex items-center justify-between flex-wrap gap-3" style={{ borderColor: 'rgba(126,231,255,0.08)', background: '#06091a' }}>
+                <div>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#5c6886', marginBottom: 4 }}>
+                    // lesson · {selectedLesson.type}
+                  </div>
+                  <h2 className="font-semibold text-lg leading-tight" style={{ color: '#eaf6ff' }}>{selectedLesson.title}</h2>
+                </div>
                 <div className="flex flex-wrap items-center gap-2">
                   <CommunityAskButton
                     variant="compact"
@@ -449,9 +513,14 @@ export function CoursePageClient({
                     <button
                       type="button"
                       onClick={() => markComplete(selectedLesson.slug, !progressBySlug.get(selectedLesson.slug))}
-                      className="text-sm px-3 py-1.5 rounded-xl bg-white/10 text-gray-300 hover:bg-ds-accent-strong hover:text-ds-accent"
+                      className="text-sm px-4 py-2 hud-chamfer-sm border transition-all"
+                      style={
+                        progressBySlug.get(selectedLesson.slug)
+                          ? { borderColor: 'rgba(109,255,176,0.4)', background: 'rgba(109,255,176,0.07)', color: '#6dffb0' }
+                          : { borderColor: 'rgba(126,231,255,0.2)', background: 'transparent', color: '#9aa8c4' }
+                      }
                     >
-                      {progressBySlug.get(selectedLesson.slug) ? 'Đánh dấu chưa hoàn thành' : 'Đánh dấu đã hoàn thành'}
+                      {progressBySlug.get(selectedLesson.slug) ? '✓ Đã hoàn thành' : 'Đánh dấu hoàn thành'}
                     </button>
                   )}
                 </div>
@@ -567,30 +636,25 @@ export function CoursePageClient({
                     )}
                   </div>
                 ) : selectedLesson.type === 'quiz' ? (
-                  <>
-                    {selectedLesson.quizQuestions && selectedLesson.quizQuestions.length > 0 ? (
-                      <>
-                        {selectedLesson.content && <p className="px-6 pt-6 text-sm text-ds-muted max-w-3xl">{selectedLesson.content}</p>}
-                        <QuizLessonBlock
-                          questions={selectedLesson.quizQuestions}
-                          onComplete={() => isEnrolled && markComplete(selectedLesson.slug, true)}
-                        />
-                        {nextLesson && (
-                          <div className="px-6 pb-6">
-                            <button
-                              type="button"
-                              onClick={() => handleSelectLesson(nextLesson)}
-                              className="px-4 py-2 rounded-xl bg-cyan-600 text-white text-sm font-medium hover:bg-cyan-500"
-                            >
-                              Bài tiếp theo: {nextLesson.title} →
-                            </button>
-                          </div>
-                        )}
-                      </>
-                    ) : (
-                      <div className="p-6 text-ds-muted">Quiz lesson (no questions yet).</div>
-                    )}
-                  </>
+                  <div className="p-8 max-w-lg space-y-4">
+                    <p className="text-ds-muted text-sm">Bài kiểm tra mở trên trang riêng với bảng câu hỏi và đồng hồ.</p>
+                    <Link
+                      href={`/courses/${slug}/exam/${encodeURIComponent(selectedLesson.slug)}`}
+                      className="inline-flex px-4 py-2 rounded-xl bg-cyan-600 text-white text-sm font-medium hover:bg-cyan-500"
+                    >
+                      Vào bài kiểm tra →
+                    </Link>
+                  </div>
+                ) : selectedLesson.type === 'assignment' ? (
+                  <div className="p-8 max-w-lg space-y-4">
+                    <p className="text-ds-muted text-sm">Nộp bài tập trên trang riêng (nhiều file).</p>
+                    <Link
+                      href={`/courses/${slug}/assignment/${encodeURIComponent(selectedLesson.slug)}`}
+                      className="inline-flex px-4 py-2 rounded-xl bg-cyan-600 text-white text-sm font-medium hover:bg-cyan-500"
+                    >
+                      Mở bài tập →
+                    </Link>
+                  </div>
                 ) : null}
               </div>
               <LessonRelatedQuestions

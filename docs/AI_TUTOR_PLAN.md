@@ -1,5 +1,7 @@
 # Kế hoạch thiết kế AI Tutor – Galaxies Edu
 
+> **Cập nhật 2026-05-27:** Kế hoạch triển khai hiện tại và kiến trúc agent nằm ở [`docs/plans/learning-agent-system.md`](plans/learning-agent-system.md). UI production: **`CosmoAssistantWidget`** (`client/src/components/ai-tutor/CosmoAssistantWidget.tsx`) — một FAB cyan góc phải toàn app; API đăng nhập qua `POST /api/agent/message`. Tài liệu dưới đây giữ làm bối cảnh Phase 1–3 ban đầu.
+
 ## 1. Mục tiêu & phạm vi
 
 **Mục tiêu:** Cung cấp trợ lý học tập (AI Tutor) giúp người dùng hiểu nội dung trong app: Lịch sử Trái Đất, sinh vật tiêu biểu, hóa thạch, Hệ Mặt Trời, Milky Way, và khóa học.

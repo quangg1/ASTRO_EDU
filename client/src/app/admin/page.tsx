@@ -19,6 +19,7 @@ import { useAuthStore } from '@/features/auth/public'
 import { canManagePlatform } from '@/lib/roles'
 import {
   fetchAdminUsers,
+  deleteUserPermanently,
   updateUserRole,
   updateUserStatus,
   fetchAdminTeacherApplications,
@@ -26,6 +27,7 @@ import {
   fetchAdminAnalyticsCohort,
   fetchAdminAnalyticsFunnel,
   fetchAdminLearningPathAnalytics,
+  fetchAdminAgentAnalytics,
   fetchAdminAnalyticsOverview,
   fetchAdminAnalyticsRetention,
   type AdminUser,
@@ -34,6 +36,7 @@ import {
   type AdminAnalyticsCohort,
   type AdminAnalyticsFunnelItem,
   type AdminLearningPathAnalytics,
+  type AdminAgentAnalytics,
   type AdminAnalyticsOverview,
   type AdminAnalyticsRetention,
   type AnalyticsRange,
@@ -55,12 +58,16 @@ export default function AdminPage() {
   const [orderStats, setOrderStats] = useState<AdminOrderStats | null>(null)
   const [recentOrders, setRecentOrders] = useState<Order[]>([])
   const [analyticsRange, setAnalyticsRange] = useState<AnalyticsRange>('30d')
-  const [analyticsTab, setAnalyticsTab] = useState<'overview' | 'funnel' | 'retention' | 'cohort' | 'learning-path'>('overview')
+  const [analyticsTab, setAnalyticsTab] = useState<
+    'overview' | 'funnel' | 'retention' | 'cohort' | 'learning-path' | 'agent'
+  >('overview')
   const [analytics, setAnalytics] = useState<AdminAnalyticsOverview | null>(null)
   const [analyticsFunnel, setAnalyticsFunnel] = useState<AdminAnalyticsFunnelItem[]>([])
   const [analyticsRetention, setAnalyticsRetention] = useState<AdminAnalyticsRetention | null>(null)
   const [analyticsCohort, setAnalyticsCohort] = useState<AdminAnalyticsCohort[]>([])
   const [learningPathAnalytics, setLearningPathAnalytics] = useState<AdminLearningPathAnalytics | null>(null)
+  const [agentAnalytics, setAgentAnalytics] = useState<AdminAgentAnalytics | null>(null)
+  const [agentAnalyticsLoading, setAgentAnalyticsLoading] = useState(false)
   const [learningPathFilter, setLearningPathFilter] = useState<{ moduleId: string; depth: '' | 'beginner' | 'explorer' | 'researcher' }>({
     moduleId: '',
     depth: '',
@@ -81,6 +88,7 @@ export default function AdminPage() {
     retention: 'Giữ chân',
     cohort: 'Nhóm người dùng',
     'learning-path': 'Lộ trình học',
+    agent: 'Agent học tập',
   }
 
   useEffect(() => {
@@ -106,14 +114,14 @@ export default function AdminPage() {
         const val = <T,>(i: number, fallback: T): T =>
           results[i].status === 'fulfilled' ? (results[i] as PromiseFulfilledResult<T>).value : fallback
 
-        const uRes = val(0, { success: false as const, error: 'Không tải danh sách người dùng' })
+        const uRes = val(0, { success: false, error: 'Không tải danh sách người dùng' } as Awaited<ReturnType<typeof fetchAdminUsers>>)
         const courses = val(1, [] as Awaited<ReturnType<typeof fetchCourses>>)
         const orderOverview = val(2, { stats: null, orders: [] as Order[] })
-        const analyticsOverview = val(3, { success: false as const, error: 'Không tải analytics' })
-        const funnelOverview = val(4, { success: false as const, error: 'Không tải funnel' })
-        const retentionOverview = val(5, { success: false as const, error: 'Không tải retention' })
-        const cohortOverview = val(6, { success: false as const, error: 'Không tải cohort' })
-        const lpOverview = val(7, { success: false as const, error: 'Không tải learning path' })
+        const analyticsOverview = val(3, { success: false, error: 'Không tải analytics' } as Awaited<ReturnType<typeof fetchAdminAnalyticsOverview>>)
+        const funnelOverview = val(4, { success: false, error: 'Không tải funnel' } as Awaited<ReturnType<typeof fetchAdminAnalyticsFunnel>>)
+        const retentionOverview = val(5, { success: false, error: 'Không tải retention' } as Awaited<ReturnType<typeof fetchAdminAnalyticsRetention>>)
+        const cohortOverview = val(6, { success: false, error: 'Không tải cohort' } as Awaited<ReturnType<typeof fetchAdminAnalyticsCohort>>)
+        const lpOverview = val(7, { success: false, error: 'Không tải learning path' } as Awaited<ReturnType<typeof fetchAdminLearningPathAnalytics>>)
 
         if (uRes.success && uRes.data) setUsers(uRes.data)
         else setError(uRes.error || '')
@@ -170,6 +178,18 @@ export default function AdminPage() {
 
   useEffect(() => {
     if (!user || !canManagePlatform(user)) return
+    if (analyticsTab !== 'agent') return
+    setAgentAnalyticsLoading(true)
+    void fetchAdminAgentAnalytics(analyticsRange)
+      .then((res) => {
+        if (res.success && res.data) setAgentAnalytics(res.data)
+        else setAgentAnalytics(null)
+      })
+      .finally(() => setAgentAnalyticsLoading(false))
+  }, [user, analyticsTab, analyticsRange])
+
+  useEffect(() => {
+    if (!user || !canManagePlatform(user)) return
     trackEvent('admin_dashboard_viewed', { range: analyticsRange })
   }, [user, analyticsRange])
 
@@ -216,6 +236,52 @@ export default function AdminPage() {
       if (appsRes.success && appsRes.data) setTeacherApps(appsRes.data)
     } else {
       setError(res.error || '')
+      setMessage('error')
+    }
+  }
+
+  const handleDeleteUser = async (u: AdminUser) => {
+    if (u.id === user?.id) return
+    if (!u.email) {
+      setError('Tài khoản không có email — không thể xóa (cần gửi thông báo trước).')
+      setMessage('error')
+      return
+    }
+    const reason =
+      window.prompt(
+        'Lý do xóa vĩnh viễn (gửi cho người dùng qua email, tối thiểu 10 ký tự):',
+        u.deactivationReason || '',
+      ) || ''
+    if (!reason.trim() || reason.trim().length < 10) {
+      setError('Cần nhập lý do ít nhất 10 ký tự.')
+      setMessage('error')
+      return
+    }
+    const ok = window.confirm(
+      `XÓA VĨNH VIỄN «${u.email}»?\n\nEmail thông báo (kèm lý do) sẽ gửi trước. Không thể hoàn tác.`,
+    )
+    if (!ok) return
+    const confirmEmail = window.prompt(
+      `Nhập lại email để xác nhận:\n${u.email}`,
+      '',
+    )
+    if (!confirmEmail?.trim()) return
+    setUpdatingId(u.id)
+    setMessage(null)
+    setError('')
+    const res = await deleteUserPermanently(u.id, confirmEmail.trim(), reason.trim())
+    setUpdatingId(null)
+    if (res.success) {
+      setUsers((prev) => prev.filter((x) => x.id !== u.id))
+      setMessage('success')
+      trackEvent('admin_user_deleted', { target_role: u.role })
+    } else {
+      const code = 'code' in res ? String(res.code) : ''
+      const msg =
+        code === 'SMTP_NOT_CONFIGURED' || code === 'DELETE_EMAIL_FAILED'
+          ? `${res.error || ''} Lưu services/api/.env (SMTP_*, MAIL_FROM), restart npm run dev:api.`
+          : res.error || ''
+      setError(msg)
       setMessage('error')
     }
   }
@@ -343,7 +409,7 @@ export default function AdminPage() {
               {/* Analytics sections — keyboard nav (← →) and a11y come from Tabs primitive */}
               <Tabs value={analyticsTab} onValueChange={(v) => setAnalyticsTab(v as typeof analyticsTab)}>
                 <TabList aria-label="Phân tích dữ liệu" className="border-b-0">
-                  {(['overview', 'funnel', 'retention', 'cohort', 'learning-path'] as const).map((tab) => (
+                  {(['overview', 'funnel', 'retention', 'cohort', 'learning-path', 'agent'] as const).map((tab) => (
                     <Tab key={tab} value={tab}>
                       {analyticsTabLabel[tab]}
                     </Tab>
@@ -662,6 +728,94 @@ export default function AdminPage() {
                 </div>
               )}
 
+              {analyticsTab === 'agent' && (
+                <div className="space-y-4">
+                  {agentAnalyticsLoading ? (
+                    <div className="p-8 text-center text-gray-500 flex items-center justify-center gap-3">
+                      <Spinner />
+                      <span>Đang tải agent analytics...</span>
+                    </div>
+                  ) : !agentAnalytics ? (
+                    <EmptyState
+                      title="Chưa có dữ liệu agent"
+                      description="Dữ liệu xuất hiện khi người học dùng Agent trên bài học hoặc Explore."
+                      className="m-4"
+                    />
+                  ) : (
+                    <>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        <div className="rounded-xl border border-white/10 bg-black/20 p-3">
+                          <p className="text-[11px] text-gray-500 uppercase">Phiên agent</p>
+                          <p className="text-xl font-semibold text-white mt-1">{agentAnalytics.summary.agentSessions}</p>
+                        </div>
+                        <div className="rounded-xl border border-white/10 bg-black/20 p-3">
+                          <p className="text-[11px] text-gray-500 uppercase">Người dùng agent</p>
+                          <p className="text-xl font-semibold text-cyan-200 mt-1">{agentAnalytics.summary.agentUsers}</p>
+                        </div>
+                        <div className="rounded-xl border border-white/10 bg-black/20 p-3">
+                          <p className="text-[11px] text-gray-500 uppercase">Tin nhắn</p>
+                          <p className="text-xl font-semibold text-violet-300 mt-1">{agentAnalytics.summary.agentMessages}</p>
+                        </div>
+                        <div className="rounded-xl border border-white/10 bg-black/20 p-3">
+                          <p className="text-[11px] text-gray-500 uppercase">Hồ sơ học agent</p>
+                          <p className="text-xl font-semibold text-emerald-300 mt-1">{agentAnalytics.summary.learnerProfiles}</p>
+                        </div>
+                      </div>
+                      <div className="h-[280px] rounded-xl border border-white/10 bg-black/20 p-2">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <AreaChart
+                            data={agentAnalytics.daily.map((row) => ({
+                              date: row.date.slice(5),
+                              sessions: row.sessions,
+                              messages: row.messages,
+                            }))}
+                          >
+                            <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" />
+                            <XAxis dataKey="date" stroke="#94a3b8" />
+                            <YAxis stroke="#94a3b8" />
+                            <Tooltip />
+                            <Legend />
+                            <Area type="monotone" dataKey="sessions" stroke="#22d3ee" fill="#22d3ee33" name="Phiên" />
+                            <Area type="monotone" dataKey="messages" stroke="#a78bfa" fill="#a78bfa22" name="Tin nhắn" />
+                          </AreaChart>
+                        </ResponsiveContainer>
+                      </div>
+                      <div className="rounded-xl border border-white/10 bg-black/20 p-3">
+                        <p className="text-sm text-white font-medium mb-2">Heatmap khó khăn (bài + tín hiệu)</p>
+                        {!(agentAnalytics.struggleHeatmap?.length) ? (
+                          <p className="text-sm text-gray-500">Chưa có tín hiệu struggle trong khoảng thời gian này.</p>
+                        ) : (
+                          <div className="space-y-2">
+                            {agentAnalytics.struggleHeatmap.slice(0, 12).map((row) => (
+                              <div
+                                key={`${row.lessonId}:${row.signal}`}
+                                className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm"
+                              >
+                                <div className="min-w-0">
+                                  <p className="text-gray-200 truncate">{row.lessonTitle || row.lessonId}</p>
+                                  <p className="text-[11px] text-gray-500">{row.signal}</p>
+                                </div>
+                                <div className="shrink-0 text-right text-xs text-gray-400">
+                                  <p>
+                                    User: <span className="text-cyan-300">{row.uniqueUsers}</span>
+                                  </p>
+                                  <p>
+                                    Quiz fail: <span className="text-rose-300">{row.quizFailProfiles}</span>
+                                  </p>
+                                  <p>
+                                    Dwell: <span className="text-emerald-300">{row.totalDwellSec}s</span>
+                                  </p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+
               {analyticsTab === 'overview' && analytics && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="rounded-xl border border-white/10 bg-black/20 p-3">
@@ -882,6 +1036,14 @@ export default function AdminPage() {
                             {u.accountStatus === 'active' ? 'Ngừng hoạt động' : 'Khôi phục'}
                           </button>
                           {u.deactivationReason ? <p className="text-[11px] text-gray-500 max-w-[220px]">{u.deactivationReason}</p> : null}
+                          <button
+                            type="button"
+                            onClick={() => void handleDeleteUser(u)}
+                            disabled={updatingId === u.id || u.id === user?.id}
+                            className="block text-xs rounded-lg px-2 py-1.5 border border-red-600/50 bg-red-950/40 text-red-300 hover:bg-red-900/50 disabled:opacity-50"
+                          >
+                            Xóa vĩnh viễn
+                          </button>
                         </div>
                       </td>
                       <td className="px-4 py-3 text-xs text-gray-500">

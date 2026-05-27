@@ -7,15 +7,24 @@ export function getNotificationWsUrl(): string {
   if (!token) return ''
 
   const httpBase = getUnifiedBase()
+  const q = `?token=${encodeURIComponent(token)}`
+
   if (!httpBase) {
     const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-    return `${proto}//${window.location.host}/ws/notifications?token=${encodeURIComponent(token)}`
+    return `${proto}//${window.location.host}/ws/notifications${q}`
   }
 
-  const wsBase = httpBase.startsWith('https://')
-    ? `wss://${httpBase.slice('https://'.length)}`
+  let hostPart = httpBase.startsWith('https://')
+    ? httpBase.slice('https://'.length)
     : httpBase.startsWith('http://')
-      ? `ws://${httpBase.slice('http://'.length)}`
+      ? httpBase.slice('http://'.length)
       : httpBase
-  return `${wsBase}/ws/notifications?token=${encodeURIComponent(token)}`
+
+  // Tránh ws://localhost → ::1 trên Windows (ECONNREFUSED).
+  if (hostPart.startsWith('localhost:')) {
+    hostPart = `127.0.0.1:${hostPart.split(':')[1] || '3002'}`
+  }
+
+  const wsBase = httpBase.startsWith('https://') ? `wss://${hostPart}` : `ws://${hostPart}`
+  return `${wsBase}/ws/notifications${q}`
 }

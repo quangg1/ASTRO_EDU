@@ -55,6 +55,11 @@ export type {
   DecorationBulkImportResult,
 } from './api/avatarDecorationApi'
 export { useEquippedDecoration } from './hooks/useEquippedDecoration'
+export {
+  gemActivityDirection,
+  gemActivityDirectionLabel,
+  labelGemActivityVi,
+} from './lib/formatGemActivity'
 
 // Solar journey milestone cache + sync (dashboard / gamification) — PR10
 export {

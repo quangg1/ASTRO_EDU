@@ -30,7 +30,9 @@ const { bootstrapCommunityForums } = require('./features/community/services/foru
 const { startNewsCrawlScheduler } = require('./features/community/jobs/newsCrawlScheduler');
 const mediaRouter = require('./features/media');
 const adminRouter = require('./features/admin');
+const { agentRouter } = require('./features/agent');
 const { attachNotificationWebSocket, WS_PATH } = require('./features/notifications/ws/attachNotificationWs');
+const { isMailConfigured } = require('./shared/mailer');
 
 const env = validateApiEnv();
 const app = express();
@@ -65,11 +67,17 @@ app.use('/api/comments', commentsRouter);
 app.use('/api/news', newsRouter);
 app.use('/api/community', communityRouter);
 app.use('/api/admin', adminRouter);
+app.use('/api/agent', agentRouter);
 app.use(mediaRouter); // POST /upload, GET /files/*
 app.use(errorMiddleware);
 
 app.get('/health', (req, res) => {
-  res.json({ status: 'OK', service: 'api', timestamp: new Date().toISOString() });
+  res.json({
+    status: 'OK',
+    service: 'api',
+    timestamp: new Date().toISOString(),
+    smtpConfigured: isMailConfigured(),
+  });
 });
 
 async function start() {
@@ -86,7 +94,14 @@ async function start() {
   attachNotificationWebSocket(server);
   startNewsCrawlScheduler({ info: (msg, meta) => console.log(msg, meta || ''), error: (msg, meta) => console.error(msg, meta || '') });
 
-  server.listen(PORT, () => {
+  server.listen(PORT, '0.0.0.0', () => {
+    if (!isMailConfigured()) {
+      console.warn(
+        '[mailer] SMTP chưa cấu hình — email (xác nhận đăng ký, xóa tài khoản, hóa đơn…) sẽ không gửi. Thêm biến vào services/api/.env',
+      );
+    } else {
+      console.log('[mailer] SMTP đã bật (MAIL_FROM:', process.env.MAIL_FROM?.trim(), ')');
+    }
     console.log(`
 ╔══════════════════════════════════════════════════════════════╗
 ║           Galaxies Unified API (Modular Monolith)            ║

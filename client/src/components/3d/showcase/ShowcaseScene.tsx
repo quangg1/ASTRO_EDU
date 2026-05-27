@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useMemo, useState, useEffect } from 'react'
+import { useRef, useMemo, useState, useEffect, useCallback } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { OrbitControls, Stars, Preload } from '@react-three/drei'
 import { Suspense } from 'react'
@@ -433,6 +433,10 @@ export default function ShowcaseScene({
     }
   }, [])
 
+  const onPointerMissed = useCallback(() => {
+    useShowcaseStore.getState().setFocusedEntity(null)
+  }, [])
+
   return (
     <Canvas
       camera={{ position: [0, 19, 58], fov: 45 }}
@@ -443,7 +447,8 @@ export default function ShowcaseScene({
         powerPreference: 'high-performance',
         stencil: false,
       }}
-      style={{ background: '#000' }}
+      style={{ background: '#000', touchAction: 'none' }}
+      onPointerMissed={onPointerMissed}
       onCreated={({ gl }) => {
         gl.outputColorSpace = THREE.SRGBColorSpace
         gl.toneMapping = THREE.ACESFilmicToneMapping

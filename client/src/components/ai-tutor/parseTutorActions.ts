@@ -11,6 +11,13 @@ export type TutorAction =
   | { type: 'open_dashboard' }
   | { type: 'open_my_courses' }
 
+export type LpLessonAction = {
+  type: 'open_learning_path_lesson'
+  lessonId: string
+  moduleId: string
+  nodeId: string
+}
+
 /** Phản hồi từ Python service (đã validate). */
 export type ApiToolCall = {
   id?: string
@@ -46,6 +53,10 @@ export function toolCallsToTutorActions(calls: unknown): TutorAction[] {
       out.push({ type: 'open_dashboard' })
     } else if (name === 'open_my_courses') {
       out.push({ type: 'open_my_courses' })
+    } else if (name === 'navigate_to_narrative' || name === 'go_to_explore') {
+      const ma = args.stage_time_ma ?? args.stageTime
+      const n = typeof ma === 'number' ? ma : Number(ma)
+      if (!Number.isNaN(n)) out.push({ type: 'go_to_explore', stageTime: n })
     }
   }
   return out

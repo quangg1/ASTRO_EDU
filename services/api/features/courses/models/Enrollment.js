@@ -9,6 +9,13 @@ const progressSchema = new mongoose.Schema({
 const enrollmentSchema = new mongoose.Schema({
   userId: { type: String, required: true, index: true },
   courseId: { type: mongoose.Schema.Types.ObjectId, ref: 'Course', required: true, index: true },
+  status: {
+    type: String,
+    enum: ['active', 'trial', 'expired'],
+    default: 'active',
+  },
+  trialModuleId: { type: String, default: null },
+  trialExpiresAt: { type: Date, default: null },
   progress: [progressSchema],
   enrolledAt: { type: Date, default: Date.now },
 }, { timestamps: true });

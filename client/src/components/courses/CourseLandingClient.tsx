@@ -4,13 +4,24 @@ import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useAuthStore } from '@/features/auth/public'
-import { fetchCourse, type Course, type CourseLessonOutline, type CourseModule, type Lesson } from '@/features/courses/api/coursesApi'
+import {
+  fetchCourse,
+  fetchCourseForEditor,
+  fetchCourseOutline,
+  type Course,
+  type CourseLessonOutline,
+  type CourseModule,
+  type Lesson,
+} from '@/features/courses/api/coursesApi'
+import { getToken } from '@/features/auth/public'
 import { resolveMediaUrl } from '@/lib/apiConfig'
 import { courseLevelLabel, courseRequiresPayment, formatCatalogPrice } from '@/components/courses/courseCatalogMeta'
 import { trackEvent } from '@/lib/analytics'
 import { fetchCoursePromoBanner, type CoursePromoBanner as PromoBanner } from '@/features/promotions/api/promoApi'
 import { CoursePromoBanner } from '@/components/courses/CoursePromoBanner'
 import { CommunityAskButton } from '@/components/community/learning/CommunityAskButton'
+import { CourseCohortsJoin } from '@/features/courses/cohort/CourseCohortsJoin'
+import { ModuleMaterialsList } from '@/features/courses/cohort/ModuleMaterialsList'
 
 function isOutlineEntry(l: Lesson | CourseLessonOutline): l is CourseLessonOutline {
   return !('content' in l)
@@ -19,7 +30,13 @@ function isOutlineEntry(l: Lesson | CourseLessonOutline): l is CourseLessonOutli
 function groupLessons(
   courseModules: CourseModule[],
   lessons: (Lesson | CourseLessonOutline)[]
-): { key: string; label: string; index: number; lessons: (Lesson | CourseLessonOutline)[] }[] {
+): {
+  key: string
+  label: string
+  index: number
+  lessons: (Lesson | CourseLessonOutline)[]
+  materials?: CourseModule['materials']
+}[] {
   const sorted = [...lessons].sort((a, b) => a.order - b.order)
   if (courseModules.length === 0) {
     return Object.entries(
@@ -52,9 +69,16 @@ function groupLessons(
     label: m.title,
     index: mi,
     lessons: map[m._id || m.slug] ?? [],
+    materials: m.materials,
   }))
   if ((map._unassigned?.length ?? 0) > 0) {
-    groups.push({ key: '_unassigned', label: 'Chưa gán module', index: groups.length, lessons: map._unassigned })
+    groups.push({
+      key: '_unassigned',
+      label: 'Chưa gán module',
+      index: groups.length,
+      lessons: map._unassigned,
+      materials: undefined,
+    })
   }
   return groups
 }
@@ -62,20 +86,74 @@ function groupLessons(
 export function CourseLandingClient({
   slug,
   initialCourse,
+  previewBootstrap,
   enrolledFlash,
+  cohortPlacedFlash,
 }: {
   slug: string
-  initialCourse: Course
+  initialCourse?: Course
+  /** Studio / GV: tải khóa nháp phía client (SSR không gửi token). */
+  previewBootstrap?: boolean
   enrolledFlash?: boolean
+  cohortPlacedFlash?: boolean
 }) {
   const router = useRouter()
   const { user, checked } = useAuthStore()
-  const [course, setCourse] = useState(initialCourse)
+  const [course, setCourse] = useState<Course | null>(initialCourse ?? null)
+  const [loading, setLoading] = useState(Boolean(previewBootstrap))
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [promoBanner, setPromoBanner] = useState<PromoBanner | null>(null)
 
-  useEffect(() => setCourse(initialCourse), [initialCourse])
+  useEffect(() => {
+    if (initialCourse) {
+      setCourse(initialCourse)
+      setLoading(false)
+      setLoadError(null)
+    }
+  }, [initialCourse])
 
   useEffect(() => {
+    if (!previewBootstrap || !checked) return
+    let cancelled = false
+    setLoading(true)
+    setLoadError(null)
+    if (!getToken()) {
+      setLoadError('Chưa đăng nhập trong cửa sổ này. Mở preview từ Studio (cùng tab) hoặc đăng nhập lại.')
+      setLoading(false)
+      return
+    }
+    void (async () => {
+      const { course: c, error } = await fetchCourseOutline(slug)
+      if (cancelled) return
+      if (c) {
+        setCourse(c)
+        setLoading(false)
+        return
+      }
+      const editor = await fetchCourseForEditor(slug)
+      if (cancelled) return
+      if (editor) {
+        setCourse({
+          ...editor,
+          enrollment: null,
+          outlineOnly: true,
+          editorPreview: editor.published === false,
+        } as Course)
+        setLoading(false)
+        return
+      }
+      setLoadError(
+        error || 'Không tải được khóa học. Kiểm tra bạn có quyền sửa khóa này trong Studio.',
+      )
+      setLoading(false)
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [slug, previewBootstrap, checked])
+
+  useEffect(() => {
+    if (previewBootstrap || !slug) return
     let cancelled = false
     fetchCourse(slug).then((c) => {
       if (!cancelled && c) setCourse(c)
@@ -83,10 +161,10 @@ export function CourseLandingClient({
     return () => {
       cancelled = true
     }
-  }, [slug])
+  }, [slug, previewBootstrap])
 
   useEffect(() => {
-    if (!course.id || course.enrollment) return
+    if (!course?.id || course.enrollment) return
     if (!courseRequiresPayment(course)) return
     let cancelled = false
     void fetchCoursePromoBanner(course.id).then((b) => {
@@ -95,12 +173,36 @@ export function CourseLandingClient({
     return () => {
       cancelled = true
     }
-  }, [course.id, course.enrollment, course.isPaid, course.price, course.requiresPayment])
+  }, [course?.id, course?.enrollment, course?.isPaid, course?.price, course?.requiresPayment])
+
+  const lessons = course?.lessons ?? []
+  const courseModules = useMemo(
+    () => [...(course?.modules ?? [])].sort((a, b) => a.order - b.order),
+    [course?.modules],
+  )
+  const groups = useMemo(() => groupLessons(courseModules, lessons), [courseModules, lessons])
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-ds-base pt-24 px-4 text-center text-ds-subtle text-sm">
+        Đang tải trang khóa học…
+      </div>
+    )
+  }
+
+  if (!course || loadError) {
+    return (
+      <div className="min-h-screen bg-ds-base pt-24 px-4 max-w-md mx-auto text-center space-y-3">
+        <p className="text-ds-text text-sm">{loadError || 'Không tìm thấy khóa học'}</p>
+        <Link href="/studio" className="text-sm text-ds-accent hover:text-cyan-100">
+          ← Quay lại Studio
+        </Link>
+      </div>
+    )
+  }
 
   const isEnrolled = course.enrollment != null
-  const lessons = course.lessons ?? []
-  const courseModules = (course.modules ?? []).sort((a, b) => a.order - b.order)
-  const groups = useMemo(() => groupLessons(courseModules, lessons), [courseModules, lessons])
+  const catalogOpen = course.catalogEnabled !== false
 
   const firstLessonSlug = lessons.length ? [...lessons].sort((a, b) => a.order - b.order)[0]?.slug : null
 
@@ -143,7 +245,14 @@ export function CourseLandingClient({
           </div>
         </div>
       )}
-      <main className={`px-4 pb-16 max-w-3xl mx-auto ${enrolledFlash ? 'pt-4' : 'pt-20'}`}>
+      {(course.editorPreview || course.published === false) && (
+        <div className={`px-4 ${enrolledFlash ? 'pt-2' : 'pt-16'}`}>
+          <div className="max-w-3xl mx-auto rounded-xl border border-amber-500/35 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+            Xem trước bản nháp — học viên chưa thấy khóa này trên catalog cho đến khi bạn publish.
+          </div>
+        </div>
+      )}
+      <main className={`px-4 pb-16 max-w-3xl mx-auto ${enrolledFlash ? 'pt-4' : course.editorPreview || course.published === false ? 'pt-4' : 'pt-20'}`}>
         <Link href="/courses" className="text-sm text-ds-accent hover:text-cyan-100 mb-6 inline-block">
           ← Danh sách khóa học
         </Link>
@@ -191,7 +300,7 @@ export function CourseLandingClient({
                   Vào học
                 </Link>
               )}
-              {!isEnrolled && isPaid && (
+              {!isEnrolled && isPaid && catalogOpen && (
                 <button
                   type="button"
                   onClick={handleBuyNow}
@@ -235,7 +344,7 @@ export function CourseLandingClient({
           </div>
         </div>
 
-        {!isEnrolled && isPaid && (
+        {!isEnrolled && isPaid && catalogOpen && (
           <aside className="rounded-2xl border border-amber-500/25 bg-amber-500/5 p-5 mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
               <p className="text-sm font-semibold text-amber-100">Một lần mua — truy cập trọn khóa</p>
@@ -251,6 +360,23 @@ export function CourseLandingClient({
           </aside>
         )}
 
+        {!catalogOpen && !isEnrolled && (
+          <p className="text-sm text-amber-200/90 mb-4 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3">
+            Khóa theo kỳ — chọn lớp bên dưới và đăng ký trước ngày khai giảng. Mã lớp gửi qua email sau khi hoàn tất.
+          </p>
+        )}
+
+        <CourseCohortsJoin
+          courseSlug={slug}
+          courseId={course.id}
+          isPaid={course.isPaid}
+          price={course.price}
+          currency={course.currency}
+          catalogEnrolled={isEnrolled}
+          catalogOpen={catalogOpen}
+          cohortPlacedFlash={cohortPlacedFlash}
+        />
+
         <section className="rounded-2xl border border-ds-border bg-ds-surface p-6 mb-8">
           <h2 className="text-lg font-semibold text-white mb-1">Chương trình (syllabus)</h2>
           <p className="text-xs text-ds-subtle mb-5">Xem trước cấu trúc bài học trước khi ghi danh.</p>
@@ -260,6 +386,7 @@ export function CourseLandingClient({
                 <div className="px-4 py-2 border-b border-white/5 bg-white/[0.02]">
                   <p className="text-[10px] text-cyan-500/80 font-semibold uppercase tracking-wider">Module {g.index + 1}</p>
                   <p className="text-sm text-white font-medium">{g.label}</p>
+                  <ModuleMaterialsList materials={g.materials} />
                 </div>
                 <ul className="divide-y divide-white/5">
                   {g.lessons.map((lesson) => {
@@ -267,14 +394,22 @@ export function CourseLandingClient({
                     const meta = ol
                       ? lesson.type === 'quiz'
                         ? `${lesson.quizQuestionCount ?? 0} câu hỏi`
-                        : `${lesson.sectionCount ?? 0} block`
+                        : lesson.type === 'assignment'
+                          ? 'Bài nộp'
+                          : lesson.type === 'live_session'
+                            ? 'Buổi live'
+                            : `${lesson.sectionCount ?? 0} block`
                       : lesson.type === 'quiz'
                         ? 'Quiz'
-                        : lesson.type === 'visualization'
-                          ? '3D'
-                          : lesson.videoUrl
-                            ? 'Video'
-                            : 'Đọc'
+                        : lesson.type === 'assignment'
+                          ? 'Bài nộp'
+                          : lesson.type === 'live_session'
+                            ? 'Buổi live'
+                            : lesson.type === 'visualization'
+                              ? '3D'
+                              : lesson.videoUrl
+                                ? 'Video'
+                                : 'Đọc'
                     return (
                       <li key={lesson.slug} className="px-4 py-3 flex items-start gap-3">
                         <span className="text-[10px] text-ds-subtle w-6 shrink-0 pt-0.5">{lesson.order + 1}</span>

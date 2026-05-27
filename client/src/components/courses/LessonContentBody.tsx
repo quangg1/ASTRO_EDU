@@ -38,16 +38,16 @@ export function LessonContentBody({ lesson }: { lesson: Lesson }) {
   const showVideoTab = !!lesson.videoUrl || videoSections.length > 0
 
   return (
-    <div className="p-6 space-y-6 w-full">
+    <div className="p-6 space-y-6 w-full" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
       {lesson.coverImage && (
-        <section className="rounded-2xl overflow-hidden border border-ds-accent-strong bg-ds-surface">
+        <section className="hud-chamfer-md overflow-hidden border" style={{ borderColor: 'rgba(126,231,255,0.18)', background: '#08111f' }}>
           <div className="relative w-full h-56 md:h-72">
             <img src={lesson.coverImage} alt={lesson.title} className="w-full h-full object-cover opacity-80" />
-            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
+            <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, #03060f 0%, rgba(0,0,0,0.4) 50%, transparent 100%)' }} />
             <div className="absolute bottom-0 left-0 right-0 p-5">
-              <h2 className="text-xl md:text-2xl font-semibold text-white">{lesson.title}</h2>
+              <h2 className="text-xl md:text-2xl font-semibold" style={{ color: '#eaf6ff' }}>{lesson.title}</h2>
               {lesson.description && (
-                <p className="text-sm text-gray-300 mt-1 line-clamp-2">{lesson.description}</p>
+                <p className="text-sm mt-1 line-clamp-2" style={{ color: '#9aa8c4' }}>{lesson.description}</p>
               )}
             </div>
           </div>
@@ -55,7 +55,7 @@ export function LessonContentBody({ lesson }: { lesson: Lesson }) {
       )}
 
       {gallery.length > 0 && (
-        <section className="rounded-xl border border-ds-border bg-ds-surface p-4">
+        <section className="hud-chamfer border p-4" style={{ borderColor: 'rgba(126,231,255,0.12)', background: '#08111f' }}>
           <h3 className="text-sm font-semibold text-gray-200 mb-3">Thư viện hình ảnh</h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {gallery.map((img, idx) => (
@@ -73,7 +73,7 @@ export function LessonContentBody({ lesson }: { lesson: Lesson }) {
       {showVideoTab && (
         <div className="space-y-4">
           {lesson.videoUrl && (
-            <section className="rounded-2xl overflow-hidden border border-ds-border bg-black/60 shadow-lg">
+            <section className="hud-chamfer-md overflow-hidden border" style={{ borderColor: 'rgba(126,231,255,0.12)', background: '#08111f' }}>
               <div className="w-full aspect-video">
                 {lesson.videoUrl.includes('youtube.com') || lesson.videoUrl.includes('youtu.be') ? (
                   <iframe
@@ -93,7 +93,7 @@ export function LessonContentBody({ lesson }: { lesson: Lesson }) {
           )}
 
           {videoSections.map((sec, idx) => (
-            <section key={`${sec.title ?? 'video'}-${idx}`} className="rounded-xl border border-ds-border bg-ds-surface p-4 space-y-3">
+            <section key={`${sec.title ?? 'video'}-${idx}`} className="hud-chamfer border p-4 space-y-3" style={{ borderColor: 'rgba(126,231,255,0.12)', background: '#08111f' }}>
               <h3 className="text-white font-medium">{sec.title || `Video ${idx + 1}`}</h3>
               {sec.content && <p className="text-sm text-ds-muted">{sec.content}</p>}
               <div className="w-full aspect-video rounded-xl overflow-hidden bg-black/60 border border-ds-border">
@@ -111,7 +111,7 @@ export function LessonContentBody({ lesson }: { lesson: Lesson }) {
       {(
         <>
           {(lesson.sourcePdf || lesson.sourcePageCount != null) && (
-            <section className="rounded-lg bg-white/5 border border-ds-border p-4">
+            <section className="hud-chamfer border p-4" style={{ borderColor: 'rgba(126,231,255,0.1)', background: 'rgba(0,0,0,0.25)' }}>
               <h3 className="text-sm font-semibold text-gray-200 mb-2">Nguồn nội dung PDF</h3>
               <p className="text-sm text-ds-muted">
                 {lesson.sourcePdf ? `File: ${lesson.sourcePdf}` : 'File: không xác định'}
@@ -121,7 +121,7 @@ export function LessonContentBody({ lesson }: { lesson: Lesson }) {
           )}
 
           {learningGoals && (
-            <section className="rounded-xl bg-cyan-950/30 border border-ds-accent-strong p-5">
+            <section className="hud-chamfer border p-5" style={{ borderColor: 'rgba(126,231,255,0.2)', background: 'rgba(126,231,255,0.06)' }}>
               <h3 className="text-sm font-semibold text-ds-accent mb-2">Mục tiêu học tập</h3>
               <ul className="list-disc list-inside text-gray-200 text-sm md:text-[15px] space-y-2 leading-relaxed">
                 {lesson.learningGoals?.map((goal, i) => (
@@ -132,7 +132,7 @@ export function LessonContentBody({ lesson }: { lesson: Lesson }) {
           )}
 
           {lesson.stageTime != null && (
-            <section className="rounded-xl border border-ds-accent-strong bg-ds-surface overflow-hidden">
+            <section className="hud-chamfer-md overflow-hidden border" style={{ borderColor: 'rgba(126,231,255,0.18)', background: '#08111f' }}>
               <div className="px-4 py-3 border-b border-ds-border">
                 <h3 className="text-sm font-semibold text-ds-accent">Mô phỏng 3D trong bài học</h3>
                 <p className="text-xs text-ds-muted mt-1">
@@ -165,7 +165,8 @@ export function LessonContentBody({ lesson }: { lesson: Lesson }) {
               {readingSections.map((sec, i) => (
                 <section
                   key={`${sec.type}-${sec.title ?? 'sec'}-${i}`}
-                  className="rounded-xl border border-ds-border bg-ds-surface p-5"
+                  className="hud-chamfer border p-5"
+                  style={{ borderColor: 'rgba(126,231,255,0.12)', background: '#08111f' }}
                 >
                   <SectionPreview sec={sec} />
                 </section>
@@ -178,7 +179,7 @@ export function LessonContentBody({ lesson }: { lesson: Lesson }) {
       )}
 
       {resources.length > 0 && (
-        <details className="rounded-xl border border-ds-border bg-ds-surface overflow-hidden">
+        <details className="hud-chamfer border overflow-hidden" style={{ borderColor: 'rgba(126,231,255,0.12)', background: '#08111f' }}>
           <summary className="px-5 py-3 text-sm font-semibold text-white cursor-pointer hover:bg-white/5 transition-colors">
             Resources ({resources.length})
           </summary>

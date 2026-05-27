@@ -14,6 +14,7 @@ type Props = {
   questions: RecallQuestion[]
   passed: boolean
   onPassed: () => void
+  onQuizFailed?: () => void
   /** Khi true, không cho đóng overlay (chưa làm quiz) */
   gateActive?: boolean
 }
@@ -25,6 +26,7 @@ export function LessonRecallQuizOverlay({
   questions,
   passed,
   onPassed,
+  onQuizFailed,
   gateActive = false,
 }: Props) {
   useEffect(() => {
@@ -120,6 +122,7 @@ export function LessonRecallQuizOverlay({
                   questions={questions}
                   passed={passed}
                   onPassed={onPassed}
+                  onQuizFailed={onQuizFailed}
                   onContinue={onClose}
                 />
               </motion.div>

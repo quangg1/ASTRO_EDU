@@ -168,6 +168,12 @@ router.put('/editor', authMiddleware, requireRole('teacher', 'admin'), async (re
       doc.markModified('modules');
     }
     await doc.save();
+    try {
+      const { scheduleReindexAllLessons } = require('../../agent/services/ragIndexService');
+      scheduleReindexAllLessons();
+    } catch (e) {
+      console.warn('LP save: RAG reindex schedule skipped:', e.message);
+    }
     const fresh = await LearningPath.findOne({ slug: 'main' }).lean();
     res.json({
       success: true,

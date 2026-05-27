@@ -52,6 +52,22 @@ export interface ResourceLink {
   kind: 'video' | 'article' | 'model' | 'other'
 }
 
+export interface ModuleMaterial {
+  id: string
+  label: string
+  kind: 'pdf' | 'slides' | 'link' | 'video'
+  url: string
+  uploadedAt?: string | null
+}
+
+export interface QuizSettings {
+  revealMode?: 'after_submit' | 'after_each_question' | 'never'
+  timeLimitMinutes?: number | null
+  maxAttempts?: number | null
+  shuffleOptions?: boolean
+  passingScorePct?: number | null
+}
+
 export interface CourseModule {
   _id?: string
   title: string
@@ -59,6 +75,7 @@ export interface CourseModule {
   description?: string
   icon?: string
   order: number
+  materials?: ModuleMaterial[]
 }
 
 /** `GET /courses/:slug?outline=1` — không có payload đầy đủ của bài */
@@ -66,7 +83,7 @@ export interface CourseLessonOutline {
   title: string
   slug: string
   description?: string
-  type: 'text' | 'visualization' | 'quiz'
+  type: 'text' | 'visualization' | 'quiz' | 'assignment' | 'live_session'
   order: number
   moduleId?: string | null
   week?: number | null
@@ -79,7 +96,7 @@ export interface Lesson {
   title: string
   slug: string
   description: string
-  type: 'text' | 'visualization' | 'quiz'
+  type: 'text' | 'visualization' | 'quiz' | 'assignment' | 'live_session'
   visualizationId: string | null
   stageTime?: number | null
   videoUrl?: string | null
@@ -94,6 +111,10 @@ export interface Lesson {
   sections?: LessonSection[]
   /** Câu hỏi quiz (cho type quiz) */
   quizQuestions?: QuizQuestion[]
+  quizSettings?: QuizSettings | null
+  assignmentSettings?: { maxFiles?: number; maxBytesPerFile?: number } | null
+  meetingUrl?: string | null
+  liveScheduledAt?: string | null
   /** Tài nguyên bổ sung */
   resourceLinks?: ResourceLink[]
   /** Metadata nguồn PDF */
@@ -113,6 +134,11 @@ export interface Course {
   price?: number
   currency?: string
   isPaid?: boolean
+  /** Catalog self-paced enroll; false = chỉ cohort */
+  catalogEnabled?: boolean
+  published?: boolean
+  /** true when GV/admin xem khóa chưa publish */
+  editorPreview?: boolean
   /** Server-computed: isPaid && price > 0 */
   requiresPayment?: boolean
   modules?: CourseModule[]
@@ -127,7 +153,6 @@ export interface Course {
     enrolledAt: string
     progress: { lessonSlug: string; completed: boolean; completedAt: string | null }[]
   } | null
-  published?: boolean
 }
 
 /** Payload đầy đủ lesson từ GET /courses/:slug/editor (Studio); khác catalogue `Course.lessons` union */
@@ -183,14 +208,17 @@ export async function fetchCourses(filters?: string | FetchCoursesOpts): Promise
   }
 }
 
-/** SSR / catalog: chỉ metadata bài học — giữ payload nhẹ và tránh leak nội dung paywall */
-export async function fetchCourseOutline(slug: string): Promise<Course | null> {
+/** Landing outline (client) — có auth để GV xem khóa nháp (Studio Student View). */
+export async function fetchCourseOutline(
+  slug: string,
+): Promise<{ course: Course | null; error?: string }> {
   const res = await fetch(`${COURSES_BASE}/courses/${encodeURIComponent(slug)}?outline=1`, {
     headers: authHeaders(),
+    cache: 'no-store',
   })
   const data = await res.json()
-  if (data.success && data.data) return data.data
-  return null
+  if (data.success && data.data) return { course: data.data }
+  return { course: null, error: data.error || (res.status === 401 ? 'Phiên đăng nhập hết hạn' : undefined) }
 }
 
 /** Danh sách khóa học cho Studio (teacher/admin), gồm cả chưa publish */
@@ -255,6 +283,8 @@ export type MediaUploadPurpose =
   | 'course-thumbnail'
   | 'course-lesson'
   | 'course-block'
+  | 'course-module-material'
+  | 'assignment-staging'
   | 'showcase-entity'
   | 'learning-path-lesson'
   | 'generic'

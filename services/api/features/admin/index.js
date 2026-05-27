@@ -1,6 +1,11 @@
 const express = require('express');
 const { authMiddleware, requireRole } = require('../../shared/jwtAuth');
-const { listAdminUsers, updateAdminUserRole, updateAdminUserStatus } = require('./services/adminUserService');
+const {
+  listAdminUsers,
+  updateAdminUserRole,
+  updateAdminUserStatus,
+  deleteAdminUserPermanently,
+} = require('./services/adminUserService');
 const { listApplicationsForAdmin, reviewApplication } = require('../auth/services/teacherApplicationService');
 const { getAdminOrderOverview } = require('./services/adminOrderService');
 const User = require('../auth/models/User');
@@ -182,6 +187,31 @@ router.patch('/users/:id/status', authMiddleware, requireRole('admin'), async (r
   } catch (err) {
     req.logger?.error('admin_update_status_failed', { error: err.message, targetUserId: req.params.id });
     res.status(err.status || 500).json({ success: false, code: err.code || 'ADMIN_USER_STATUS_UPDATE_FAILED', error: err.message || 'Lỗi cập nhật trạng thái tài khoản' });
+  }
+});
+
+router.delete('/users/:id', authMiddleware, requireRole('admin'), async (req, res) => {
+  try {
+    const result = await deleteAdminUserPermanently({
+      actorUserId: req.userId,
+      targetUserId: req.params.id,
+      confirmEmail: req.body?.confirmEmail,
+      reason: req.body?.reason,
+    });
+    res.json({
+      success: true,
+      message: result.emailSent
+        ? 'Đã gửi email thông báo và xóa vĩnh viễn tài khoản.'
+        : 'Đã xóa vĩnh viễn (email thông báo chưa gửi được — môi trường dev).',
+      ...result,
+    });
+  } catch (err) {
+    req.logger?.error('admin_delete_user_failed', { error: err.message, targetUserId: req.params.id });
+    res.status(err.status || 500).json({
+      success: false,
+      code: err.code || 'ADMIN_USER_DELETE_FAILED',
+      error: err.message || 'Lỗi xóa người dùng',
+    });
   }
 });
 
@@ -490,6 +520,18 @@ router.get('/analytics/cohort', authMiddleware, requireRole('admin'), async (req
   } catch (err) {
     console.error('Admin analytics cohort error:', err);
     res.status(500).json({ success: false, error: 'Lỗi tải cohort analytics' });
+  }
+});
+
+router.get('/analytics/agent', authMiddleware, requireRole('admin'), async (req, res) => {
+  try {
+    const range = String(req.query.range || '30d');
+    const { getAgentAdminAnalytics } = require('../agent/services/adminAgentAnalyticsService');
+    const data = await getAgentAdminAnalytics({ range });
+    res.json({ success: true, ...data });
+  } catch (err) {
+    req.logger?.error('admin_analytics_agent_failed', { error: err.message });
+    res.status(500).json({ success: false, error: 'Lỗi tải agent analytics' });
   }
 });
 

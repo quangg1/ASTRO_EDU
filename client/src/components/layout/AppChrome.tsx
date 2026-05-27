@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { AppHeader } from '@/components/layout/AppHeader'
+import { AppHeader } from '@/components/ui/AppHeader'
 import { AppShell } from '@/components/layout/AppShell'
 import { useLayoutChrome } from '@/components/layout/LayoutChromeContext'
 import { PromoCampaignBar } from '@/components/promotions/PromoCampaignBar'

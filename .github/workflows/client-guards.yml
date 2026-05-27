@@ -38,4 +38,5 @@ jobs:
         run: |
           node scripts/check-import-boundaries.mjs
           node scripts/check-earth-history-ssot.mjs
+          node scripts/check-agent-tool-schema.mjs
           node scripts/check-app-public-imports.mjs

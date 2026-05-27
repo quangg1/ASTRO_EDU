@@ -5,7 +5,11 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { Eye, EyeOff, Sparkles } from 'lucide-react'
-import { register } from '@/features/auth/public'
+import {
+  register,
+  verifyRegistrationEmail,
+  resendRegistrationVerification,
+} from '@/features/auth/public'
 import { FirebaseAuthButtons } from '@/components/auth/FirebaseAuthButtons'
 import { getStaticAssetUrl } from '@/lib/apiConfig'
 import { useAuthStore } from '@/features/auth/public'
@@ -61,12 +65,18 @@ export default function RegisterPage() {
   const [displayName, setDisplayName] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
+  const [info, setInfo] = useState('')
   const [loading, setLoading] = useState(false)
+  const [phase, setPhase] = useState<'form' | 'verify'>('form')
+  const [pendingEmail, setPendingEmail] = useState('')
+  const [verifyCode, setVerifyCode] = useState('')
+  const [devCode, setDevCode] = useState<string | null>(null)
   const setUser = useAuthStore((s) => s.setUser)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
+    setInfo('')
     if (password.length < 6) {
       setError(viText.auth.passwordMinLength)
       return
@@ -74,13 +84,68 @@ export default function RegisterPage() {
     setLoading(true)
     try {
       const res = await register(email, password, displayName || undefined)
-      if (res.success && res.user) {
+      if (res.success && 'needsVerification' in res && res.needsVerification) {
+        setPendingEmail(res.email)
+        setPhase('verify')
+        setInfo(
+          res.message ||
+            'Chúng tôi đã gửi mã 6 số tới email của bạn. Nhập mã để hoàn tất đăng ký.',
+        )
+        if (res.devVerificationCode) setDevCode(res.devVerificationCode)
+        return
+      }
+      if (res.success && 'user' in res && res.user) {
         trackEvent('register_success', { provider: 'local' })
         setUser(res.user)
         router.push('/dashboard')
         return
       }
-      setError(res.error || viText.auth.registerFailed)
+      setError('error' in res ? res.error || viText.auth.registerFailed : viText.auth.registerFailed)
+    } catch {
+      setError(viText.auth.networkError)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleVerify = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError('')
+    setInfo('')
+    const code = verifyCode.trim().replace(/\s/g, '')
+    if (code.length !== 6) {
+      setError('Nhập đủ 6 chữ số trong email.')
+      return
+    }
+    setLoading(true)
+    try {
+      const res = await verifyRegistrationEmail(pendingEmail, code)
+      if (res.success && res.user) {
+        trackEvent('register_success', { provider: 'local', email_verified: true })
+        setUser(res.user)
+        router.push('/dashboard')
+        return
+      }
+      setError(res.error || 'Mã không hợp lệ hoặc đã hết hạn.')
+    } catch {
+      setError(viText.auth.networkError)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleResend = async () => {
+    setError('')
+    setInfo('')
+    setLoading(true)
+    try {
+      const res = await resendRegistrationVerification(pendingEmail)
+      if (res.success) {
+        setInfo('Đã gửi lại mã — kiểm tra email (cả thư rác).')
+        if (res.devVerificationCode) setDevCode(res.devVerificationCode)
+      } else {
+        setError(res.error || 'Không gửi lại được mã')
+      }
     } catch {
       setError(viText.auth.networkError)
     } finally {
@@ -227,10 +292,83 @@ export default function RegisterPage() {
               <div className="flex-1 h-[2px] bg-gradient-to-l from-transparent via-white/20 to-white/20" />
             </div>
 
+            {phase === 'verify' ? (
+              <form onSubmit={handleVerify} className="flex flex-col gap-6">
+                {error && (
+                  <div className="p-3 rounded-xl bg-red-500/20 text-red-300 text-sm border border-red-400/30">
+                    {error}
+                  </div>
+                )}
+                {info && (
+                  <div className="p-3 rounded-xl bg-emerald-500/15 text-emerald-200 text-sm border border-emerald-400/30">
+                    {info}
+                  </div>
+                )}
+                <p className="text-sm text-white/80">
+                  Mã xác nhận đã gửi tới <strong className="text-white">{pendingEmail}</strong>
+                </p>
+                <div className="flex flex-col gap-[4px] w-full">
+                  <label className="font-[Poppins,sans-serif] text-white/80 text-[16px]">
+                    Mã xác nhận (6 số)
+                  </label>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    maxLength={6}
+                    value={verifyCode}
+                    onChange={(e) => setVerifyCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    placeholder="000000"
+                    required
+                    className="h-[56px] w-full rounded-[12px] bg-white/10 backdrop-blur-md border border-white/20 px-4 text-white text-center text-2xl tracking-[0.4em] font-mono placeholder:text-white/30 focus:outline-none focus:border-amber-400/60"
+                  />
+                </div>
+                {devCode && (
+                  <p className="text-xs text-amber-200/90 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 font-mono">
+                    Dev (SMTP tắt): {devCode}
+                  </p>
+                )}
+                <motion.button
+                  type="submit"
+                  disabled={loading}
+                  whileHover={{ scale: loading ? 1 : 1.02 }}
+                  whileTap={{ scale: loading ? 1 : 0.98 }}
+                  className="h-[56px] w-full rounded-[28px] bg-gradient-to-r from-amber-500 via-orange-500 to-orange-600 text-white font-medium disabled:opacity-50"
+                >
+                  {loading ? 'Đang xác nhận…' : 'Xác nhận & vào Cosmo Learn'}
+                </motion.button>
+                <button
+                  type="button"
+                  disabled={loading}
+                  onClick={() => void handleResend()}
+                  className="text-sm text-cyan-400 hover:text-cyan-300 disabled:opacity-50"
+                >
+                  Gửi lại mã
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPhase('form')
+                    setVerifyCode('')
+                    setDevCode(null)
+                    setError('')
+                    setInfo('')
+                  }}
+                  className="text-sm text-white/60 hover:text-white"
+                >
+                  ← Sửa email / đăng ký lại
+                </button>
+              </form>
+            ) : (
             <form onSubmit={handleSubmit} className="flex flex-col gap-6">
               {error && (
                 <div className="p-3 rounded-xl bg-red-500/20 text-red-300 text-sm border border-red-400/30">
                   {error}
+                </div>
+              )}
+              {info && (
+                <div className="p-3 rounded-xl bg-emerald-500/15 text-emerald-200 text-sm border border-emerald-400/30">
+                  {info}
                 </div>
               )}
 
@@ -318,6 +456,7 @@ export default function RegisterPage() {
                 </p>
               </div>
             </form>
+            )}
           </motion.div>
         </div>
       </div>

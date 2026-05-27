@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { usePathname, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
@@ -37,6 +38,14 @@ import { useAuthStore } from '@/features/auth/public'
 import { SectionPreview } from '@/components/studio/LessonPreview'
 import { applyConceptAnchorsToHtml } from '@/features/concepts/public'
 import { trackEvent } from '@/lib/analytics'
+import {
+  AgentCoachBanner,
+  AgentPageProvider,
+  buildSessionContext,
+  openCosmoAssistant,
+  postSpacedReviewComplete,
+  useAgentCoach,
+} from '@/features/agent/public'
 import { CommunityAskButton } from '@/components/community/learning/CommunityAskButton'
 import { LessonRelatedQuestions } from '@/components/community/learning/LessonRelatedQuestions'
 type Props = {
@@ -67,6 +76,8 @@ export default function LearningLessonView({
 }: Props) {
   const { modules: hookModules, concepts: hookConcepts } = useLearningPath()
   const userId = useAuthStore((s) => s.user?.id ?? null)
+  const pathname = usePathname()
+  const router = useRouter()
   const modules = modulesProp ?? hookModules
   const concepts = conceptsProp ?? hookConcepts
   const hit = getLessonById(initialLesson.id, modules)
@@ -98,14 +109,31 @@ export default function LearningLessonView({
   const mastered = isLessonMastered(mastery, lesson.id)
 
   const recallQuestions = useMemo(() => normalizeStudioRecallQuiz(lesson), [lesson])
-  const recallGateActive = recallQuestions.length >= 3
 
-  const openRecallQuiz = () => {
+  const coach = useAgentCoach({
+    lessonId: lesson.id,
+    lessonTitle: lesson.titleVi,
+    enabled: Boolean(userId),
+  })
+
+  const recallGateActive = recallQuestions.length >= 3
+  const [agentCoachTrigger, setAgentCoachTrigger] = useState<'quiz_failed' | null>(null)
+
+  const openRecallQuiz = useCallback(() => {
     if (recallQuestions.length === 0 || mastered) return
     setQuizOverlayOpen(true)
-  }
+  }, [recallQuestions.length, mastered])
+
+  useEffect(() => {
+    const onOpenRecall = () => openRecallQuiz()
+    window.addEventListener('galaxies:open-recall-quiz', onOpenRecall)
+    return () => window.removeEventListener('galaxies:open-recall-quiz', onOpenRecall)
+  }, [openRecallQuiz])
 
   const handleRecallPassed = () => {
+    setAgentCoachTrigger(null)
+    void coach.reportQuizPassed()
+    void postSpacedReviewComplete(lesson.id)
     const wasMastered = isLessonMastered(mastery, lesson.id)
     const next = setLessonMastered(mastery, lesson.id, true)
     setMastery(next)
@@ -219,6 +247,71 @@ export default function LearningLessonView({
     }
     return groups
   }, [sectionNavItems])
+
+  const activeSectionContext = useMemo(() => {
+    if (!activeSectionId) return null
+    const idx = sectionNavItems.findIndex((s) => s.id === activeSectionId)
+    if (idx < 0) return null
+    const nav = sectionNavItems[idx]
+    const sec = highlightedSections[idx] as { html?: string; content?: string; body?: string }
+    const raw = sec?.html || sec?.content || sec?.body || ''
+    const excerpt = raw
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 500)
+    return {
+      activeSectionId: nav.id,
+      activeSectionTitle: nav.title,
+      activeSectionExcerpt: excerpt,
+    }
+  }, [activeSectionId, sectionNavItems, highlightedSections])
+
+  const agentSessionContext = useMemo(
+    () =>
+      buildSessionContext({
+        pathname: pathname || '',
+        surface: 'learning_path',
+        lessonId: lesson.id,
+        lessonTitle: lesson.titleVi,
+        moduleId: displayModule.id,
+        nodeId: displayNode.id,
+        depth,
+        coachTrigger: agentCoachTrigger,
+        recallQuizAvailable: recallGateActive && !mastered,
+        ...activeSectionContext,
+      }),
+    [
+      pathname,
+      lesson.id,
+      lesson.titleVi,
+      displayModule.id,
+      displayNode.id,
+      depth,
+      agentCoachTrigger,
+      recallGateActive,
+      mastered,
+      activeSectionContext,
+    ],
+  )
+
+  const handleSuggestDepth = useCallback(
+    (suggested: DepthLevel, reason: string) => {
+      const pool = displayNode.depths?.[suggested] ?? []
+      const match =
+        pool.find((l) => l.titleVi === lesson.titleVi || l.title === lesson.title) || pool[0]
+      if (!match?.id) return
+      void import('@/features/agent/api/agentApi').then(({ postDepthPreference }) =>
+        postDepthPreference(suggested),
+      )
+      window.alert(`${reason}\n\nChuyển sang mức ${DEPTH_META[suggested].labelVi}…`)
+      router.push(
+        `/tutorial/${encodeURIComponent(displayModule.id)}/${encodeURIComponent(displayNode.id)}/${encodeURIComponent(match.id)}`,
+      )
+    },
+    [displayModule.id, displayNode, lesson.title, lesson.titleVi, router],
+  )
+
   const relatedLessonsForActiveConcept = useMemo(() => {
     if (!activeConceptId) return []
     const rows: Array<{
@@ -339,6 +432,7 @@ export default function LearningLessonView({
         lessonId: lesson.id,
         depth,
         durationSec,
+        activeSec: durationSec,
       })
       void flushLearningPathBehavior()
     }
@@ -454,6 +548,19 @@ export default function LearningLessonView({
   }, [activeSectionId])
 
   return (
+    <AgentPageProvider
+      value={{
+        sessionContext: agentSessionContext,
+        learnerSnapshot: {
+          recentLessonIds: [lesson.id],
+          weakLessons: coach.snapshot?.weakLessons,
+          misconceptions: coach.snapshot?.misconceptions,
+          spacedReviewDue: coach.snapshot?.spacedReviewDue,
+          depthSuggestion: coach.snapshot?.depthSuggestion ?? null,
+        },
+        onSuggestDepth: handleSuggestDepth,
+      }}
+    >
     <div className="min-h-screen bg-ds-base relative overflow-x-hidden">
       <div
         className="pointer-events-none fixed inset-0 opacity-25"
@@ -488,6 +595,17 @@ export default function LearningLessonView({
           <span className="text-ds-muted truncate">Bài học</span>
         </nav>
 
+        {userId && coach.nudge?.allowed ? (
+          <AgentCoachBanner
+            nudge={coach.nudge}
+            onDismiss={() => void coach.dismiss()}
+            onOpenAgent={coach.openAgent}
+            onChip={(action) => {
+              if (action === 'recall_quiz') setQuizOverlayOpen(true)
+            }}
+          />
+        ) : null}
+
         <motion.header
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -509,6 +627,19 @@ export default function LearningLessonView({
           </h1>
           {lesson.title ? <p className="text-ds-muted text-sm md:text-base">{lesson.title}</p> : null}
           <div className="mt-4 flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() =>
+                openCosmoAssistant({
+                  prompt: activeSectionContext?.activeSectionTitle
+                    ? `Giải thích giúp tôi mục "${activeSectionContext.activeSectionTitle}" trong bài "${lesson.titleVi}".`
+                    : `Giải thích giúp tôi bài "${lesson.titleVi}" — tóm tắt ý chính.`,
+                })
+              }
+              className="inline-flex items-center justify-center rounded-xl border border-cyan-500/35 bg-cyan-500/10 px-4 py-2 text-sm text-cyan-100 transition-colors hover:bg-cyan-500/20"
+            >
+              Hỏi CosmoLearn AI
+            </button>
             <CommunityAskButton
               variant="compact"
               context={{
@@ -949,9 +1080,14 @@ export default function LearningLessonView({
           questions={recallQuestions}
           passed={mastered}
           onPassed={handleRecallPassed}
+          onQuizFailed={() => {
+            setAgentCoachTrigger('quiz_failed')
+            void coach.reportQuizFailed()
+          }}
           gateActive={recallGateActive}
         />
       ) : null}
     </div>
+    </AgentPageProvider>
   )
 }

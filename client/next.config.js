@@ -23,6 +23,7 @@ const UNIFIED_API_ROUTE_SEGMENTS = [
   'comments',
   'news',
   'admin',
+  'agent',
 ];
 
 function trimEndSlash(s) {

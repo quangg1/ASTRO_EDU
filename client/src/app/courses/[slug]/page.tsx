@@ -7,7 +7,7 @@ export default async function CourseSlugPage({
   searchParams,
 }: {
   params: { slug: string }
-  searchParams?: { lesson?: string; enrolled?: string; checkout?: string }
+  searchParams?: { lesson?: string; enrolled?: string; checkout?: string; cohortPlaced?: string; preview?: string }
 }) {
   const { slug } = params
 
@@ -15,19 +15,22 @@ export default async function CourseSlugPage({
     redirect(`/courses/${slug}/learn/${encodeURIComponent(searchParams.lesson.trim())}`)
   }
 
+  const preview = searchParams?.preview === '1'
   const outline = await fetchCourseOutlineServer(slug)
   if (searchParams?.checkout === '1' && outline?.isPaid && (outline.price ?? 0) > 0 && !outline.enrollment) {
     redirect(`/courses/${slug}/checkout`)
   }
-  if (!outline) {
+  if (!outline && !preview) {
     notFound()
   }
 
   return (
     <CourseLandingClient
       slug={slug}
-      initialCourse={outline}
+      initialCourse={outline ?? undefined}
+      previewBootstrap={preview && !outline}
       enrolledFlash={searchParams?.enrolled === '1'}
+      cohortPlacedFlash={searchParams?.cohortPlaced === '1'}
     />
   )
 }

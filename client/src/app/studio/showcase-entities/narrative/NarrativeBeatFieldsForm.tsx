@@ -86,6 +86,7 @@ export function NarrativeBeatFieldsForm({ entityId, beat, schema, onChange }: Pr
           <SectionFields
             key={section.id}
             section={section}
+            entityId={entityId}
             beat={beat}
             patchPath={patchPath}
           />
@@ -97,10 +98,12 @@ export function NarrativeBeatFieldsForm({ entityId, beat, schema, onChange }: Pr
 
 function SectionFields({
   section,
+  entityId,
   beat,
   patchPath,
 }: {
   section: NarrativePanelSection
+  entityId: string
   beat: NarrativeBeat
   patchPath: (path: string, value: unknown) => void
 }) {
@@ -200,7 +203,7 @@ function SectionFields({
                   value={String(value ?? '')}
                   onChange={(url) => patchPath(slot.path, url)}
                   accept="image/*"
-                  uploadContext={beatMediaContext(entityId, beat.id, slot.path)}
+                  uploadContext={beatMediaContext(entityId, String(beat.id), slot.path)}
                 />
               </div>
             )

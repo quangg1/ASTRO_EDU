@@ -30,18 +30,30 @@ async function authMiddleware(req, res, next) {
   }
 }
 
-function optionalAuth(req, res, next) {
+/** Giống authMiddleware nhưng không bắt buộc token — role luôn đọc từ DB (JWT có thể cũ). */
+async function optionalAuth(req, res, next) {
   const authHeader = req.headers.authorization;
   const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
-  if (token) {
-    const payload = verifyToken(token);
-    if (payload) {
-      req.userId = payload.sub;
-      req.user = payload;
-      req.userRole = payload.role || 'student';
-    }
+  if (!token) {
+    return next();
   }
-  next();
+  const payload = verifyToken(token);
+  if (!payload) {
+    return next();
+  }
+  try {
+    const user = await User.findById(payload.sub).select('role accountStatus');
+    if (!user || user.accountStatus === 'deactivated') {
+      return next();
+    }
+    req.userDoc = user;
+    req.userId = payload.sub;
+    req.user = payload;
+    req.userRole = user.role || payload.role || 'student';
+    next();
+  } catch (error) {
+    next(error);
+  }
 }
 
 function requireRole(...roles) {

@@ -49,7 +49,7 @@ export function ExploreSceneCanvas({
   handleShowcaseCameraSettled,
 }: Props) {
   return (
-    <div className="canvas-container">
+    <div className="canvas-container explore-scene-canvas">
       <Suspense fallback={<Loading />}>
         {sceneMode === 'earth' ? (
           <EarthScene />
