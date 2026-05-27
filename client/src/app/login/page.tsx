@@ -4,7 +4,7 @@ import { Suspense, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { motion } from 'framer-motion'
-import { Eye, EyeOff, Sparkles } from 'lucide-react'
+import { Eye, EyeOff, Sparkles, Mail, Lock } from 'lucide-react'
 import { login } from '@/lib/authApi'
 import { FirebaseAuthButtons } from '@/components/auth/FirebaseAuthButtons'
 import { getStaticAssetUrl } from '@/lib/apiConfig'
@@ -120,12 +120,36 @@ function LoginPageContent() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3, duration: 0.8 }}
+            className="flex flex-col gap-6"
           >
-            <h1 className="font-[Poppins,sans-serif] font-semibold text-[56px] text-white leading-[64px] mb-4">
-              Khám phá vũ trụ
-            </h1>
-            <p className="font-[Poppins,sans-serif] text-[20px] text-white/90 max-w-[500px] leading-relaxed">
-              Cosmo Learn — học thiên văn qua mô phỏng 3D tương tác. Tham gia cộng đồng và bắt đầu khám phá sao, hành tinh và thiên hà.
+            {/* Chamfered eyebrow pill with mini orbit icon */}
+            <span
+              className="hud-chamfer-sm hud-mono hud-mono-md inline-flex items-center gap-2.5 self-start px-3.5 py-2 text-[color:var(--hud-plasma)]"
+              style={{
+                background: 'rgba(126,231,255,0.06)',
+                border: '2px solid rgba(126,231,255,0.25)',
+              }}
+            >
+              <svg className="size-4 shrink-0" viewBox="0 0 24 24" fill="none" aria-hidden>
+                <circle cx="12" cy="12" r="9.5" stroke="currentColor" strokeWidth="1" opacity="0.4" />
+                <circle cx="12" cy="12" r="5.5" stroke="currentColor" strokeWidth="1" opacity="0.6" />
+                <circle cx="12" cy="12" r="2" fill="var(--hud-amber)" />
+                <circle cx="17.5" cy="12" r="1.2" fill="currentColor" />
+              </svg>
+              // ASTRONOMY OBSERVATORY
+            </span>
+
+            <h1
+              className="hud-em font-heading text-[56px] xl:text-[72px] 2xl:text-[clamp(56px,6vw,96px)] font-medium leading-[0.95] tracking-[-0.035em] text-white"
+              dangerouslySetInnerHTML={{
+                __html: 'Khám phá <em>vũ trụ</em>',
+              }}
+            />
+
+            <p className="text-white/70 text-[16px] max-w-[500px] leading-[1.6]">
+              <span className="font-semibold text-white">Cosmo Learn</span>
+              <span className="text-white/50"> — </span>
+              học thiên văn qua mô phỏng 3D tương tác. Tham gia cộng đồng và bắt đầu khám phá sao, hành tinh và thiên hà.
             </p>
           </motion.div>
         </div>
@@ -133,17 +157,13 @@ function LoginPageContent() {
 
       {/* Right - Auth Form */}
       <div className="w-full lg:w-1/2 relative overflow-y-auto">
-        <motion.div
-          className="absolute inset-0 bg-gradient-to-br from-slate-950 via-amber-950/50 to-slate-950"
-          animate={{
-            background: [
-              'linear-gradient(135deg, #0a0a0f 0%, #422006 48%, #0a0a0f 100%)',
-              'linear-gradient(135deg, #0a0a0f 0%, #3d2a0a 48%, #0a0a0f 100%)',
-              'linear-gradient(135deg, #0a0a0f 0%, #451a03 48%, #0a0a0f 100%)',
-              'linear-gradient(135deg, #0a0a0f 0%, #422006 48%, #0a0a0f 100%)',
-            ],
+        {/* Deep-space background (HUD) */}
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            background:
+              'radial-gradient(900px 600px at 85% -10%, rgba(245,165,36,0.10), transparent 60%), radial-gradient(700px 500px at 10% 30%, rgba(126,231,255,0.06), transparent 60%), #03060f',
           }}
-          transition={{ duration: 18, repeat: Infinity, ease: 'easeInOut' }}
         />
 
         {/* Animated stars */}
@@ -193,14 +213,19 @@ function LoginPageContent() {
           animate={{ opacity: 1, y: 0 }}
           className="hidden sm:block absolute top-6 sm:top-12 right-4 sm:right-12 z-20"
         >
-          <p className="font-[Poppins,sans-serif] text-[16px] text-white/80">
+          <p className="font-[JetBrains_Mono,monospace] text-[11px] uppercase tracking-[0.22em] text-[#9aa8c4]">
             Bạn mới ở đây?{' '}
             <Link
               href="/register"
-              className="inline-flex items-center gap-1 text-white font-medium underline hover:text-amber-300 transition-colors"
+              className="inline-flex items-center gap-1 text-[#7ee7ff] font-medium transition-all"
+              style={{
+                textDecoration: 'underline',
+                textDecorationColor: 'rgba(126,231,255,0.4)',
+                textUnderlineOffset: '3px',
+              }}
             >
               Đăng ký
-              <Sparkles className="size-4" />
+              <Sparkles className="size-3.5" />
             </Link>
           </p>
         </motion.div>
@@ -213,102 +238,186 @@ function LoginPageContent() {
         {/* Form */}
         <div className="relative z-10 flex items-center justify-center min-h-screen p-4 sm:p-8 lg:p-16">
           <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
+            initial={{ opacity: 0, scale: 0.96 }}
             animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.5 }}
-            className="w-full max-w-[568px] flex flex-col gap-8 sm:gap-12 pt-16 sm:pt-0"
+            transition={{ duration: 0.6 }}
+            className="relative w-full max-w-[568px] pt-16 sm:pt-0"
           >
-            <h2 className="font-[Poppins,sans-serif] font-medium text-[30px] sm:text-[40px] text-white">
-              {viText.auth.welcomeBack}
-            </h2>
+            {/* HUD panel wrapper */}
+            <div
+              className="relative flex flex-col gap-7 sm:gap-8 px-6 py-8 sm:px-10 sm:py-12"
+              style={{
+                background: 'rgba(6,9,26,0.45)',
+                border: '1px solid rgba(126,231,255,0.22)',
+                boxShadow: 'inset 0 0 80px rgba(126,231,255,0.04)',
+                clipPath:
+                  'polygon(22px 0, 100% 0, 100% calc(100% - 22px), calc(100% - 22px) 100%, 0 100%, 0 22px)',
+              }}
+            >
+              {/* 4 corner brackets */}
+              <span aria-hidden className="absolute top-2 left-2 w-[18px] h-[18px]" style={{ borderTop: '1px solid #7ee7ff', borderLeft: '1px solid #7ee7ff' }} />
+              <span aria-hidden className="absolute top-2 right-2 w-[18px] h-[18px]" style={{ borderTop: '1px solid #7ee7ff', borderRight: '1px solid #7ee7ff' }} />
+              <span aria-hidden className="absolute bottom-2 left-2 w-[18px] h-[18px]" style={{ borderBottom: '1px solid #7ee7ff', borderLeft: '1px solid #7ee7ff' }} />
+              <span aria-hidden className="absolute bottom-2 right-2 w-[18px] h-[18px]" style={{ borderBottom: '1px solid #7ee7ff', borderRight: '1px solid #7ee7ff' }} />
 
-            <div className="flex flex-col gap-4">
-              <FirebaseAuthButtons redirectTo={redirectTo} />
-            </div>
-
-            <div className="flex items-center gap-6">
-              <div className="flex-1 h-[2px] bg-gradient-to-r from-transparent via-white/20 to-white/20" />
-              <span className="font-medium text-[18px] text-white/60">HOẶC</span>
-              <div className="flex-1 h-[2px] bg-gradient-to-l from-transparent via-white/20 to-white/20" />
-            </div>
-
-            <form onSubmit={handleSubmit} className="flex flex-col gap-6">
-              {error && (
-                <div className="p-3 rounded-xl bg-red-500/20 text-red-300 text-sm border border-red-400/30">
-                  {error}
-                </div>
-              )}
-
-              <div className="flex flex-col gap-[4px] w-full">
-                <label className="font-[Poppins,sans-serif] text-white/80 text-[16px]">
-                  Email
-                </label>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Nhập email của bạn"
-                  required
-                  className="h-[56px] w-full rounded-[12px] bg-white/10 backdrop-blur-md border border-white/20 px-4 text-white placeholder:text-white/40 focus:outline-none focus:border-amber-400/60 focus:bg-white/15 transition-all duration-300"
-                />
-              </div>
-
-              <div className="flex flex-col gap-2">
-                <div className="flex items-center justify-between">
-                  <label className="font-[Poppins,sans-serif] text-white/80 text-[16px]">
-                    Mật khẩu
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="flex items-center gap-2 text-white/60 hover:text-white/80 transition-colors text-[14px]"
-                  >
-                    {showPassword ? (
-                      <><EyeOff className="size-4" /> Ẩn</>
-                    ) : (
-                      <><Eye className="size-4" /> Hiện</>
-                    )}
-                  </button>
-                </div>
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Nhập mật khẩu"
-                  required
-                  className="h-[56px] w-full rounded-[12px] bg-white/10 backdrop-blur-md border border-white/20 px-4 text-white placeholder:text-white/40 focus:outline-none focus:border-amber-400/60 focus:bg-white/15 transition-all duration-300"
-                />
-              </div>
-
-              <motion.button
-                type="submit"
-                disabled={loading}
-                whileHover={{ scale: loading ? 1 : 1.02, boxShadow: loading ? 'none' : '0 0 40px rgba(245, 166, 35, 0.45)' }}
-                whileTap={{ scale: loading ? 1 : 0.98 }}
-                className="h-[56px] sm:h-[64px] w-full rounded-[28px] sm:rounded-[32px] bg-gradient-to-r from-amber-500 via-orange-500 to-orange-600 hover:from-amber-400 hover:via-orange-400 hover:to-orange-500 text-white font-[Poppins,sans-serif] text-[18px] sm:text-[20px] font-medium transition-all duration-300 relative overflow-hidden group disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <motion.div
-                  className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0"
-                  animate={{ x: ['-100%', '100%'] }}
-                  transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}
-                />
-                <span className="relative z-10">
-                  {loading ? 'Đang đăng nhập...' : viText.auth.signIn}
+              {/* Eyebrow */}
+              <div className="inline-flex items-center gap-3">
+                <span aria-hidden className="block w-8 h-px bg-[#7ee7ff]/60" />
+                <span className="font-[JetBrains_Mono,monospace] text-[11px] uppercase tracking-[0.22em] text-[#5c6886]">
+                  // authenticate / 01
                 </span>
-              </motion.button>
-
-              <div className="lg:hidden text-center">
-                <p className="font-[Poppins,sans-serif] text-[16px] text-white/80">
-                  Bạn mới ở đây?{' '}
-                  <Link
-                    href="/register"
-                    className="text-white font-medium underline hover:text-amber-300"
-                  >
-                    Đăng ký
-                  </Link>
-                </p>
               </div>
-            </form>
+
+              {/* Heading */}
+              <h2
+                className="font-[Space_Grotesk,sans-serif] text-white leading-[1.02]"
+                style={{
+                  fontSize: 'clamp(36px, 4vw, 56px)',
+                  letterSpacing: '-0.03em',
+                  fontWeight: 500,
+                }}
+                dangerouslySetInnerHTML={{
+                  __html: viText.auth.welcomeBack.replace(
+                    /(trở lại|back)/i,
+                    '<em style="font-style:italic;font-weight:300;color:#f5a524">$1</em>'
+                  ),
+                }}
+              />
+
+              <div className="flex flex-col gap-3">
+                <FirebaseAuthButtons redirectTo={redirectTo} />
+              </div>
+
+              {/* Divider HOẶC */}
+              <div className="flex items-center gap-4">
+                <div className="flex-1 h-px bg-[rgba(126,231,255,0.14)]" />
+                <span className="font-[JetBrains_Mono,monospace] text-[11px] uppercase tracking-[0.28em] text-[#5c6886]">
+                  HOẶC
+                </span>
+                <div className="flex-1 h-px bg-[rgba(126,231,255,0.14)]" />
+              </div>
+
+              <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+                {error && (
+                  <div
+                    className="px-4 py-3 text-sm text-red-200"
+                    style={{
+                      background: 'rgba(239,68,68,0.1)',
+                      border: '1px solid rgba(239,68,68,0.4)',
+                      clipPath:
+                        'polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px)',
+                    }}
+                  >
+                    {error}
+                  </div>
+                )}
+
+                {/* Email */}
+                <div className="flex flex-col gap-2 w-full">
+                  <label className="font-[JetBrains_Mono,monospace] text-[11px] uppercase tracking-[0.2em] text-white">
+                    Email
+                  </label>
+                  <div
+                    className="input-row flex items-center gap-3 px-4 h-[52px] focus-within:!border-[#7ee7ff] transition-all"
+                    style={{
+                      background: 'rgba(10,16,36,0.85)',
+                      border: '1px solid rgba(126,231,255,0.14)',
+                      clipPath:
+                        'polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px)',
+                    }}
+                  >
+                    <Mail className="size-[15px] text-[#5c6886] shrink-0" strokeWidth={1.6} aria-hidden />
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="Nhập email của bạn"
+                      required
+                      className="flex-1 bg-transparent border-0 outline-none font-[Space_Grotesk,sans-serif] text-[14px] text-[#eaf6ff] placeholder:text-[#5c6886]"
+                    />
+                  </div>
+                </div>
+
+                {/* Password */}
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center justify-between">
+                    <label className="font-[JetBrains_Mono,monospace] text-[11px] uppercase tracking-[0.2em] text-white">
+                      Mật khẩu
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="inline-flex items-center gap-1.5 font-[JetBrains_Mono,monospace] text-[10px] uppercase tracking-[0.18em] text-white hover:text-[#7ee7ff] transition-colors"
+                    >
+                      {showPassword ? (
+                        <><EyeOff className="size-[13px] text-white" strokeWidth={1.6} /> Ẩn</>
+                      ) : (
+                        <><Eye className="size-[13px] text-white" strokeWidth={1.6} /> Hiện</>
+                      )}
+                    </button>
+                  </div>
+                  <div
+                    className="input-row flex items-center gap-3 px-4 h-[52px] focus-within:!border-[#7ee7ff] transition-all"
+                    style={{
+                      background: 'rgba(10,16,36,0.85)',
+                      border: '1px solid rgba(126,231,255,0.14)',
+                      clipPath:
+                        'polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px)',
+                    }}
+                  >
+                    <Lock className="size-[15px] text-[#5c6886] shrink-0" strokeWidth={1.6} aria-hidden />
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="Nhập mật khẩu"
+                      required
+                      className="flex-1 bg-transparent border-0 outline-none font-[Space_Grotesk,sans-serif] text-[14px] text-[#eaf6ff] placeholder:text-[#5c6886]"
+                    />
+                  </div>
+                </div>
+
+                {/* Submit */}
+                <motion.button
+                  type="submit"
+                  disabled={loading}
+                  whileHover={{ y: loading ? 0 : -1, boxShadow: loading ? 'none' : '0 0 0 1px rgba(245,165,36,0.6), 0 16px 44px -10px rgba(245,165,36,0.7)' }}
+                  whileTap={{ scale: loading ? 1 : 0.98 }}
+                  className="relative inline-flex items-center justify-center gap-2 w-full px-7 py-[18px] mt-1 font-[Space_Grotesk,sans-serif] text-[15px] uppercase tracking-[0.16em] transition-all disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden group"
+                  style={{
+                    background: 'linear-gradient(180deg, #ffd27a, #f5a524 60%, #d8901c)',
+                    color: '#1a0e00',
+                    fontWeight: 600,
+                    boxShadow: '0 0 0 1px rgba(245,165,36,0.5), 0 12px 36px -10px rgba(245,165,36,0.55)',
+                    clipPath:
+                      'polygon(14px 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%, 0 14px)',
+                  }}
+                >
+                  <motion.div
+                    className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/25 to-white/0"
+                    animate={{ x: ['-100%', '100%'] }}
+                    transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}
+                  />
+                  <span className="relative z-10">
+                    {loading ? 'Đang đăng nhập...' : viText.auth.signIn}
+                  </span>
+                  <span className="relative z-10 font-[JetBrains_Mono,monospace] text-[14px]" aria-hidden>→</span>
+                </motion.button>
+
+                <div className="lg:hidden text-center">
+                  <p className="font-[JetBrains_Mono,monospace] text-[11px] uppercase tracking-[0.22em] text-[#9aa8c4]">
+                    Bạn mới ở đây?{' '}
+                    <Link
+                      href="/register"
+                      className="text-[#7ee7ff] font-medium"
+                      style={{ textDecoration: 'underline', textDecorationColor: 'rgba(126,231,255,0.4)', textUnderlineOffset: '3px' }}
+                    >
+                      Đăng ký
+                    </Link>
+                  </p>
+                </div>
+              </form>
+            </div>
           </motion.div>
         </div>
       </div>

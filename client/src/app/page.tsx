@@ -6,15 +6,18 @@ import { TestimonialsSection } from '@/components/landing/TestimonialsSection'
 import { CTASection } from '@/components/landing/CTASection'
 import { LandingFooter } from '@/components/landing/LandingFooter'
 import { HudAtmosphere } from '@/components/landing/HudAtmosphere'
-import { fetchPublicCoursesServer } from '@/lib/server/coursesServer'
+import { fetchPublicCoursesServer, fetchLearningPathModulesServer } from '@/lib/server/coursesServer'
 
 export default async function HomePage() {
-  const courses = await fetchPublicCoursesServer()
+  const [courses, modules] = await Promise.all([
+    fetchPublicCoursesServer(),
+    fetchLearningPathModulesServer(),
+  ])
   return (
     <main className="min-h-screen bg-cosmic relative isolate">
       <HudAtmosphere />
       <HeroSection />
-      <CategoriesSection />
+      <CategoriesSection modules={modules} />
       <CoursesSection courses={courses} loading={false} />
       <StatsSection />
       <TestimonialsSection />

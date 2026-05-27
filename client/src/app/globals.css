@@ -466,3 +466,24 @@ body.explore-cockpit-fullscreen [data-mobile-bottom-nav] {
   .hud-sun-pulse { animation: none !important; }
   .hud-reveal { opacity: 1; transform: none; filter: none; transition: none; }
 }
+
+/* ── Dashboard HUD styles ─────────────────────────────────── */
+.dash-font { font-family: 'Space Grotesk', sans-serif; }
+.dash-mono { font-family: 'JetBrains Mono', monospace; }
+
+.dash-nav-item:hover {
+  background: rgba(126,231,255,0.05) !important;
+  color: #eaf6ff !important;
+  border-color: rgba(126,231,255,0.15) !important;
+}
+
+@keyframes dash-scan {
+  0%   { transform: translateY(-100vh); }
+  100% { transform: translateY(200vh); }
+}
+.dash-scanline {
+  animation: dash-scan 12s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .dash-scanline { animation: none; }
+}

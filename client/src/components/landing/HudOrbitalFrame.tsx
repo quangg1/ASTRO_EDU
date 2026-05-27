@@ -15,7 +15,7 @@ export function HudOrbitalFrame({ children, className = '' }: HudOrbitalFramePro
         style={{
           background:
             'linear-gradient(135deg, rgba(10,16,36,0.6) 0%, rgba(3,6,15,0.4) 100%)',
-          border: '1px solid rgba(126,231,255,0.25)',
+          border: '2px solid rgba(126,231,255,0.25)',
           boxShadow: '0 0 60px rgba(126,231,255,0.08), inset 0 0 40px rgba(126,231,255,0.05)',
         }}
       >

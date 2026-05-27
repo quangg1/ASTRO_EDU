@@ -2,19 +2,9 @@
 
 import { motion } from 'framer-motion'
 import Link from 'next/link'
-import { Orbit, Sun, Moon, Rocket, Globe, Sparkles, Star, Telescope, ArrowUpRight } from 'lucide-react'
+import { ArrowUpRight } from 'lucide-react'
 import { SectionEyebrow } from './SectionEyebrow'
-
-const categories = [
-  { icon: Sun, name: 'Hệ Mặt Trời', count: 45, href: '/topics/solar-system', feature: true },
-  { icon: Star, name: 'Ngôi sao & Chòm sao', count: 38, href: '/topics/stars-constellations' },
-  { icon: Globe, name: 'Hành tinh ngoài', count: 27, href: '/topics/exoplanets' },
-  { icon: Orbit, name: 'Vật lý thiên thể', count: 52, href: '/topics/astrophysics' },
-  { icon: Rocket, name: 'Khám phá không gian', count: 33, href: '/topics/space-exploration' },
-  { icon: Sparkles, name: 'Thiên hà & Tinh vân', count: 41, href: '/topics/galaxies-nebulae' },
-  { icon: Moon, name: 'Quan sát bầu trời', count: 29, href: '/topics/stargazing' },
-  { icon: Telescope, name: 'Kính thiên văn', count: 18, href: '/topics/telescopes' },
-]
+import type { LearningModule } from '@/data/learningPathCurriculum'
 
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.07 } } }
 const item = {
@@ -22,7 +12,7 @@ const item = {
   show: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.5, ease: 'easeOut' as const } },
 }
 
-export function CategoriesSection() {
+export function CategoriesSection({ modules }: { modules: LearningModule[] }) {
   return (
     <section id="categories" className="py-20 md:py-28 relative">
       <div className="container mx-auto px-4 sm:px-6 max-w-[1440px]">
@@ -44,10 +34,10 @@ export function CategoriesSection() {
             </p>
           </div>
           <Link
-            href="/topics"
+            href="/tutorial"
             className="hud-mono hud-mono-md inline-flex items-center gap-2 text-[color:var(--hud-plasma)] hover:text-white transition-colors self-start md:self-end"
           >
-            Xem toàn bộ chủ đề →
+            Xem lộ trình học →
           </Link>
         </motion.div>
 
@@ -57,13 +47,14 @@ export function CategoriesSection() {
           initial="hidden"
           whileInView="show"
           viewport={{ once: true }}
-          className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3"
+          className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4"
         >
-          {categories.map((cat, i) => {
+          {modules.map((mod, i) => {
             const num = String(i + 1).padStart(2, '0')
-            const isFeature = cat.feature
+            const isFeature = i === 0
+            const nodeCount = mod.nodes?.length ?? 0
             return (
-              <Link key={cat.name} href={cat.href}>
+              <Link key={mod.id} href={`/tutorial/${mod.id}`}>
                 <motion.div
                   variants={item}
                   whileHover={{ y: -3 }}
@@ -94,9 +85,9 @@ export function CategoriesSection() {
                     {num}
                   </span>
 
-                  {/* Icon */}
+                  {/* Emoji icon */}
                   <div
-                    className="hud-chamfer-sm flex h-[46px] w-[46px] items-center justify-center mt-4"
+                    className="hud-chamfer-sm flex h-[46px] w-[46px] items-center justify-center mt-4 text-2xl"
                     style={{
                       background: isFeature ? 'rgba(245,165,36,0.15)' : 'rgba(126,231,255,0.06)',
                       border: isFeature
@@ -104,18 +95,15 @@ export function CategoriesSection() {
                         : '1px solid rgba(126,231,255,0.2)',
                     }}
                   >
-                    <cat.icon
-                      className="h-5 w-5"
-                      style={{ color: isFeature ? 'var(--hud-amber)' : 'var(--hud-plasma)' }}
-                    />
+                    {mod.emoji}
                   </div>
 
                   {/* Title + meta */}
                   <div className="mt-auto">
                     <h3 className="font-heading font-semibold text-white text-[15px] mb-1 leading-snug">
-                      {cat.name}
+                      {mod.titleVi || mod.title}
                     </h3>
-                    <p className="hud-mono hud-mono-sm text-white/40">{cat.count} khóa học</p>
+                    <p className="hud-mono hud-mono-sm text-white/40">{nodeCount} node</p>
                   </div>
 
                   {/* Arrow */}

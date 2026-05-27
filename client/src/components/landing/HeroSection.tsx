@@ -89,7 +89,7 @@ export function HeroSection() {
               className="hud-chamfer-md flex items-center gap-3 w-full px-5 py-4 text-left text-sm text-white/45 transition-all"
               style={{
                 background: 'rgba(6,9,26,0.7)',
-                border: '1px solid rgba(126,231,255,0.2)',
+                border: '2px solid rgba(126,231,255,0.2)',
               }}
             >
               <Search className="w-4 h-4 text-[color:var(--hud-plasma)]/70 shrink-0" aria-hidden />
@@ -115,7 +115,7 @@ export function HeroSection() {
                 className="hud-chamfer-sm inline-flex items-center px-3.5 py-1.5 text-xs text-white/70 transition-all hover:text-white"
                 style={{
                   background: 'rgba(126,231,255,0.04)',
-                  border: '1px solid rgba(126,231,255,0.16)',
+                  border: '2px solid rgba(126,231,255,0.16)',
                 }}
               >
                 {chip.label}
@@ -147,7 +147,7 @@ export function HeroSection() {
               className="hud-chamfer group inline-flex items-center justify-center gap-3 px-7 py-4 text-sm font-semibold text-white transition-all"
               style={{
                 background: 'rgba(126,231,255,0.06)',
-                border: '1px solid rgba(126,231,255,0.3)',
+                border: '2px solid rgba(126,231,255,0.3)',
               }}
             >
               <Play className="h-4 w-4 text-[color:var(--hud-plasma)]" />

@@ -16,9 +16,39 @@ import {
 } from '@/lib/conceptsApi'
 import { fetchEditorLearningPath } from '@/lib/learningPathApi'
 
+// ─── UI constants ─────────────────────────────────────────────────────────────
 const inputCls =
-  'w-full rounded-lg bg-black/50 border border-white/15 px-3 py-2 text-white text-sm focus:border-cyan-500/50 focus:outline-none transition-colors'
+  'w-full bg-[#060b18] border border-[rgba(126,231,255,0.15)] px-3 py-2 text-[#eaf6ff] text-sm focus:border-[rgba(126,231,255,0.5)] focus:outline-none transition-colors placeholder:text-[#5c6886]'
 
+const chf = (cut = 14): React.CSSProperties => ({
+  clipPath: `polygon(${cut}px 0,100% 0,100% calc(100% - ${cut}px),calc(100% - ${cut}px) 100%,0 100%,0 ${cut}px)`,
+})
+
+const panelStyle = (glowColor = 'rgba(126,231,255,0.18)'): React.CSSProperties => ({
+  border: `1px solid ${glowColor}`,
+  boxShadow: `0 0 24px -8px ${glowColor}`,
+  ...chf(14),
+})
+
+function CornerBrackets({
+  size = 14,
+  color = 'rgba(126,231,255,0.55)',
+}: {
+  size?: number
+  color?: string
+}) {
+  const b: React.CSSProperties = { position: 'absolute', width: size, height: size }
+  return (
+    <>
+      <span style={{ ...b, top: 10, left: 10, borderTop: `1.5px solid ${color}`, borderLeft: `1.5px solid ${color}` }} />
+      <span style={{ ...b, top: 10, right: 10, borderTop: `1.5px solid ${color}`, borderRight: `1.5px solid ${color}` }} />
+      <span style={{ ...b, bottom: 10, left: 10, borderBottom: `1.5px solid ${color}`, borderLeft: `1.5px solid ${color}` }} />
+      <span style={{ ...b, bottom: 10, right: 10, borderBottom: `1.5px solid ${color}`, borderRight: `1.5px solid ${color}` }} />
+    </>
+  )
+}
+
+// ─── Logic helpers (unchanged) ─────────────────────────────────────────────────
 function slugifyConceptId(raw: string): string {
   return raw
     .trim()
@@ -102,6 +132,7 @@ function buildUsage(modules: LearningModule[]): UsageRow[] {
   return out
 }
 
+// ─── Page component ────────────────────────────────────────────────────────────
 export default function StudioConceptsPage() {
   const router = useRouter()
   const { user, checked } = useAuthStore()
@@ -368,96 +399,314 @@ export default function StudioConceptsPage() {
   }
 
   if (!checked || !user) {
-    return <div className="min-h-screen bg-black pt-20 px-4 text-gray-400">Đang kiểm tra đăng nhập...</div>
+    return (
+      <div
+        className="min-h-screen pt-20 px-4 flex items-center justify-center"
+        style={{ background: '#03060f' }}
+      >
+        <p
+          className="text-xs tracking-[0.2em] uppercase"
+          style={{ fontFamily: 'JetBrains Mono, monospace', color: '#5c6886' }}
+        >
+          // verifying credentials...
+        </p>
+      </div>
+    )
   }
 
+  // ─── Render ──────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-[#050508] pt-14 pb-10 px-3 md:px-6">
-      <div className="max-w-6xl mx-auto space-y-4">
-        <nav className="text-sm">
-          <Link href="/studio" className="text-cyan-400 hover:text-cyan-300">
+    <div
+      className="min-h-screen pt-14 pb-16 px-3 md:px-6"
+      style={{ background: 'linear-gradient(135deg,#03060f 0%,#050c1a 60%,#03060f 100%)' }}
+    >
+      {/* Google Fonts */}
+      {/* eslint-disable-next-line @next/next/no-page-custom-font */}
+      <link
+        href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500&display=swap"
+        rel="stylesheet"
+      />
+
+      {/* Subtle grid overlay */}
+      <div
+        aria-hidden
+        style={{
+          position: 'fixed',
+          inset: 0,
+          backgroundImage:
+            'linear-gradient(rgba(255,255,255,0.018) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.018) 1px,transparent 1px)',
+          backgroundSize: '80px 80px',
+          maskImage: 'radial-gradient(ellipse 80% 80% at 50% 50%,black 40%,transparent 100%)',
+          pointerEvents: 'none',
+          zIndex: 0,
+        }}
+      />
+
+      <div className="max-w-6xl mx-auto space-y-5 relative" style={{ zIndex: 1 }}>
+
+        {/* Breadcrumb */}
+        <nav className="flex items-center gap-2">
+          <Link
+            href="/studio"
+            className="text-xs transition-colors"
+            style={{
+              fontFamily: 'JetBrains Mono, monospace',
+              color: '#7ee7ff',
+              letterSpacing: '0.1em',
+            }}
+          >
             ← Studio
           </Link>
+          <span style={{ color: '#5c6886', fontSize: 11 }}>/</span>
+          <span
+            className="text-xs"
+            style={{
+              fontFamily: 'JetBrains Mono, monospace',
+              color: '#5c6886',
+              letterSpacing: '0.1em',
+            }}
+          >
+            concepts
+          </span>
         </nav>
 
-        <header className="rounded-2xl border border-white/10 bg-gradient-to-r from-cyan-950/40 to-violet-950/30 px-4 py-4 md:px-6 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-          <div>
-            <h1 className="text-xl md:text-2xl font-bold text-white">Concept Studio</h1>
-            <p className="text-xs text-slate-400 mt-1">
-              Tạo và quản lý thư viện concept dùng chung toàn hệ thống. Lesson chỉ map bằng concept id.
-            </p>
+        {/* ── HEADER PANEL ──────────────────────────────────────────────────── */}
+        <header
+          className="relative px-5 py-5 md:px-7"
+          style={{
+            background: 'linear-gradient(135deg,rgba(0,24,48,0.85) 0%,rgba(4,8,20,0.9) 100%)',
+            ...panelStyle('rgba(126,231,255,0.28)'),
+          }}
+        >
+          <CornerBrackets size={16} />
+
+          {/* Eyebrow */}
+          <p
+            className="mb-2 text-[10px] uppercase tracking-[0.22em]"
+            style={{ fontFamily: 'JetBrains Mono, monospace', color: '#7ee7ff' }}
+          >
+            // concept.studio · knowledge management
+          </p>
+
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            <div>
+              <h1
+                className="text-2xl md:text-3xl font-medium"
+                style={{ fontFamily: 'Space Grotesk, sans-serif', color: '#eaf6ff', letterSpacing: '-0.02em' }}
+              >
+                Concept{' '}
+                <em style={{ fontStyle: 'italic', fontWeight: 300, color: '#f5a524' }}>Studio</em>
+              </h1>
+              <p
+                className="mt-1 text-xs"
+                style={{ fontFamily: 'JetBrains Mono, monospace', color: '#5c6886', letterSpacing: '0.05em' }}
+              >
+                Tạo và quản lý thư viện concept dùng chung toàn hệ thống · lesson chỉ map bằng concept id
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              {/* Ghost button — Learning Path */}
+              <Link
+                href="/studio/learning-path"
+                className="text-xs px-4 py-2 inline-flex items-center gap-2 transition-all"
+                style={{
+                  fontFamily: 'JetBrains Mono, monospace',
+                  color: '#7ee7ff',
+                  border: '1px solid rgba(126,231,255,0.3)',
+                  letterSpacing: '0.05em',
+                  ...chf(8),
+                  boxShadow: '0 0 12px -4px rgba(126,231,255,0)',
+                }}
+                onMouseEnter={(e) => {
+                  ;(e.currentTarget as HTMLElement).style.boxShadow = '0 0 16px -4px rgba(126,231,255,0.4)'
+                  ;(e.currentTarget as HTMLElement).style.borderColor = 'rgba(126,231,255,0.7)'
+                }}
+                onMouseLeave={(e) => {
+                  ;(e.currentTarget as HTMLElement).style.boxShadow = '0 0 12px -4px rgba(126,231,255,0)'
+                  ;(e.currentTarget as HTMLElement).style.borderColor = 'rgba(126,231,255,0.3)'
+                }}
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                  <path d="M5 12h14M12 5l7 7-7 7" />
+                </svg>
+                Learning Path
+              </Link>
+
+              {/* Primary amber button — Save */}
+              <button
+                type="button"
+                onClick={save}
+                disabled={saving || loading}
+                className="text-xs px-5 py-2 font-medium transition-all disabled:opacity-40"
+                style={{
+                  fontFamily: 'JetBrains Mono, monospace',
+                  background: saving || loading ? '#6b4a10' : '#f5a524',
+                  color: '#1a0e00',
+                  letterSpacing: '0.05em',
+                  boxShadow: saving || loading ? 'none' : '0 0 20px -4px rgba(245,165,36,0.6)',
+                  ...chf(8),
+                }}
+              >
+                {saving ? '// saving...' : 'Lưu Concept Library'}
+              </button>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Link
-              href="/studio/learning-path"
-              className="text-xs min-h-10 px-3 inline-flex items-center rounded-lg border border-white/15 text-slate-200 hover:bg-white/10"
-            >
-              Đi tới Learning Path mapping
-            </Link>
-            <button
-              type="button"
-              onClick={save}
-              disabled={saving || loading}
-              className="text-xs min-h-10 px-3 rounded-lg bg-cyan-600 text-white hover:bg-cyan-500 disabled:opacity-50"
-            >
-              {saving ? 'Đang lưu...' : 'Lưu Concept Library'}
-            </button>
-          </div>
+
+          {/* Bottom-right label */}
+          <span
+            className="absolute bottom-3 right-7 text-[10px]"
+            style={{
+              fontFamily: 'JetBrains Mono, monospace',
+              color: 'rgba(126,231,255,0.35)',
+              letterSpacing: '0.12em',
+            }}
+          >
+            {concepts.length} concepts loaded
+          </span>
         </header>
 
-        {message ? <p className="text-sm text-emerald-400/90">{message}</p> : null}
-        <section className="rounded-2xl border border-white/10 bg-[#0b1220]/70 p-4 space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-sm font-semibold text-cyan-100">Taxonomy Registry</h2>
-            <p className="text-[11px] text-slate-400">Domain/Subdomain chỉ tạo tại đây</p>
+        {/* ── MESSAGE ───────────────────────────────────────────────────────── */}
+        {message ? (
+          <div
+            className="px-4 py-2 flex items-center gap-3"
+            style={{
+              background: 'rgba(109,255,176,0.06)',
+              border: '1px solid rgba(109,255,176,0.3)',
+              ...chf(8),
+            }}
+          >
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#6dffb0', flexShrink: 0, display: 'inline-block', boxShadow: '0 0 8px #6dffb0' }} />
+            <p
+              className="text-xs"
+              style={{ fontFamily: 'JetBrains Mono, monospace', color: '#6dffb0', letterSpacing: '0.05em' }}
+            >
+              {message}
+            </p>
           </div>
+        ) : null}
+
+        {/* ── TAXONOMY REGISTRY ─────────────────────────────────────────────── */}
+        <section
+          className="relative p-5 space-y-4"
+          style={{
+            background: 'rgba(6,11,24,0.8)',
+            ...panelStyle('rgba(126,231,255,0.18)'),
+          }}
+        >
+          {/* Section eyebrow */}
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <p
+                className="text-[10px] uppercase tracking-[0.2em] mb-1"
+                style={{ fontFamily: 'JetBrains Mono, monospace', color: '#7ee7ff' }}
+              >
+                // 01 · taxonomy-registry
+              </p>
+              <h2
+                className="text-sm font-medium"
+                style={{ fontFamily: 'Space Grotesk, sans-serif', color: '#eaf6ff' }}
+              >
+                Domain &amp; Subdomain{' '}
+                <em style={{ fontStyle: 'italic', fontWeight: 300, color: '#f5a524' }}>Registry</em>
+              </h2>
+            </div>
+            <p
+              className="text-[10px] uppercase tracking-[0.15em]"
+              style={{ fontFamily: 'JetBrains Mono, monospace', color: '#5c6886' }}
+            >
+              domain/subdomain chỉ tạo tại đây
+            </p>
+          </div>
+
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-            <div className="rounded-lg border border-white/10 bg-black/25 p-3 space-y-2">
-              <p className="text-xs text-slate-300">Thêm domain</p>
+            {/* Domain panel */}
+            <div
+              className="p-3 space-y-2"
+              style={{
+                background: 'rgba(0,0,0,0.35)',
+                border: '1px solid rgba(126,231,255,0.1)',
+                ...chf(10),
+              }}
+            >
+              <p
+                className="text-[10px] uppercase tracking-[0.15em]"
+                style={{ fontFamily: 'JetBrains Mono, monospace', color: '#9aa8c4' }}
+              >
+                + Thêm domain
+              </p>
               <div className="flex gap-2">
                 <input
                   value={registryDomainName}
                   onChange={(e) => setRegistryDomainName(e.target.value)}
                   placeholder="vd: space-missions"
                   className={`${inputCls} flex-1`}
+                  style={{ fontFamily: 'JetBrains Mono, monospace' }}
                 />
                 <button
                   type="button"
                   onClick={addRegistryDomain}
-                  className="rounded-lg border border-cyan-500/40 px-3 text-xs text-cyan-200 hover:bg-cyan-500/10"
+                  className="px-3 text-xs transition-all"
+                  style={{
+                    fontFamily: 'JetBrains Mono, monospace',
+                    border: '1px solid rgba(126,231,255,0.35)',
+                    color: '#7ee7ff',
+                    ...chf(6),
+                  }}
                 >
                   Thêm
                 </button>
               </div>
-              <div className="max-h-[130px] overflow-y-auto space-y-1">
+              <div className="max-h-[130px] overflow-y-auto space-y-1 pr-1">
                 {domainOptions.map((domain) => (
-                  <div key={`registry-domain-${domain}`} className="flex items-center justify-between text-xs">
+                  <div key={`registry-domain-${domain}`} className="flex items-center justify-between text-xs py-0.5">
                     <button
                       type="button"
                       onClick={() => setRegistryDomainTarget(domain)}
-                      className={`text-left ${
-                        registryDomainTarget === domain ? 'text-cyan-200' : 'text-slate-300 hover:text-white'
-                      }`}
+                      className="text-left transition-colors flex items-center gap-1.5"
+                      style={{
+                        fontFamily: 'JetBrains Mono, monospace',
+                        color: registryDomainTarget === domain ? '#7ee7ff' : '#9aa8c4',
+                      }}
                     >
+                      {registryDomainTarget === domain && (
+                        <span style={{ width: 4, height: 4, borderRadius: '50%', background: '#7ee7ff', display: 'inline-block' }} />
+                      )}
                       {domain}
                     </button>
                     <button
                       type="button"
                       onClick={() => removeRegistryDomain(domain)}
-                      className="text-rose-300 hover:text-rose-200"
+                      className="text-[10px] transition-colors"
+                      style={{ fontFamily: 'JetBrains Mono, monospace', color: '#ff5cd4' }}
                     >
-                      Xóa
+                      ×
                     </button>
                   </div>
                 ))}
               </div>
             </div>
-            <div className="rounded-lg border border-white/10 bg-black/25 p-3 space-y-2">
-              <p className="text-xs text-slate-300">Thêm subdomain</p>
+
+            {/* Subdomain panel */}
+            <div
+              className="p-3 space-y-2"
+              style={{
+                background: 'rgba(0,0,0,0.35)',
+                border: '1px solid rgba(126,231,255,0.1)',
+                ...chf(10),
+              }}
+            >
+              <p
+                className="text-[10px] uppercase tracking-[0.15em]"
+                style={{ fontFamily: 'JetBrains Mono, monospace', color: '#9aa8c4' }}
+              >
+                + Thêm subdomain
+              </p>
               <select
                 value={registryDomainTarget}
                 onChange={(e) => setRegistryDomainTarget(e.target.value)}
                 className={inputCls}
+                style={{ fontFamily: 'JetBrains Mono, monospace' }}
               >
                 {domainOptions.map((domain) => (
                   <option key={`registry-domain-opt-${domain}`} value={domain}>
@@ -471,28 +720,43 @@ export default function StudioConceptsPage() {
                   onChange={(e) => setRegistrySubdomainName(e.target.value)}
                   placeholder="vd: telescope-observation"
                   className={`${inputCls} flex-1`}
+                  style={{ fontFamily: 'JetBrains Mono, monospace' }}
                 />
                 <button
                   type="button"
                   onClick={addRegistrySubdomain}
-                  className="rounded-lg border border-cyan-500/40 px-3 text-xs text-cyan-200 hover:bg-cyan-500/10"
+                  className="px-3 text-xs transition-all"
+                  style={{
+                    fontFamily: 'JetBrains Mono, monospace',
+                    border: '1px solid rgba(126,231,255,0.35)',
+                    color: '#7ee7ff',
+                    ...chf(6),
+                  }}
                 >
                   Thêm
                 </button>
               </div>
-              <div className="max-h-[130px] overflow-y-auto space-y-1">
+              <div className="max-h-[130px] overflow-y-auto space-y-1 pr-1">
                 {(taxonomyRegistry[registryDomainTarget] || []).map((subdomain) => (
                   <div
                     key={`registry-subdomain-${registryDomainTarget}-${subdomain}`}
-                    className="flex items-center justify-between text-xs"
+                    className="flex items-center justify-between text-xs py-0.5"
                   >
-                    <span className="text-slate-300">{subdomain}</span>
+                    <span
+                      style={{
+                        fontFamily: 'JetBrains Mono, monospace',
+                        color: '#9aa8c4',
+                      }}
+                    >
+                      {subdomain}
+                    </span>
                     <button
                       type="button"
                       onClick={() => removeRegistrySubdomain(registryDomainTarget, subdomain)}
-                      className="text-rose-300 hover:text-rose-200"
+                      className="text-[10px] transition-colors"
+                      style={{ fontFamily: 'JetBrains Mono, monospace', color: '#ff5cd4' }}
                     >
-                      Xóa
+                      ×
                     </button>
                   </div>
                 ))}
@@ -500,23 +764,96 @@ export default function StudioConceptsPage() {
             </div>
           </div>
         </section>
+
+        {/* ── UNCLASSIFIED WARNING ───────────────────────────────────────────── */}
         {unclassifiedCount > 0 ? (
-          <p className="text-xs text-amber-300/90">
-            Có {unclassifiedCount} concept chưa gán đủ taxonomy (domain/subdomain).
-          </p>
+          <div
+            className="px-4 py-2 flex items-center gap-3"
+            style={{
+              background: 'rgba(245,165,36,0.06)',
+              border: '1px solid rgba(245,165,36,0.3)',
+              ...chf(8),
+            }}
+          >
+            <span
+              style={{
+                width: 6,
+                height: 6,
+                borderRadius: '50%',
+                background: '#f5a524',
+                flexShrink: 0,
+                display: 'inline-block',
+                boxShadow: '0 0 8px #f5a524',
+                animation: 'pulse 2s ease-in-out infinite',
+              }}
+            />
+            <p
+              className="text-xs"
+              style={{ fontFamily: 'JetBrains Mono, monospace', color: '#f5a524', letterSpacing: '0.05em' }}
+            >
+              {unclassifiedCount} concept chưa gán đủ taxonomy (domain/subdomain)
+            </p>
+          </div>
         ) : null}
+
+        {/* ── UNCLASSIFIED QUEUE ────────────────────────────────────────────── */}
         {unclassifiedConcepts.length > 0 && (
-          <section className="rounded-2xl border border-amber-500/30 bg-amber-500/5 p-4 space-y-3">
+          <section
+            className="relative p-5 space-y-4"
+            style={{
+              background: 'rgba(24,12,0,0.7)',
+              border: '1px solid rgba(245,165,36,0.3)',
+              boxShadow: '0 0 24px -8px rgba(245,165,36,0.2)',
+              ...chf(14),
+            }}
+          >
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <h2 className="text-sm font-semibold text-amber-200">Unclassified Queue</h2>
-              <span className="text-[11px] text-amber-300/80">{unclassifiedConcepts.length} cần phân loại</span>
+              <div>
+                <p
+                  className="text-[10px] uppercase tracking-[0.2em] mb-1"
+                  style={{ fontFamily: 'JetBrains Mono, monospace', color: '#f5a524' }}
+                >
+                  // 02 · unclassified-queue
+                </p>
+                <h2
+                  className="text-sm font-medium flex items-center gap-2"
+                  style={{ fontFamily: 'Space Grotesk, sans-serif', color: '#ffd27a' }}
+                >
+                  <span
+                    style={{
+                      width: 6,
+                      height: 6,
+                      borderRadius: '50%',
+                      background: '#f5a524',
+                      display: 'inline-block',
+                      boxShadow: '0 0 8px #f5a524',
+                    }}
+                  />
+                  Unclassified{' '}
+                  <em style={{ fontStyle: 'italic', fontWeight: 300, color: '#f5a524' }}>Queue</em>
+                </h2>
+              </div>
+              <span
+                className="text-xs px-3 py-1"
+                style={{
+                  fontFamily: 'JetBrains Mono, monospace',
+                  color: '#f5a524',
+                  border: '1px solid rgba(245,165,36,0.35)',
+                  ...chf(6),
+                  background: 'rgba(245,165,36,0.08)',
+                }}
+              >
+                {unclassifiedConcepts.length} pending
+              </span>
             </div>
+
             {activeQueueConcept && (
               <>
                 <select
                   value={activeQueueConcept.id}
                   onChange={(e) => setQueueConceptId(e.target.value)}
                   className={inputCls}
+                  style={{ fontFamily: 'JetBrains Mono, monospace' }}
                 >
                   {unclassifiedConcepts.map((c) => (
                     <option key={c.id} value={c.id}>
@@ -524,13 +861,27 @@ export default function StudioConceptsPage() {
                     </option>
                   ))}
                 </select>
-                <div className="rounded-lg border border-white/10 bg-black/25 p-2">
+
+                <div
+                  className="p-3"
+                  style={{
+                    background: 'rgba(0,0,0,0.3)',
+                    border: '1px solid rgba(245,165,36,0.15)',
+                    ...chf(8),
+                  }}
+                >
                   <div className="flex items-center justify-between mb-2">
-                    <p className="text-[11px] text-slate-400">Chọn concept áp dụng cùng lúc</p>
+                    <p
+                      className="text-[10px] uppercase tracking-[0.15em]"
+                      style={{ fontFamily: 'JetBrains Mono, monospace', color: '#9aa8c4' }}
+                    >
+                      Chọn concept áp dụng cùng lúc
+                    </p>
                     <button
                       type="button"
                       onClick={() => setQueueSelectedIds(unclassifiedConcepts.map((c) => c.id))}
-                      className="text-[10px] text-cyan-300 hover:text-cyan-100"
+                      className="text-[10px] transition-colors"
+                      style={{ fontFamily: 'JetBrains Mono, monospace', color: '#7ee7ff' }}
                     >
                       Chọn tất cả
                     </button>
@@ -539,7 +890,7 @@ export default function StudioConceptsPage() {
                     {unclassifiedConcepts.map((c) => {
                       const checked = queueSelectedIds.includes(c.id)
                       return (
-                        <label key={`queue-select-${c.id}`} className="flex items-center gap-2 text-xs text-slate-200">
+                        <label key={`queue-select-${c.id}`} className="flex items-center gap-2 text-xs cursor-pointer">
                           <input
                             type="checkbox"
                             checked={checked}
@@ -548,8 +899,9 @@ export default function StudioConceptsPage() {
                                 e.target.checked ? [...new Set([...prev, c.id])] : prev.filter((id) => id !== c.id),
                               )
                             }
+                            style={{ accentColor: '#f5a524' }}
                           />
-                          <span>
+                          <span style={{ fontFamily: 'JetBrains Mono, monospace', color: '#9aa8c4', fontSize: 11 }}>
                             {c.id} — {c.title || c.id}
                           </span>
                         </label>
@@ -557,15 +909,42 @@ export default function StudioConceptsPage() {
                     })}
                   </div>
                 </div>
-                <div className="rounded-xl border border-white/10 bg-black/30 p-3">
-                  <p className="text-xs text-cyan-200">#{activeQueueConcept.id}</p>
-                  <p className="text-sm text-white font-medium">{activeQueueConcept.title || activeQueueConcept.id}</p>
-                  <p className="text-[11px] text-slate-400 mt-1">
+
+                <div
+                  className="p-3"
+                  style={{
+                    background: 'rgba(0,0,0,0.4)',
+                    border: '1px solid rgba(245,165,36,0.2)',
+                    ...chf(10),
+                  }}
+                >
+                  <p
+                    className="text-[10px] mb-1"
+                    style={{ fontFamily: 'JetBrains Mono, monospace', color: '#7ee7ff' }}
+                  >
+                    #{activeQueueConcept.id}
+                  </p>
+                  <p
+                    className="text-sm font-medium"
+                    style={{ fontFamily: 'Space Grotesk, sans-serif', color: '#eaf6ff' }}
+                  >
+                    {activeQueueConcept.title || activeQueueConcept.id}
+                  </p>
+                  <p
+                    className="mt-1 text-xs leading-relaxed"
+                    style={{ color: '#5c6886', fontFamily: 'Space Grotesk, sans-serif' }}
+                  >
                     {activeQueueConcept.short_description || activeQueueConcept.explanation || 'Không có mô tả'}
                   </p>
                 </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                  <select value={queueDomain} onChange={(e) => setQueueDomain(e.target.value)} className={inputCls}>
+                  <select
+                    value={queueDomain}
+                    onChange={(e) => setQueueDomain(e.target.value)}
+                    className={inputCls}
+                    style={{ fontFamily: 'JetBrains Mono, monospace' }}
+                  >
                     {domainOptions.map((d) => (
                       <option key={d} value={d}>
                         {d}
@@ -576,6 +955,7 @@ export default function StudioConceptsPage() {
                     value={queueSubdomain}
                     onChange={(e) => setQueueSubdomain(e.target.value)}
                     className={inputCls}
+                    style={{ fontFamily: 'JetBrains Mono, monospace' }}
                   >
                     {queueSubdomainOptions.length === 0 && <option value="">(không có subdomain)</option>}
                     {queueSubdomainOptions.map((d) => (
@@ -585,18 +965,35 @@ export default function StudioConceptsPage() {
                     ))}
                   </select>
                 </div>
+
                 <div className="flex flex-wrap gap-2">
                   <button
                     type="button"
                     onClick={applyQueueTaxonomy}
-                    className="rounded-lg bg-amber-600 text-white text-xs font-medium px-3 py-2 hover:bg-amber-500"
+                    className="text-xs font-medium px-4 py-2 transition-all"
+                    style={{
+                      fontFamily: 'JetBrains Mono, monospace',
+                      background: '#f5a524',
+                      color: '#1a0e00',
+                      boxShadow: '0 0 16px -4px rgba(245,165,36,0.5)',
+                      letterSpacing: '0.05em',
+                      ...chf(8),
+                    }}
                   >
                     Áp dụng cho concept đã chọn
                   </button>
                   <button
                     type="button"
                     onClick={applyQueueTaxonomyToSimilar}
-                    className="rounded-lg border border-amber-500/40 text-amber-200 text-xs font-medium px-3 py-2 hover:bg-amber-500/10"
+                    className="text-xs font-medium px-4 py-2 transition-all"
+                    style={{
+                      fontFamily: 'JetBrains Mono, monospace',
+                      color: '#ffd27a',
+                      border: '1px solid rgba(245,165,36,0.4)',
+                      background: 'rgba(245,165,36,0.06)',
+                      letterSpacing: '0.05em',
+                      ...chf(8),
+                    }}
                   >
                     Áp dụng cho concept tương tự
                   </button>
@@ -606,49 +1003,91 @@ export default function StudioConceptsPage() {
           </section>
         )}
 
+        {/* ── LOADING STATE ─────────────────────────────────────────────────── */}
         {loading ? (
-          <p className="text-slate-500 py-12 text-center">Đang tải...</p>
+          <div className="py-16 text-center">
+            <p
+              className="text-xs tracking-[0.2em] uppercase"
+              style={{ fontFamily: 'JetBrains Mono, monospace', color: '#5c6886' }}
+            >
+              // loading concept library...
+            </p>
+          </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-[340px,1fr] gap-4">
-            <section className="rounded-2xl border border-white/10 bg-[#0c1018] p-4 space-y-3">
-              <h2 className="text-sm font-semibold text-white">Tạo concept mới</h2>
+
+            {/* ── CREATE CONCEPT PANEL ──────────────────────────────────────── */}
+            <section
+              className="relative p-4 space-y-3"
+              style={{
+                background: 'rgba(6,11,24,0.85)',
+                ...panelStyle('rgba(126,231,255,0.15)'),
+              }}
+            >
+              <div>
+                <p
+                  className="text-[10px] uppercase tracking-[0.2em] mb-1"
+                  style={{ fontFamily: 'JetBrains Mono, monospace', color: '#7ee7ff' }}
+                >
+                  // 03 · new-concept
+                </p>
+                <h2
+                  className="text-sm font-medium"
+                  style={{ fontFamily: 'Space Grotesk, sans-serif', color: '#eaf6ff' }}
+                >
+                  Tạo concept{' '}
+                  <em style={{ fontStyle: 'italic', fontWeight: 300, color: '#f5a524' }}>mới</em>
+                </h2>
+              </div>
+
               <input
                 value={newConceptId}
                 onChange={(e) => setNewConceptId(slugifyConceptId(e.target.value))}
                 placeholder="concept_id (vd: scientific_method)"
                 className={inputCls}
+                style={{ fontFamily: 'JetBrains Mono, monospace' }}
               />
               <input
                 value={newConceptTitle}
                 onChange={(e) => setNewConceptTitle(e.target.value)}
                 placeholder="title (vd: Quỹ đạo)"
                 className={inputCls}
+                style={{ fontFamily: 'Space Grotesk, sans-serif' }}
               />
               <input
                 value={newConceptShortDescription}
                 onChange={(e) => setNewConceptShortDescription(e.target.value)}
                 placeholder="short_description"
                 className={inputCls}
+                style={{ fontFamily: 'Space Grotesk, sans-serif' }}
               />
               <textarea
                 value={newConceptExplanation}
                 onChange={(e) => setNewConceptExplanation(e.target.value)}
                 placeholder="explanation"
-                className={`${inputCls} min-h-[100px]`}
+                className={`${inputCls} min-h-[100px] resize-y`}
+                style={{ fontFamily: 'Space Grotesk, sans-serif' }}
               />
               <input
                 value={newConceptExamples}
                 onChange={(e) => setNewConceptExamples(e.target.value)}
                 placeholder='examples (phân tách bởi "|")'
                 className={inputCls}
+                style={{ fontFamily: 'Space Grotesk, sans-serif' }}
               />
               <input
                 value={newConceptRelated}
                 onChange={(e) => setNewConceptRelated(e.target.value)}
                 placeholder='related ids (vd: gravity|velocity)'
                 className={inputCls}
+                style={{ fontFamily: 'JetBrains Mono, monospace' }}
               />
-              <select value={newConceptDomain} onChange={(e) => setNewConceptDomain(e.target.value)} className={inputCls}>
+              <select
+                value={newConceptDomain}
+                onChange={(e) => setNewConceptDomain(e.target.value)}
+                className={inputCls}
+                style={{ fontFamily: 'JetBrains Mono, monospace' }}
+              >
                 <option value="">domain (chọn)</option>
                 {domainOptions.map((d) => (
                   <option key={d} value={d}>
@@ -661,6 +1100,7 @@ export default function StudioConceptsPage() {
                 onChange={(e) => setNewConceptSubdomain(e.target.value)}
                 className={inputCls}
                 disabled={!newConceptDomain}
+                style={{ fontFamily: 'JetBrains Mono, monospace', opacity: newConceptDomain ? 1 : 0.5 }}
               >
                 <option value="">subdomain (chọn)</option>
                 {newConceptSubdomainOptions.map((d) => (
@@ -674,16 +1114,29 @@ export default function StudioConceptsPage() {
                 onChange={(e) => setNewConceptAliases(e.target.value)}
                 placeholder='aliases (vd: quỹ đạo elip|elliptical orbit)'
                 className={inputCls}
+                style={{ fontFamily: 'Space Grotesk, sans-serif' }}
               />
-              <label className="block text-xs text-slate-400">
-                Prerequisites mapping
-                <div className="mt-1 max-h-[140px] overflow-y-auto rounded-lg border border-white/15 bg-black/40 p-2 space-y-1">
+
+              <label className="block">
+                <span
+                  className="text-[10px] uppercase tracking-[0.15em]"
+                  style={{ fontFamily: 'JetBrains Mono, monospace', color: '#9aa8c4' }}
+                >
+                  Prerequisites mapping
+                </span>
+                <div
+                  className="mt-1 max-h-[140px] overflow-y-auto p-2 space-y-1"
+                  style={{
+                    background: 'rgba(0,0,0,0.4)',
+                    border: '1px solid rgba(126,231,255,0.1)',
+                  }}
+                >
                   {concepts
                     .filter((c) => c.id !== slugifyConceptId(newConceptId || newConceptTitle))
                     .map((c) => {
                       const checked = newConceptPrerequisites.includes(c.id)
                       return (
-                        <label key={`new-pr-${c.id}`} className="flex items-center gap-2 text-xs text-slate-200">
+                        <label key={`new-pr-${c.id}`} className="flex items-center gap-2 text-xs cursor-pointer">
                           <input
                             type="checkbox"
                             checked={checked}
@@ -692,13 +1145,17 @@ export default function StudioConceptsPage() {
                                 e.target.checked ? [...new Set([...prev, c.id])] : prev.filter((id) => id !== c.id),
                               )
                             }
+                            style={{ accentColor: '#7ee7ff' }}
                           />
-                          <span>{c.id} — {c.title || c.id}</span>
+                          <span style={{ fontFamily: 'JetBrains Mono, monospace', color: '#9aa8c4', fontSize: 10 }}>
+                            {c.id} — {c.title || c.id}
+                          </span>
                         </label>
                       )
                     })}
                 </div>
               </label>
+
               <button
                 type="button"
                 onClick={() => {
@@ -740,21 +1197,54 @@ export default function StudioConceptsPage() {
                   setNewConceptAliases('')
                   setNewConceptPrerequisites([])
                 }}
-                className="w-full rounded-lg bg-emerald-600/80 hover:bg-emerald-500 text-white text-xs font-medium py-2"
+                className="w-full text-xs font-medium py-2 transition-all"
+                style={{
+                  fontFamily: 'JetBrains Mono, monospace',
+                  background: 'rgba(109,255,176,0.12)',
+                  color: '#6dffb0',
+                  border: '1px solid rgba(109,255,176,0.35)',
+                  letterSpacing: '0.08em',
+                  boxShadow: '0 0 16px -6px rgba(109,255,176,0.3)',
+                  ...chf(8),
+                }}
               >
                 + Tạo concept
               </button>
             </section>
 
-            <section className="rounded-2xl border border-white/10 bg-[#0a0f17] p-4">
-              <div className="mb-3 space-y-2">
-                <h2 className="text-sm font-semibold text-white">Concept usage report</h2>
+            {/* ── CONCEPT LIST PANEL ────────────────────────────────────────── */}
+            <section
+              className="relative p-4"
+              style={{
+                background: 'rgba(5,9,16,0.85)',
+                ...panelStyle('rgba(126,231,255,0.13)'),
+              }}
+            >
+              <div className="mb-4 space-y-3">
+                <div>
+                  <p
+                    className="text-[10px] uppercase tracking-[0.2em] mb-1"
+                    style={{ fontFamily: 'JetBrains Mono, monospace', color: '#7ee7ff' }}
+                  >
+                    // 04 · usage-report
+                  </p>
+                  <h2
+                    className="text-sm font-medium"
+                    style={{ fontFamily: 'Space Grotesk, sans-serif', color: '#eaf6ff' }}
+                  >
+                    Concept{' '}
+                    <em style={{ fontStyle: 'italic', fontWeight: 300, color: '#f5a524' }}>Usage Report</em>
+                  </h2>
+                </div>
+
                 <input
                   value={conceptSearch}
                   onChange={(e) => setConceptSearch(e.target.value)}
                   className={inputCls}
                   placeholder="Tìm theo concept id/title/nội dung hoặc lesson/module..."
+                  style={{ fontFamily: 'Space Grotesk, sans-serif' }}
                 />
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                   <select
                     value={domainFilter}
@@ -763,6 +1253,7 @@ export default function StudioConceptsPage() {
                       setSubdomainFilter('all')
                     }}
                     className={inputCls}
+                    style={{ fontFamily: 'JetBrains Mono, monospace' }}
                   >
                     <option value="all">Tất cả domain</option>
                     {domainOptions.map((d) => (
@@ -775,6 +1266,7 @@ export default function StudioConceptsPage() {
                     value={subdomainFilter}
                     onChange={(e) => setSubdomainFilter(e.target.value)}
                     className={inputCls}
+                    style={{ fontFamily: 'JetBrains Mono, monospace' }}
                   >
                     <option value="all">Tất cả subdomain</option>
                     {subdomainOptions.map((d) => (
@@ -784,278 +1276,434 @@ export default function StudioConceptsPage() {
                     ))}
                   </select>
                 </div>
-                <p className="text-[11px] text-slate-500">
+
+                <p
+                  className="text-[10px]"
+                  style={{ fontFamily: 'JetBrains Mono, monospace', color: '#5c6886', letterSpacing: '0.1em' }}
+                >
                   Hiển thị {filteredConcepts.length}/{concepts.length} concept
                 </p>
               </div>
+
               <div className="space-y-2 max-h-[65vh] overflow-y-auto pr-1">
                 {filteredConcepts.length === 0 ? (
-                  <p className="text-xs text-slate-600">Chưa có concept nào.</p>
+                  <p
+                    className="text-xs py-8 text-center"
+                    style={{ fontFamily: 'JetBrains Mono, monospace', color: '#5c6886' }}
+                  >
+                    // no concepts found
+                  </p>
                 ) : (
                   filteredConcepts.map((c) => {
                     const rows = usageByConcept.get(c.id) || []
                     return (
-                      <details key={c.id} className="rounded-lg border border-white/10 bg-black/30 px-3 py-2">
-                        <summary className="cursor-pointer flex items-center justify-between gap-2">
-                          <span className="text-xs text-cyan-200">
-                            #{c.id} · {c.title || c.id}
-                          </span>
-                          <span className="text-[11px] text-slate-400">{rows.length} lesson(s)</span>
-                        </summary>
-                        <div className="mt-2">
-                          <p className="text-[11px] text-slate-400">{c.short_description}</p>
-                          <p className="text-[11px] text-slate-300 mt-1">{c.explanation}</p>
-                        </div>
-                        <details className="mt-2 rounded-lg border border-white/10 bg-black/20 p-2">
-                          <summary className="cursor-pointer text-[11px] text-slate-300">Thông tin chính (full fields)</summary>
-                          <div className="mt-2 space-y-2">
-                            <label className="block text-[10px] text-slate-500">
-                              Title
-                              <input
-                                value={c.title || ''}
-                                onChange={(e) =>
-                                  setConcepts((prev) =>
-                                    prev.map((x) => (x.id === c.id ? { ...x, title: e.target.value } : x)),
-                                  )
-                                }
-                                className={`mt-1 ${inputCls}`}
-                              />
-                            </label>
-                            <label className="block text-[10px] text-slate-500">
-                              Short description
-                              <input
-                                value={c.short_description || ''}
-                                onChange={(e) =>
-                                  setConcepts((prev) =>
-                                    prev.map((x) =>
-                                      x.id === c.id ? { ...x, short_description: e.target.value } : x,
-                                    ),
-                                  )
-                                }
-                                className={`mt-1 ${inputCls}`}
-                              />
-                            </label>
-                            <label className="block text-[10px] text-slate-500">
-                              Explanation
-                              <textarea
-                                value={c.explanation || ''}
-                                onChange={(e) =>
-                                  setConcepts((prev) =>
-                                    prev.map((x) => (x.id === c.id ? { ...x, explanation: e.target.value } : x)),
-                                  )
-                                }
-                                className={`mt-1 ${inputCls} min-h-[90px]`}
-                              />
-                            </label>
-                            <label className="block text-[10px] text-slate-500">
-                              Examples (phân tách bởi "|")
-                              <input
-                                value={(c.examples || []).join('|')}
-                                onChange={(e) =>
-                                  setConcepts((prev) =>
-                                    prev.map((x) =>
-                                      x.id === c.id ? { ...x, examples: parsePipeList(e.target.value) } : x,
-                                    ),
-                                  )
-                                }
-                                className={`mt-1 ${inputCls}`}
-                                placeholder="ví dụ 1|ví dụ 2|ví dụ 3"
-                              />
-                            </label>
-                            <label className="block text-[10px] text-slate-500">
-                              Related (ids, phân tách bởi "|")
-                              <input
-                                value={(c.related || []).join('|')}
-                                onChange={(e) =>
-                                  setConcepts((prev) =>
-                                    prev.map((x) =>
-                                      x.id === c.id
-                                        ? {
-                                            ...x,
-                                            related: parsePipeList(e.target.value).map((id) => slugifyConceptId(id)),
-                                          }
-                                        : x,
-                                    ),
-                                  )
-                                }
-                                className={`mt-1 ${inputCls}`}
-                                placeholder="gravity|velocity|orbital_period"
-                              />
-                            </label>
-                            <label className="inline-flex items-center gap-2 text-[11px] text-slate-300">
-                              <input
-                                type="checkbox"
-                                checked={c.published !== false}
-                                onChange={(e) =>
-                                  setConcepts((prev) =>
-                                    prev.map((x) =>
-                                      x.id === c.id ? { ...x, published: e.target.checked } : x,
-                                    ),
-                                  )
-                                }
-                              />
-                              Published
-                            </label>
-                          </div>
-                        </details>
-                        {c.examples?.length > 0 && (
-                          <ul className="mt-2 list-disc pl-4">
-                            {c.examples.map((ex, i) => (
-                              <li key={`${c.id}-ex-${i}`} className="text-[11px] text-slate-300">
-                                {ex}
-                              </li>
-                            ))}
-                          </ul>
-                        )}
-                        <details className="mt-2 rounded-lg border border-white/10 bg-black/20 p-2">
-                          <summary className="cursor-pointer text-[11px] text-slate-300">Taxonomy & mapping</summary>
-                          <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-2">
-                          <label className="text-[10px] text-slate-500">
-                            Domain
-                            <select
-                              value={c.domain || ''}
-                              onChange={(e) => {
-                                const v = e.target.value
-                                setConcepts((prev) =>
-                                  prev.map((x) =>
-                                    x.id === c.id
-                                      ? {
-                                          ...x,
-                                          domain: v || undefined,
-                                          subdomain:
-                                            v && x.domain !== v
-                                              ? getSubdomainOptionsForDomain(v, taxonomyRegistry)[0] || undefined
-                                              : x.subdomain,
-                                        }
-                                      : x,
-                                  ),
-                                )
+                      <details
+                        key={c.id}
+                        className="group"
+                        style={{
+                          background: 'rgba(0,0,0,0.35)',
+                          border: '1px solid rgba(126,231,255,0.1)',
+                          ...chf(8),
+                        }}
+                      >
+                        <summary
+                          className="cursor-pointer flex items-center justify-between gap-2 px-3 py-2.5"
+                          style={{ listStyle: 'none' }}
+                        >
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span
+                              style={{
+                                width: 5,
+                                height: 5,
+                                borderRadius: '50%',
+                                background: c.domain ? '#7ee7ff' : '#f5a524',
+                                flexShrink: 0,
+                                display: 'inline-block',
                               }}
-                              className={`mt-1 ${inputCls}`}
+                            />
+                            <span
+                              className="text-xs truncate"
+                              style={{ fontFamily: 'JetBrains Mono, monospace', color: '#7ee7ff' }}
                             >
-                              <option value="">Không gán</option>
-                              {domainOptions.map((d) => (
-                                <option key={d} value={d}>
-                                  {d}
-                                </option>
-                              ))}
-                            </select>
-                          </label>
-                          <label className="text-[10px] text-slate-500">
-                            Subdomain
-                            <select
-                              value={c.subdomain || ''}
-                              onChange={(e) => {
-                                const v = e.target.value
-                                setConcepts((prev) =>
-                                  prev.map((x) => (x.id === c.id ? { ...x, subdomain: v || undefined } : x)),
-                                )
-                              }}
-                              className={`mt-1 ${inputCls}`}
-                              disabled={!c.domain}
+                              #{c.id}
+                            </span>
+                            <span
+                              className="text-xs truncate hidden sm:inline"
+                              style={{ color: '#9aa8c4', fontFamily: 'Space Grotesk, sans-serif' }}
                             >
-                              <option value="">Không gán</option>
-                              {getSubdomainOptionsForDomain(c.domain || '', taxonomyRegistry).map((d) => (
-                                <option key={`${c.id}-${d}`} value={d}>
-                                  {d}
-                                </option>
-                              ))}
-                            </select>
-                          </label>
+                              · {c.title || c.id}
+                            </span>
                           </div>
-                        </details>
-                        <details className="mt-2 rounded-lg border border-white/10 bg-black/20 p-2">
-                          <summary className="cursor-pointer text-[11px] text-slate-300">
-                            Metadata nâng cao
-                          </summary>
-                        <details className="mt-2 rounded-lg border border-white/10 bg-black/20 p-2">
-                          <summary className="cursor-pointer text-[11px] text-slate-300">
-                            Aliases ({(c.aliases || []).length})
-                          </summary>
-                          <input
-                            value={(c.aliases || []).join('|')}
-                            onChange={(e) =>
-                              setConcepts((prev) =>
-                                prev.map((x) =>
-                                  x.id === c.id ? { ...x, aliases: parsePipeList(e.target.value) } : x,
-                                ),
-                              )
-                            }
-                            className={`mt-2 ${inputCls}`}
-                            placeholder="alias1|alias2|alias3"
-                          />
-                        </details>
-                        <details className="mt-2 rounded-lg border border-white/10 bg-black/20 p-2">
-                          <summary className="cursor-pointer text-[11px] text-slate-300">
-                            Prerequisites mapping ({(c.prerequisites || []).length})
-                          </summary>
-                          <div className="mt-2 max-h-[140px] overflow-y-auto rounded-lg border border-white/15 bg-black/40 p-2 space-y-1">
-                            {concepts
-                              .filter((cc) => cc.id !== c.id)
-                              .map((cc) => {
-                                const checked = (c.prerequisites || []).includes(cc.id)
-                                return (
-                                  <label key={`${c.id}-pr-${cc.id}`} className="flex items-center gap-2 text-xs text-slate-200">
-                                    <input
-                                      type="checkbox"
-                                      checked={checked}
-                                      onChange={(e) =>
-                                        setConcepts((prev) =>
-                                          prev.map((x) => {
-                                            if (x.id !== c.id) return x
-                                            const current = x.prerequisites || []
-                                            return {
-                                              ...x,
-                                              prerequisites: e.target.checked
-                                                ? [...new Set([...current, cc.id])]
-                                                : current.filter((id) => id !== cc.id),
-                                            }
-                                          }),
-                                        )
-                                      }
-                                    />
-                                    <span>{cc.id} — {cc.title || cc.id}</span>
-                                  </label>
-                                )
-                              })}
-                          </div>
-                        </details>
-                        </details>
-                        <details className="mt-2 rounded-lg border border-white/10 bg-black/20 p-2">
-                          <summary className="cursor-pointer text-[11px] text-slate-300">
-                            Lesson usage ({rows.length})
-                          </summary>
-                          <div className="mt-2 space-y-1">
-                          {rows.length === 0 ? (
-                            <p className="text-[11px] text-slate-500">Chưa được map vào lesson nào.</p>
-                          ) : (
-                            rows.map((r, idx) => (
-                              <p key={`${c.id}-${idx}`} className="text-[11px] text-slate-300">
-                                <span className="text-slate-500">{r.moduleTitle}</span> → {r.nodeTitle} →{' '}
-                                <span className="text-cyan-300">{DEPTH_META[r.depth].labelVi}</span> → {r.lessonTitle}
-                              </p>
-                            ))
-                          )}
-                          </div>
-                        </details>
-                        <div className="mt-2 flex justify-end">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const usedCount = rows.length
-                              const ok =
-                                usedCount > 0
-                                  ? window.confirm(
-                                      `Concept "${c.id}" đang được dùng trong ${usedCount} lesson(s). Bạn có chắc muốn xóa không?`,
-                                    )
-                                  : window.confirm(`Xóa concept "${c.id}"?`)
-                              if (!ok) return
-                              setConcepts((prev) => prev.filter((x) => x.id !== c.id))
-                            }}
-                            className="text-[11px] text-red-400/80 hover:text-red-300"
+                          <span
+                            className="text-[10px] shrink-0"
+                            style={{ fontFamily: 'JetBrains Mono, monospace', color: '#5c6886' }}
                           >
-                            Xóa concept
-                          </button>
+                            {rows.length} lesson{rows.length !== 1 ? 's' : ''}
+                          </span>
+                        </summary>
+
+                        <div className="px-3 pb-3 pt-1 space-y-2">
+                          <p className="text-[11px]" style={{ color: '#5c6886' }}>{c.short_description}</p>
+                          <p className="text-[11px] leading-relaxed" style={{ color: '#9aa8c4' }}>{c.explanation}</p>
+
+                          {/* Full fields */}
+                          <details
+                            className="mt-1"
+                            style={{
+                              background: 'rgba(0,0,0,0.25)',
+                              border: '1px solid rgba(126,231,255,0.08)',
+                              ...chf(6),
+                            }}
+                          >
+                            <summary
+                              className="cursor-pointer px-3 py-1.5 text-[10px] uppercase tracking-[0.15em]"
+                              style={{ fontFamily: 'JetBrains Mono, monospace', color: '#9aa8c4' }}
+                            >
+                              Thông tin chính (full fields)
+                            </summary>
+                            <div className="px-3 pb-3 pt-2 space-y-2">
+                              <label className="block">
+                                <span className="text-[10px] uppercase tracking-[0.12em]" style={{ fontFamily: 'JetBrains Mono, monospace', color: '#5c6886' }}>Title</span>
+                                <input
+                                  value={c.title || ''}
+                                  onChange={(e) =>
+                                    setConcepts((prev) =>
+                                      prev.map((x) => (x.id === c.id ? { ...x, title: e.target.value } : x)),
+                                    )
+                                  }
+                                  className={`mt-1 ${inputCls}`}
+                                  style={{ fontFamily: 'Space Grotesk, sans-serif' }}
+                                />
+                              </label>
+                              <label className="block">
+                                <span className="text-[10px] uppercase tracking-[0.12em]" style={{ fontFamily: 'JetBrains Mono, monospace', color: '#5c6886' }}>Short description</span>
+                                <input
+                                  value={c.short_description || ''}
+                                  onChange={(e) =>
+                                    setConcepts((prev) =>
+                                      prev.map((x) =>
+                                        x.id === c.id ? { ...x, short_description: e.target.value } : x,
+                                      ),
+                                    )
+                                  }
+                                  className={`mt-1 ${inputCls}`}
+                                  style={{ fontFamily: 'Space Grotesk, sans-serif' }}
+                                />
+                              </label>
+                              <label className="block">
+                                <span className="text-[10px] uppercase tracking-[0.12em]" style={{ fontFamily: 'JetBrains Mono, monospace', color: '#5c6886' }}>Explanation</span>
+                                <textarea
+                                  value={c.explanation || ''}
+                                  onChange={(e) =>
+                                    setConcepts((prev) =>
+                                      prev.map((x) => (x.id === c.id ? { ...x, explanation: e.target.value } : x)),
+                                    )
+                                  }
+                                  className={`mt-1 ${inputCls} min-h-[90px] resize-y`}
+                                  style={{ fontFamily: 'Space Grotesk, sans-serif' }}
+                                />
+                              </label>
+                              <label className="block">
+                                <span className="text-[10px] uppercase tracking-[0.12em]" style={{ fontFamily: 'JetBrains Mono, monospace', color: '#5c6886' }}>Examples (phân tách bởi "|")</span>
+                                <input
+                                  value={(c.examples || []).join('|')}
+                                  onChange={(e) =>
+                                    setConcepts((prev) =>
+                                      prev.map((x) =>
+                                        x.id === c.id ? { ...x, examples: parsePipeList(e.target.value) } : x,
+                                      ),
+                                    )
+                                  }
+                                  className={`mt-1 ${inputCls}`}
+                                  placeholder="ví dụ 1|ví dụ 2|ví dụ 3"
+                                  style={{ fontFamily: 'Space Grotesk, sans-serif' }}
+                                />
+                              </label>
+                              <label className="block">
+                                <span className="text-[10px] uppercase tracking-[0.12em]" style={{ fontFamily: 'JetBrains Mono, monospace', color: '#5c6886' }}>Related (ids, phân tách bởi "|")</span>
+                                <input
+                                  value={(c.related || []).join('|')}
+                                  onChange={(e) =>
+                                    setConcepts((prev) =>
+                                      prev.map((x) =>
+                                        x.id === c.id
+                                          ? {
+                                              ...x,
+                                              related: parsePipeList(e.target.value).map((id) => slugifyConceptId(id)),
+                                            }
+                                          : x,
+                                      ),
+                                    )
+                                  }
+                                  className={`mt-1 ${inputCls}`}
+                                  placeholder="gravity|velocity|orbital_period"
+                                  style={{ fontFamily: 'JetBrains Mono, monospace' }}
+                                />
+                              </label>
+                              <label className="inline-flex items-center gap-2 text-[11px] cursor-pointer" style={{ color: '#9aa8c4' }}>
+                                <input
+                                  type="checkbox"
+                                  checked={c.published !== false}
+                                  onChange={(e) =>
+                                    setConcepts((prev) =>
+                                      prev.map((x) =>
+                                        x.id === c.id ? { ...x, published: e.target.checked } : x,
+                                      ),
+                                    )
+                                  }
+                                  style={{ accentColor: '#7ee7ff' }}
+                                />
+                                <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase' }}>Published</span>
+                              </label>
+                            </div>
+                          </details>
+
+                          {/* Examples list */}
+                          {c.examples?.length > 0 && (
+                            <ul className="pl-3 space-y-0.5">
+                              {c.examples.map((ex, i) => (
+                                <li
+                                  key={`${c.id}-ex-${i}`}
+                                  className="text-[11px] flex items-start gap-1.5"
+                                  style={{ color: '#9aa8c4' }}
+                                >
+                                  <span style={{ color: '#7ee7ff', flexShrink: 0 }}>·</span>
+                                  {ex}
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+
+                          {/* Taxonomy */}
+                          <details
+                            style={{
+                              background: 'rgba(0,0,0,0.25)',
+                              border: '1px solid rgba(126,231,255,0.08)',
+                              ...chf(6),
+                            }}
+                          >
+                            <summary
+                              className="cursor-pointer px-3 py-1.5 text-[10px] uppercase tracking-[0.15em]"
+                              style={{ fontFamily: 'JetBrains Mono, monospace', color: '#9aa8c4' }}
+                            >
+                              Taxonomy &amp; mapping
+                            </summary>
+                            <div className="px-3 pb-3 pt-2 grid grid-cols-1 md:grid-cols-2 gap-2">
+                              <label className="block">
+                                <span className="text-[10px] uppercase tracking-[0.12em]" style={{ fontFamily: 'JetBrains Mono, monospace', color: '#5c6886' }}>Domain</span>
+                                <select
+                                  value={c.domain || ''}
+                                  onChange={(e) => {
+                                    const v = e.target.value
+                                    setConcepts((prev) =>
+                                      prev.map((x) =>
+                                        x.id === c.id
+                                          ? {
+                                              ...x,
+                                              domain: v || undefined,
+                                              subdomain:
+                                                v && x.domain !== v
+                                                  ? getSubdomainOptionsForDomain(v, taxonomyRegistry)[0] || undefined
+                                                  : x.subdomain,
+                                            }
+                                          : x,
+                                      ),
+                                    )
+                                  }}
+                                  className={`mt-1 ${inputCls}`}
+                                  style={{ fontFamily: 'JetBrains Mono, monospace' }}
+                                >
+                                  <option value="">Không gán</option>
+                                  {domainOptions.map((d) => (
+                                    <option key={d} value={d}>
+                                      {d}
+                                    </option>
+                                  ))}
+                                </select>
+                              </label>
+                              <label className="block">
+                                <span className="text-[10px] uppercase tracking-[0.12em]" style={{ fontFamily: 'JetBrains Mono, monospace', color: '#5c6886' }}>Subdomain</span>
+                                <select
+                                  value={c.subdomain || ''}
+                                  onChange={(e) => {
+                                    const v = e.target.value
+                                    setConcepts((prev) =>
+                                      prev.map((x) => (x.id === c.id ? { ...x, subdomain: v || undefined } : x)),
+                                    )
+                                  }}
+                                  className={`mt-1 ${inputCls}`}
+                                  disabled={!c.domain}
+                                  style={{ fontFamily: 'JetBrains Mono, monospace', opacity: c.domain ? 1 : 0.5 }}
+                                >
+                                  <option value="">Không gán</option>
+                                  {getSubdomainOptionsForDomain(c.domain || '', taxonomyRegistry).map((d) => (
+                                    <option key={`${c.id}-${d}`} value={d}>
+                                      {d}
+                                    </option>
+                                  ))}
+                                </select>
+                              </label>
+                            </div>
+                          </details>
+
+                          {/* Advanced metadata */}
+                          <details
+                            style={{
+                              background: 'rgba(0,0,0,0.25)',
+                              border: '1px solid rgba(126,231,255,0.08)',
+                              ...chf(6),
+                            }}
+                          >
+                            <summary
+                              className="cursor-pointer px-3 py-1.5 text-[10px] uppercase tracking-[0.15em]"
+                              style={{ fontFamily: 'JetBrains Mono, monospace', color: '#9aa8c4' }}
+                            >
+                              Metadata nâng cao
+                            </summary>
+                            <div className="px-3 pb-3 pt-2 space-y-2">
+                              <details
+                                style={{
+                                  background: 'rgba(0,0,0,0.2)',
+                                  border: '1px solid rgba(126,231,255,0.06)',
+                                  ...chf(6),
+                                }}
+                              >
+                                <summary
+                                  className="cursor-pointer px-3 py-1.5 text-[10px] uppercase tracking-[0.12em]"
+                                  style={{ fontFamily: 'JetBrains Mono, monospace', color: '#9aa8c4' }}
+                                >
+                                  Aliases ({(c.aliases || []).length})
+                                </summary>
+                                <div className="px-3 pb-3 pt-2">
+                                  <input
+                                    value={(c.aliases || []).join('|')}
+                                    onChange={(e) =>
+                                      setConcepts((prev) =>
+                                        prev.map((x) =>
+                                          x.id === c.id ? { ...x, aliases: parsePipeList(e.target.value) } : x,
+                                        ),
+                                      )
+                                    }
+                                    className={inputCls}
+                                    placeholder="alias1|alias2|alias3"
+                                    style={{ fontFamily: 'Space Grotesk, sans-serif' }}
+                                  />
+                                </div>
+                              </details>
+
+                              <details
+                                style={{
+                                  background: 'rgba(0,0,0,0.2)',
+                                  border: '1px solid rgba(126,231,255,0.06)',
+                                  ...chf(6),
+                                }}
+                              >
+                                <summary
+                                  className="cursor-pointer px-3 py-1.5 text-[10px] uppercase tracking-[0.12em]"
+                                  style={{ fontFamily: 'JetBrains Mono, monospace', color: '#9aa8c4' }}
+                                >
+                                  Prerequisites mapping ({(c.prerequisites || []).length})
+                                </summary>
+                                <div className="px-3 pb-3 pt-2">
+                                  <div
+                                    className="max-h-[140px] overflow-y-auto p-2 space-y-1"
+                                    style={{
+                                      background: 'rgba(0,0,0,0.3)',
+                                      border: '1px solid rgba(126,231,255,0.08)',
+                                    }}
+                                  >
+                                    {concepts
+                                      .filter((cc) => cc.id !== c.id)
+                                      .map((cc) => {
+                                        const checked = (c.prerequisites || []).includes(cc.id)
+                                        return (
+                                          <label key={`${c.id}-pr-${cc.id}`} className="flex items-center gap-2 text-xs cursor-pointer">
+                                            <input
+                                              type="checkbox"
+                                              checked={checked}
+                                              onChange={(e) =>
+                                                setConcepts((prev) =>
+                                                  prev.map((x) => {
+                                                    if (x.id !== c.id) return x
+                                                    const current = x.prerequisites || []
+                                                    return {
+                                                      ...x,
+                                                      prerequisites: e.target.checked
+                                                        ? [...new Set([...current, cc.id])]
+                                                        : current.filter((id) => id !== cc.id),
+                                                    }
+                                                  }),
+                                                )
+                                              }
+                                              style={{ accentColor: '#7ee7ff' }}
+                                            />
+                                            <span style={{ fontFamily: 'JetBrains Mono, monospace', color: '#9aa8c4', fontSize: 10 }}>
+                                              {cc.id} — {cc.title || cc.id}
+                                            </span>
+                                          </label>
+                                        )
+                                      })}
+                                  </div>
+                                </div>
+                              </details>
+                            </div>
+                          </details>
+
+                          {/* Lesson usage */}
+                          <details
+                            style={{
+                              background: 'rgba(0,0,0,0.25)',
+                              border: '1px solid rgba(126,231,255,0.08)',
+                              ...chf(6),
+                            }}
+                          >
+                            <summary
+                              className="cursor-pointer px-3 py-1.5 text-[10px] uppercase tracking-[0.15em]"
+                              style={{ fontFamily: 'JetBrains Mono, monospace', color: '#9aa8c4' }}
+                            >
+                              Lesson usage ({rows.length})
+                            </summary>
+                            <div className="px-3 pb-3 pt-2 space-y-1">
+                              {rows.length === 0 ? (
+                                <p className="text-[10px]" style={{ fontFamily: 'JetBrains Mono, monospace', color: '#5c6886' }}>
+                                  // chưa được map vào lesson nào
+                                </p>
+                              ) : (
+                                rows.map((r, idx) => (
+                                  <p key={`${c.id}-${idx}`} className="text-[11px] leading-relaxed">
+                                    <span style={{ color: '#5c6886' }}>{r.moduleTitle}</span>
+                                    <span style={{ color: '#9aa8c4' }}> → {r.nodeTitle} → </span>
+                                    <span style={{ color: '#7ee7ff' }}>{DEPTH_META[r.depth].labelVi}</span>
+                                    <span style={{ color: '#9aa8c4' }}> → {r.lessonTitle}</span>
+                                  </p>
+                                ))
+                              )}
+                            </div>
+                          </details>
+
+                          {/* Delete */}
+                          <div className="flex justify-end pt-1">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const usedCount = rows.length
+                                const ok =
+                                  usedCount > 0
+                                    ? window.confirm(
+                                        `Concept "${c.id}" đang được dùng trong ${usedCount} lesson(s). Bạn có chắc muốn xóa không?`,
+                                      )
+                                    : window.confirm(`Xóa concept "${c.id}"?`)
+                                if (!ok) return
+                                setConcepts((prev) => prev.filter((x) => x.id !== c.id))
+                              }}
+                              className="text-[10px] uppercase tracking-[0.12em] transition-colors"
+                              style={{ fontFamily: 'JetBrains Mono, monospace', color: 'rgba(255,92,212,0.6)' }}
+                              onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = '#ff5cd4' }}
+                              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = 'rgba(255,92,212,0.6)' }}
+                            >
+                              × Xóa concept
+                            </button>
+                          </div>
                         </div>
                       </details>
                     )
@@ -1063,6 +1711,7 @@ export default function StudioConceptsPage() {
                 )}
               </div>
             </section>
+
           </div>
         )}
       </div>

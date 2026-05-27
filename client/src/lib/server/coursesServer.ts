@@ -2,6 +2,7 @@ import 'server-only'
 
 import { getApiPathBase } from '@/lib/apiConfig'
 import type { Course } from '@/lib/coursesApi'
+import type { LearningModule } from '@/data/learningPathCurriculum'
 
 export async function fetchPublicCoursesServer(search?: string): Promise<Course[]> {
   const base = getApiPathBase()
@@ -17,6 +18,17 @@ export async function fetchPublicCoursesServer(search?: string): Promise<Course[
     }
   } catch {}
 
+  return []
+}
+
+export async function fetchLearningPathModulesServer(): Promise<LearningModule[]> {
+  try {
+    const res = await fetch(`${getApiPathBase()}/learning-path`, { cache: 'no-store' })
+    const data = await res.json()
+    if (data.success && Array.isArray(data.data?.modules)) {
+      return data.data.modules as LearningModule[]
+    }
+  } catch {}
   return []
 }
 

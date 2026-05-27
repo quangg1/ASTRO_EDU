@@ -55,7 +55,7 @@ export function CTASection() {
               className="hud-chamfer inline-flex items-center justify-center px-8 py-4 text-sm font-semibold text-white transition-all"
               style={{
                 background: 'rgba(126,231,255,0.06)',
-                border: '1px solid rgba(126,231,255,0.3)',
+                border: '2px solid rgba(126,231,255,0.3)',
               }}
             >
               Tìm hiểu thêm

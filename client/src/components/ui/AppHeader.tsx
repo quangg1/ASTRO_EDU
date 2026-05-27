@@ -113,7 +113,7 @@ export function AppHeader() {
               <Link
                 href="/dashboard"
                 style={{ clipPath: 'polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px)' }}
-                className={`inline-flex items-center gap-2 px-4 py-[7px] text-[11px] font-bold uppercase tracking-widest border transition-colors ${
+                className={`inline-flex items-center gap-2 px-4 py-[7px] text-[11px] font-bold uppercase tracking-widest border-2 transition-colors ${
                   navActive(pathname, '/dashboard')
                     ? 'border-[#7ee7ff]/80 bg-[#7ee7ff]/15 text-[#7ee7ff]'
                     : 'border-[#7ee7ff]/30 text-slate-300 hover:border-[#7ee7ff]/70 hover:text-[#7ee7ff] hover:bg-[#7ee7ff]/10'
@@ -125,7 +125,7 @@ export function AppHeader() {
               <Link
                 href="/community"
                 style={{ clipPath: 'polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px)' }}
-                className={`inline-flex items-center gap-2 px-4 py-[7px] text-[11px] font-bold uppercase tracking-widest border transition-colors ${
+                className={`inline-flex items-center gap-2 px-4 py-[7px] text-[11px] font-bold uppercase tracking-widest border-2 transition-colors ${
                   navActive(pathname, '/community')
                     ? 'border-[#7ee7ff]/80 bg-[#7ee7ff]/15 text-[#7ee7ff]'
                     : 'border-[#7ee7ff]/30 text-slate-300 hover:border-[#7ee7ff]/70 hover:text-[#7ee7ff] hover:bg-[#7ee7ff]/10'
@@ -140,7 +140,7 @@ export function AppHeader() {
                   type="button"
                   onClick={() => setUserMenuOpen((v) => !v)}
                   style={{ clipPath: 'polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px)' }}
-                  className={`inline-flex items-center gap-2 pl-1.5 pr-3 py-[5px] border text-[11px] font-bold uppercase tracking-widest transition-colors ${
+                  className={`inline-flex items-center gap-2 pl-1.5 pr-3 py-[5px] border-2 text-[11px] font-bold uppercase tracking-widest transition-colors ${
                     userMenuOpen
                       ? 'border-[#7ee7ff]/80 bg-[#7ee7ff]/15 text-[#7ee7ff]'
                       : 'border-[#7ee7ff]/30 text-slate-300 hover:border-[#7ee7ff]/70 hover:text-[#7ee7ff] hover:bg-[#7ee7ff]/10'
@@ -290,14 +290,14 @@ export function AppHeader() {
               <Link
                 href="/courses"
                 style={{ clipPath: 'polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px)' }}
-                className="inline-flex items-center gap-2 px-4 py-[7px] text-[11px] font-bold uppercase tracking-widest border border-[#7ee7ff]/30 text-slate-300 hover:border-[#7ee7ff]/70 hover:text-[#7ee7ff] hover:bg-[#7ee7ff]/10 transition-colors"
+                className="inline-flex items-center gap-2 px-4 py-[7px] text-[11px] font-bold uppercase tracking-widest border-2 border-[#7ee7ff]/30 text-slate-300 hover:border-[#7ee7ff]/70 hover:text-[#7ee7ff] hover:bg-[#7ee7ff]/10 transition-colors"
               >
                 {viText.nav.courses}
               </Link>
               <Link
                 href="/login"
                 style={{ clipPath: 'polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px)' }}
-                className="inline-flex items-center gap-2 px-4 py-[7px] text-[11px] font-bold uppercase tracking-widest border border-[#7ee7ff]/30 text-slate-300 hover:border-[#7ee7ff]/70 hover:text-[#7ee7ff] hover:bg-[#7ee7ff]/10 transition-colors"
+                className="inline-flex items-center gap-2 px-4 py-[7px] text-[11px] font-bold uppercase tracking-widest border-2 border-[#7ee7ff]/30 text-slate-300 hover:border-[#7ee7ff]/70 hover:text-[#7ee7ff] hover:bg-[#7ee7ff]/10 transition-colors"
               >
                 {viText.nav.signIn}
               </Link>
@@ -320,7 +320,7 @@ export function AppHeader() {
         <div className="flex items-center gap-2 md:hidden shrink-0">
           <Link
             href="/search"
-            className="h-10 w-10 inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-slate-300 hover:bg-white/[0.08] hover:text-white active:scale-[0.98] transition"
+            className="h-10 w-10 inline-flex items-center justify-center rounded-xl border-2 border-white/10 bg-white/[0.04] text-slate-300 hover:bg-white/[0.08] hover:text-white active:scale-[0.98] transition"
             aria-label="Tìm kiếm"
           >
             <Search className="w-5 h-5" />
@@ -328,7 +328,7 @@ export function AppHeader() {
           <button
             type="button"
             onClick={() => setMobileOpen((v) => !v)}
-            className="h-10 min-w-[4.5rem] px-3 rounded-xl border border-white/10 bg-white/[0.04] text-slate-200 text-sm font-medium hover:bg-white/[0.08] active:scale-[0.98] transition"
+            className="h-10 min-w-[4.5rem] px-3 rounded-xl border-2 border-white/10 bg-white/[0.04] text-slate-200 text-sm font-medium hover:bg-white/[0.08] active:scale-[0.98] transition"
             aria-label={mobileOpen ? 'Đóng menu' : 'Mở menu'}
             aria-expanded={mobileOpen}
           >

@@ -2,7 +2,10 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { BookOpen, ChevronRight, Flame, Gem, Sparkles, TrendingUp } from 'lucide-react'
+import {
+  BookOpen, ChevronRight, Flame, Gem, TrendingUp,
+  Star, Users2, Wallet, CheckCircle2,
+} from 'lucide-react'
 import { useAuthStore } from '@/store/useAuthStore'
 import { useLearningPath } from '@/hooks/useLearningPath'
 import {
@@ -15,7 +18,57 @@ import { loadCompletedMilestoneIds, syncSolarJourneyProgress } from '@/lib/solar
 import { getLessonById } from '@/data/learningPathCurriculum'
 import { loadGemWallet, syncGemWallet } from '@/lib/gemWallet'
 
-/** Tổng quan: chỉ số chung + 2 cột Khóa học / Hoạt động (cấu trúc giống ảnh). */
+const chamfer = (cut = 18) => ({
+  clipPath: `polygon(${cut}px 0,100% 0,100% calc(100% - ${cut}px),calc(100% - ${cut}px) 100%,0 100%,0 ${cut}px)`,
+})
+
+function Brackets({ c = '#7ee7ff', s = 14, o = 6 }: { c?: string; s?: number; o?: number }) {
+  const b = (ex: React.CSSProperties) => ({
+    position: 'absolute' as const, width: s, height: s, opacity: 0.85,
+    pointerEvents: 'none' as const, ...ex,
+  })
+  return (
+    <>
+      <span style={b({ top: o, left: o, borderTop: `1.5px solid ${c}`, borderLeft: `1.5px solid ${c}` })} />
+      <span style={b({ top: o, right: o, borderTop: `1.5px solid ${c}`, borderRight: `1.5px solid ${c}` })} />
+      <span style={b({ bottom: o, left: o, borderBottom: `1.5px solid ${c}`, borderLeft: `1.5px solid ${c}` })} />
+      <span style={b({ bottom: o, right: o, borderBottom: `1.5px solid ${c}`, borderRight: `1.5px solid ${c}` })} />
+    </>
+  )
+}
+
+function HudPanel({
+  children, amber, className, style: extraStyle,
+}: {
+  children: React.ReactNode
+  amber?: boolean
+  className?: string
+  style?: React.CSSProperties
+}) {
+  const accent = amber ? '#f5a524' : '#7ee7ff'
+  const borderColor = amber ? 'rgba(245,165,36,0.35)' : 'rgba(126,231,255,0.2)'
+  const bg = amber
+    ? 'linear-gradient(135deg,rgba(18,10,2,0.97) 0%,rgba(24,14,3,0.95) 100%)'
+    : 'rgba(6,9,26,0.92)'
+  const glow = amber ? 'rgba(245,165,36,0.06)' : 'rgba(126,231,255,0.04)'
+  return (
+    <div
+      className={`relative${className ? ' ' + className : ''}`}
+      style={{
+        background: bg,
+        border: `1px solid ${borderColor}`,
+        boxShadow: `inset 0 0 24px ${glow}, 0 4px 32px rgba(0,0,0,0.4)`,
+        transition: 'box-shadow 0.2s',
+        ...chamfer(18),
+        ...extraStyle,
+      }}
+    >
+      <Brackets c={accent} />
+      {children}
+    </div>
+  )
+}
+
 export default function DashboardOverviewPage() {
   const { user, checked, loading } = useAuthStore()
   const userId = user?.id ?? null
@@ -25,10 +78,24 @@ export default function DashboardOverviewPage() {
   const [solarDoneCount, setSolarDoneCount] = useState(0)
   const [lastLessonId, setLastLessonId] = useState<string | null>(null)
   const [gemBalance, setGemBalance] = useState(0)
+  const [utcTime, setUtcTime] = useState('')
 
   const gemNextMilestone = 100
   const gemProgressPct = Math.min(100, Math.round((gemBalance / gemNextMilestone) * 100))
   const gemToNext = Math.max(0, gemNextMilestone - gemBalance)
+
+  useEffect(() => {
+    const tick = () => {
+      const now = new Date()
+      const h = String(now.getUTCHours()).padStart(2, '0')
+      const m = String(now.getUTCMinutes()).padStart(2, '0')
+      const s = String(now.getUTCSeconds()).padStart(2, '0')
+      setUtcTime(`${h}:${m}:${s}`)
+    }
+    tick()
+    const id = setInterval(tick, 1000)
+    return () => clearInterval(id)
+  }, [])
 
   useEffect(() => {
     const refreshGems = () => setGemBalance(loadGemWallet(userId).balance)
@@ -48,7 +115,6 @@ export default function DashboardOverviewPage() {
       setLearningPathDoneCount(Object.keys(synced).filter((id) => !!synced[id]).length)
       setLastLessonId(loadLastLearningPathLessonId(userId))
     })
-
     const localMilestones = loadCompletedMilestoneIds(userId)
     setSolarDoneCount(localMilestones.size)
     void syncSolarJourneyProgress(userId).then((synced) => setSolarDoneCount(synced.size))
@@ -63,8 +129,7 @@ export default function DashboardOverviewPage() {
     if (!currentLearningPathModule) return 0
     const local = loadLessonCompletion(userId)
     const mod = currentLearningPathModule.module
-    let total = 0
-    let done = 0
+    let total = 0, done = 0
     for (const node of mod.nodes) {
       for (const d of ['beginner', 'explorer', 'researcher'] as const) {
         for (const le of node.depths[d] ?? []) {
@@ -81,127 +146,289 @@ export default function DashboardOverviewPage() {
 
   if (!checked && loading) {
     return (
-      <div className="rounded-2xl border border-white/10 bg-[#0c0a12] p-6 text-sm text-slate-400">
+      <div
+        className="relative p-6 text-sm"
+        style={{ ...chamfer(14), border: '1px solid rgba(126,231,255,0.15)', background: 'rgba(6,9,26,0.9)', color: '#9aa8c4' }}
+      >
         Đang đồng bộ thông tin học tập...
       </div>
     )
   }
 
   return (
-    <div className="space-y-8">
-      <header>
-        <h1 className="text-2xl sm:text-3xl font-semibold text-white tracking-tight">Tổng quan</h1>
-        <p className="mt-1 text-sm text-slate-500">
-          Theo dõi tiến độ và tiếp tục hành trình học của bạn.
-        </p>
+    <div className="space-y-6">
+      {/* Page Head */}
+      <header className="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <p
+            className="dash-mono text-[10px] uppercase flex items-center gap-2"
+            style={{ color: '#8a9bb8', letterSpacing: '0.18em', marginBottom: 50 }}
+          >
+            <span style={{ width: 20, height: 1, background: 'rgba(126,231,255,0.25)', display: 'inline-block', verticalAlign: 'middle' }} />
+            // 01 · bảng điều khiển / tổng quan
+          </p>
+          <h1
+            className="dash-font font-medium leading-none"
+            style={{ fontSize: 'clamp(40px,4vw,56px)', letterSpacing: '-0.03em', color: '#eaf6ff' }}
+          >
+            Tổng <em style={{ fontStyle: 'italic', fontWeight: 300, color: '#f5a524' }}>quan</em>
+          </h1>
+          <p className="mt-2 text-sm" style={{ color: '#9aa8c4' }}>
+            Theo dõi tiến độ và tiếp tục hành trình học của bạn.
+          </p>
+        </div>
+        <div className="text-right" style={{ alignSelf: 'flex-start', paddingTop: 4 }}>
+          <p className="dash-mono text-sm flex items-center justify-end gap-2" style={{ color: '#7ee7ff' }}>
+            <span className="inline-block w-1.5 h-1.5 rounded-full" style={{ background: '#6dffb0', boxShadow: '0 0 5px #6dffb0' }} />
+            UTC {utcTime}
+          </p>
+          <p className="dash-mono text-[11px] mt-0.5" style={{ color: '#5c6886' }}>
+            PHIÊN <span style={{ color: '#7ee7ff' }}>#A-7321</span>
+          </p>
+        </div>
       </header>
 
-      {/* Hàng chỉ số chung — giữ card hiện tại, chỉ bố cục 3 cột */}
+      {/* Stats Row — 3 cards */}
       <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        <article className="rounded-2xl border border-violet-500/25 bg-[#12101c] p-5 shadow-[0_8px_40px_rgba(0,0,0,0.35)]">
-          <p className="text-[10px] uppercase tracking-wider text-slate-500 mb-3">Cấp độ</p>
-          <div className="flex items-center gap-3 mb-4">
-            <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-violet-600/40 to-fuchsia-600/30 border border-white/10 flex items-center justify-center">
-              <Sparkles className="w-6 h-6 text-violet-200" />
+
+        {/* Card 1 — Cấp độ */}
+        <HudPanel style={{ padding: 20 }}>
+          <p className="dash-mono text-[10px] uppercase mb-4" style={{ color: '#7ee7ff', letterSpacing: '0.18em' }}>
+            // cấp độ
+          </p>
+          <div className="flex items-center gap-3 mb-5">
+            <div
+              className="relative flex items-center justify-center"
+              style={{
+                width: 48, height: 48, flexShrink: 0,
+                border: '1.5px solid rgba(245,165,36,0.6)',
+                boxShadow: '0 0 14px rgba(245,165,36,0.25)',
+                ...chamfer(10),
+              }}
+            >
+              <Star size={22} style={{ color: '#f5a524' }} strokeWidth={1.6} />
             </div>
             <div>
-              <p className="text-lg font-semibold text-white">Mầm non</p>
-              <p className="text-xs text-slate-500">Học tập & khám phá</p>
+              <p className="text-[22px] font-semibold leading-tight" style={{ color: '#eaf6ff' }}>Mầm non</p>
+              <p className="dash-mono text-[10px] mt-0.5" style={{ color: '#5c6886' }}>Học tập & khám phá</p>
             </div>
           </div>
-          <div className="flex justify-between text-[10px] text-slate-500 mb-1">
-            <span>10 Gem</span>
-            <span>100 Gem</span>
+          <div className="flex justify-between mb-1.5">
+            <span className="dash-mono text-[10px]" style={{ color: '#5c6886' }}>10 Gem</span>
+            <span className="dash-mono text-[10px]" style={{ color: '#5c6886' }}>100 Gem</span>
           </div>
-          <div className="h-2 rounded-full bg-white/5 border border-white/10 overflow-hidden">
-            <div className="h-full w-[10%] rounded-full bg-gradient-to-r from-violet-500 to-cyan-400" />
+          <div
+            className="relative overflow-hidden"
+            style={{ height: 6, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)', ...chamfer(3) }}
+          >
+            <div
+              style={{
+                position: 'absolute', left: 0, top: 0, bottom: 0,
+                width: `${gemProgressPct}%`,
+                background: 'linear-gradient(90deg,#f5a524,#ffd27a)',
+                boxShadow: '0 0 8px rgba(245,165,36,0.7)',
+                ...chamfer(3),
+              }}
+            />
+            {gemProgressPct > 0 && (
+              <span
+                style={{
+                  position: 'absolute', top: '50%', left: `${gemProgressPct}%`,
+                  transform: 'translate(-50%,-50%)',
+                  width: 8, height: 8, borderRadius: '50%',
+                  background: '#fff',
+                  boxShadow: '0 0 6px #fff, 0 0 12px #f5a524',
+                }}
+              />
+            )}
           </div>
-          <p className="text-xs text-slate-500 mt-2">90 Gem đến cấp độ tiếp theo</p>
-        </article>
+          <p className="text-xs mt-2" style={{ color: '#9aa8c4' }}>
+            <span className="font-semibold" style={{ color: '#f5a524' }}>{gemToNext} Gem</span>
+            {' '}đến cấp độ tiếp theo
+          </p>
+        </HudPanel>
 
-        <article className="rounded-2xl border border-orange-500/20 bg-gradient-to-br from-orange-950/40 to-[#12101c] p-5 shadow-[0_8px_40px_rgba(0,0,0,0.35)]">
-          <p className="text-[10px] uppercase tracking-wider text-slate-500 mb-3">Chuỗi ngày hiện tại</p>
-          <div className="flex items-center gap-3">
-            <Flame className="w-10 h-10 text-orange-400" />
+        {/* Card 2 — Chuỗi ngày (amber variant) */}
+        <HudPanel amber style={{ padding: 20 }}>
+          <p className="dash-mono text-[10px] uppercase mb-4" style={{ color: '#f5a524', letterSpacing: '0.18em' }}>
+            // chuỗi ngày hiện tại
+          </p>
+          <div className="flex items-center gap-4">
+            <div
+              className="flex items-center justify-center"
+              style={{
+                width: 64, height: 64, flexShrink: 0,
+                border: '1.5px solid rgba(245,165,36,0.5)',
+                boxShadow: '0 0 18px rgba(245,165,36,0.3)',
+                ...chamfer(12),
+              }}
+            >
+              <Flame size={32} style={{ color: '#f5a524' }} strokeWidth={1.5} />
+            </div>
             <div>
-              <p className="text-3xl font-bold text-orange-200 tabular-nums">1</p>
-              <p className="text-sm text-orange-200/80">ngày</p>
+              <p
+                className="dash-font font-normal leading-none"
+                style={{
+                  fontSize: 64,
+                  background: 'linear-gradient(180deg,#ffd27a 0%,#f5a524 60%,rgba(245,165,36,0.3) 100%)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text',
+                }}
+              >
+                1
+              </p>
+              <p className="dash-mono text-[11px] uppercase mt-1" style={{ color: '#f5a524', letterSpacing: '0.15em' }}>
+                // ngày
+              </p>
             </div>
           </div>
-          <p className="text-xs text-slate-500 mt-4 border-t border-white/10 pt-3">Chuỗi dài nhất: 1 ngày</p>
-        </article>
+          <div
+            className="flex items-center justify-between mt-4 pt-3"
+            style={{ borderTop: '1px dashed rgba(245,165,36,0.2)' }}
+          >
+            <span className="dash-mono text-[10px]" style={{ color: '#5c6886' }}>Chuỗi dài nhất</span>
+            <span className="dash-mono text-[11px] font-medium" style={{ color: '#f5a524' }}>1 ngày</span>
+          </div>
+        </HudPanel>
 
-        <article className="rounded-2xl border border-cyan-500/25 bg-[#12101c] p-5 sm:col-span-2 lg:col-span-1 shadow-[0_8px_40px_rgba(0,0,0,0.35)]">
+        {/* Card 3 — Điểm cộng đồng / Gem */}
+        <HudPanel style={{ padding: 20 }} className="sm:col-span-2 lg:col-span-1">
+          <p className="dash-mono text-[10px] uppercase mb-4" style={{ color: '#7ee7ff', letterSpacing: '0.18em' }}>
+            // điểm & phần thưởng
+          </p>
           <div className="grid grid-cols-2 gap-4 mb-4">
             <div>
-              <p className="text-[10px] uppercase tracking-wider text-slate-500 mb-1">Điểm cộng đồng</p>
-              <p className="text-2xl font-semibold text-white tabular-nums">0</p>
+              <p className="dash-mono text-[10px] uppercase mb-1 flex items-center gap-1.5" style={{ color: '#8a9bb8', letterSpacing: '0.12em' }}>
+                <Users2 size={10} strokeWidth={1.6} />
+                điểm cộng đồng
+              </p>
+              <p
+                className="dash-font text-5xl font-normal leading-none"
+                style={{
+                  background: 'linear-gradient(180deg,#ffd27a 0%,#f5a524 100%)',
+                  WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
+                }}
+              >
+                0
+              </p>
             </div>
             <div>
-              <p className="text-[10px] uppercase tracking-wider text-slate-500 mb-1 flex items-center gap-1">
-                <Gem className="w-3.5 h-3.5 text-cyan-400" /> Gem
+              <p className="dash-mono text-[10px] uppercase mb-1 flex items-center gap-1.5" style={{ color: '#8a9bb8', letterSpacing: '0.12em' }}>
+                <Gem size={10} strokeWidth={1.6} style={{ color: '#7ee7ff' }} />
+                gem
               </p>
-              <p className="text-2xl font-semibold text-cyan-200 tabular-nums">{gemBalance}</p>
+              <p
+                className="dash-font text-5xl font-normal leading-none"
+                style={{
+                  background: 'linear-gradient(180deg,#ffd27a 0%,#f5a524 100%)',
+                  WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
+                }}
+              >
+                {gemBalance}
+              </p>
             </div>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <Link
-              href="/gem"
-              className="inline-flex items-center gap-1.5 rounded-lg border border-cyan-500/30 bg-cyan-500/10 px-3 py-1.5 text-xs text-cyan-200 hover:bg-cyan-500/20"
-            >
-              <Gem className="w-3.5 h-3.5" /> Ví Gem
-            </Link>
-            <Link
-              href="/tutorial"
-              className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-slate-300 hover:bg-white/10"
-            >
-              <BookOpen className="w-3.5 h-3.5" /> Xem lộ trình
-            </Link>
-            <Link
-              href="/community"
-              className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-slate-300 hover:bg-white/10"
-            >
-              <TrendingUp className="w-3.5 h-3.5" /> Cộng đồng
-            </Link>
+          <div className="flex flex-wrap gap-2 mb-4">
+            {[
+              { href: '/gem', icon: Wallet, label: 'Ví Gem' },
+              { href: '/tutorial', icon: TrendingUp, label: 'Xem lộ trình' },
+              { href: '/community', icon: BookOpen, label: 'Cộng đồng' },
+            ].map(({ href, icon: Icon, label }) => (
+              <Link
+                key={href}
+                href={href}
+                className="inline-flex items-center gap-1.5 text-xs transition-all"
+                style={{
+                  padding: '6px 12px',
+                  border: '1px solid rgba(126,231,255,0.25)',
+                  background: 'rgba(126,231,255,0.06)',
+                  color: '#9aa8c4',
+                  fontFamily: 'JetBrains Mono, monospace',
+                  ...chamfer(8),
+                }}
+              >
+                <Icon size={11} strokeWidth={1.6} />
+                {label}
+              </Link>
+            ))}
           </div>
-          <p className="text-[10px] text-slate-600 mt-3">Mốc Solar đã hoàn thành: {solarDoneCount}</p>
-        </article>
+          <p
+            className="dash-mono text-[10px] pt-3"
+            style={{ borderTop: '1px dashed rgba(126,231,255,0.1)', color: '#5c6886' }}
+          >
+            // Mốc Solar đã hoàn thành:{' '}
+            <span style={{ color: '#7ee7ff' }}>{solarDoneCount}</span>
+          </p>
+        </HudPanel>
       </section>
 
-      {/* Hai cột: Khóa học của tôi | Hoạt động gần đây */}
+      {/* Bottom Row — 2 panels */}
       <section className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <article className="rounded-2xl border border-white/10 bg-[#0c0a12] p-5 sm:p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
-          <div className="flex items-center justify-between gap-2 mb-4">
-            <div className="flex items-center gap-2">
-              <BookOpen className="w-4 h-4 text-cyan-400/80" />
-              <h2 className="text-sm font-semibold text-white">Khóa học của tôi</h2>
+
+        {/* Panel 1 — Khóa học của tôi */}
+        <HudPanel style={{ padding: 24 }}>
+          <div className="flex items-center justify-between gap-2 mb-5">
+            <div className="flex items-center gap-2.5">
+              <div
+                className="flex items-center justify-center"
+                style={{ width: 30, height: 30, border: '1px solid rgba(126,231,255,0.3)', ...chamfer(6) }}
+              >
+                <BookOpen size={14} strokeWidth={1.6} style={{ color: '#7ee7ff' }} />
+              </div>
+              <h2 className="text-sm font-semibold" style={{ color: '#eaf6ff' }}>Khóa học của tôi</h2>
             </div>
-            <Link href="/my-courses" className="text-xs text-cyan-400/90 hover:text-cyan-300 flex items-center gap-0.5">
-              Xem tất cả <ChevronRight className="w-3.5 h-3.5" />
+            <Link
+              href="/my-courses"
+              className="dash-mono text-[10px] uppercase flex items-center gap-0.5 transition-colors"
+              style={{ color: '#7ee7ff', letterSpacing: '0.12em', textDecoration: 'underline', textDecorationColor: 'rgba(126,231,255,0.3)' }}
+            >
+              Xem tất cả <ChevronRight size={11} />
             </Link>
           </div>
 
           {userId && currentLearningPathModule ? (
             <Link
               href={`/tutorial/${currentLearningPathModule.module.id}`}
-              className="block rounded-xl border border-cyan-500/20 bg-[#12101c] p-4 hover:border-cyan-500/40 transition-colors"
+              className="block transition-all"
+              style={{
+                border: '1px solid rgba(126,231,255,0.2)',
+                background: 'rgba(10,16,36,0.6)',
+                padding: 16,
+                ...chamfer(12),
+              }}
             >
               <div className="flex items-start gap-3">
-                <div className="h-12 w-12 shrink-0 rounded-xl bg-gradient-to-br from-cyan-600/30 to-blue-600/20 border border-white/10 flex items-center justify-center text-lg font-bold text-cyan-200">
+                <div
+                  className="shrink-0 flex items-center justify-center text-lg font-bold"
+                  style={{
+                    width: 48, height: 48,
+                    border: '1.5px solid rgba(126,231,255,0.4)',
+                    background: 'linear-gradient(135deg,rgba(126,231,255,0.15) 0%,rgba(77,210,255,0.08) 100%)',
+                    color: '#7ee7ff',
+                    boxShadow: '0 0 12px rgba(126,231,255,0.15)',
+                    ...chamfer(8),
+                  }}
+                >
                   {pathTitle.slice(0, 1).toUpperCase()}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="font-semibold text-white truncate">{pathTitle}</p>
-                  <p className="text-sm text-slate-400 truncate">{pathSubtitle}</p>
+                  <p className="font-semibold truncate" style={{ color: '#eaf6ff' }}>{pathTitle}</p>
+                  <p className="text-sm truncate mt-0.5" style={{ color: '#9aa8c4' }}>{pathSubtitle}</p>
                   <div className="mt-3">
-                    <div className="flex justify-between text-[10px] text-slate-500 mb-1">
-                      <span>Tiến độ</span>
-                      <span className="text-cyan-300 tabular-nums">{currentModulePct}%</span>
+                    <div className="flex justify-between mb-1.5">
+                      <span className="dash-mono text-[10px] uppercase" style={{ color: '#5c6886', letterSpacing: '0.1em' }}>Tiến độ</span>
+                      <span className="dash-mono text-[10px]" style={{ color: '#7ee7ff' }}>{currentModulePct}%</span>
                     </div>
-                    <div className="h-1.5 rounded-full bg-white/10 overflow-hidden">
+                    <div style={{ height: 4, background: 'rgba(126,231,255,0.08)', border: '1px solid rgba(126,231,255,0.12)', ...chamfer(2) }}>
                       <div
-                        className="h-full rounded-full bg-cyan-500/90 transition-all"
-                        style={{ width: `${currentModulePct}%` }}
+                        style={{
+                          height: '100%', width: `${currentModulePct}%`,
+                          background: 'linear-gradient(90deg,#7ee7ff,#4dd2ff)',
+                          boxShadow: '0 0 6px rgba(126,231,255,0.6)',
+                          transition: 'width 0.5s ease',
+                          ...chamfer(2),
+                        }}
                       />
                     </div>
                   </div>
@@ -209,52 +436,85 @@ export default function DashboardOverviewPage() {
               </div>
             </Link>
           ) : (
-            <div className="rounded-xl border border-dashed border-white/15 bg-white/[0.02] p-6 text-center">
-              <p className="text-sm text-slate-500 mb-3">
-                {userId
-                  ? 'Hoàn thành một bài trong lộ trình học để thấy tiến độ tại đây.'
-                  : 'Đăng nhập để đồng bộ tiến độ.'}
+            <div
+              className="p-6 text-center"
+              style={{ border: '1px dashed rgba(126,231,255,0.15)', background: 'rgba(126,231,255,0.02)', ...chamfer(10) }}
+            >
+              <p className="text-sm mb-3" style={{ color: '#5c6886' }}>
+                {userId ? 'Hoàn thành một bài trong lộ trình học để thấy tiến độ tại đây.' : 'Đăng nhập để đồng bộ tiến độ.'}
               </p>
-              <Link href="/tutorial" className="text-sm text-cyan-400 hover:underline">
+              <Link href="/tutorial" className="text-sm" style={{ color: '#7ee7ff' }}>
                 Mở Lộ trình →
               </Link>
             </div>
           )}
-        </article>
+        </HudPanel>
 
-        <article className="rounded-2xl border border-white/10 bg-[#0c0a12] p-5 sm:p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
-          <div className="flex items-center gap-2 mb-4">
-            <TrendingUp className="w-4 h-4 text-emerald-400/80" />
-            <h2 className="text-sm font-semibold text-white">Hoạt động gần đây</h2>
+        {/* Panel 2 — Hoạt động gần đây */}
+        <HudPanel style={{ padding: 24 }}>
+          <div className="flex items-center gap-2.5 mb-5">
+            <div
+              className="flex items-center justify-center"
+              style={{ width: 30, height: 30, border: '1px solid rgba(109,255,176,0.3)', ...chamfer(6) }}
+            >
+              <TrendingUp size={14} strokeWidth={1.6} style={{ color: '#6dffb0' }} />
+            </div>
+            <h2 className="text-sm font-semibold" style={{ color: '#eaf6ff' }}>Hoạt động gần đây</h2>
           </div>
           <ul className="space-y-3">
             {learningPathDoneCount > 0 ? (
-              <li className="flex items-start gap-3">
-                <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-400 text-xs">
-                  ✓
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm text-slate-200">Lộ trình học — {learningPathDoneCount} bài đã hoàn thành</p>
-                  <p className="text-[10px] text-slate-500 mt-0.5">{learningPathPct}% tổng lộ trình</p>
+              <li
+                className="flex items-start gap-3"
+                style={{ border: '1px solid rgba(109,255,176,0.15)', background: 'rgba(109,255,176,0.04)', padding: 12, ...chamfer(10) }}
+              >
+                <div
+                  className="shrink-0 flex items-center justify-center mt-0.5"
+                  style={{ width: 24, height: 24, borderRadius: '50%', border: '1.5px solid rgba(109,255,176,0.5)', background: 'rgba(109,255,176,0.1)', boxShadow: '0 0 8px rgba(109,255,176,0.2)' }}
+                >
+                  <CheckCircle2 size={13} strokeWidth={2} style={{ color: '#6dffb0' }} />
                 </div>
-                <span className="text-xs text-emerald-400/90 tabular-nums">+{learningPathDoneCount * 10} XP</span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm" style={{ color: '#eaf6ff' }}>
+                    Lộ trình học — {learningPathDoneCount} bài đã hoàn thành
+                  </p>
+                  <p className="dash-mono text-[10px] mt-0.5" style={{ color: '#5c6886' }}>
+                    // {learningPathPct}% tổng lộ trình
+                  </p>
+                </div>
+                <span
+                  className="dash-mono text-[11px] font-medium shrink-0"
+                  style={{ color: '#f5a524', textShadow: '0 0 8px rgba(245,165,36,0.5)' }}
+                >
+                  +{learningPathDoneCount * 10} XP
+                </span>
               </li>
             ) : (
-              <li className="text-sm text-slate-500">Chưa có hoạt động. Bắt đầu từ Lộ trình hoặc khóa học.</li>
+              <li className="text-sm" style={{ color: '#5c6886' }}>
+                Chưa có hoạt động. Bắt đầu từ Lộ trình hoặc khóa học.
+              </li>
             )}
             {solarDoneCount > 0 && (
-              <li className="flex items-start gap-3">
-                <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-orange-500/20 text-orange-300 text-xs">
-                  ✓
-                </span>
+              <li
+                className="flex items-start gap-3"
+                style={{ border: '1px solid rgba(245,165,36,0.15)', background: 'rgba(245,165,36,0.04)', padding: 12, ...chamfer(10) }}
+              >
+                <div
+                  className="shrink-0 flex items-center justify-center mt-0.5"
+                  style={{ width: 24, height: 24, borderRadius: '50%', border: '1.5px solid rgba(245,165,36,0.5)', background: 'rgba(245,165,36,0.1)', boxShadow: '0 0 8px rgba(245,165,36,0.2)' }}
+                >
+                  <CheckCircle2 size={13} strokeWidth={2} style={{ color: '#f5a524' }} />
+                </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm text-slate-200">Khám phá — {solarDoneCount} mốc hành trình</p>
+                  <p className="text-sm" style={{ color: '#eaf6ff' }}>
+                    Khám phá — {solarDoneCount} mốc hành trình
+                  </p>
                 </div>
               </li>
             )}
           </ul>
-        </article>
+        </HudPanel>
       </section>
+
     </div>
   )
 }
