@@ -59,6 +59,7 @@ const NODE_CONFIGS = [
   { cx: 380, cy: 75,  r: 11, color: '#7ee7ff', shortLabel: 'QUIZ' },
   { cx: 540, cy: 115, r: 11, color: '#6dffb0', shortLabel: 'EXPLORE' },
   { cx: 720, cy: 155, r: 11, color: '#f5a524', shortLabel: 'DEEP HIST' },
+  { cx: 860, cy: 120, r: 11, color: '#c4a0ff', shortLabel: 'CỘNG ĐỒNG' },
 ]
 
 export default function GemPage() {
@@ -290,10 +291,12 @@ export default function GemPage() {
               <line x1="210" y1="115" x2="380" y2="75"  stroke="rgba(126,231,255,0.2)" strokeWidth="1" strokeDasharray="5 6" />
               <line x1="380" y1="75"  x2="540" y2="115" stroke="rgba(126,231,255,0.2)" strokeWidth="1" strokeDasharray="5 6" />
               <line x1="540" y1="115" x2="720" y2="155" stroke="rgba(126,231,255,0.2)" strokeWidth="1" strokeDasharray="5 6" />
+              <line x1="720" y1="155" x2="860" y2="120" stroke="rgba(126,231,255,0.2)" strokeWidth="1" strokeDasharray="5 6" />
 
               {/* Nodes from earnWays */}
               {earnWays.map((way, i) => {
                 const cfg = NODE_CONFIGS[i]
+                if (!cfg) return null
                 const rewardNum = way.reward.replace(' Gem', '')
                 return (
                   <g key={i}>
