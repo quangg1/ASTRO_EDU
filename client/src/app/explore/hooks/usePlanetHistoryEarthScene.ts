@@ -3,9 +3,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import { beatToEarthStage } from '@/features/content3d/narrative/adapters/earthAdapter'
 import { usePlanetNarrativeStore } from '@/features/content3d/narrative/stores/planetNarrativeStore'
-import { fetchFossilsForStage } from '@/features/content3d/earth/api/earthApi'
-import { useSceneCommandStore } from '@/features/content3d/earth/public'
-import type { EarthStage, Fossil } from '@/features/content3d/earth/lib/earthHistoryTypes'
+import {
+  fetchFossilsForStage,
+  useSceneCommandStore,
+  type EarthStage,
+  type Fossil,
+} from '@/features/content3d/earth/public'
 
 const EARTH_ENTITY_ID = 'planet-earth'
 
