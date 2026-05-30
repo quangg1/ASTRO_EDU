@@ -11,7 +11,7 @@ import {
   revokeCatalogEnrollment,
   revokeCohortEnrollment,
   type AdminUserDetail,
-} from '@/features/admin/api/adminOpsApi'
+} from '@/features/admin/public'
 import { formatOrderAmount } from '@/lib/money'
 import { formatOrderDateVi, orderKindLabelVi, orderStatusLabelVi } from '@/features/payment/lib/orderLabels'
 import { AdminGate } from '@/components/admin/AdminShell'

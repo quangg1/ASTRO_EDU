@@ -11,7 +11,7 @@ import {
   fetchAdminOrdersList,
   patchAdminOrderNote,
   refundAdminOrder,
-} from '@/features/admin/api/adminOpsApi'
+} from '@/features/admin/public'
 import type { AdminOrder } from '@/features/payment/public'
 import { formatOrderAmount } from '@/lib/money'
 import {

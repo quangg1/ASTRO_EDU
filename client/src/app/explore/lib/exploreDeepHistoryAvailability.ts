@@ -1,5 +1,5 @@
 import { getLegacyPresetBundle } from '@/features/content3d/narrative/lib/legacyPresets'
-import { fetchPlanetNarrative } from '@/features/content3d/planet-narrative/api/planetNarrativeApi'
+import { fetchPlanetNarrative } from '@/features/content3d/narrative/public'
 
 const probeCache = new Map<string, boolean>()
 

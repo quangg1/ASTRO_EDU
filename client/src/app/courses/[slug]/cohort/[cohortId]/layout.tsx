@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import { useAuthStore } from '@/features/auth/public'
-import { fetchCohortHome } from '@/features/courses/api/cohortApi'
+import { fetchCohortHome } from '@/features/courses/public'
 import { Button } from '@/design-system'
 
 export default function CohortLayout({ children }: { children: React.ReactNode }) {
