@@ -6,13 +6,19 @@ import { AnimatePresence, motion } from 'framer-motion'
 import type { DepthLevel, LearningModule, LearningNode } from '@/data/learningPathCurriculum'
 import { DEPTH_ORDER } from '@/data/learningPathCurriculum'
 import {
-  loadLessonCompletion,
-  syncLearningPathCompletion,
   isLessonComplete,
+  isLessonMastered,
+  loadLessonCompletion,
+  loadLessonMastery,
+  loadLessonVisited3D,
+  syncLearningPathCompletion,
+  trackLearningPathBehavior,
   type LessonCompletionMap,
-} from '@/lib/learningPathProgress'
-import { trackLearningPathBehavior } from '@/lib/learningPathBehavior'
-import { useAuthStore } from '@/store/useAuthStore'
+  type LessonMasteryMap,
+  type LessonVisited3DMap,
+} from '@/features/learning-path/public'
+import { useAuthStore } from '@/features/auth/public'
+import { suggestExploreTargetsForLesson } from '@/features/content3d/showcase/public'
 
 type Props = {
   module: LearningModule
@@ -57,14 +63,24 @@ export default function NodeDepthPanel({ module, node }: Props) {
   const depths = useMemo(() => DEPTH_ORDER.filter((d) => (node.depths[d]?.length ?? 0) > 0), [node])
   const [active, setActive] = useState<DepthLevel>(depths[0] ?? 'beginner')
   const [completion, setCompletion] = useState<LessonCompletionMap>({})
+  const [mastery, setMastery] = useState<LessonMasteryMap>({})
+  const [visited3D, setVisited3D] = useState<LessonVisited3DMap>({})
   const [hoveredLesson, setHoveredLesson] = useState<string | null>(null)
   const [hoveredTab, setHoveredTab] = useState<DepthLevel | null>(null)
 
   useEffect(() => {
-    const refresh = () => setCompletion(loadLessonCompletion(userId))
+    const refresh = () => {
+      setCompletion(loadLessonCompletion(userId))
+      setMastery(loadLessonMastery(userId))
+      setVisited3D(loadLessonVisited3D(userId))
+    }
     const refreshAndSync = () => {
       refresh()
-      void syncLearningPathCompletion(userId).then((synced) => setCompletion(synced))
+      void syncLearningPathCompletion(userId).then((synced) => {
+        setCompletion(synced)
+        setMastery(loadLessonMastery(userId))
+        setVisited3D(loadLessonVisited3D(userId))
+      })
     }
     refreshAndSync()
     window.addEventListener('focus', refreshAndSync)
@@ -240,7 +256,10 @@ export default function NodeDepthPanel({ module, node }: Props) {
           <ul style={{ padding: 0, margin: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 8 }}>
             {lessons.map((lesson, i) => {
               const done = isLessonComplete(completion, lesson.id)
+              const mast = isLessonMastered(mastery, lesson.id)
               const href = `/tutorial/${encodeURIComponent(module.id)}/${encodeURIComponent(node.id)}/${encodeURIComponent(lesson.id)}`
+              const exploreTargets = suggestExploreTargetsForLesson(lesson)
+              const visitedScene = !!visited3D[lesson.id]
               const lessonNum = String(i + 1).padStart(2, '0')
               const isHov = hoveredLesson === lesson.id
               return (
@@ -250,68 +269,147 @@ export default function NodeDepthPanel({ module, node }: Props) {
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: i * 0.045 }}
                 >
-                  <Link
-                    href={href}
-                    onMouseEnter={() => setHoveredLesson(lesson.id)}
-                    onMouseLeave={() => setHoveredLesson(null)}
+                  <div
                     style={{
-                      display: 'flex', alignItems: 'center', gap: 12,
-                      padding: '12px 16px',
                       clipPath: 'polygon(8px 0%,100% 0%,100% calc(100% - 8px),calc(100% - 8px) 100%,0% 100%,0% 8px)',
                       background: isHov ? 'rgba(var(--lv-bleed-rgb),0.06)' : 'rgba(var(--lv-bleed-rgb),0.02)',
                       border: isHov ? '1px solid rgba(var(--lv-bleed-rgb),0.45)' : '1px solid rgba(var(--lv-bleed-rgb),0.15)',
                       boxShadow: isHov ? '0 0 14px rgba(var(--lv-bleed-rgb),0.1)' : 'none',
-                      textDecoration: 'none',
                       transition: 'background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease',
                     }}
                   >
-                    {done ? (
-                      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ flexShrink: 0 }}>
-                        <circle cx="7" cy="7" r="6" stroke="#3ddc84" strokeWidth="1.5" />
-                        <path d="M4.5 7L6.5 9L9.5 5.5" stroke="#3ddc84" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                    ) : (
+                    <Link
+                      href={href}
+                      onMouseEnter={() => setHoveredLesson(lesson.id)}
+                      onMouseLeave={() => setHoveredLesson(null)}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 12,
+                        padding: '12px 16px',
+                        textDecoration: 'none',
+                      }}
+                    >
+                      {mast ? (
+                        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ flexShrink: 0 }}>
+                          <path d="M7 1.5L8.6 5.2H12.5L9.4 7.6L10.6 11.5L7 9.2L3.4 11.5L4.6 7.6L1.5 5.2H5.4L7 1.5Z" fill="#c4b5fd" stroke="#a78bfa" strokeWidth="0.8" />
+                        </svg>
+                      ) : done ? (
+                        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ flexShrink: 0 }}>
+                          <circle cx="7" cy="7" r="6" stroke="#3ddc84" strokeWidth="1.5" />
+                          <path d="M4.5 7L6.5 9L9.5 5.5" stroke="#3ddc84" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      ) : (
+                        <span style={{
+                          width: 8, height: 8, borderRadius: '50%', flexShrink: 0,
+                          background: 'rgba(var(--lv-bleed-rgb),1)',
+                          boxShadow: '0 0 7px rgba(var(--lv-bleed-rgb),0.6)',
+                        }} />
+                      )}
+
                       <span style={{
-                        width: 8, height: 8, borderRadius: '50%', flexShrink: 0,
-                        background: 'rgba(var(--lv-bleed-rgb),1)',
-                        boxShadow: '0 0 7px rgba(var(--lv-bleed-rgb),0.6)',
-                      }} />
-                    )}
+                        fontFamily: "'JetBrains Mono',monospace",
+                        fontSize: 10, letterSpacing: '0.14em', textTransform: 'uppercase',
+                        color: '#3a4a6a', flexShrink: 0, whiteSpace: 'nowrap',
+                      }}>
+                        L · {lessonNum}
+                      </span>
 
-                    <span style={{
-                      fontFamily: "'JetBrains Mono',monospace",
-                      fontSize: 10, letterSpacing: '0.14em', textTransform: 'uppercase',
-                      color: '#3a4a6a', flexShrink: 0, whiteSpace: 'nowrap',
-                    }}>
-                      L · {lessonNum}
-                    </span>
+                      <span style={{ color: '#263042', fontSize: 10, flexShrink: 0 }}>·</span>
 
-                    <span style={{ color: '#263042', fontSize: 10, flexShrink: 0 }}>·</span>
+                      <span style={{
+                        flex: 1, minWidth: 0,
+                        fontFamily: "'Space Grotesk',sans-serif",
+                        fontSize: 15, fontWeight: 500,
+                        color: done ? '#5c6886' : '#c8d8f0',
+                        lineHeight: 1.4,
+                      }}>
+                        {lesson.titleVi}
+                      </span>
 
-                    <span style={{
-                      flex: 1, minWidth: 0,
-                      fontFamily: "'Space Grotesk',sans-serif",
-                      fontSize: 15, fontWeight: 500,
-                      color: done ? '#5c6886' : '#c8d8f0',
-                      lineHeight: 1.4,
-                    }}>
-                      {lesson.titleVi}
-                    </span>
-
-                    <div style={{
-                      flexShrink: 0, width: 32, height: 28,
-                      clipPath: 'polygon(5px 0%,100% 0%,100% calc(100% - 5px),calc(100% - 5px) 100%,0% 100%,0% 5px)',
-                      background: isHov ? 'rgba(var(--lv-bleed-rgb),0.18)' : 'rgba(var(--lv-bleed-rgb),0.07)',
-                      border: `1px solid rgba(var(--lv-bleed-rgb),${isHov ? '0.55' : '0.28'})`,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      color: 'rgba(var(--lv-bleed-rgb),1)',
-                      fontFamily: "'JetBrains Mono',monospace", fontSize: 14,
-                      transition: 'background 0.2s ease, transform 0.2s ease, border-color 0.2s ease',
-                      transform: isHov ? 'translateX(3px)' : 'none',
-                    }}>
-                      →
-                    </div>
-                  </Link>
+                      <div style={{
+                        flexShrink: 0, width: 32, height: 28,
+                        clipPath: 'polygon(5px 0%,100% 0%,100% calc(100% - 5px),calc(100% - 5px) 100%,0% 100%,0% 5px)',
+                        background: isHov ? 'rgba(var(--lv-bleed-rgb),0.18)' : 'rgba(var(--lv-bleed-rgb),0.07)',
+                        border: `1px solid rgba(var(--lv-bleed-rgb),${isHov ? '0.55' : '0.28'})`,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        color: 'rgba(var(--lv-bleed-rgb),1)',
+                        fontFamily: "'JetBrains Mono',monospace", fontSize: 14,
+                        transition: 'background 0.2s ease, transform 0.2s ease, border-color 0.2s ease',
+                        transform: isHov ? 'translateX(3px)' : 'none',
+                      }}>
+                        →
+                      </div>
+                    </Link>
+                    {exploreTargets.showcase || exploreTargets.history ? (
+                      <div style={{ margin: '0 12px 12px', padding: '10px 12px', borderTop: '1px solid rgba(126,231,255,0.08)' }}>
+                        <p style={{ margin: '0 0 8px', fontSize: 11, color: visitedScene ? '#6ee7b7' : '#fcd34d' }}>
+                          {visitedScene ? 'Đã khám phá 3D liên quan' : 'Khám phá 3D / Deep History liên quan bài này'}
+                        </p>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                          {exploreTargets.showcase && !visitedScene ? (
+                            <Link
+                              href={exploreTargets.showcase.href}
+                              onClick={() =>
+                                trackLearningPathBehavior({
+                                  eventName: 'lp_lesson_opened',
+                                  moduleId: module.id,
+                                  nodeId: node.id,
+                                  lessonId: lesson.id,
+                                  depth: active,
+                                  metadata: {
+                                    source: 'learning-cta-to-showcase',
+                                    entityId: exploreTargets.showcase!.entityId,
+                                  },
+                                })
+                              }
+                              style={{
+                                padding: '4px 10px',
+                                clipPath: 'polygon(4px 0%,100% 0%,calc(100% - 4px) 100%,0% 100%)',
+                                background: 'rgba(126,231,255,0.12)',
+                                border: '1px solid rgba(126,231,255,0.35)',
+                                fontSize: 11,
+                                fontWeight: 600,
+                                color: CYAN,
+                                textDecoration: 'none',
+                              }}
+                            >
+                              Showcase 3D
+                            </Link>
+                          ) : null}
+                          {exploreTargets.history ? (
+                            <Link
+                              href={exploreTargets.history.href}
+                              onClick={() =>
+                                trackLearningPathBehavior({
+                                  eventName: 'lp_lesson_opened',
+                                  moduleId: module.id,
+                                  nodeId: node.id,
+                                  lessonId: lesson.id,
+                                  depth: active,
+                                  metadata: {
+                                    source: 'learning-cta-to-deep-history',
+                                    entityId: exploreTargets.history!.entityId,
+                                    beatId: exploreTargets.history!.beatId,
+                                  },
+                                })
+                              }
+                              style={{
+                                padding: '4px 10px',
+                                clipPath: 'polygon(4px 0%,100% 0%,calc(100% - 4px) 100%,0% 100%)',
+                                background: 'rgba(139,92,246,0.12)',
+                                border: '1px solid rgba(167,139,250,0.35)',
+                                fontSize: 11,
+                                fontWeight: 600,
+                                color: '#c4b5fd',
+                                textDecoration: 'none',
+                              }}
+                            >
+                              {lesson.sceneContext?.historyFocus?.labelVi?.trim() || 'Deep History'}
+                            </Link>
+                          ) : null}
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
                 </motion.li>
               )
             })}

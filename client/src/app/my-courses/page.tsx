@@ -4,13 +4,15 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { ChevronDown, ChevronUp, Layers, Lock, Sparkles } from 'lucide-react'
-import { useAuthStore } from '@/store/useAuthStore'
-import { fetchMyCourses, type MyCourse } from '@/lib/coursesApi'
+import { useAuthStore } from '@/features/auth/public'
+import { fetchMyCourses, type MyCourse } from '@/features/courses/public'
 import { SkeletonList } from '@/components/ui/Skeleton'
-import { fetchMyOrders, type Order } from '@/lib/paymentsApi'
-import { useLearningPath } from '@/hooks/useLearningPath'
+import { fetchMyOrders, orderStatusLabelVi, type Order } from '@/features/payment/public'
+import { formatOrderAmount, formatVnd, sumCompletedOrdersVnd } from '@/lib/money'
+import { useLiveClock } from '@/hooks/useLiveClock'
 import { getLessonById } from '@/data/learningPathCurriculum'
 import {
+  useLearningPath,
   loadLessonCompletion,
   loadLastLearningPathLessonId,
   moduleProgressPercent,
@@ -19,7 +21,7 @@ import {
   countCompletedLessonsInModule,
   countFullyCompletedModules,
   computeProgressPercent,
-} from '@/lib/learningPathProgress'
+} from '@/features/learning-path/public'
 
 // ─── design primitives ───────────────────────────────────────────────────────
 
@@ -98,7 +100,7 @@ export default function MyCoursesPage() {
   const [courses, setCourses] = useState<MyCourse[]>([])
   const [loading, setLoading] = useState(true)
   const [orders, setOrders] = useState<Order[]>([])
-  const [utcTime, setUtcTime] = useState('')
+  const { time: localTime, zoneLabel } = useLiveClock()
   const { modules } = useLearningPath()
   const [lpExpanded, setLpExpanded] = useState(true)
   const [lpSnapshot, setLpSnapshot] = useState<{
@@ -115,20 +117,6 @@ export default function MyCoursesPage() {
     modulesTotal: 0,
   })
 
-  // UTC clock
-  useEffect(() => {
-    const tick = () => {
-      const now = new Date()
-      const h = String(now.getUTCHours()).padStart(2, '0')
-      const m = String(now.getUTCMinutes()).padStart(2, '0')
-      const s = String(now.getUTCSeconds()).padStart(2, '0')
-      setUtcTime(`${h}:${m}:${s}`)
-    }
-    tick()
-    const id = setInterval(tick, 1000)
-    return () => clearInterval(id)
-  }, [])
-
   useEffect(() => {
     if (checked && !user) {
       router.replace('/login?redirect=/my-courses')
@@ -141,7 +129,7 @@ export default function MyCoursesPage() {
         setOrders(os)
       })
       .finally(() => setLoading(false))
-  }, [checked, user, router])
+  }, [checked, user?.id, router])
 
   useEffect(() => {
     if (!user) return
@@ -157,12 +145,10 @@ export default function MyCoursesPage() {
     refreshLp()
     void syncLearningPathCompletion(user.id).then(() => refreshLp())
     window.addEventListener('lp-progress-changed', refreshLp)
-    window.addEventListener('focus', refreshLp)
     return () => {
       window.removeEventListener('lp-progress-changed', refreshLp)
-      window.removeEventListener('focus', refreshLp)
     }
-  }, [user, modules])
+  }, [user?.id, modules])
 
   const currentModule = lpSnapshot.lastHit?.module
   const modulePct = currentModule
@@ -189,24 +175,9 @@ export default function MyCoursesPage() {
 
   // derived order stats
   const completedOrders = orders.filter((o) => o.status === 'completed').length
-  const pendingOrders = orders.filter((o) => o.status === 'pending').length
-  const totalValue = orders.reduce((sum, o) => sum + o.amount, 0)
+  const totalValueVnd = sumCompletedOrdersVnd(orders)
 
-  const amountStr = (o: Order) =>
-    o.currency === 'USD' ? `$${o.amount.toFixed(2)}` : `${o.amount.toLocaleString('en-US')} ₫`
-
-  const fmtDate = (iso: string) => {
-    const d = new Date(iso)
-    const month = d.getMonth() + 1
-    const day = d.getDate()
-    const year = d.getFullYear()
-    const h = d.getHours()
-    const min = String(d.getMinutes()).padStart(2, '0')
-    const sec = String(d.getSeconds()).padStart(2, '0')
-    const ampm = h >= 12 ? 'PM' : 'AM'
-    const h12 = h % 12 || 12
-    return `${month}/${day}/${year} · ${h12}:${min}:${sec} ${ampm}`
-  }
+  const amountStr = (o: Order) => formatOrderAmount(o.amount, o.currency)
 
   return (
     <div
@@ -288,7 +259,7 @@ export default function MyCoursesPage() {
                   display: 'inline-block',
                 }}
               />
-              UTC {utcTime}
+              {zoneLabel} {localTime}
             </p>
             <p
               style={{
@@ -997,7 +968,7 @@ export default function MyCoursesPage() {
           )}
         </section>
 
-        {/* ④ Lịch sử đơn hàng */}
+        {/* ④ Thanh toán — xem đầy đủ tại /my-orders */}
         <section>
           <div
             style={{
@@ -1024,7 +995,7 @@ export default function MyCoursesPage() {
                 }}
               >
                 <span style={{ width: 20, height: 1, background: 'rgba(126,231,255,0.25)', display: 'inline-block' }} />
-                // 04 · transactions / ledger
+                // 04 · transactions
               </p>
               <h2
                 style={{
@@ -1035,197 +1006,79 @@ export default function MyCoursesPage() {
                 }}
               >
                 Lịch sử{' '}
-                <em style={{ fontStyle: 'italic', fontWeight: 300, color: '#f5a524' }}>đơn hàng</em>
+                <em style={{ fontStyle: 'italic', fontWeight: 300, color: '#f5a524' }}>thanh toán</em>
               </h2>
             </div>
-            {!loading && orders.length > 0 && (
-              <p
-                style={{
-                  fontFamily: 'JetBrains Mono, monospace',
-                  fontSize: 10,
-                  color: '#5c6886',
-                  letterSpacing: '0.12em',
-                  textTransform: 'uppercase',
-                }}
-              >
-                total <span style={{ color: '#9aa8c4' }}>{orders.length}</span>
-                {' · '}completed <span style={{ color: '#6dffb0' }}>{completedOrders}</span>
-                {' · '}pending <span style={{ color: '#f5a524' }}>{pendingOrders}</span>
-              </p>
-            )}
+            <Link
+              href="/my-orders"
+              style={{
+                fontFamily: 'JetBrains Mono, monospace',
+                fontSize: 11,
+                letterSpacing: '0.1em',
+                color: '#f5a524',
+                textDecoration: 'none',
+              }}
+            >
+              Xem tất cả →
+            </Link>
           </div>
 
           {loading ? (
             <SkeletonList count={1} />
           ) : orders.length === 0 ? (
             <HudPanel style={{ padding: '20px 24px' }}>
-              <p
-                style={{
-                  fontFamily: 'JetBrains Mono, monospace',
-                  fontSize: 12,
-                  color: '#5c6886',
-                }}
-              >
-                // no transactions found
+              <p style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 12, color: '#5c6886' }}>
+                Chưa có đơn thanh toán.{' '}
+                <Link href="/courses" style={{ color: '#7ee7ff' }}>
+                  Khám phá khóa học
+                </Link>
               </p>
             </HudPanel>
           ) : (
-            <HudPanel style={{ overflow: 'hidden', padding: 0 }}>
-              {/* table header */}
-              <div
+            <HudPanel style={{ padding: '16px 20px' }}>
+              <p
                 style={{
-                  display: 'grid',
-                  gridTemplateColumns: '1fr 140px 140px 200px',
-                  padding: '12px 24px',
-                  borderBottom: '1px solid rgba(126,231,255,0.1)',
-                  background: 'rgba(126,231,255,0.04)',
+                  fontFamily: 'JetBrains Mono, monospace',
+                  fontSize: 10,
+                  color: '#5c6886',
+                  marginBottom: 12,
+                  letterSpacing: '0.1em',
                 }}
               >
-                {['// course', '// amount', '// status', '// created'].map((h) => (
-                  <span
-                    key={h}
-                    style={{
-                      fontFamily: 'JetBrains Mono, monospace',
-                      fontSize: 10,
-                      letterSpacing: '0.15em',
-                      textTransform: 'uppercase',
-                      color: '#5c6886',
-                    }}
-                  >
-                    {h}
-                  </span>
-                ))}
-              </div>
-
-              {/* rows */}
-              {orders.map((o, i) => {
-                const isCompleted = o.status === 'completed'
-                const dotColor = isCompleted ? '#6dffb0' : '#7ee7ff'
-                return (
-                  <div
+                {orders.length} đơn · {completedOrders} đã thanh toán · tổng {formatVnd(totalValueVnd)}
+              </p>
+              <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+                {orders.slice(0, 3).map((o) => (
+                  <li
                     key={o._id}
                     style={{
-                      display: 'grid',
-                      gridTemplateColumns: '1fr 140px 140px 200px',
-                      padding: '11px 24px',
-                      borderBottom: i < orders.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none',
-                      transition: 'background 0.15s',
-                      alignItems: 'center',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      gap: 12,
+                      padding: '8px 0',
+                      borderTop: '1px solid rgba(255,255,255,0.06)',
+                      fontFamily: 'JetBrains Mono, monospace',
+                      fontSize: 12,
                     }}
                   >
-                    {/* course */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <span
-                        style={{
-                          width: 6, height: 6, borderRadius: '50%',
-                          background: dotColor,
-                          boxShadow: `0 0 5px ${dotColor}`,
-                          flexShrink: 0,
-                        }}
-                      />
-                      <Link
-                        href={`/courses/${o.courseSlug}`}
-                        style={{
-                          fontFamily: 'JetBrains Mono, monospace',
-                          fontSize: 13,
-                          color: '#9aa8c4',
-                          textDecoration: 'none',
-                        }}
-                      >
-                        {o.courseSlug}
-                      </Link>
-                    </div>
-
-                    {/* amount */}
-                    <span
-                      style={{
-                        fontFamily: 'JetBrains Mono, monospace',
-                        fontSize: 14,
-                        fontWeight: 500,
-                        color: '#f5a524',
-                      }}
-                    >
-                      {amountStr(o)}
+                    <span style={{ color: '#9aa8c4', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {o.courseSlug}
                     </span>
-
-                    {/* status badge */}
-                    <span>
-                      <span
-                        style={{
-                          display: 'inline-block',
-                          padding: '3px 10px',
-                          border: isCompleted
-                            ? '1px solid rgba(109,255,176,0.5)'
-                            : '1px solid rgba(245,165,36,0.5)',
-                          background: isCompleted
-                            ? 'rgba(109,255,176,0.08)'
-                            : 'rgba(245,165,36,0.08)',
-                          color: isCompleted ? '#6dffb0' : '#f5a524',
-                          fontFamily: 'JetBrains Mono, monospace',
-                          fontSize: 10,
-                          letterSpacing: '0.12em',
-                          textTransform: 'uppercase',
-                          ...chamfer(5),
-                        }}
-                      >
-                        {o.status}
-                      </span>
+                    <span style={{ color: '#f5a524', flexShrink: 0 }}>{amountStr(o)}</span>
+                    <span style={{ color: '#6dffb0', flexShrink: 0, fontSize: 10 }}>
+                      {orderStatusLabelVi(o.status)}
                     </span>
-
-                    {/* timestamp */}
-                    <span
-                      style={{
-                        fontFamily: 'JetBrains Mono, monospace',
-                        fontSize: 12,
-                        color: '#5c6886',
-                      }}
-                    >
-                      {fmtDate(o.createdAt)}
-                    </span>
-                  </div>
-                )
-              })}
-
-              {/* foot */}
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: '12px 24px',
-                  borderTop: '1px solid rgba(126,231,255,0.1)',
-                  background: 'rgba(126,231,255,0.02)',
-                  flexWrap: 'wrap',
-                  gap: 8,
-                }}
-              >
-                <p
-                  style={{
-                    fontFamily: 'JetBrains Mono, monospace',
-                    fontSize: 10,
-                    letterSpacing: '0.12em',
-                    textTransform: 'uppercase',
-                    color: '#5c6886',
-                  }}
-                >
-                  // ledger.sync ·{' '}
-                  <span style={{ color: '#7ee7ff' }}>all systems nominal</span>
+                  </li>
+                ))}
+              </ul>
+              {orders.length > 3 && (
+                <p style={{ marginTop: 12, fontSize: 11, color: '#5c6886' }}>
+                  +{orders.length - 3} đơn khác —{' '}
+                  <Link href="/my-orders" style={{ color: '#f5a524' }}>
+                    mở lịch sử đầy đủ
+                  </Link>
                 </p>
-                <p
-                  style={{
-                    fontFamily: 'JetBrains Mono, monospace',
-                    fontSize: 11,
-                    color: '#5c6886',
-                    letterSpacing: '0.1em',
-                  }}
-                >
-                  tổng đơn{' '}
-                  <span style={{ color: '#9aa8c4' }}>{orders.length}</span>
-                  {'  ·  '}
-                  tổng giá trị{' '}
-                  <span style={{ color: '#f5a524' }}>${totalValue.toFixed(2)}</span>
-                </p>
-              </div>
+              )}
             </HudPanel>
           )}
         </section>

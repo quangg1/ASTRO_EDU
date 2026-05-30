@@ -1,25 +1,14 @@
 'use client'
 
-import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
 import { Play, ArrowRight, ChevronDown, Search } from 'lucide-react'
 import { SolarSystemVisual } from './SolarSystemVisual'
 import { HudOrbitalFrame } from './HudOrbitalFrame'
-
-function formatUTC(d: Date) {
-  return d.toISOString().slice(11, 19) // HH:MM:SS
-}
+import { useLiveClock } from '@/hooks/useLiveClock'
 
 export function HeroSection() {
-  const [utc, setUtc] = useState<string>('')
-
-  useEffect(() => {
-    const tick = () => setUtc(formatUTC(new Date()))
-    tick()
-    const id = setInterval(tick, 1000)
-    return () => clearInterval(id)
-  }, [])
+  const { time: localTime, zoneLabel } = useLiveClock()
 
   return (
     <section className="relative min-h-[100dvh] md:min-h-screen flex items-center overflow-hidden">
@@ -70,7 +59,9 @@ export function HeroSection() {
           >
             <span>MISSION COS-LRN/04</span>
             <span aria-hidden className="text-[color:var(--hud-plasma)]/40">·</span>
-            <span className="text-[color:var(--hud-plasma)] tabular-nums">{utc || '--:--:--'} UTC</span>
+            <span className="text-[color:var(--hud-plasma)] tabular-nums">
+              {localTime} {zoneLabel}
+            </span>
             <span aria-hidden className="text-[color:var(--hud-plasma)]/40">·</span>
             <span className="inline-flex items-center gap-1.5">
               STATUS <span className="hud-status-dot-cyan" aria-hidden /> ONLINE

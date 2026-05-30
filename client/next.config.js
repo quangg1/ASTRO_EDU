@@ -1,31 +1,107 @@
-/**
- * Hot reload (Fast Refresh) cần:
- * 1) Dev server compile thành công — nếu terminal báo "Failed to compile" / import error,
- *    HMR sẽ không áp dụng; khi đó phải sửa lỗi (hoặc xóa .next rồi chạy lại dev).
- * 2) Trên Windows (ổ mạng, OneDrive, antivirus): có thể bật polling:
- *    PowerShell: $env:WATCHPACK_POLLING="1"; npm run dev
- *    hoặc: npm run dev:poll
- *
- * @type {import('next').NextConfig}
- */
-const nextConfig = {
-  // Enable React strict mode for better development experience
-  reactStrictMode: true,
+/** Tiền tố `/api/...` do unified API (`services/api`) — không gồm route nội bộ Next như `/api/chat`. */
+const path = require('path');
+const ENV = require('../shared/envNames');
 
-  /** Tutorial Studio cũ → Learning Path Studio */
+const UNIFIED_API_ROUTE_SEGMENTS = [
+  'courses',
+  'tutorials',
+  'learning-path',
+  'concepts',
+  'showcase-entities',
+  'showcase-catalog',
+  'showcase-orbits',
+  'gems',
+  'showcase',
+  'earth-history',
+  'planet-narratives',
+  'fossils',
+  'phyla',
+  'payments',
+  'promotions',
+  'notifications',
+  'forums',
+  'posts',
+  'comments',
+  'news',
+  'admin',
+  'agent',
+];
+
+function trimEndSlash(s) {
+  return String(s || '').trim().replace(/\/$/, '');
+}
+
+function readEnv(name) {
+  return trimEndSlash(process.env[name] || '');
+}
+
+function resolveMediaOrigin() {
+  return (
+    readEnv(ENV.MEDIA_SERVICE_URL) ||
+    readEnv(ENV.NEXT_PUBLIC_API_BASE_URL) ||
+    readEnv(ENV.API_PROXY_TARGET)
+  );
+}
+
+function resolveApiProxyOrigin() {
+  return readEnv(ENV.API_PROXY_TARGET) || readEnv(ENV.NEXT_PUBLIC_API_BASE_URL);
+}
+
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  reactStrictMode: true,
+  transpilePackages: ['@galaxies/contracts', 'three'],
+
   async redirects() {
     return [
       { source: '/studio/tutorial', destination: '/studio/learning-path', permanent: false },
       { source: '/studio/tutorial/new', destination: '/studio/learning-path', permanent: false },
       { source: '/studio/tutorial/:slug', destination: '/studio/learning-path', permanent: false },
-    ]
+    ];
   },
 
-  // Proxy /media to Media service (uploads served same-origin)
   async rewrites() {
-    const mediaUrl = process.env.MEDIA_SERVICE_URL || 'http://localhost:3004';
-    return [{ source: '/media/:path*', destination: `${mediaUrl}/:path*` }];
+    const mediaUrl = resolveMediaOrigin();
+    const mediaRule = mediaUrl
+      ? { source: '/media/:path*', destination: `${mediaUrl}/:path*` }
+      : null;
+
+    if (process.env.NODE_ENV !== 'development') {
+      return mediaRule ? [mediaRule] : [];
+    }
+
+    const apiOrigin = resolveApiProxyOrigin();
+    if (!apiOrigin) {
+      return mediaRule ? [mediaRule] : [];
+    }
+
+    const apiRules = UNIFIED_API_ROUTE_SEGMENTS.flatMap((segment) => [
+      {
+        source: `/api/${segment}/:path*`,
+        destination: `${apiOrigin}/api/${segment}/:path*`,
+      },
+      {
+        source: `/api/${segment}`,
+        destination: `${apiOrigin}/api/${segment}`,
+      },
+    ]);
+    const wsRules = [
+      { source: '/ws/:path*', destination: `${apiOrigin}/ws/:path*` },
+    ];
+    const authRules = [
+      { source: '/auth/:path*', destination: `${apiOrigin}/auth/:path*` },
+      { source: '/auth', destination: `${apiOrigin}/auth` },
+      { source: '/upload/:path*', destination: `${apiOrigin}/upload/:path*` },
+      { source: '/upload/avatar', destination: `${apiOrigin}/upload/avatar` },
+      { source: '/upload', destination: `${apiOrigin}/upload` },
+      { source: '/files/:path*', destination: `${apiOrigin}/files/:path*` },
+      { source: '/files', destination: `${apiOrigin}/files` },
+    ];
+    return mediaRule
+      ? [mediaRule, ...wsRules, ...apiRules, ...authRules]
+      : [...wsRules, ...apiRules, ...authRules];
   },
+
   async headers() {
     return [
       {
@@ -39,30 +115,36 @@ const nextConfig = {
       },
     ];
   },
-  
-  // Allow images from localhost and from media CDN (S3 / CloudFront)
+
   images: {
+    // CDN đã phục vụ file tĩnh; bỏ qua /_next/image trên Render (tránh 502 khi fetch S3).
+    unoptimized: Boolean(readEnv(ENV.NEXT_PUBLIC_MEDIA_CDN)),
     remotePatterns: [
       { protocol: 'https', hostname: '**.amazonaws.com', pathname: '/**' },
       { protocol: 'https', hostname: '**.cloudfront.net', pathname: '/**' },
-      { protocol: 'http', hostname: 'localhost', pathname: '/**' },
       { protocol: 'https', hostname: 'images.unsplash.com', pathname: '/**' },
     ],
   },
-  
-  // Transpile three.js packages
-  transpilePackages: ['three'],
-  
+
   webpack: (config, { dev, isServer }) => {
-    /** Polling khi file watcher của Windows không bắt được sự kiện save (D:, cloud sync, v.v.) */
+    // file:../packages/contracts — webpack resolve zod từ client/node_modules
+    config.resolve.alias = {
+      ...(config.resolve.alias || {}),
+      zod: require.resolve('zod'),
+    };
+    config.resolve.modules = [
+      path.resolve(__dirname, 'node_modules'),
+      ...(config.resolve.modules || ['node_modules']),
+    ];
+
     if (dev && !isServer && process.env.WATCHPACK_POLLING === '1') {
       config.watchOptions = {
         ...config.watchOptions,
         poll: 1000,
         aggregateTimeout: 300,
-      }
+      };
     }
-    return config
+    return config;
   },
 };
 

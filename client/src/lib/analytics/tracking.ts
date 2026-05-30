@@ -10,11 +10,13 @@ export type AnalyticsEventName =
   | 'login_success'
   | 'register_success'
   | 'lesson_complete_toggled'
+  | 'lesson_mastered'
   | 'concept_panel_opened'
   | 'checkout_started'
   | 'payment_return_viewed'
   | 'admin_dashboard_viewed'
   | 'admin_user_role_changed'
+  | 'admin_user_deleted'
   | 'admin_teacher_application_reviewed'
   | 'admin_range_changed'
 

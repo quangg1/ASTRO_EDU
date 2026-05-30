@@ -5,10 +5,9 @@ import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { Eye, EyeOff, Sparkles, Mail, Lock } from 'lucide-react'
-import { login } from '@/lib/authApi'
+import { login, useAuthStore } from '@/features/auth/public'
 import { FirebaseAuthButtons } from '@/components/auth/FirebaseAuthButtons'
 import { getStaticAssetUrl } from '@/lib/apiConfig'
-import { useAuthStore } from '@/store/useAuthStore'
 import { SiteLogo } from '@/components/ui/SiteLogo'
 import { sr } from '@/lib/ssrStableRandom'
 import { trackEvent } from '@/lib/analytics'
@@ -81,7 +80,14 @@ function LoginPageContent() {
         router.push(redirectTo)
         return
       }
-      setError(res.error || viText.auth.signInFailed)
+      if (res.code === 'EMAIL_NOT_VERIFIED') {
+        setError(
+          (res.error || 'Email chưa xác nhận.') +
+            ' Mở trang đăng ký, nhập lại email và chọn «Gửi lại mã».',
+        )
+      } else {
+        setError(res.error || viText.auth.signInFailed)
+      }
     } catch {
       setError(viText.auth.networkError)
     } finally {

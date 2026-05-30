@@ -24,6 +24,9 @@
     "paths": {
       "@/*": [
         "./src/*"
+      ],
+      "@galaxies/shared/*": [
+        "../shared/*"
       ]
     },
     "target": "ES2017"

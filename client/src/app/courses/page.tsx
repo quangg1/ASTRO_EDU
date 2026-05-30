@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { fetchCourses, type Course } from '@/lib/coursesApi'
+import { fetchCourses, type Course } from '@/features/courses/public'
 import { SkeletonList } from '@/components/ui/Skeleton'
+import { useLiveClock } from '@/hooks/useLiveClock'
 
 // ─── design primitives ───────────────────────────────────────────────────────
 
@@ -474,20 +475,7 @@ function CourseCard({ course, index }: { course: Course; index: number }) {
 export default function CoursesPage() {
   const [courses, setCourses] = useState<Course[]>([])
   const [loading, setLoading] = useState(true)
-  const [utcTime, setUtcTime] = useState('')
-
-  useEffect(() => {
-    const tick = () => {
-      const now = new Date()
-      const h = String(now.getUTCHours()).padStart(2, '0')
-      const m = String(now.getUTCMinutes()).padStart(2, '0')
-      const s = String(now.getUTCSeconds()).padStart(2, '0')
-      setUtcTime(`${h}:${m}:${s}`)
-    }
-    tick()
-    const id = setInterval(tick, 1000)
-    return () => clearInterval(id)
-  }, [])
+  const { time: localTime, zoneLabel } = useLiveClock()
 
   useEffect(() => {
     fetchCourses()
@@ -567,7 +555,9 @@ export default function CoursesPage() {
                 fontSize: 11, color: '#5c6886',
               }}
             >
-              <span style={{ color: '#7ee7ff' }}>UTC {utcTime}</span>
+              <span style={{ color: '#7ee7ff' }}>
+                {zoneLabel} {localTime}
+              </span>
               <span>·</span>
               <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
                 <span

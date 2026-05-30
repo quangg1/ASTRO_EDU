@@ -1,9 +1,15 @@
 /**
  * Learning Path — mỗi Node có 3 tầng; mỗi tầng là danh sách bài học (LessonItem), mỗi bài có id ổn định.
  * Nội dung bài: **sections** (cùng block kit với Course — LessonSection).
+ *
+ * **Runtime SSOT:** `GET /api/learning-path` (see `useLearningPath` + `fetchPublicLearningPathData`).
+ * Static `LEARNING_MODULES` / `LEARNING_CONCEPTS` here are **offline / dev fallback** only until API loads.
  */
 
-import type { LessonSection } from '@/lib/coursesApi'
+import type { LessonSection } from '@/features/courses/api/coursesApi'
+import type { QuizQuestion } from '@/shared/types/quizQuestion'
+
+export type { QuizQuestion }
 
 export type DepthLevel = 'beginner' | 'explorer' | 'researcher'
 
@@ -42,6 +48,23 @@ export type LessonConceptAnchor = {
   phrase: string
 }
 
+/** Deep History focus — cùng entity với showcase, mở timeline + beat (và pin tuỳ chọn). */
+export type LessonHistoryFocus = {
+  beatId: number
+  pinId?: string
+  labelVi?: string
+}
+
+/** Bài học "claim" entity showcase 3D — Layer 3 deep-link (không dùng bridge rule). */
+export type LessonSceneContext = {
+  /** Entity catalog id (vd: planet-saturn) — ưu tiên hiển thị khi khớp. */
+  primaryEntityId?: string
+  /** Các entity bổ sung cùng bài có thể liên quan. */
+  entityIds?: string[]
+  /** Cùng primaryEntityId — mở Deep History (?history=1&beat=&pin=). */
+  historyFocus?: LessonHistoryFocus
+}
+
 export type LessonItem = {
   id: string
   titleVi: string
@@ -50,10 +73,14 @@ export type LessonItem = {
   conceptIds?: string[]
   /** Highlight + link theo cụm văn bản cụ thể (ưu tiên hơn auto keyword). */
   conceptAnchors?: LessonConceptAnchor[]
+  /** 3–5 câu kiểm tra nhanh; nếu thiếu, client sinh câu từ concept gắn bài. */
+  recallQuiz?: QuizQuestion[]
   /** Block content — cùng schema với khóa học (richtext, image, video, …) */
   sections?: LessonSection[]
   /** Legacy: HTML đơn nếu chưa có sections (hoặc ghi đè từ API cũ) */
   body?: string
+  /** Liên kết bài ↔ entity 3D showcase (Learning Bridge layer 3). */
+  sceneContext?: LessonSceneContext
 }
 
 /** Map node → chủ đề landing (Dual mapping). weight: 0–1, tổng không cần = 1. */
@@ -75,6 +102,10 @@ export type LearningConcept = {
   aliases?: string[]
   /** Concept cần biết trước khi học concept này. */
   prerequisites?: string[]
+  /** Mức độ học tập sư phạm (không đồng nhất với topo depth của graph). */
+  difficulty_level?: 0 | 1 | 2
+  /** Khi sync từ API Mongo. */
+  published?: boolean
 }
 
 export type LearningNode = {
@@ -975,6 +1006,10 @@ export function mergeLearningModules(
               conceptAnchors: Array.isArray(ov.conceptAnchors)
                 ? ov.conceptAnchors
                 : lesson.conceptAnchors,
+              sceneContext:
+                ov.sceneContext !== undefined && ov.sceneContext !== null
+                  ? ov.sceneContext
+                  : lesson.sceneContext,
               body: ov.body ?? lesson.body,
               sections:
                 ov.sections !== undefined && ov.sections !== null

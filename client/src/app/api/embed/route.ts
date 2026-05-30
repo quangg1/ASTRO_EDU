@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-const EMBEDDING_URL = process.env.EMBEDDING_URL || 'http://localhost:5004'
+import { readEnv } from '@/lib/readEnv'
+import { devError } from '@/lib/devLog'
+import { userMessages } from '@/lib/userMessages'
+import ENV from '@galaxies/shared/envNames'
+
+const EMBEDDING_URL = readEnv(ENV.EMBEDDING_URL)
 
 /**
  * Proxy to embedding service (Flag Embedding BGE-M3).
@@ -8,6 +13,10 @@ const EMBEDDING_URL = process.env.EMBEDDING_URL || 'http://localhost:5004'
  * Returns: { embeddings: number[][] } or { embedding: number[] }
  */
 export async function POST(req: NextRequest) {
+  if (!EMBEDDING_URL) {
+    devError('embed', { missing: ENV.EMBEDDING_URL })
+    return NextResponse.json({ error: userMessages.aiUnavailable }, { status: 503 })
+  }
   try {
     const body = await req.json()
     const url = `${EMBEDDING_URL.replace(/\/$/, '')}`
@@ -21,10 +30,8 @@ export async function POST(req: NextRequest) {
       })
       if (!res.ok) {
         const err = await res.text()
-        return NextResponse.json(
-          { error: 'Embedding service error', details: err },
-          { status: res.status }
-        )
+        devError('embed', err)
+        return NextResponse.json({ error: userMessages.aiUnavailable }, { status: res.status })
       }
       const data = await res.json()
       return NextResponse.json(data)
@@ -39,10 +46,8 @@ export async function POST(req: NextRequest) {
       })
       if (!res.ok) {
         const err = await res.text()
-        return NextResponse.json(
-          { error: 'Embedding service error', details: err },
-          { status: res.status }
-        )
+        devError('embed', err)
+        return NextResponse.json({ error: userMessages.aiUnavailable }, { status: res.status })
       }
       const data = await res.json()
       return NextResponse.json(data)
@@ -57,10 +62,7 @@ export async function POST(req: NextRequest) {
     if (err.name === 'AbortError') {
       return NextResponse.json({ error: 'Embedding request timeout' }, { status: 504 })
     }
-    console.error('Embed API error:', err)
-    return NextResponse.json(
-      { error: 'Cannot reach embedding service. Is it running on EMBEDDING_URL?' },
-      { status: 503 }
-    )
+    devError('embed', err)
+    return NextResponse.json({ error: userMessages.aiUnavailable }, { status: 503 })
   }
 }

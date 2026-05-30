@@ -1,0 +1,252 @@
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+#r{background:#06061a;border-radius:12px;padding:18px;font-family:system-ui,sans-serif;font-size:11px;line-height:1.6;color:#5050a0;display:flex;flex-direction:column;gap:12px;}
+h1{font-size:13px;color:#8080c0;font-weight:600;}
+h2{font-size:10.5px;font-weight:600;margin-bottom:5px;}
+.sec{background:#09091e;border-radius:8px;padding:11px 13px;border:0.5px solid #141430;}
+.row{display:flex;gap:8px;flex-wrap:wrap;}
+.col{flex:1;min-width:160px;}
+.badge{display:inline-block;font-size:8px;padding:1px 7px;border-radius:8px;margin-bottom:5px;font-weight:600;}
+.br{background:#2a0808;color:#F06060;border:0.5px solid #F0606050;}
+.ba{background:#2a1800;color:#F0A020;border:0.5px solid #F0A02050;}
+.bg{background:#08180a;color:#2DC4A7;border:0.5px solid #2DC4A750;}
+.bb{background:#080820;color:#5BA8F5;border:0.5px solid #5BA8F550;}
+.bp{background:#180820;color:#9B84F0;border:0.5px solid #9B84F050;}
+.bw{background:#181818;color:#c0c0c0;border:0.5px solid #c0c0c050;}
+.item{font-size:9.5px;color:#252548;padding:2.5px 0;border-bottom:0.5px solid #0c0c22;line-height:1.6;}
+.item:last-child{border:none;}
+.item b{color:#3a3a78;font-weight:500;}
+pre{background:#030310;border-radius:5px;padding:7px 9px;font-family:'Fira Mono',monospace;font-size:8.5px;line-height:1.9;margin-top:5px;overflow-x:auto;white-space:pre-wrap;}
+.g{color:#2DC4A7;} .a{color:#F0A020;} .b{color:#5BA8F5;} .r{color:#F06060;} .p{color:#9B84F0;} .dim{color:#1e1e45;} .w{color:#c0c0e0;}
+.signal{font-size:8.5px;padding:4px 8px;border-radius:4px;margin-top:4px;line-height:1.5;}
+.sr{background:#1a040410;border-left:2px solid #F0606060;color:#3a1010;}
+.sg{background:#04180810;border-left:2px solid #2DC4A760;color:#0a2818;}
+.sa{background:#1a100210;border-left:2px solid #F0A02060;color:#3a2010;}
+.sep{height:1px;background:#0c0c20;margin:4px 0;}
+.arrow{color:#1e1e50;font-size:12px;margin:0 4px;}
+.flow{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:6px 0;}
+.fb{background:#070718;border:0.5px solid #1a1a40;border-radius:6px;padding:5px 9px;font-size:9.5px;color:#404080;}
+</style>
+<div id="r">
+<h1>Planet Narrative Spaces — System Design Analysis</h1>
+
+<!-- SECTION 1: Vấn đề với hướng hiện tại -->
+<div class="sec" style="border-color:#F0606030;">
+<h2 style="color:#F06060">① Điểm sai của hướng document — teacher mental model bị đảo ngược</h2>
+<div class="row">
+<div class="col">
+<span class="badge br">FLOW HIỆN TẠI — SAI THỨ TỰ</span>
+<div class="flow">
+  <div class="fb">1. Pick body<br><span style="font-size:8px;color:#252548">Earth/Mars/Venus</span></div>
+  <span class="arrow">→</span>
+  <div class="fb">2. Pick spine<br><span style="font-size:8px;color:#252548">geologic/mission/chapters</span></div>
+  <span class="arrow">→</span>
+  <div class="fb">3. Lay out beats<br><span style="font-size:8px;color:#252548">drag & drop</span></div>
+</div>
+<div class="signal sr">Teacher phải nghĩ như engineer: "Tôi cần configure world trước, rồi mới đặt nội dung." — Không ai dạy học theo kiểu này. Teacher nghĩ bằng câu chuyện trước, không phải bằng technical config.</div>
+</div>
+<div class="col">
+<span class="badge bg">FLOW ĐỀ XUẤT — STORY FIRST</span>
+<div class="flow">
+  <div class="fb" style="border-color:#2DC4A740;color:#2DC4A7">1. Chọn template<br><span style="font-size:8px;color:#0a2818">"Tôi muốn kể câu chuyện gì?"</span></div>
+  <span class="arrow" style="color:#2DC4A750">→</span>
+  <div class="fb" style="border-color:#2DC4A740">2. Customize world<br><span style="font-size:8px;color:#252548">template đã chọn body+spine</span></div>
+  <span class="arrow" style="color:#2DC4A750">→</span>
+  <div class="fb" style="border-color:#2DC4A740">3. Điền content<br><span style="font-size:8px;color:#252548">beats, assets, lessons</span></div>
+</div>
+<div class="signal sg">Teacher chọn "Deep Time Journey" → system tự biết: body=Earth, spine=geologic_ma, asset_pack=fossils. Teacher chỉ cần điền nội dung, không config kỹ thuật.</div>
+</div>
+</div>
+</div>
+
+<!-- SECTION 2: Core abstraction -->
+<div class="sec">
+<h2 style="color:#9B84F0">② Core abstraction — NarrativeSpace (3 lớp đúng, nhưng tên + scope cần rõ hơn)</h2>
+<div class="row">
+
+<div class="col" style="min-width:200px">
+<span class="badge bp">LAYER 1 — WorldConfig</span>
+<pre><span class="dim">// Tách planet khỏi narrative</span>
+<span class="p">interface WorldConfig {</span>
+  <span class="w">bodySlug:</span> <span class="g">'earth'|'mars'|'venus'|string</span>
+  <span class="w">atmospherePreset:</span> <span class="b">string</span>
+  <span class="dim">// 'modern'|'archean'|'olympus-dust'|'venus-haze'</span>
+  <span class="w">colorGrade:</span> <span class="b">string</span>
+  <span class="w">effectTags:</span> <span class="b">string[]</span>
+  <span class="dim">// 'volcano'|'meteor'|'dust-storm' → effect registry</span>
+  <span class="w">lightingPreset:</span> <span class="b">string</span>
+  <span class="dim">// không hard-code effect, chỉ tag → renderer lookup</span>
+<span class="p">}</span></pre>
+</div>
+
+<div class="col" style="min-width:200px">
+<span class="badge bb">LAYER 2 — SequenceConfig</span>
+<pre><span class="dim">// "Spine" là sequence — không bắt buộc là time</span>
+<span class="b">interface SequenceConfig {</span>
+  <span class="w">type:</span>
+    <span class="g">| 'geologic_ma'</span>     <span class="dim">// Earth, Mars geology</span>
+    <span class="g">| 'mission_sols'</span>    <span class="dim">// Mars rover timeline</span>
+    <span class="g">| 'chapters'</span>        <span class="dim">// pure narrative, no time</span>
+    <span class="g">| 'custom_epochs'</span>   <span class="dim">// teacher-defined units</span>
+  <span class="w">unit:</span> <span class="b">string</span>          <span class="dim">// "Ma"|"Sol"|"Chapter"|"Epoch"</span>
+  <span class="w">range?:</span> <span class="b">[number, number]</span>
+  <span class="w">direction:</span> <span class="g">'forward'|'reverse'</span>
+  <span class="dim">// Earth: 4500 → 0 (reverse). Mission: 0 → n (forward)</span>
+<span class="b">}</span></pre>
+</div>
+
+<div class="col" style="min-width:200px">
+<span class="badge bg">LAYER 3 — Beat (content atom)</span>
+<pre><span class="dim">// EarthStage → Beat (generalized)</span>
+<span class="g">interface Beat {</span>
+  <span class="w">id:</span> <span class="b">string</span>
+  <span class="w">ref:</span> <span class="b">string|number</span>   <span class="dim">// Ma / Sol / Chapter#</span>
+  <span class="w">label:</span> <span class="b">Record&lt;Lang,string&gt;</span>
+  <span class="w">description:</span> <span class="b">Record&lt;Lang,string&gt;</span>
+  <span class="w">worldOverride?:</span> <span class="p">Partial&lt;WorldConfig&gt;</span>
+  <span class="dim">// override atmosphere/effects tại beat này</span>
+  <span class="w">assets:</span> <span class="b">BeatAsset[]</span>    <span class="dim">// organisms, markers, models</span>
+  <span class="w">interactions:</span> <span class="b">Interaction[]</span>
+  <span class="w">lessonLinks:</span> <span class="b">LessonRef[]</span>
+<span class="g">}</span></pre>
+</div>
+
+</div>
+<div class="row" style="margin-top:8px;">
+<div class="col">
+<pre><span class="dim">// NarrativeSpace — the top-level document</span>
+<span class="a">interface NarrativeSpace {</span>
+  <span class="w">id, slug, version:</span>    <span class="b">string</span>
+  <span class="w">title:</span>                 <span class="b">Record&lt;Lang,string&gt;</span>
+  <span class="w">templateId:</span>           <span class="b">string</span>       <span class="dim">// preset nào đã dùng</span>
+  <span class="w">world:</span>                 <span class="p">WorldConfig</span>
+  <span class="w">sequence:</span>             <span class="b">SequenceConfig</span>
+  <span class="w">beats:</span>                 <span class="g">Beat[]</span>
+  <span class="w">assetBundle:</span>           <span class="b">AssetBundle</span>  <span class="dim">// replaces iconicOrganisms implicit contract</span>
+  <span class="w">meta: {</span>
+    <span class="w">verified:</span>            <span class="b">boolean</span>      <span class="dim">// teacher custom vs verified preset</span>
+    <span class="w">sourceRefs:</span>          <span class="b">Citation[]</span>   <span class="dim">// bắt buộc cho scientific accuracy</span>
+    <span class="w">author, createdAt, publishedAt</span>
+  <span class="w">}</span>
+<span class="a">}</span></pre>
+</div>
+</div>
+</div>
+
+<!-- SECTION 3: Template system -->
+<div class="sec">
+<h2 style="color:#F0A020">③ Template system — teacher chọn câu chuyện, không chọn config</h2>
+<div class="row">
+<div class="col">
+<span class="badge ba">4 BUILT-IN TEMPLATES</span>
+<pre><span class="a">const TEMPLATES = [</span>
+  <span class="dim">// Earth History hiện tại = preset này</span>
+  <span class="g">{</span>
+    <span class="w">id:</span>       <span class="g">'deep-time-journey'</span>
+    <span class="w">label:</span>    <span class="g">'Hành trình địa chất'</span>
+    <span class="w">world:</span>    <span class="b">{ bodySlug: 'earth', atmospherePreset: 'archean' }</span>
+    <span class="w">sequence:</span> <span class="b">{ type: 'geologic_ma', range: [4500, 0], unit: 'Ma' }</span>
+    <span class="w">assetPack:</span><span class="b">'fossils-pbdb'</span>
+  <span class="g">},</span>
+  <span class="g">{</span>
+    <span class="w">id:</span>       <span class="g">'mission-timeline'</span>
+    <span class="w">label:</span>    <span class="g">'Dòng thời gian sứ mệnh'</span>
+    <span class="w">world:</span>    <span class="b">{ bodySlug: 'mars', atmospherePreset: 'olympus-dust' }</span>
+    <span class="w">sequence:</span> <span class="b">{ type: 'mission_sols', unit: 'Sol' }</span>
+    <span class="w">assetPack:</span><span class="b">'spacecraft-catalog'</span>
+  <span class="g">},</span>
+  <span class="g">{</span>
+    <span class="w">id:</span>       <span class="g">'topic-chapters'</span>
+    <span class="w">label:</span>    <span class="g">'Chương theo chủ đề'</span>
+    <span class="w">world:</span>    <span class="b">{ bodySlug: '*' }</span>         <span class="dim">// teacher chọn</span>
+    <span class="w">sequence:</span> <span class="b">{ type: 'chapters', unit: 'Chapter' }</span>
+    <span class="w">assetPack:</span><span class="b">'generic'</span>
+  <span class="g">},</span>
+  <span class="g">{</span>
+    <span class="w">id:</span>       <span class="g">'blank-canvas'</span>
+    <span class="w">label:</span>    <span class="g">'Tự do hoàn toàn'</span>
+    <span class="dim">// teacher config tất cả — advanced only</span>
+  <span class="g">},</span>
+<span class="a">]</span></pre>
+</div>
+<div class="col">
+<span class="badge bg">EARTH HISTORY = PRESET, KHÔNG PHẢI ENGINE</span>
+<div class="item">earthHistoryData.ts hiện tại → convert thành 1 NarrativeSpace JSON với templateId='deep-time-journey'. Không xóa, chỉ wrap lại.</div>
+<div class="item">iconicOrganisms implicit contract → thành AssetBundle field trong NarrativeSpace. Beat gắn asset qua id, không phải stage index 0-21.</div>
+<div class="item">Teacher tạo "Mars Geology" = chọn template 'deep-time-journey' → đổi bodySlug='mars' → sequence type='custom_epochs' với Noachian/Hesperian/Amazonian → điền beats.</div>
+<div class="item">3 themes on Mars = template 'topic-chapters' với 3 beats, bodySlug='mars' — không cần timeline.</div>
+<div class="signal sg">Earth History không mất đi tính unique — nó chỉ là NarrativeSpace đầu tiên với verified=true, sourceRefs đầy đủ nhất. Mọi thứ teacher tạo sau đều follow cùng schema.</div>
+</div>
+</div>
+</div>
+
+<!-- SECTION 4: Migration path -->
+<div class="sec">
+<h2 style="color:#5BA8F5">④ Migration path — không đập đi, chuyển dần trong 3 bước</h2>
+<div class="row">
+<div class="col">
+<span class="badge bb">BƯỚC 1 — Wrap static (1-2 ngày)</span>
+<pre><span class="dim">// Tạo NarrativeSpaceService</span>
+<span class="b">class NarrativeSpaceService {</span>
+  <span class="dim">// Source priority: API → draft → built-in preset</span>
+  <span class="g">async getActiveSpace(slug: string) {</span>
+    <span class="w">return await this.api.get(slug)</span>
+      <span class="w">?? this.draftStore.get(slug)</span>
+      <span class="w">?? BUILT_IN_PRESETS[slug]</span>  <span class="dim">// earth-history fallback</span>
+  <span class="g">}</span>
+<span class="b">}</span>
+
+<span class="dim">// earthHistoryData.ts → convert 1 lần thành JSON</span>
+<span class="dim">// BUILT_IN_PRESETS['earth-history'] = { beats: [...22 stages] }</span>
+<span class="dim">// Không xóa file cũ ngay — dùng làm seed data</span></pre>
+</div>
+<div class="col">
+<span class="badge bb">BƯỚC 2 — Migrate imports (3-5 ngày)</span>
+<pre><span class="dim">// Tất cả component import trực tiếp → đổi sang hook</span>
+<span class="r">// Cũ: import { earthHistoryData } from './earthHistoryData'</span>
+<span class="g">// Mới: const { beats } = useNarrativeSpace('earth-history')</span>
+
+<span class="dim">// useSimulatorStore.loadStages() đã có → chỉ cần đổi</span>
+<span class="dim">// source từ static import sang service call</span>
+
+<span class="dim">// StageTimePicker, LessonPreview, CoursePageClient</span>
+<span class="dim">// → đổi prop type: EarthStage → Beat</span>
+<span class="dim">// → backward compat: Beat có earthStageCompat?: EarthStage</span></pre>
+</div>
+<div class="col">
+<span class="badge bb">BƯỚC 3 — Studio authoring (ship khi stable)</span>
+<pre><span class="dim">// Studio NarrativeSpace editor</span>
+<span class="g">// 1. Template picker UI</span>
+<span class="g">// 2. WorldConfig panel (body, atmosphere, effects)</span>
+<span class="g">// 3. Beat editor (drag reorder, per-beat content)</span>
+<span class="g">// 4. AssetBundle manager (link organisms, 3D models)</span>
+<span class="g">// 5. Lesson link picker (connect to learning path)</span>
+<span class="g">// 6. Preview in client (same renderer)</span>
+
+<span class="dim">// Mars support: chỉ cần bodySlug='mars' + texture</span>
+<span class="dim">// atmosphere/effects là asset pack, không code mới</span></pre>
+</div>
+</div>
+</div>
+
+<!-- SECTION 5: Key decisions -->
+<div class="sec" style="background:#040410;border-color:#1a1a40;">
+<h2 style="color:#5050a0;margin-bottom:8px;">⑤ 3 quyết định kiến trúc quan trọng nhất</h2>
+<div class="row">
+<div class="col" style="min-width:160px;">
+<div style="color:#2DC4A7;font-size:9.5px;margin-bottom:5px;">✓ AssetBundle thay implicit contract</div>
+<div style="font-size:9px;color:#0a2818;line-height:1.7;">iconicOrganisms gắn với beat qua id, không index 0-21. Thêm/xóa beat không làm lệch organisms. Beat tự mang assetRefs[], không depend external array.</div>
+</div>
+<div class="col" style="min-width:160px;">
+<div style="color:#F0A020;font-size:9.5px;margin-bottom:5px;">✓ verified vs teacher-custom</div>
+<div style="font-size:9px;color:#3a2010;line-height:1.7;">NarrativeSpace có meta.verified flag. Verified spaces (Earth History gốc) không thể bị sửa bởi teacher — chỉ fork. Teacher custom spaces có sourceRefs bắt buộc để maintain scientific accuracy.</div>
+</div>
+<div class="col" style="min-width:160px;">
+<div style="color:#5BA8F5;font-size:9.5px;margin-bottom:5px;">✓ Effect là tag, không phải code</div>
+<div style="font-size:9px;color:#0a1020;line-height:1.7;">effectTags: ['volcano', 'dust-storm'] → renderer lookup effect registry. Thêm effect mới = thêm vào registry, không sửa NarrativeSpace schema hay component code. Teacher chọn effect từ dropdown, không biết code.</div>
+</div>
+</div>
+</div>
+
+</div>

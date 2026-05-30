@@ -5,10 +5,14 @@ import Link from 'next/link'
 import { motion } from 'framer-motion'
 import type { LearningModule } from '@/data/learningPathCurriculum'
 import { DEPTH_ORDER } from '@/data/learningPathCurriculum'
-import { loadLessonCompletion, moduleProgressPercent, syncLearningPathCompletion } from '@/lib/learningPathProgress'
-import { useLearningPath } from '@/hooks/useLearningPath'
-import { useAuthStore } from '@/store/useAuthStore'
-import { trackLearningPathBehavior } from '@/lib/learningPathBehavior'
+import {
+  loadLessonCompletion,
+  moduleProgressPercent,
+  syncLearningPathCompletion,
+  trackLearningPathBehavior,
+  useLearningPath,
+} from '@/features/learning-path/public'
+import { useAuthStore } from '@/features/auth/public'
 
 type Props = { module: LearningModule }
 
@@ -149,8 +153,8 @@ export default function LearningModuleView({ module }: Props) {
     })
   }, [m.id, m.order])
 
-  const ac = AMBER
-  const acRgb = '245,165,36'
+  const ac = getAccent(m.order)
+  const acRgb = getAccentRgb(m.order)
   const ord = String(m.order).padStart(2, '0')
   const prevMod = modules.find((x) => x.order === m.order - 1)
   const nextMod = modules.find((x) => x.order === m.order + 1)

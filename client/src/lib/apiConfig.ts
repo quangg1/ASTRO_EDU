@@ -1,54 +1,219 @@
+import ENV from '@galaxies/shared/envNames'
+import { devError } from '@/lib/devLog'
+import { readEnv } from '@/lib/readEnv'
+import { readRuntimePublicConfig } from '@/lib/runtimePublicConfig'
+import { userMessages } from '@/lib/userMessages'
+
 /**
- * When using the merged API (services/api), set NEXT_PUBLIC_API_BASE_URL
- * to the API root (e.g. http://localhost:3002). All auth, courses, payment,
- * community, media requests will use this base.
+ * URL backend từ biến môi trường — xem `shared/envNames.js` và `.env.local.example`.
  */
-const UNIFIED_BASE = typeof process !== 'undefined' ? process.env.NEXT_PUBLIC_API_BASE_URL : ''
+function trimEndSlash(s: string): string {
+  return s.replace(/\/$/, '')
+}
+
+function normalizeUnifiedEnvBase(raw: string): string {
+  let s = trimEndSlash(raw.trim())
+  if (s.toLowerCase().endsWith('/api')) {
+    s = trimEndSlash(s.slice(0, -'/api'.length))
+  }
+  return s
+}
+
+const UNIFIED_BASE =
+  typeof process !== 'undefined'
+    ? normalizeUnifiedEnvBase(readEnv(ENV.NEXT_PUBLIC_API_BASE_URL))
+    : ''
+
+/** Build-time inlined base, or server/runtime env, or inline script on first paint. */
+function resolveUnifiedBase(): string {
+  if (UNIFIED_BASE) return UNIFIED_BASE
+  if (typeof window === 'undefined') {
+    const server =
+      normalizeUnifiedEnvBase(readEnv(ENV.NEXT_PUBLIC_API_BASE_URL)) ||
+      normalizeUnifiedEnvBase(readEnv(ENV.MEDIA_SERVICE_URL))
+    if (server) return server
+  } else {
+    const runtime = readRuntimePublicConfig()?.apiBase
+    if (runtime) return normalizeUnifiedEnvBase(runtime)
+  }
+  return ''
+}
+
+function devProxyApiOrigin(): string {
+  return trimEndSlash(readEnv(ENV.API_PROXY_TARGET))
+}
+
+function isBrowser(): boolean {
+  return typeof window !== 'undefined'
+}
+
+function isSameBrowserOriginAs(baseNoTrailingSlash: string): boolean {
+  if (!isBrowser()) return false
+  try {
+    const u = new URL(baseNoTrailingSlash, window.location.origin)
+    return u.origin === window.location.origin
+  } catch {
+    return false
+  }
+}
+
+function looksLikeMisconfiguredNextDevApiOrigin(candidate: string): boolean {
+  try {
+    const u = new URL(candidate)
+    if (u.hostname !== 'localhost' && u.hostname !== '127.0.0.1') return false
+    const p = u.port === '' ? (u.protocol === 'https:' ? '443' : '80') : u.port
+    return p === '3000'
+  } catch {
+    return false
+  }
+}
+
+function resolveMisconfiguredUnifiedBaseForSSR(): string | null {
+  if (process.env.NODE_ENV !== 'development') return null
+  if (isBrowser()) return null
+  if (UNIFIED_BASE && looksLikeMisconfiguredNextDevApiOrigin(UNIFIED_BASE)) {
+    const proxy = devProxyApiOrigin()
+    return proxy || null
+  }
+  return null
+}
+
+function resolveMisconfiguredLegacyForSSR(resolvedFullApiBase: string): string | null {
+  if (process.env.NODE_ENV !== 'development') return null
+  if (isBrowser()) return null
+  try {
+    const u = new URL(resolvedFullApiBase)
+    const originLike = `${u.protocol}//${u.host}`
+    if (looksLikeMisconfiguredNextDevApiOrigin(originLike)) {
+      const proxy = devProxyApiOrigin()
+      return proxy ? `${proxy}/api` : null
+    }
+  } catch {
+    /* ignore */
+  }
+  return null
+}
+
+function missingApiBaseError(): never {
+  devError('apiConfig', {
+    hint: 'Set NEXT_PUBLIC_API_BASE_URL and/or API_PROXY_TARGET — see client/.env.local.example',
+  })
+  throw new Error(userMessages.loadDataFailed)
+}
 
 export function getApiBase(): string {
-  return UNIFIED_BASE || ''
+  return resolveUnifiedBase() || ''
 }
 
-/** Base URL for auth routes: /auth/* */
 export function getAuthBase(): string {
-  return UNIFIED_BASE || process.env.NEXT_PUBLIC_AUTH_URL || 'http://localhost:3002'
+  const base = resolveUnifiedBase()
+  if (base) {
+    if (process.env.NODE_ENV === 'development' && isSameBrowserOriginAs(base)) {
+      return ''
+    }
+    const ssrRedirect = resolveMisconfiguredUnifiedBaseForSSR()
+    if (ssrRedirect) return ssrRedirect
+    return base
+  }
+  const legacy = trimEndSlash(readEnv('NEXT_PUBLIC_AUTH_URL'))
+  if (legacy) return legacy
+  if (process.env.NODE_ENV === 'development' && isBrowser()) return ''
+  const proxy = devProxyApiOrigin()
+  if (proxy) return proxy
+  missingApiBaseError()
 }
 
-/** Base URL gốc (không /api). */
 export function getUnifiedBase(): string {
-  return UNIFIED_BASE || 'http://localhost:3002'
+  const base = resolveUnifiedBase()
+  if (base) {
+    if (process.env.NODE_ENV === 'development' && isSameBrowserOriginAs(base)) {
+      return ''
+    }
+    const ssrRedirect = resolveMisconfiguredUnifiedBaseForSSR()
+    if (ssrRedirect) return ssrRedirect
+    return base
+  }
+  if (process.env.NODE_ENV === 'development' && isBrowser()) return ''
+  const proxy = devProxyApiOrigin()
+  if (proxy) return proxy
+  missingApiBaseError()
 }
 
-/** Base URL for API routes (/api/...). Mặc định 3002 (API gộp) khi không set. */
+function resolveLegacyApiUrl(): string | null {
+  const courses = readEnv('NEXT_PUBLIC_COURSES_URL')
+  const t = trimEndSlash(courses)
+  if (t) return t
+
+  const legacy = readEnv('NEXT_PUBLIC_API_URL')
+  const l = trimEndSlash(legacy)
+  if (!l) return null
+  return l.endsWith('/api') ? l : `${l}/api`
+}
+
 export function getApiPathBase(): string {
-  if (UNIFIED_BASE) return `${UNIFIED_BASE}/api`
-  return process.env.NEXT_PUBLIC_COURSES_URL || 'http://localhost:3002/api'
+  const base = resolveUnifiedBase()
+  if (base) {
+    if (process.env.NODE_ENV === 'development' && isSameBrowserOriginAs(base)) {
+      return ''
+    }
+    const ssrRedirect = resolveMisconfiguredUnifiedBaseForSSR()
+    if (ssrRedirect) return `${ssrRedirect}/api`
+    return `${base}/api`
+  }
+  const resolved = resolveLegacyApiUrl()
+  if (resolved) {
+    if (process.env.NODE_ENV === 'development' && isSameBrowserOriginAs(resolved.replace(/\/api\/?$/, ''))) {
+      return ''
+    }
+    const ssrLegacy = resolveMisconfiguredLegacyForSSR(resolved)
+    if (ssrLegacy) return ssrLegacy
+    return resolved
+  }
+  if (process.env.NODE_ENV === 'development' && isBrowser()) {
+    return ''
+  }
+  const proxy = devProxyApiOrigin()
+  if (proxy) return `${proxy}/api`
+  missingApiBaseError()
 }
 
-/** Base URL for media: /upload, /files (API-served uploads) */
+export function getEarthHistoryApiPathBase(): string {
+  const dedicated = readEnv(ENV.NEXT_PUBLIC_EARTH_HISTORY_API_URL)
+  const d = trimEndSlash(dedicated)
+  if (d) return d.endsWith('/api') ? d : `${d}/api`
+  return getApiPathBase()
+}
+
 export function getMediaBase(): string {
-  return UNIFIED_BASE || process.env.NEXT_PUBLIC_MEDIA_URL || 'http://localhost:3002'
+  const base = resolveUnifiedBase()
+  if (base) {
+    if (process.env.NODE_ENV === 'development' && isSameBrowserOriginAs(base)) {
+      return ''
+    }
+    const ssrRedirect = resolveMisconfiguredUnifiedBaseForSSR()
+    if (ssrRedirect) return ssrRedirect
+    return base
+  }
+  const legacy = trimEndSlash(readEnv('NEXT_PUBLIC_MEDIA_URL'))
+  if (legacy) return legacy
+  if (process.env.NODE_ENV === 'development' && isBrowser()) return ''
+  const proxy = devProxyApiOrigin()
+  if (proxy) return proxy
+  missingApiBaseError()
 }
 
-/** Base URL for static assets on CDN (models, textures, images, course-media). No trailing slash. */
 export function getMediaCdnBase(): string {
-  return (typeof process !== 'undefined' && process.env.NEXT_PUBLIC_MEDIA_CDN) || ''
+  const runtime = readRuntimePublicConfig()?.mediaCdn
+  if (runtime) return runtime
+  return readEnv(ENV.NEXT_PUBLIC_MEDIA_CDN)
 }
 
-/**
- * Resolve static asset path to full URL when CDN is set.
- * Use for /models/, /textures/, /images/, /course-media/.
- * @param path - e.g. "/models/foo.glb" or "/textures/paleo/paleo_000.jpg"
- */
 export function getStaticAssetUrl(path: string): string {
   if (!path) return path
   const base = getMediaCdnBase()
   return base ? base.replace(/\/$/, '') + path : path
 }
 
-/**
- * Resolve any media URL for display: full URL → as-is; /files/* → API base; else → static CDN.
- */
 export function resolveMediaUrl(url: string | null | undefined): string {
   if (!url) return ''
   if (/^https?:\/\//i.test(url)) return url

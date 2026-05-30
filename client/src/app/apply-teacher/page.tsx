@@ -3,14 +3,10 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useAuthStore } from '@/store/useAuthStore'
-import {
-  fetchMyTeacherApplicationStatus,
-  submitTeacherApplication,
-  type TeacherApplication,
-} from '@/lib/authApi'
-
-const BIO_MIN = 30
+import { useAuthStore } from '@/features/auth/public'
+import { ApplyTeacherForm } from '@/components/auth/ApplyTeacherForm'
+import { fetchMyTeacherApplicationStatus, type TeacherApplication } from '@/features/auth/public'
+import { useLiveClock } from '@/hooks/useLiveClock'
 
 const chamfer = (cut = 14) => ({
   clipPath: `polygon(${cut}px 0,100% 0,100% calc(100% - ${cut}px),calc(100% - ${cut}px) 100%,0 100%,0 ${cut}px)`,
@@ -36,12 +32,8 @@ export default function ApplyTeacherPage() {
   const [loading, setLoading] = useState(true)
   const [pending, setPending] = useState<TeacherApplication | null>(null)
   const [last, setLast] = useState<TeacherApplication | null>(null)
-  const [bio, setBio] = useState('')
-  const [organization, setOrganization] = useState('')
-  const [submitting, setSubmitting] = useState(false)
   const [message, setMessage] = useState<'ok' | 'err' | null>(null)
-  const [error, setError] = useState('')
-  const [utcTime, setUtcTime] = useState('')
+  const { time: localTime, zoneLabel } = useLiveClock()
 
   useEffect(() => {
     if (!checked) return
@@ -71,40 +63,6 @@ export default function ApplyTeacherPage() {
       cancelled = true
     }
   }, [checked, user, router])
-
-  useEffect(() => {
-    const tick = () => {
-      const now = new Date()
-      const pad = (n: number) => String(n).padStart(2, '0')
-      setUtcTime(`${pad(now.getUTCHours())}:${pad(now.getUTCMinutes())}:${pad(now.getUTCSeconds())}`)
-    }
-    tick()
-    const id = setInterval(tick, 1000)
-    return () => clearInterval(id)
-  }, [])
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setMessage(null)
-    setError('')
-    if (bio.trim().length < BIO_MIN) {
-      setMessage('err')
-      setError(`Nội dung giới thiệu cần ít nhất ${BIO_MIN} ký tự.`)
-      return
-    }
-    setSubmitting(true)
-    const res = await submitTeacherApplication({ bio: bio.trim(), organization: organization.trim() })
-    setSubmitting(false)
-    if (res.success && res.application) {
-      setMessage('ok')
-      setPending(res.application)
-      setBio('')
-      setOrganization('')
-    } else {
-      setMessage('err')
-      setError(res.error || 'Không gửi được đơn')
-    }
-  }
 
   const mono: React.CSSProperties = { fontFamily: "'JetBrains Mono', monospace" }
 
@@ -161,7 +119,7 @@ export default function ApplyTeacherPage() {
             // 01 · application · teacher-access
           </span>
           <span style={{ ...mono, fontSize: 10, letterSpacing: '0.12em', color: '#5c6886' }}>
-            UTC · <span style={{ color: '#9aa8c4' }}>{utcTime}</span>
+            {zoneLabel} · <span style={{ color: '#9aa8c4' }}>{localTime}</span>
           </span>
         </div>
 
@@ -253,204 +211,32 @@ export default function ApplyTeacherPage() {
           </div>
         )}
 
-        {/* Application form */}
         {!pending && (
-          <form onSubmit={handleSubmit}>
-            <div
-              className="relative p-6"
-              style={{
-                background: 'rgba(6,9,26,0.72)',
-                border: '1px solid rgba(126,231,255,0.13)',
-                ...chamfer(18),
+          <div
+            className="relative p-6"
+            style={{
+              background: 'rgba(6,9,26,0.72)',
+              border: '1px solid rgba(126,231,255,0.13)',
+              ...chamfer(18),
+            }}
+          >
+            <Brackets c="#7ee7ff" s={13} o={8} />
+            {message === 'ok' ? (
+              <p className="text-sm text-emerald-300 mb-4 font-mono text-[11px] tracking-wide">
+                Đã gửi đơn — bạn sẽ nhận email khi có kết quả.
+              </p>
+            ) : null}
+            <ApplyTeacherForm
+              defaultName={user.displayName}
+              defaultEmail={user.email}
+              onSubmitted={() => {
+                setMessage('ok')
+                void fetchMyTeacherApplicationStatus().then((res) => {
+                  if (res.success && res.pending) setPending(res.pending)
+                })
               }}
-            >
-              <Brackets c="#7ee7ff" s={13} o={8} />
-
-              <div style={{ ...mono, fontSize: 9.5, letterSpacing: '0.18em', color: '#5c6886', marginBottom: 20, textTransform: 'uppercase' }}>
-                // 03 · form · instructor-application
-              </div>
-
-              {/* Bio field */}
-              <div style={{ marginBottom: 18 }}>
-                <label
-                  style={{
-                    display: 'block',
-                    ...mono,
-                    fontSize: 10,
-                    letterSpacing: '0.14em',
-                    color: '#9aa8c4',
-                    textTransform: 'uppercase',
-                    marginBottom: 8,
-                  }}
-                >
-                  Giới thiệu &amp; lý do muốn giảng dạy
-                  <span style={{ color: '#ff5cd4', marginLeft: 4 }}>*</span>
-                </label>
-                <textarea
-                  value={bio}
-                  onChange={(e) => setBio(e.target.value)}
-                  rows={8}
-                  required
-                  style={{
-                    width: '100%',
-                    background: 'rgba(0,0,0,0.45)',
-                    border: '1px solid rgba(126,231,255,0.15)',
-                    borderRadius: 2,
-                    color: '#eaf6ff',
-                    padding: '12px 14px',
-                    fontSize: 14,
-                    lineHeight: 1.65,
-                    outline: 'none',
-                    resize: 'vertical',
-                    minHeight: 160,
-                    fontFamily: "'Space Grotesk', sans-serif",
-                    boxSizing: 'border-box',
-                  }}
-                  placeholder={`Tối thiểu ${BIO_MIN} ký tự: kinh nghiệm, chủ đề bạn muốn dạy, liên kết công khai (nếu có)...`}
-                  onFocus={(e) => {
-                    e.currentTarget.style.border = '1px solid rgba(126,231,255,0.45)'
-                    e.currentTarget.style.boxShadow = '0 0 0 3px rgba(126,231,255,0.06)'
-                  }}
-                  onBlur={(e) => {
-                    e.currentTarget.style.border = '1px solid rgba(126,231,255,0.15)'
-                    e.currentTarget.style.boxShadow = 'none'
-                  }}
-                />
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    marginTop: 6,
-                  }}
-                >
-                  <span style={{ ...mono, fontSize: 9.5, color: '#5c6886', letterSpacing: '0.1em' }}>
-                    Tối thiểu {BIO_MIN} ký tự
-                  </span>
-                  <span
-                    style={{
-                      ...mono,
-                      fontSize: 9.5,
-                      letterSpacing: '0.1em',
-                      color: bio.trim().length >= BIO_MIN ? '#6dffb0' : '#5c6886',
-                    }}
-                  >
-                    {bio.trim().length} ký tự
-                  </span>
-                </div>
-              </div>
-
-              {/* Organization field */}
-              <div style={{ marginBottom: 22 }}>
-                <label
-                  style={{
-                    display: 'block',
-                    ...mono,
-                    fontSize: 10,
-                    letterSpacing: '0.14em',
-                    color: '#9aa8c4',
-                    textTransform: 'uppercase',
-                    marginBottom: 8,
-                  }}
-                >
-                  Cơ quan / trường
-                  <span style={{ ...mono, fontSize: 9, color: '#3d4f6e', marginLeft: 8 }}>(tuỳ chọn)</span>
-                </label>
-                <input
-                  type="text"
-                  value={organization}
-                  onChange={(e) => setOrganization(e.target.value)}
-                  style={{
-                    width: '100%',
-                    background: 'rgba(0,0,0,0.45)',
-                    border: '1px solid rgba(126,231,255,0.15)',
-                    borderRadius: 2,
-                    color: '#eaf6ff',
-                    padding: '10px 14px',
-                    fontSize: 14,
-                    outline: 'none',
-                    fontFamily: "'Space Grotesk', sans-serif",
-                    boxSizing: 'border-box',
-                  }}
-                  placeholder="Ví dụ: Trường THPT…"
-                  onFocus={(e) => {
-                    e.currentTarget.style.border = '1px solid rgba(126,231,255,0.45)'
-                    e.currentTarget.style.boxShadow = '0 0 0 3px rgba(126,231,255,0.06)'
-                  }}
-                  onBlur={(e) => {
-                    e.currentTarget.style.border = '1px solid rgba(126,231,255,0.15)'
-                    e.currentTarget.style.boxShadow = 'none'
-                  }}
-                />
-              </div>
-
-              {/* Divider */}
-              <div style={{ height: 1, background: 'rgba(126,231,255,0.08)', marginBottom: 18 }} />
-
-              {/* Messages */}
-              {message === 'ok' && (
-                <div
-                  style={{
-                    ...mono,
-                    fontSize: 10,
-                    letterSpacing: '0.14em',
-                    color: '#6dffb0',
-                    background: 'rgba(109,255,176,0.06)',
-                    border: '1px solid rgba(109,255,176,0.22)',
-                    padding: '10px 14px',
-                    marginBottom: 14,
-                    textTransform: 'uppercase',
-                    ...chamfer(8),
-                  }}
-                >
-                  ✓ Đã gửi đơn thành công. Cảm ơn bạn!
-                </div>
-              )}
-              {message === 'err' && (
-                <div
-                  style={{
-                    ...mono,
-                    fontSize: 10,
-                    letterSpacing: '0.14em',
-                    color: '#ff5cd4',
-                    background: 'rgba(255,92,212,0.05)',
-                    border: '1px solid rgba(255,92,212,0.22)',
-                    padding: '10px 14px',
-                    marginBottom: 14,
-                    ...chamfer(8),
-                  }}
-                >
-                  ✕ {error}
-                </div>
-              )}
-
-              {/* Submit button */}
-              <button
-                type="submit"
-                disabled={submitting || !!pending}
-                style={{
-                  width: '100%',
-                  padding: '14px 18px',
-                  background: submitting || !!pending
-                    ? 'rgba(245,165,36,0.25)'
-                    : 'linear-gradient(135deg, #f5a524 0%, #e8950f 100%)',
-                  color: submitting || !!pending ? 'rgba(245,165,36,0.5)' : '#1a0e00',
-                  border: 'none',
-                  cursor: submitting || !!pending ? 'not-allowed' : 'pointer',
-                  ...mono,
-                  fontSize: 11,
-                  fontWeight: 700,
-                  letterSpacing: '0.2em',
-                  textTransform: 'uppercase',
-                  boxShadow: submitting || !!pending ? 'none' : '0 0 28px rgba(245,165,36,0.35), 0 4px 20px rgba(245,165,36,0.2)',
-                  transition: 'opacity 0.2s',
-                  ...chamfer(12),
-                }}
-              >
-                {submitting ? '● Đang gửi…' : 'Gửi đơn →'}
-              </button>
-            </div>
-          </form>
+            />
+          </div>
         )}
 
         {/* Footer note */}

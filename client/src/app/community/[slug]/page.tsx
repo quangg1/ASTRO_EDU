@@ -5,7 +5,7 @@ import dynamic from 'next/dynamic'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Eye, Grid2X2, List, Search, Sparkles } from 'lucide-react'
-import { useAuthStore } from '@/store/useAuthStore'
+import { useAuthStore } from '@/features/auth/public'
 import {
   fetchForum,
   fetchForumPosts,
@@ -13,8 +13,10 @@ import {
   createPost,
   type Forum,
   type Post,
-} from '@/lib/communityApi'
-import { plainTextExcerpt, postThumbnailUrl, isHtmlFragmentEmpty } from '@/lib/postContent'
+  plainTextExcerpt,
+  postThumbnailUrl,
+  isHtmlFragmentEmpty,
+} from '@/features/community/public'
 import { CornerBrackets } from '@/components/landing/CornerBrackets'
 
 const RichTextEditor = dynamic(() => import('@/components/studio/RichTextEditor'), {
@@ -876,10 +878,10 @@ function ForumPageContent() {
                 <span className="text-xs uppercase tracking-wide text-gray-500">Sắp xếp:</span>
                 {(
                   [
-                    { value: 'newest' as const, label: 'Mới nhất' },
-                    { value: 'hot' as const, label: 'Nổi bật' },
-                    { value: 'top' as const, label: 'Top vote' },
-                  ]
+                      { value: 'newest' as const, label: 'Mới nhất' },
+                      { value: 'hot' as const, label: 'Nổi bật' },
+                      { value: 'top' as const, label: 'Top vote' },
+                    ]
                 ).map((option) => (
                   <button
                     key={option.value}
@@ -944,10 +946,10 @@ function ForumPageContent() {
             )}
 
             {loading ? (
-              <div className="space-y-3">
-                <div className="h-24 rounded-xl border border-white/10 bg-white/5 animate-pulse" />
-                <div className="h-24 rounded-xl border border-white/10 bg-white/5 animate-pulse" />
-                <div className="h-24 rounded-xl border border-white/10 bg-white/5 animate-pulse" />
+                <div className="space-y-3">
+                  <div className="h-24 rounded-xl border border-white/10 bg-white/5 animate-pulse" />
+                  <div className="h-24 rounded-xl border border-white/10 bg-white/5 animate-pulse" />
+                  <div className="h-24 rounded-xl border border-white/10 bg-white/5 animate-pulse" />
               </div>
             ) : (
               <div className="space-y-3">

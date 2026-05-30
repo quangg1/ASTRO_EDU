@@ -2,8 +2,7 @@
 
 import { useState, useEffect, useMemo, useRef } from 'react'
 import Link from 'next/link'
-import { fetchCourses } from '@/lib/coursesApi'
-import type { Course } from '@/lib/coursesApi'
+import { fetchCourses, type Course } from '@/features/courses/public'
 import { DEPTH_ORDER, LEARNING_MODULES } from '@/data/learningPathCurriculum'
 
 function searchLearningPath(query: string) {

@@ -7,20 +7,29 @@
  * - Còn lại (ví dụ > 750 Ma): màu đơn sắc.
  */
 
-import React, { useRef, useMemo, Suspense } from 'react'
-import { useFrame, useLoader } from '@react-three/fiber'
+import React, { useRef, useMemo, useEffect, useState } from 'react'
+import { useFrame } from '@react-three/fiber'
 import { Sphere } from '@react-three/drei'
 import * as THREE from 'three'
 import { EarthStage } from '@/types'
+
+/** Không pick mesh globe/lưới — để layer THREE.Points (hóa thạch) nhận raycast được. */
+export const globeSurfaceRaycast: THREE.Mesh['raycast'] = () => {}
+import { getStaticAssetUrl } from '@/lib/apiConfig'
 import { hasPaleoTexture, getPaleoTexturePath } from '@/lib/paleoTextureMap'
 
 const TEXTURE_BASE = '/textures'
 
 interface EarthProps {
   stage: EarthStage
+  effectTags?: {
+    meteorShower?: boolean
+    debrisField?: boolean
+    dustHaze?: boolean
+  }
 }
 
-export function Earth({ stage }: EarthProps) {
+export function Earth({ stage, effectTags }: EarthProps) {
   const earthRef = useRef<THREE.Mesh>(null)
   const atmosphereRef = useRef<THREE.Mesh>(null)
   const cloudsRef = useRef<THREE.Mesh>(null)
@@ -33,6 +42,16 @@ export function Earth({ stage }: EarthProps) {
     () => (stage.atmosphereColor ? new THREE.Color(stage.atmosphereColor) : new THREE.Color('#87CEEB')),
     [stage.atmosphereColor]
   )
+  const activeEffects = effectTags ?? {
+    meteorShower: true,
+    debrisField: true,
+    dustHaze: true,
+  }
+
+  useFrame((_, delta) => {
+    if (cloudsRef.current) cloudsRef.current.rotation.y += delta * 0.017
+    if (atmosphereRef.current) atmosphereRef.current.rotation.y += delta * 0.004
+  })
 
   // Xoay do nhóm cha (EarthWithFossils) trong EarthScene – không xoay riêng để texture và hóa thạch khớp
 
@@ -42,62 +61,75 @@ export function Earth({ stage }: EarthProps) {
     <group>
       {/* Earth: 8k_earth (Neogene+) | texture paleo (có trong web) | màu đơn sắc */}
       {useRealisticTextures ? (
-        <Suspense fallback={<ColoredEarth ref={earthRef} stage={stage} />}>
-          <RealisticEarth ref={earthRef} />
-        </Suspense>
+        <RealisticEarth ref={earthRef} stage={stage} />
       ) : usePaleoTexture ? (
-        <Suspense fallback={<ColoredEarth ref={earthRef} stage={stage} />}>
-          <PaleoEarth ref={earthRef} stageTime={stage.time} />
-        </Suspense>
+        <PaleoEarth ref={earthRef} stageTime={stage.time} stage={stage} />
       ) : (
         <ColoredEarth ref={earthRef} stage={stage} />
       )}
 
       {/* Mây (chỉ khi dùng 8k_earth) */}
       {useRealisticTextures && (
-        <Suspense fallback={null}>
-          <CloudsLayer ref={cloudsRef} />
-        </Suspense>
+        <CloudsLayer ref={cloudsRef} />
       )}
 
       {/* Grid (kinh/vĩ tuyến, xích đạo nổi bật) */}
       <group>{gridLines}</group>
 
-      {/* Khí quyển */}
+      {/* Khí quyển: Fresnel glow nhẹ, dễ phân biệt preset từng planet/stage */}
       {stage.atmosphereColor && (
-        <Sphere ref={atmosphereRef} args={[5.3, 64, 64]}>
-          <meshBasicMaterial
-            color={atmosphereColor}
-            transparent
-            opacity={0.2}
-            side={THREE.BackSide}
-          />
-        </Sphere>
+        <AtmosphereGlow ref={atmosphereRef} moodColor={atmosphereColor} />
       )}
 
       {/* Mây đơn sắc khi không dùng 8k_earth (paleo hoặc màu đơn) */}
       {!useRealisticTextures && stage.time < 100 && (
-        <Sphere ref={cloudsRef} args={[5.05, 64, 64]}>
+        <Sphere ref={cloudsRef} args={[5.05, 64, 64]} raycast={globeSurfaceRaycast}>
           <meshStandardMaterial color="#ffffff" transparent opacity={0.3} depthWrite={false} />
         </Sphere>
       )}
 
-      {stage.hasDebris && <Debris />}
-      {stage.hasMeteorites && <Meteorites />}
+      {activeEffects.debrisField && stage.hasDebris && <Debris />}
+      {activeEffects.meteorShower && stage.hasMeteorites && <Meteorites />}
+      {activeEffects.dustHaze && stage.time >= 3000 && <DustHaze color={atmosphereColor} />}
     </group>
   )
 }
 
+function useOptionalTexture(path: string): THREE.Texture | null {
+  const [texture, setTexture] = useState<THREE.Texture | null>(null)
+  useEffect(() => {
+    let cancelled = false
+    const loader = new THREE.TextureLoader()
+    loader.load(
+      path,
+      (loaded) => {
+        if (!cancelled) setTexture(loaded)
+      },
+      undefined,
+      () => {
+        if (!cancelled) setTexture(null)
+      },
+    )
+    return () => {
+      cancelled = true
+    }
+  }, [path])
+  return texture
+}
+
 /** Lục địa + đèn đêm + độ cao (normal) + độ bóng đại dương (specular) */
-const RealisticEarth = React.forwardRef<THREE.Mesh>(function RealisticEarth(_, ref) {
-  const [day, night, normal, specular] = useLoader(THREE.TextureLoader, [
-    `${TEXTURE_BASE}/8k_earth_daymap.jpg`,
-    `${TEXTURE_BASE}/8k_earth_nightmap.jpg`,
-    `${TEXTURE_BASE}/8k_earth_normal_map.jpg`,
-    `${TEXTURE_BASE}/8k_earth_specular_map.jpg`,
-  ]) as [THREE.Texture, THREE.Texture, THREE.Texture, THREE.Texture]
+const RealisticEarth = React.forwardRef<THREE.Mesh, { stage: EarthStage }>(function RealisticEarth(
+  { stage },
+  ref,
+) {
+  const day = useOptionalTexture(getStaticAssetUrl(`${TEXTURE_BASE}/8k_earth_daymap.jpg`))
+  const night = useOptionalTexture(getStaticAssetUrl(`${TEXTURE_BASE}/8k_earth_nightmap.jpg`))
+  const normal = useOptionalTexture(getStaticAssetUrl(`${TEXTURE_BASE}/8k_earth_normal_map.jpg`))
+  const specular = useOptionalTexture(getStaticAssetUrl(`${TEXTURE_BASE}/8k_earth_specular_map.jpg`))
+  const ready = day && night && normal && specular
 
   useMemo(() => {
+    if (!ready) return
     day.colorSpace = THREE.SRGBColorSpace
     night.colorSpace = THREE.SRGBColorSpace
     day.wrapS = day.wrapT = THREE.RepeatWrapping
@@ -106,45 +138,55 @@ const RealisticEarth = React.forwardRef<THREE.Mesh>(function RealisticEarth(_, r
     normal.wrapS = normal.wrapT = THREE.RepeatWrapping
     specular.colorSpace = THREE.LinearSRGBColorSpace
     specular.wrapS = specular.wrapT = THREE.RepeatWrapping
-  }, [day, night, normal, specular])
+  }, [day, night, normal, specular, ready])
+
+  if (!ready) return <ColoredEarth ref={ref} stage={stage} />
+
+  // Night-side lights chỉ thực sự nổi ở mốc hiện đại/cận đại.
+  const cityLightIntensity = stage.time <= 0.03 ? 0.85 : stage.time <= 2 ? 0.38 : 0.16
 
   return (
-    <Sphere ref={ref} args={[5, 128, 128]}>
+    <Sphere ref={ref} args={[5, 128, 128]} raycast={globeSurfaceRaycast}>
       <meshStandardMaterial
         map={day}
+        color="#f4f4f4"
         emissiveMap={night}
-        emissiveIntensity={0.22}
-        emissive={new THREE.Color(0x0a0a0a)}
+        emissiveIntensity={cityLightIntensity}
+        emissive={new THREE.Color(0x2a2a2a)}
         normalMap={normal}
         normalScale={new THREE.Vector2(0.9, 0.9)}
         metalnessMap={specular}
-        metalness={0.4}
-        roughness={0.6}
+        metalness={0.38}
+        roughness={0.52}
       />
     </Sphere>
   )
 })
 
 /** Trái Đất theo bản đồ cổ địa lý: cùng texture cho day (map) và night (emissive tối hơn) */
-const PaleoEarth = React.forwardRef<THREE.Mesh, { stageTime: number }>(function PaleoEarth(
-  { stageTime },
+const PaleoEarth = React.forwardRef<THREE.Mesh, { stageTime: number; stage: EarthStage }>(function PaleoEarth(
+  { stageTime, stage },
   ref
 ) {
   const path = getPaleoTexturePath(stageTime)!
-  const map = useLoader(THREE.TextureLoader, path) as THREE.Texture
+  const map = useOptionalTexture(path)
   useMemo(() => {
+    if (!map) return
     map.colorSpace = THREE.SRGBColorSpace
     map.wrapS = map.wrapT = THREE.ClampToEdgeWrapping
   }, [map])
+
+  if (!map) return <ColoredEarth ref={ref} stage={stage} />
   return (
-    <Sphere ref={ref} args={[5, 128, 128]}>
+    <Sphere ref={ref} args={[5, 128, 128]} raycast={globeSurfaceRaycast}>
       <meshStandardMaterial
         map={map}
+        color="#eaeaea"
         emissiveMap={map}
-        emissive={new THREE.Color(0x111111)}
-        emissiveIntensity={0.18}
-        metalness={0.1}
-        roughness={0.8}
+        emissive={new THREE.Color(0x1a1a22)}
+        emissiveIntensity={0.26}
+        metalness={0.08}
+        roughness={0.68}
       />
     </Sphere>
   )
@@ -158,13 +200,13 @@ const ColoredEarth = React.forwardRef<THREE.Mesh, { stage: EarthStage }>(functio
   const { stage } = props
   const color = useMemo(() => new THREE.Color(stage.earthColor), [stage.earthColor])
   return (
-    <Sphere ref={ref} args={[5, 128, 128]}>
+    <Sphere ref={ref} args={[5, 128, 128]} raycast={globeSurfaceRaycast}>
       <meshStandardMaterial
-        color={color}
+        color={color.clone().multiplyScalar(1.12)}
         metalness={0.1}
-        roughness={0.8}
+        roughness={0.72}
         emissive={color}
-        emissiveIntensity={stage.time > 4000 ? 0.3 : 0.05}
+        emissiveIntensity={stage.time > 4000 ? 0.36 : 0.08}
       />
     </Sphere>
   )
@@ -172,18 +214,71 @@ const ColoredEarth = React.forwardRef<THREE.Mesh, { stage: EarthStage }>(functio
 
 /** Lớp mây từ texture */
 const CloudsLayer = React.forwardRef<THREE.Mesh>(function CloudsLayer(_, ref) {
-  const cloudsTex = useLoader(THREE.TextureLoader, `${TEXTURE_BASE}/8k_earth_clouds.jpg`) as THREE.Texture
+  const cloudsTex = useOptionalTexture(getStaticAssetUrl(`${TEXTURE_BASE}/8k_earth_clouds.jpg`))
+  if (!cloudsTex) return null
   cloudsTex.colorSpace = THREE.SRGBColorSpace
   cloudsTex.wrapS = cloudsTex.wrapT = THREE.RepeatWrapping
 
   return (
-    <Sphere ref={ref} args={[5.05, 64, 64]}>
+    <Sphere ref={ref} args={[5.05, 64, 64]} raycast={globeSurfaceRaycast}>
       <meshStandardMaterial
         map={cloudsTex}
         transparent
         opacity={0.4}
         depthWrite={false}
         side={THREE.DoubleSide}
+      />
+    </Sphere>
+  )
+})
+
+const ATMOSPHERE_RIM_NEUTRAL = new THREE.Color(0x2c3d55)
+
+const AtmosphereGlow = React.forwardRef<THREE.Mesh, { moodColor: THREE.Color }>(function AtmosphereGlow(
+  { moodColor },
+  ref,
+) {
+  const uniforms = useMemo(
+    () => ({
+      atmosphereColor: { value: new THREE.Color() },
+      intensity: { value: 0.34 },
+    }),
+    [],
+  )
+
+  useEffect(() => {
+    uniforms.atmosphereColor.value.copy(moodColor.clone().lerp(ATMOSPHERE_RIM_NEUTRAL, 0.68))
+  }, [moodColor, uniforms])
+
+  return (
+    <Sphere ref={ref} args={[5.35, 64, 64]} raycast={globeSurfaceRaycast}>
+      <shaderMaterial
+        uniforms={uniforms}
+        vertexShader={`
+          varying vec3 vWorldNormal;
+          varying vec3 vViewDir;
+          void main() {
+            vec4 viewPosition = modelViewMatrix * vec4(position, 1.0);
+            vViewDir = normalize(-viewPosition.xyz);
+            vWorldNormal = normalize(normalMatrix * normal);
+            gl_Position = projectionMatrix * viewPosition;
+          }
+        `}
+        fragmentShader={`
+          varying vec3 vWorldNormal;
+          varying vec3 vViewDir;
+          uniform vec3 atmosphereColor;
+          uniform float intensity;
+          void main() {
+            float fresnel = pow(1.0 - max(dot(vWorldNormal, vViewDir), 0.0), 2.7);
+            float alpha = fresnel * intensity;
+            gl_FragColor = vec4(atmosphereColor, alpha);
+          }
+        `}
+        transparent
+        depthWrite={false}
+        side={THREE.BackSide}
+        blending={THREE.AdditiveBlending}
       />
     </Sphere>
   )
@@ -205,7 +300,7 @@ function buildGridLines() {
     const op = isEquator ? opacityEquator : opacity
     const color = isEquator ? '#00FFFF' : '#FFD700'
     lines.push(
-      <mesh key={`lat-${lat}`} position={[0, y, 0]} rotation={[Math.PI / 2, 0, 0]}>
+      <mesh key={`lat-${lat}`} position={[0, y, 0]} rotation={[Math.PI / 2, 0, 0]} raycast={globeSurfaceRaycast}>
         <ringGeometry args={[r - lineWidth, r + lineWidth, 64]} />
         <meshBasicMaterial color={color} transparent opacity={op} side={THREE.DoubleSide} />
       </mesh>
@@ -216,7 +311,7 @@ function buildGridLines() {
   for (let lng = 0; lng < 360; lng += 30) {
     const theta = (lng * Math.PI) / 180
     lines.push(
-      <mesh key={`lng-${lng}`} rotation={[0, theta, 0]}>
+      <mesh key={`lng-${lng}`} rotation={[0, theta, 0]} raycast={globeSurfaceRaycast}>
         <torusGeometry args={[R, 0.01, 8, 64]} />
         <meshBasicMaterial color="#FFD700" transparent opacity={opacity} />
       </mesh>
@@ -338,5 +433,19 @@ function Meteorites() {
         </mesh>
       ))}
     </group>
+  )
+}
+
+function DustHaze({ color }: { color: THREE.Color }) {
+  return (
+    <Sphere args={[5.24, 48, 48]}>
+      <meshBasicMaterial
+        color={color}
+        transparent
+        opacity={0.09}
+        depthWrite={false}
+        side={THREE.DoubleSide}
+      />
+    </Sphere>
   )
 }

@@ -8,9 +8,10 @@ import {
   loadLessonCompletion,
   moduleProgressPercent,
   syncLearningPathCompletion,
-} from '@/lib/learningPathProgress'
-import { useLearningPath } from '@/hooks/useLearningPath'
-import { useAuthStore } from '@/store/useAuthStore'
+  useLearningPath,
+} from '@/features/learning-path/public'
+import { useAuthStore } from '@/features/auth/public'
+import { Network } from 'lucide-react'
 
 // ── Design tokens ──────────────────────────────────────
 const AMBER = '#f5a524'
@@ -311,6 +312,54 @@ export default function LearningPathHub() {
                 )}
               </motion.div>
             </div>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.28, duration: 0.45 }}
+            style={{ marginTop: 28, display: 'flex', justifyContent: 'center' }}
+          >
+            <Link
+              href="/tutorial/knowledge-map"
+              style={{
+                display: 'inline-flex',
+                maxWidth: 560,
+                alignItems: 'center',
+                gap: 14,
+                padding: '14px 22px',
+                textDecoration: 'none',
+                clipPath: 'polygon(12px 0%,100% 0%,100% calc(100% - 12px),calc(100% - 12px) 100%,0% 100%,0% 12px)',
+                background: 'linear-gradient(135deg,rgba(139,92,246,0.12),rgba(126,231,255,0.08))',
+                border: '1px solid rgba(139,92,246,0.35)',
+                boxShadow: '0 0 28px rgba(139,92,246,0.12)',
+              }}
+            >
+              <span
+                style={{
+                  display: 'flex',
+                  width: 44,
+                  height: 44,
+                  flexShrink: 0,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  clipPath: 'polygon(8px 0%,100% 0%,100% calc(100% - 8px),calc(100% - 8px) 100%,0% 100%,0% 8px)',
+                  background: 'rgba(139,92,246,0.18)',
+                  border: '1px solid rgba(167,139,250,0.35)',
+                  color: '#c4b5fd',
+                }}
+              >
+                <Network size={20} aria-hidden />
+              </span>
+              <span>
+                <span style={{ display: 'block', fontSize: 14, fontWeight: 600, color: '#eaf6ff' }}>
+                  Bản đồ tri thức (star map)
+                </span>
+                <span style={{ display: 'block', marginTop: 4, fontSize: 12, lineHeight: 1.55, color: '#9aa8c4' }}>
+                  Xem toàn bộ graph concept — prerequisite như các vì sao nối nhau; tiến độ bài học làm sáng các điểm đã gặp.
+                </span>
+              </span>
+            </Link>
           </motion.div>
         </motion.header>
 

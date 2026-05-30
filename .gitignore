@@ -40,6 +40,10 @@ npm-debug.log*
 *.dmg
 *.msi
 
+# Dev sandbox — đặt file rời / scratch không thuộc repo ở đây
+_local/
+**/.scratch/
+
 # Large assets – lưu trên cloud (xem docs/MEDIA_CLOUD.md)
 PALEOMAP PaleoAtlas Rasters v3/
 lich_su_trai_dat_course/

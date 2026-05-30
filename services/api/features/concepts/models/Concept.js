@@ -1,0 +1,21 @@
+const mongoose = require('mongoose');
+
+const conceptSchema = new mongoose.Schema(
+  {
+    id: { type: String, required: true, unique: true, index: true },
+    title: { type: String, default: '' },
+    short_description: { type: String, default: '' },
+    explanation: { type: String, default: '' },
+    examples: [{ type: String }],
+    related: [{ type: String }],
+    domain: { type: String, default: '' },
+    subdomain: { type: String, default: '' },
+    aliases: [{ type: String }],
+    prerequisites: [{ type: String }],
+    difficulty_level: { type: Number, enum: [0, 1, 2], default: 1 },
+    published: { type: Boolean, default: true },
+  },
+  { timestamps: true, minimize: false },
+);
+
+module.exports = mongoose.models.Concept || mongoose.model('Concept', conceptSchema);

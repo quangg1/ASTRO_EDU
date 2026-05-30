@@ -5,7 +5,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { Star } from 'lucide-react'
 import { resolveMediaUrl } from '@/lib/apiConfig'
-import type { Course } from '@/lib/coursesApi'
+import type { Course } from '@/features/courses/public'
 import { SectionEyebrow } from './SectionEyebrow'
 
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.12 } } }

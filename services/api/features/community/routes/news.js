@@ -3,35 +3,20 @@ const Forum = require('../models/Forum');
 const Post = require('../models/Post');
 const { findPostsHot } = require('../postSort');
 const { optionalAuth } = require('../../../shared/jwtAuth');
-const { escapeRegex } = require('../../../shared/escapeRegex');
+const { NEWS_FORUM_SLUG } = require('../constants/forumCatalog');
+const { buildForumPostFilter } = require('../lib/postListQuery');
 
 const router = express.Router();
 
 async function getNewsForum() {
-  let forum = await Forum.findOne({ slug: 'tin-thien-van' });
+  let forum = await Forum.findOne({ slug: NEWS_FORUM_SLUG });
   if (!forum) forum = await Forum.findOne({ isNews: true });
   return forum;
 }
 
-/** Query filter: ?category=… (khớp một phần tử rssCategories), ?q=… (tìm trong tiêu đề). */
-function buildNewsFilterQuery(forumId, reqQuery) {
-  const base = { forumId, isCrawled: true };
-  const category = typeof reqQuery.category === 'string' ? reqQuery.category.trim() : '';
-  const q = typeof reqQuery.q === 'string' ? reqQuery.q.trim() : '';
-  const conds = [];
-
-  if (category) {
-    conds.push({
-      rssCategories: new RegExp(`^${escapeRegex(category)}$`, 'i'),
-    });
-  }
-  if (q.length >= 2) {
-    conds.push({ title: new RegExp(escapeRegex(q), 'i') });
-  }
-
-  if (conds.length === 0) return base;
-  if (conds.length === 1) return { ...base, ...conds[0] };
-  return { ...base, $and: conds };
+function buildNewsFilterQuery(forum, reqQuery) {
+  const base = buildForumPostFilter(forum, reqQuery);
+  return { ...base, isCrawled: true };
 }
 
 /** Danh sách category đã có trong DB (để làm chip filter). */
@@ -70,7 +55,7 @@ router.get('/', optionalAuth, async (req, res) => {
     const skip = (Math.max(1, parseInt(page, 10)) - 1) * Math.min(50, parseInt(limit, 10) || 20);
     const limitNum = Math.min(50, parseInt(limit, 10) || 20);
 
-    const filter = buildNewsFilterQuery(forum._id, req.query);
+    const filter = buildNewsFilterQuery(forum, req.query);
 
     let sortOpt = { isPinned: -1, publishedAt: -1, createdAt: -1 };
     if (sort === 'top') sortOpt = { isPinned: -1, voteCount: -1, publishedAt: -1, createdAt: -1 };

@@ -3,16 +3,15 @@ import { Suspense } from 'react'
 import './globals.css'
 import { getStaticAssetUrl } from '@/lib/apiConfig'
 import { AuthProvider } from '@/components/auth/AuthProvider'
-import { AppChrome } from '@/components/ui/AppChrome'
-import { AITutor } from '@/components/ai-tutor/AITutor'
-import { ErrorBoundaryWrap } from '@/components/ui/ErrorBoundaryWrap'
-import { Analytics } from '@/components/ui/Analytics'
-import { PwaRegister } from '@/components/ui/PwaRegister'
-import { PwaInstallPrompt } from '@/components/ui/PwaInstallPrompt'
-import { PwaStatusBadge } from '@/components/ui/PwaStatusBadge'
-import { HybridBootstrap } from '@/components/ui/HybridBootstrap'
-import { ChunkLoadRecovery } from '@/components/ui/ChunkLoadRecovery'
-import { LayoutChromeProvider } from '@/components/ui/LayoutChromeContext'
+import { AppChrome } from '@/components/layout/AppChrome'
+import { CosmoAssistantWidget } from '@/components/ai-tutor/CosmoAssistantWidget'
+import { ErrorBoundaryWrap } from '@/components/system/ErrorBoundaryWrap'
+import { Analytics } from '@/components/system/Analytics'
+import { ChunkLoadRecovery } from '@/components/system/ChunkLoadRecovery'
+import { RuntimePublicConfigScript } from '@/components/system/RuntimePublicConfigScript'
+import { LayoutChromeProvider } from '@/components/layout/LayoutChromeContext'
+import { ShowcaseCatalogProvider } from '@/components/showcase/ShowcaseCatalogProvider'
+import { ToastProvider } from '@/design-system'
 
 export const metadata: Metadata = {
   title: { default: 'Cosmo Learn – Học thiên văn tương tác 3D', template: '%s | Cosmo Learn' },
@@ -29,11 +28,6 @@ export const metadata: Metadata = {
     icon: getStaticAssetUrl('/images/web_icon.png'),
     shortcut: getStaticAssetUrl('/images/web_icon.png'),
     apple: getStaticAssetUrl('/images/web_icon.png'),
-  },
-  appleWebApp: {
-    capable: true,
-    title: 'Cosmo Learn',
-    statusBarStyle: 'black-translucent',
   },
 }
 
@@ -52,23 +46,24 @@ export default function RootLayout({
   return (
     <html lang="vi">
       <body className="antialiased">
+        <RuntimePublicConfigScript />
         <Suspense fallback={null}>
           <Analytics />
         </Suspense>
         <ChunkLoadRecovery />
-        <PwaRegister />
-        <HybridBootstrap />
         <AuthProvider>
-          <LayoutChromeProvider>
-            <ErrorBoundaryWrap>
-              <PwaInstallPrompt />
-              <PwaStatusBadge />
-              <AppChrome>{children}</AppChrome>
-              <Suspense fallback={null}>
-                <AITutor />
-              </Suspense>
-            </ErrorBoundaryWrap>
-          </LayoutChromeProvider>
+          <ShowcaseCatalogProvider>
+            <LayoutChromeProvider>
+              <ToastProvider>
+                <ErrorBoundaryWrap>
+                  <AppChrome>{children}</AppChrome>
+                  <Suspense fallback={null}>
+                    <CosmoAssistantWidget />
+                  </Suspense>
+                </ErrorBoundaryWrap>
+              </ToastProvider>
+            </LayoutChromeProvider>
+          </ShowcaseCatalogProvider>
         </AuthProvider>
       </body>
     </html>

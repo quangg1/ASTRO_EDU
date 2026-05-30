@@ -1,0 +1,32 @@
+/**
+ * Scene surface — 3D overlays (Earth, Solar System, Showcase, Milky Way).
+ *
+ * Glass backgrounds (so the 3D canvas reads through), ultra-compact density
+ * (overlays must not occlude the scene). Accent is driven by --planet-accent
+ * which the scene wrapper sets inline per focused body, e.g.:
+ *
+ *   <div className="surface-scene" style={{ ['--planet-accent']: '#cc4422' }}>
+ *
+ * Falls back to the showcase gold (#f0c35d) when no planet is focused.
+ */
+
+.surface-scene {
+  --color-bg-surface: rgba(7, 13, 20, 0.92);
+  --color-bg-elevated: rgba(11, 15, 22, 0.94);
+  --color-bg-overlay: rgba(7, 13, 20, 0.94);
+  --color-border: rgba(255, 255, 255, 0.12);
+  --color-border-strong: rgba(255, 255, 255, 0.24);
+
+  --color-accent: var(--planet-accent, #f0c35d);
+  --color-accent-soft: rgba(240, 195, 93, 0.12);
+  --color-accent-strong: rgba(240, 195, 93, 0.35);
+  --color-accent-fg: #1a1408;
+
+  --density-pad-x: 12px;
+  --density-pad-y: 6px;
+  --density-content: 10px;
+  --density-gap: 8px;
+
+  --radius-card: 12px;
+  --radius-control: 8px;
+}

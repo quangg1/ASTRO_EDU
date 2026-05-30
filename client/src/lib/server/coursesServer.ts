@@ -1,7 +1,7 @@
 import 'server-only'
 
 import { getApiPathBase } from '@/lib/apiConfig'
-import type { Course } from '@/lib/coursesApi'
+import type { Course } from '@/features/courses/public'
 import type { LearningModule } from '@/data/learningPathCurriculum'
 
 export async function fetchPublicCoursesServer(search?: string): Promise<Course[]> {

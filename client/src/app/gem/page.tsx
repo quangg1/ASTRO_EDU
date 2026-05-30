@@ -2,8 +2,22 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { useAuthStore } from '@/store/useAuthStore'
-import { loadGemWallet, syncGemWallet, type GemWalletState } from '@/lib/gemWallet'
+import { useAuthStore } from '@/features/auth/public'
+import {
+  fetchLearnerTiersWithProgress,
+  GEM_REWARD_LEARNING_PATH_LESSON,
+  gemActivityDirection,
+  gemActivityDirectionLabel,
+  labelGemActivityVi,
+  loadGemWallet,
+  syncGemWallet,
+  type GemWalletState,
+  type LearnerTierProgress,
+} from '@/features/rewards/public'
+import { fetchPublicLearningPath } from '@/features/learning-path/public'
+import { fetchPublicShowcaseCatalogBundle } from '@/features/content3d/showcase/public'
+import { useLiveClock } from '@/hooks/useLiveClock'
+import { getLessonById, type LearningModule } from '@/data/learningPathCurriculum'
 
 function formatTransactionDate(input: string) {
   const date = new Date(input)
@@ -49,34 +63,71 @@ export default function GemPage() {
   const { user } = useAuthStore()
   const userId = user?.id ?? null
   const [wallet, setWallet] = useState<GemWalletState>({ balance: 0, transactions: [] })
-  const [utcTime, setUtcTime] = useState('')
+  const { time: localTime, zoneLabel } = useLiveClock()
+  const [tierProgress, setTierProgress] = useState<LearnerTierProgress | null>(null)
+  const [tierPolicy, setTierPolicy] = useState('')
+  const [lessonTitleById, setLessonTitleById] = useState<Record<string, string>>({})
+  const [entityNameById, setEntityNameById] = useState<Record<string, string>>({})
 
   useEffect(() => {
     const refresh = () => setWallet(loadGemWallet(userId))
     refresh()
     void syncGemWallet(userId).then((next) => setWallet(next))
     window.addEventListener('gem-wallet-changed', refresh)
-    window.addEventListener('focus', refresh)
     return () => {
       window.removeEventListener('gem-wallet-changed', refresh)
-      window.removeEventListener('focus', refresh)
     }
   }, [userId])
 
   useEffect(() => {
-    const tick = () => {
-      const now = new Date()
-      const pad = (n: number) => String(n).padStart(2, '0')
-      setUtcTime(`${pad(now.getUTCHours())}:${pad(now.getUTCMinutes())}:${pad(now.getUTCSeconds())}`)
+    let cancelled = false
+    void fetchLearnerTiersWithProgress().then((res) => {
+      if (!res || cancelled) return
+      setTierProgress(res.progress)
+      setTierPolicy(res.catalog.policyVi || '')
+    })
+    return () => {
+      cancelled = true
     }
-    tick()
-    const id = setInterval(tick, 1000)
-    return () => clearInterval(id)
   }, [])
+
+  useEffect(() => {
+    let cancelled = false
+    void Promise.all([fetchPublicLearningPath(), fetchPublicShowcaseCatalogBundle()]).then(
+      ([learningModules, showcaseBundle]) => {
+        if (cancelled) return
+
+        const lessonMap: Record<string, string> = {}
+        const modules = Array.isArray(learningModules) ? (learningModules as LearningModule[]) : []
+        for (const tx of wallet.transactions) {
+          const lessonId = String(tx.meta?.lessonId || '').trim()
+          if (!lessonId || lessonMap[lessonId]) continue
+          const lessonRef = getLessonById(lessonId, modules)
+          const title = lessonRef?.lesson?.titleVi || lessonRef?.lesson?.title || lessonId
+          lessonMap[lessonId] = title
+        }
+        setLessonTitleById(lessonMap)
+
+        const entityMap: Record<string, string> = {}
+        const catalog = Array.isArray(showcaseBundle?.catalog) ? showcaseBundle.catalog : []
+        const orbits = Array.isArray(showcaseBundle?.orbits) ? showcaseBundle.orbits : []
+        for (const item of catalog) {
+          if (item?.id && item?.name) entityMap[item.id] = item.name
+        }
+        for (const orbit of orbits) {
+          if (orbit?.id && orbit?.name && !entityMap[orbit.id]) entityMap[orbit.id] = orbit.name
+        }
+        setEntityNameById(entityMap)
+      },
+    )
+    return () => {
+      cancelled = true
+    }
+  }, [wallet.transactions])
 
   const earnWays = useMemo(
     () => [
-      { label: 'Hoàn thành một bài trong lộ trình', reward: '+5 Gem' },
+      { label: 'Hoàn thành một bài trong lộ trình', reward: `+${GEM_REWARD_LEARNING_PATH_LESSON} Gem` },
       { label: 'Trả lời câu hỏi trong diễn đàn', reward: '+5 Gem' },
       { label: 'Hoàn thành khóa học', reward: '+50 Gem' },
       { label: 'Duy trì chuỗi 7 ngày', reward: '+20 Gem' },
@@ -93,6 +144,32 @@ export default function GemPage() {
     })
     return [...map.entries()]
   }, [wallet.transactions])
+
+  const resolveGemActivityDetail = (
+    tx: GemWalletState['transactions'][number],
+  ): { label: string; detail: string | null } => {
+    const base = labelGemActivityVi(tx)
+    const reason = String(tx.reason || tx.type || '').trim()
+    const lessonId = String(tx.meta?.lessonId || '').trim()
+    const entityId = String(tx.meta?.entityId || '').trim()
+
+    if (
+      lessonId &&
+      (reason === 'lp_complete_dwell' ||
+        reason === 'depth_complete' ||
+        reason === 'recall_quiz_first' ||
+        reason === 'recall_quiz_retry' ||
+        reason === 'lesson_complete')
+    ) {
+      return { label: base, detail: lessonTitleById[lessonId] || `Bài: ${lessonId}` }
+    }
+
+    if (entityId && reason === 'scene_entity_discovered') {
+      return { label: base, detail: entityNameById[entityId] || `Vật thể: ${entityId}` }
+    }
+
+    return { label: base, detail: null }
+  }
 
   const mono: React.CSSProperties = { fontFamily: "'JetBrains Mono', monospace" }
 
@@ -115,7 +192,9 @@ export default function GemPage() {
         <div className="flex items-center gap-5" style={{ ...mono, fontSize: 10, letterSpacing: '0.12em', color: '#5c6886' }}>
           <span>Wallet · <span style={{ color: '#f5a524' }}>{wallet.balance} GEM</span></span>
           <span>Sync · <span style={{ color: '#6dffb0' }}>●</span></span>
-          <span className="hidden sm:inline">UTC · <span style={{ color: '#9aa8c4' }}>{utcTime}</span></span>
+            <span className="hidden sm:inline">
+              {zoneLabel} · <span style={{ color: '#9aa8c4' }}>{localTime}</span>
+            </span>
         </div>
       </div>
 
@@ -134,7 +213,7 @@ export default function GemPage() {
           <Brackets c="#7ee7ff" s={14} o={8} />
 
           <div style={{ ...mono, fontSize: 9, letterSpacing: '0.22em', color: '#5c6886', marginBottom: 20, textTransform: 'uppercase' }}>
-            04 Paths · 01 Unlocked
+            {String(earnWays.length).padStart(2, '0')} Paths · {tierProgress?.current?.nameVi || 'Starter'}
           </div>
 
           <h1 style={{ fontSize: 'clamp(28px, 3.5vw, 50px)', fontWeight: 500, lineHeight: 1.05, letterSpacing: '-0.03em', color: '#eaf6ff', marginBottom: 10 }}>
@@ -238,7 +317,7 @@ export default function GemPage() {
               {wallet.balance}
             </div>
             <div style={{ ...mono, fontSize: 9.5, letterSpacing: '0.22em', color: '#9aa8c4', textTransform: 'uppercase' }}>
-              GEM · ASTEROID TIER
+              GEM · {tierProgress?.current?.nameVi || 'ASTEROID'} TIER
             </div>
           </div>
 
@@ -272,7 +351,29 @@ export default function GemPage() {
         </div>
       </div>
 
-      {/* Transaction history */}
+      {(tierPolicy || tierProgress?.next) && (
+        <div
+          className="relative mt-4 p-4"
+          style={{
+            background: 'rgba(6,9,26,0.72)',
+            border: '1px solid rgba(126,231,255,0.13)',
+            ...chamfer(12),
+          }}
+        >
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p style={{ fontSize: 13, color: '#9aa8c4', lineHeight: 1.5 }}>
+              {tierPolicy || 'Hạng Learner tăng theo tổng gem đã kiếm, không giảm khi tiêu gem.'}
+            </p>
+            {tierProgress?.next ? (
+              <span style={{ ...mono, fontSize: 10, color: '#7ee7ff', letterSpacing: '0.12em', textTransform: 'uppercase' }}>
+                Next · {tierProgress.next.nameVi} · {tierProgress.gemsToNext} gem
+              </span>
+            ) : null}
+          </div>
+        </div>
+      )}
+
+      {/* Gem activity log */}
       <div
         className="relative mt-4 p-6"
         style={{
@@ -284,22 +385,25 @@ export default function GemPage() {
         <Brackets c="#7ee7ff" s={12} o={7} />
 
         {/* Section header */}
-        <div className="flex items-baseline justify-between mb-4">
+        <div className="flex items-baseline justify-between mb-1">
           <h2 style={{ fontSize: 'clamp(22px, 2.8vw, 32px)', fontWeight: 500, letterSpacing: '-0.025em', color: '#eaf6ff' }}>
-            Lịch sử{' '}
-            <em style={{ fontStyle: 'italic', fontWeight: 300, color: '#7ee7ff' }}>giao dịch</em>
+            Gem bạn{' '}
+            <em style={{ fontStyle: 'italic', fontWeight: 300, color: '#7ee7ff' }}>đã kiếm & tiêu</em>
           </h2>
           <span style={{ ...mono, fontSize: 9.5, letterSpacing: '0.18em', color: '#5c6886', textTransform: 'uppercase' }}>
-            {String(Math.min(wallet.transactions.length, 8)).padStart(2, '0')} Entries · Grouped by day
+            {String(Math.min(wallet.transactions.length, 8)).padStart(2, '0')} mục · theo ngày
           </span>
         </div>
+        <p style={{ fontSize: 13, color: '#9aa8c4', lineHeight: 1.5, marginBottom: 16 }}>
+          Mỗi dòng là một lần bạn nhận Gem khi học, khám phá 3D, làm quiz — hoặc tiêu Gem tại cửa hàng.
+        </p>
 
         {/* Cyan accent line */}
         <div style={{ height: 1, background: 'linear-gradient(90deg, rgba(126,231,255,0.35) 0%, rgba(126,231,255,0.04) 80%)', marginBottom: 20 }} />
 
         {wallet.transactions.length === 0 ? (
           <p style={{ ...mono, fontSize: 12, color: '#5c6886', letterSpacing: '0.12em' }}>
-            // NO TRANSACTIONS FOUND
+            // CHƯA CÓ HOẠT ĐỘNG GEM
           </p>
         ) : (
           <div className="space-y-5">
@@ -315,49 +419,98 @@ export default function GemPage() {
                   </div>
                 </div>
 
-                {/* Transactions in this date group */}
+                {/* Activity entries in this date group */}
                 <div className="flex-1 space-y-1.5">
-                  {entries.map(({ tx, idx }) => (
-                    <div
-                      key={tx.id}
-                      className="flex items-center gap-3"
-                      style={{
-                        padding: '9px 14px',
-                        background: 'rgba(126,231,255,0.018)',
-                        border: '1px solid rgba(126,231,255,0.07)',
-                        ...chamfer(8),
-                      }}
-                    >
-                      <span
+                  {entries.map(({ tx }) => {
+                    const direction = gemActivityDirection(tx)
+                    const isEarn = direction === 'earn'
+                    const accent = isEarn ? '#6dffb0' : '#f5a524'
+                    const accentBg = isEarn ? 'rgba(109,255,176,0.07)' : 'rgba(245,165,36,0.08)'
+                    const accentBorder = isEarn ? 'rgba(109,255,176,0.28)' : 'rgba(245,165,36,0.28)'
+
+                    return (
+                      <div
+                        key={tx.id}
+                        className="flex items-center gap-3"
                         style={{
-                          width: 6, height: 6, borderRadius: '50%',
-                          background: '#7ee7ff', flexShrink: 0,
-                          boxShadow: '0 0 5px #7ee7ff', opacity: 0.55,
-                        }}
-                      />
-                      <span style={{ flex: 1, fontSize: 13.5, color: '#eaf6ff' }}>
-                        {tx.reason}
-                      </span>
-                      <span style={{ ...mono, fontSize: 9.5, color: '#3d4f6e', letterSpacing: '0.1em' }}>
-                        TX·{String(idx).padStart(3, '0')}
-                      </span>
-                      <span
-                        style={{
-                          ...mono,
-                          fontSize: 11,
-                          fontWeight: 600,
-                          color: '#6dffb0',
-                          background: 'rgba(109,255,176,0.07)',
-                          border: '1px solid rgba(109,255,176,0.28)',
-                          padding: '2px 9px',
-                          letterSpacing: '0.04em',
-                          ...chamfer(4),
+                          padding: '9px 14px',
+                          background: 'rgba(126,231,255,0.018)',
+                          border: '1px solid rgba(126,231,255,0.07)',
+                          ...chamfer(8),
                         }}
                       >
-                        {tx.amount > 0 ? `+${tx.amount}` : tx.amount}
-                      </span>
-                    </div>
-                  ))}
+                        <span
+                          style={{
+                            width: 6,
+                            height: 6,
+                            borderRadius: '50%',
+                            background: accent,
+                            flexShrink: 0,
+                            boxShadow: `0 0 5px ${accent}`,
+                            opacity: 0.7,
+                          }}
+                        />
+                        <span style={{ flex: 1, minWidth: 0 }}>
+                          {(() => {
+                            const activity = resolveGemActivityDetail(tx)
+                            return (
+                              <>
+                                <span style={{ display: 'block', fontSize: 13.5, color: '#eaf6ff', lineHeight: 1.35 }}>
+                                  {activity.label}
+                                </span>
+                                {activity.detail ? (
+                                  <span
+                                    style={{
+                                      display: 'block',
+                                      fontSize: 11.5,
+                                      color: '#9aa8c4',
+                                      lineHeight: 1.3,
+                                      marginTop: 2,
+                                    }}
+                                  >
+                                    {activity.detail}
+                                  </span>
+                                ) : null}
+                              </>
+                            )
+                          })()}
+                        </span>
+                        <span
+                          style={{
+                            ...mono,
+                            fontSize: 9,
+                            fontWeight: 600,
+                            color: accent,
+                            background: accentBg,
+                            border: `1px solid ${accentBorder}`,
+                            padding: '2px 8px',
+                            letterSpacing: '0.08em',
+                            textTransform: 'uppercase',
+                            flexShrink: 0,
+                            ...chamfer(4),
+                          }}
+                        >
+                          {gemActivityDirectionLabel(tx)}
+                        </span>
+                        <span
+                          style={{
+                            ...mono,
+                            fontSize: 11,
+                            fontWeight: 600,
+                            color: accent,
+                            background: accentBg,
+                            border: `1px solid ${accentBorder}`,
+                            padding: '2px 9px',
+                            letterSpacing: '0.04em',
+                            flexShrink: 0,
+                            ...chamfer(4),
+                          }}
+                        >
+                          {tx.amount > 0 ? `+${tx.amount}` : tx.amount}
+                        </span>
+                      </div>
+                    )
+                  })}
                 </div>
               </div>
             ))}
@@ -381,7 +534,7 @@ export default function GemPage() {
           }}
         >
           <span>
-            Hiển thị {String(Math.min(wallet.transactions.length, 8)).padStart(2, '0')} / {String(wallet.transactions.length).padStart(2, '0')} · All Signed ✓
+            Hiển thị {String(Math.min(wallet.transactions.length, 8)).padStart(2, '0')} / {String(wallet.transactions.length).padStart(2, '0')} mục gần nhất
           </span>
         </div>
       </div>

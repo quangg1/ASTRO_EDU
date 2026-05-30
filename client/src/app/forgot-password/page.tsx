@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { forgotPassword } from '@/lib/authApi'
+import { forgotPassword } from '@/features/auth/public'
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('')
@@ -32,7 +32,7 @@ export default function ForgotPasswordPage() {
       <div className="w-full max-w-sm glass rounded-2xl p-6 shadow-xl">
         <h1 className="text-xl font-bold text-cyan-400 mb-2">Quên mật khẩu</h1>
         <p className="text-sm text-gray-400 mb-6">
-          Nhập email tài khoản của bạn. Chúng tôi sẽ gửi link đặt lại mật khẩu (trong môi trường dev, link sẽ hiện bên dưới).
+          Nhập email tài khoản đăng ký bằng mật khẩu. Chúng tôi sẽ gửi link đặt lại qua email (kiểm tra cả hộp thư spam).
         </p>
 
         {!sent ? (
@@ -63,10 +63,12 @@ export default function ForgotPasswordPage() {
           </form>
         ) : (
           <div className="space-y-4">
-            <p className="text-sm text-green-400">Nếu email tồn tại, bạn sẽ nhận được hướng dẫn đặt lại mật khẩu.</p>
+            <p className="text-sm text-green-400">
+              Nếu email tồn tại, bạn sẽ nhận được link đặt lại mật khẩu trong vài phút.
+            </p>
             {resetLink && (
               <div className="p-3 rounded-lg bg-white/10 text-sm break-all">
-                <p className="text-gray-400 mb-1">Link đặt lại (dev):</p>
+                <p className="text-gray-400 mb-1">Link đặt lại (chỉ khi dev / chưa bật SMTP):</p>
                 <a href={resetLink} className="text-cyan-400 hover:underline">
                   {resetLink}
                 </a>

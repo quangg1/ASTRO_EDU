@@ -2,10 +2,21 @@ const express = require('express');
 const Post = require('../models/Post');
 const Comment = require('../models/Comment');
 const Vote = require('../models/Vote');
+const { applyVote, mapMyVotes } = require('../services/voteService');
 const Forum = require('../models/Forum');
-const { optionalAuth, authMiddleware, requireRole, canModerate } = require('../../../shared/jwtAuth');
+const { optionalAuth, authMiddleware } = require('../../../shared/jwtAuth');
+const { publicVisibilityFilter, canAccessModToolsOrAdminOverride } = require('../lib/moderationAccess');
 const { requireString, requireEnum } = require('../../../shared/validation');
 const { AppError } = require('../../../shared/errors');
+const {
+  enrichPostsWithAuthors,
+  enrichCommentsWithAuthors,
+} = require('../../users/publicProfileService');
+const { sanitizeDiscussionHtml, isEffectivelyEmptyHtml } = require('../lib/sanitizeHtml');
+const {
+  notifyCommunityCommentOnPost,
+  notifyCommunityReply,
+} = require('../../notifications/services/notificationService');
 
 const router = express.Router();
 
@@ -14,19 +25,34 @@ router.get('/:id', optionalAuth, async (req, res) => {
     const post = await Post.findById(req.params.id).lean();
     if (!post) return res.status(404).json({ success: false, error: 'Không tìm thấy bài viết' });
 
-    const comments = await Comment.find({ postId: post._id })
-      .sort({ createdAt: 1 })
-      .lean();
+    if (post.isHidden && !canAccessModToolsOrAdminOverride(req.userRole, req.userDoc)) {
+      return res.status(404).json({ success: false, error: 'Không tìm thấy bài viết' });
+    }
+
+    const commentFilter = { postId: post._id, ...publicVisibilityFilter(req.userRole, req.userDoc) };
+    const commentsRaw = await Comment.find(commentFilter).sort({ createdAt: 1 }).lean();
+
+    const [enrichedPost] = await enrichPostsWithAuthors([post]);
+    let comments = await enrichCommentsWithAuthors(commentsRaw);
 
     let myVote = null;
     if (req.userId) {
       const v = await Vote.findOne({ userId: req.userId, targetType: 'post', targetId: post._id });
       if (v) myVote = v.value;
+      const commentVoteMap = await mapMyVotes(
+        req.userId,
+        'comment',
+        comments.map((c) => c._id),
+      );
+      comments = comments.map((c) => ({
+        ...c,
+        myVote: commentVoteMap[String(c._id)] ?? null,
+      }));
     }
 
     res.json({
       success: true,
-      data: { ...post, comments, myVote },
+      data: { ...enrichedPost, comments, myVote },
     });
   } catch (err) {
     console.error('Get post error:', err);
@@ -53,20 +79,60 @@ router.post('/:id/comments', authMiddleware, async (req, res) => {
   try {
     const post = await Post.findById(req.params.id);
     if (!post) return res.status(404).json({ success: false, error: 'Không tìm thấy bài viết' });
+    if (post.isHidden) {
+      return res.status(403).json({ success: false, error: 'Bài viết đã bị ẩn' });
+    }
 
-    const content = requireString(req.body?.content, 'content', 'Nội dung');
+    const rawContent = requireString(req.body?.content, 'content', 'Nội dung');
+    const content = sanitizeDiscussionHtml(rawContent);
+    if (isEffectivelyEmptyHtml(content)) {
+      return res.status(400).json({ success: false, error: 'Nội dung bình luận trống' });
+    }
     const { parentId } = req.body || {};
+
+    let parentComment = null;
+    if (parentId) {
+      parentComment = await Comment.findOne({ _id: parentId, postId: post._id });
+      if (!parentComment) {
+        return res.status(400).json({ success: false, error: 'Bình luận cha không hợp lệ' });
+      }
+    }
 
     const comment = await Comment.create({
       postId: post._id,
       authorId: req.userId,
       authorName: req.user?.displayName || req.user?.email || 'User',
       content,
-      parentId: parentId || null,
+      parentId: parentComment?._id || null,
     });
 
     await Post.findByIdAndUpdate(post._id, { $inc: { commentCount: 1 } });
-    res.status(201).json({ success: true, data: comment });
+    const [enriched] = await enrichCommentsWithAuthors([comment.toObject ? comment.toObject() : comment]);
+
+    const postIdStr = String(post._id);
+    const commenterName = req.user?.displayName || req.user?.email || 'Thành viên';
+    const notifyPayload = {
+      postId: postIdStr,
+      postTitle: post.title,
+      commenterName,
+      commentPreview: content,
+    };
+    if (parentComment) {
+      if (parentComment.authorId && String(parentComment.authorId) !== String(req.userId)) {
+        void notifyCommunityReply({ userId: String(parentComment.authorId), ...notifyPayload });
+      }
+      if (
+        post.authorId &&
+        String(post.authorId) !== String(req.userId) &&
+        String(post.authorId) !== String(parentComment.authorId)
+      ) {
+        void notifyCommunityCommentOnPost({ userId: String(post.authorId), ...notifyPayload });
+      }
+    } else if (post.authorId && String(post.authorId) !== String(req.userId)) {
+      void notifyCommunityCommentOnPost({ userId: String(post.authorId), ...notifyPayload });
+    }
+
+    res.status(201).json({ success: true, data: enriched });
   } catch (err) {
     console.error('Add comment error:', err);
     if (err instanceof AppError) {
@@ -82,30 +148,22 @@ router.post('/:id/vote', authMiddleware, async (req, res) => {
     if (!post) return res.status(404).json({ success: false, error: 'Không tìm thấy bài viết' });
 
     const value = requireEnum(req.body?.value, [1, -1], 'value', 'value');
+    const voterName =
+      req.userDoc?.displayName?.trim() ||
+      req.user?.name?.trim() ||
+      req.user?.email?.split('@')[0] ||
+      'Ai đó';
 
-    const existing = await Vote.findOne({
-      userId: req.userId,
+    const { delta, myVote } = await applyVote({
       targetType: 'post',
       targetId: post._id,
+      userId: req.userId,
+      value,
+      authorId: post.authorId,
+      voterName,
+      postId: String(post._id),
+      postTitle: post.title,
     });
-
-    let delta = value;
-    if (existing) {
-      if (existing.value === value) {
-        await Vote.deleteOne({ _id: existing._id });
-        delta = -value;
-      } else {
-        await Vote.updateOne({ _id: existing._id }, { $set: { value } });
-        delta = value * 2;
-      }
-    } else {
-      await Vote.create({
-        userId: req.userId,
-        targetType: 'post',
-        targetId: post._id,
-        value,
-      });
-    }
 
     const updated = await Post.findByIdAndUpdate(
       post._id,
@@ -113,7 +171,7 @@ router.post('/:id/vote', authMiddleware, async (req, res) => {
       { new: true }
     ).lean();
 
-    res.json({ success: true, voteCount: updated.voteCount, myVote: existing?.value === value ? null : value });
+    res.json({ success: true, voteCount: updated.voteCount, myVote });
   } catch (err) {
     console.error('Vote error:', err);
     if (err instanceof AppError) {
@@ -123,10 +181,10 @@ router.post('/:id/vote', authMiddleware, async (req, res) => {
   }
 });
 
-router.patch('/:id', authMiddleware, requireRole('admin', 'moderator'), async (req, res) => {
+router.patch('/:id', authMiddleware, async (req, res) => {
   try {
-    if (!canModerate({ role: req.userRole })) {
-      return res.status(403).json({ success: false, error: 'Không có quyền truy cập' });
+    if (!canAccessModToolsOrAdminOverride(req.userRole, req.userDoc)) {
+      return res.status(403).json({ success: false, error: 'Không có quyền kiểm duyệt' });
     }
     const post = await Post.findById(req.params.id);
     if (!post) return res.status(404).json({ success: false, error: 'Không tìm thấy bài viết' });
@@ -143,10 +201,10 @@ router.patch('/:id', authMiddleware, requireRole('admin', 'moderator'), async (r
   }
 });
 
-router.delete('/:id', authMiddleware, requireRole('admin', 'moderator'), async (req, res) => {
+router.delete('/:id', authMiddleware, async (req, res) => {
   try {
-    if (!canModerate({ role: req.userRole })) {
-      return res.status(403).json({ success: false, error: 'Không có quyền truy cập' });
+    if (!canAccessModToolsOrAdminOverride(req.userRole, req.userDoc)) {
+      return res.status(403).json({ success: false, error: 'Không có quyền kiểm duyệt' });
     }
     const post = await Post.findById(req.params.id);
     if (!post) return res.status(404).json({ success: false, error: 'Không tìm thấy bài viết' });

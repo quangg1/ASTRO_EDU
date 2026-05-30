@@ -26,6 +26,17 @@ export async function hydrateTokenToLocalStorage(): Promise<void> {
   }
 }
 
+/**
+ * Request notification permission (native only) and register the device with
+ * APNS / FCM so the back-end can target it.
+ *
+ * NOT wired into `HybridBootstrap` yet: doing so would prompt every user on
+ * first launch, which is hostile UX. Call this from a deliberate opt-in flow
+ * (e.g. a settings toggle, or after the user enables a feature that needs
+ * push). Documented as a deferred orphan in `docs/ARCHITECTURE_AUDIT.md`
+ * §3.7. The `@capacitor/push-notifications` dependency stays installed
+ * because the Android Gradle wrapper already links it.
+ */
 export async function registerPushNotifications(): Promise<void> {
   if (!isNativeApp()) return
   const permissionStatus = await PushNotifications.requestPermissions()

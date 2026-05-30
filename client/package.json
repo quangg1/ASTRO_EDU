@@ -2,12 +2,24 @@
   "name": "earth-history-simulator",
   "version": "1.0.0",
   "private": true,
+  "engines": {
+    "node": ">=20 <23"
+  },
   "scripts": {
     "dev": "next dev",
     "dev:poll": "cross-env WATCHPACK_POLLING=1 next dev",
+    "prebuild": "node scripts/prepare-contracts.mjs && npm run check:guards",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "postinstall": "node scripts/prepare-contracts.mjs",
+    "check:guards": "npm run check:boundaries && npm run check:earth-ssot && npm run check:app-public && npm run check:store-imports && npm run check:components-public",
+    "check:store-imports": "node scripts/check-store-imports.mjs",
+    "check:components-public": "node scripts/check-components-public.mjs",
+    "check:app-public": "node scripts/check-app-public-imports.mjs",
+    "check:boundaries": "node scripts/check-import-boundaries.mjs",
+    "check:boundaries:report": "node scripts/check-import-boundaries.mjs --report",
+    "check:earth-ssot": "node scripts/check-earth-history-ssot.mjs",
     "hybrid:web:build": "next build",
     "hybrid:sync": "npx cap sync",
     "hybrid:copy": "npx cap copy",
@@ -25,6 +37,8 @@
     "@capacitor/network": "^8.0.1",
     "@capacitor/preferences": "^8.0.1",
     "@capacitor/push-notifications": "^8.0.2",
+    "@floating-ui/dom": "^1.7.6",
+    "@galaxies/contracts": "file:../packages/contracts",
     "@react-three/drei": "^9.96.0",
     "@react-three/fiber": "^8.15.0",
     "@tiptap/extension-code-block-lowlight": "^3.20.1",
@@ -41,6 +55,7 @@
     "@tiptap/starter-kit": "^3.20.1",
     "@types/three": "^0.160.0",
     "clsx": "^2.1.0",
+    "d3-force": "^3.0.0",
     "firebase": "^11.10.0",
     "framer-motion": "^12.36.0",
     "katex": "^0.16.38",
@@ -49,11 +64,13 @@
     "next": "^14.2.0",
     "react": "^18.3.0",
     "react-dom": "^18.3.0",
+    "react-force-graph-2d": "^1.25.7",
     "react-markdown": "^10.1.0",
     "recharts": "^3.8.0",
     "remark-gfm": "^4.0.1",
     "tailwind-merge": "^2.2.0",
     "three": "^0.160.0",
+    "zod": "^3.25.76",
     "zustand": "^4.5.0"
   },
   "devDependencies": {
@@ -66,6 +83,6 @@
     "eslint-config-next": "^14.2.0",
     "postcss": "^8.4.0",
     "tailwindcss": "^3.4.0",
-    "typescript": "^5.3.0"
+    "typescript": "^5.9.3"
   }
 }

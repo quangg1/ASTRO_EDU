@@ -86,6 +86,7 @@ async function findOrLinkFirebaseUser({
     avatar: avatar || null,
     provider: p,
     providerId: gProv || fProv || uid,
+    emailVerified: true,
   });
 }
 

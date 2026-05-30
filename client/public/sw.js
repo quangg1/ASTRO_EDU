@@ -35,7 +35,13 @@ self.addEventListener('fetch', (event) => {
       fetch(request).catch(async () => {
         const cached = await caches.match(request)
         if (cached) return cached
-        return caches.match('/offline')
+        const offline = await caches.match('/offline')
+        if (offline) return offline
+        return new Response('Offline', {
+          status: 503,
+          statusText: 'Offline',
+          headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+        })
       })
     )
     return
@@ -47,12 +53,24 @@ self.addEventListener('fetch', (event) => {
     caches.match(request).then((cachedResponse) => {
       const networkFetch = fetch(request)
         .then((response) => {
-          const cloned = response.clone()
-          caches.open(RUNTIME_CACHE).then((cache) => cache.put(request, cloned))
+          if (response.ok) {
+            const cloned = response.clone()
+            caches.open(RUNTIME_CACHE).then((cache) => cache.put(request, cloned))
+          }
           return response
         })
         .catch(() => cachedResponse)
-      return cachedResponse || networkFetch
-    })
+      return (
+        cachedResponse ||
+        networkFetch.catch(
+          () =>
+            new Response('Network error', {
+              status: 503,
+              statusText: 'Network error',
+              headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+            }),
+        )
+      )
+    }),
   )
 })

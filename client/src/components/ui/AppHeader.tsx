@@ -3,11 +3,14 @@
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useAuthStore } from '@/store/useAuthStore'
-import { clearToken } from '@/lib/authApi'
+import { useAuthStore, clearToken } from '@/features/auth/public'
 import { SiteLogo } from '@/components/ui/SiteLogo'
 import { viText } from '@/messages/vi'
-import { canModerate } from '@/lib/roles'
+import { canAccessStudio, canAdminContentOverride, canModerate, canManagePlatform } from '@/lib/roles'
+import { AvatarWithDecoration } from '@/components/profile/AvatarWithDecoration'
+import { useEquippedDecoration } from '@/features/rewards/hooks/useEquippedDecoration'
+import { navItemsForSurface, navLabel } from '@/lib/navigationConfig'
+import { NotificationBell } from '@/components/notifications/NotificationBell'
 import {
   BookOpen,
   ChevronDown,
@@ -33,6 +36,7 @@ function navActive(pathname: string, href: string): boolean {
 export function AppHeader() {
   const pathname = usePathname()
   const { user, loading, checked } = useAuthStore()
+  const equippedOverlay = useEquippedDecoration()
   const [mobileOpen, setMobileOpen] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const userMenuRef = useRef<HTMLDivElement>(null)
@@ -58,9 +62,32 @@ export function AppHeader() {
     window.location.href = '/'
   }
 
-  const isTeacher = !!user && (user.role === 'teacher' || user.role === 'admin')
-  const isAdmin = !!user && user.role === 'admin'
+  const showStudio = !!user && canAccessStudio(user)
+  const showStudioOverride = !!user && canAdminContentOverride(user)
   const showModerate = !!user && canModerate(user)
+  const showAdmin = !!user && canManagePlatform(user)
+  const headerDesktopItems = navItemsForSurface('headerDesktop')
+  const headerMobileItems = navItemsForSurface('headerMobileMenu')
+  const desktopIconById = {
+    dashboard: LayoutDashboard,
+    community: MessageCircle,
+  } as const
+  const dropdownIconById = {
+    profile: UserRound,
+    myLearning: BookOpen,
+    courses: Sparkles,
+    learningPath: ListTree,
+    explore: Compass,
+    search: Search,
+  } as const
+  const mobileTopItemIds = new Set(['dashboard', 'community'])
+  const mobileMoreItemIds = new Set(['profile', 'myLearning', 'courses', 'learningPath', 'explore', 'search'])
+  const sciFiClip = 'polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px)'
+  const navBtnBase =
+    'inline-flex items-center gap-2 px-4 py-[7px] text-[11px] font-bold uppercase tracking-widest border-2 transition-colors'
+  const navBtnActive = 'border-[#7ee7ff]/80 bg-[#7ee7ff]/15 text-[#7ee7ff]'
+  const navBtnIdle =
+    'border-[#7ee7ff]/30 text-slate-300 hover:border-[#7ee7ff]/70 hover:text-[#7ee7ff] hover:bg-[#7ee7ff]/10'
 
   return (
     <header
@@ -110,58 +137,45 @@ export function AppHeader() {
             <span className="text-xs text-slate-500 tabular-nums">…</span>
           ) : user ? (
             <>
-              <Link
-                href="/dashboard"
-                style={{ clipPath: 'polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px)' }}
-                className={`inline-flex items-center gap-2 px-4 py-[7px] text-[11px] font-bold uppercase tracking-widest border-2 transition-colors ${
-                  navActive(pathname, '/dashboard')
-                    ? 'border-[#7ee7ff]/80 bg-[#7ee7ff]/15 text-[#7ee7ff]'
-                    : 'border-[#7ee7ff]/30 text-slate-300 hover:border-[#7ee7ff]/70 hover:text-[#7ee7ff] hover:bg-[#7ee7ff]/10'
-                }`}
-              >
-                <LayoutDashboard className="w-3.5 h-3.5" aria-hidden />
-                {viText.nav.dashboard}
-              </Link>
-              <Link
-                href="/community"
-                style={{ clipPath: 'polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px)' }}
-                className={`inline-flex items-center gap-2 px-4 py-[7px] text-[11px] font-bold uppercase tracking-widest border-2 transition-colors ${
-                  navActive(pathname, '/community')
-                    ? 'border-[#7ee7ff]/80 bg-[#7ee7ff]/15 text-[#7ee7ff]'
-                    : 'border-[#7ee7ff]/30 text-slate-300 hover:border-[#7ee7ff]/70 hover:text-[#7ee7ff] hover:bg-[#7ee7ff]/10'
-                }`}
-              >
-                <MessageCircle className="w-3.5 h-3.5" aria-hidden />
-                {viText.nav.community}
-              </Link>
+              {headerDesktopItems
+                .filter((item) => item.id in desktopIconById)
+                .map((item) => {
+                  const Icon = desktopIconById[item.id as keyof typeof desktopIconById]
+                  return (
+                    <Link
+                      key={`desktop-${item.id}`}
+                      href={item.href}
+                      style={{ clipPath: sciFiClip }}
+                      className={`${navBtnBase} ${
+                        navActive(pathname, item.href) ? navBtnActive : navBtnIdle
+                      }`}
+                    >
+                      <Icon className="w-3.5 h-3.5" aria-hidden />
+                      {navLabel(item)}
+                    </Link>
+                  )
+                })}
+
+              <NotificationBell />
 
               <div className="relative ml-1" ref={userMenuRef}>
                 <button
                   type="button"
                   onClick={() => setUserMenuOpen((v) => !v)}
-                  style={{ clipPath: 'polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px)' }}
+                  style={{ clipPath: sciFiClip }}
                   className={`inline-flex items-center gap-2 pl-1.5 pr-3 py-[5px] border-2 text-[11px] font-bold uppercase tracking-widest transition-colors ${
-                    userMenuOpen
-                      ? 'border-[#7ee7ff]/80 bg-[#7ee7ff]/15 text-[#7ee7ff]'
-                      : 'border-[#7ee7ff]/30 text-slate-300 hover:border-[#7ee7ff]/70 hover:text-[#7ee7ff] hover:bg-[#7ee7ff]/10'
+                    userMenuOpen ? navBtnActive : navBtnIdle
                   }`}
                   aria-expanded={userMenuOpen}
                   aria-haspopup="menu"
                 >
-                  {user.avatar ? (
-                    <img
-                      src={user.avatar}
-                      alt=""
-                      className="w-5 h-5 rounded-full object-cover ring-1 ring-[#7ee7ff]/40"
-                    />
-                  ) : (
-                    <span
-                      className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-semibold text-white ring-1 ring-[#7ee7ff]/40"
-                      style={{ background: 'linear-gradient(135deg, #4dd2ff 0%, #7c5cff 100%)' }}
-                    >
-                      {(user.displayName || user.email || '?').slice(0, 1).toUpperCase()}
-                    </span>
-                  )}
+                  <AvatarWithDecoration
+                    avatarUrl={user.avatar}
+                    displayName={user.displayName}
+                    email={user.email}
+                    overlayUrl={equippedOverlay}
+                    size="sm"
+                  />
                   <span className="max-w-[120px] truncate hidden lg:inline">{user.displayName || user.email || viText.nav.account}</span>
                   <ChevronDown className={`w-3.5 h-3.5 transition-transform ${userMenuOpen ? 'rotate-180' : ''}`} />
                 </button>
@@ -178,63 +192,24 @@ export function AppHeader() {
                     }}
                   >
                     <p className="px-3 py-1.5 text-[10px] uppercase tracking-[0.22em] font-bold text-[#7ee7ff]/80">// Tài khoản</p>
-                    <Link
-                      href="/profile"
-                      role="menuitem"
-                      className="flex items-center gap-2.5 px-3 py-2 text-[13px] text-slate-200 hover:bg-[#7ee7ff]/10 hover:text-[#7ee7ff] transition-colors"
-                      onClick={() => setUserMenuOpen(false)}
-                    >
-                      <UserRound className="w-4 h-4 text-[#7ee7ff]/70" />
-                      {viText.nav.profile}
-                    </Link>
-                    <div className="my-1 h-px bg-[#7ee7ff]/15" />
-                    <p className="px-3 py-1.5 text-[10px] uppercase tracking-[0.22em] font-bold text-[#7ee7ff]/80">// Học tập</p>
-                    <Link
-                      href="/my-courses"
-                      role="menuitem"
-                      className="flex items-center gap-2.5 px-3 py-2 text-[13px] text-slate-200 hover:bg-[#7ee7ff]/10 hover:text-[#7ee7ff] transition-colors"
-                      onClick={() => setUserMenuOpen(false)}
-                    >
-                      <BookOpen className="w-4 h-4 text-[#7ee7ff]/70" />
-                      {viText.nav.myLearning}
-                    </Link>
-                    <Link
-                      href="/courses"
-                      role="menuitem"
-                      className="flex items-center gap-2.5 px-3 py-2 text-[13px] text-slate-200 hover:bg-[#7ee7ff]/10 hover:text-[#7ee7ff] transition-colors"
-                      onClick={() => setUserMenuOpen(false)}
-                    >
-                      <Sparkles className="w-4 h-4 text-[#7ee7ff]/70" />
-                      {viText.nav.courses}
-                    </Link>
-                    <Link
-                      href="/tutorial"
-                      role="menuitem"
-                      className="flex items-center gap-2.5 px-3 py-2 text-[13px] text-slate-200 hover:bg-[#7ee7ff]/10 hover:text-[#7ee7ff] transition-colors"
-                      onClick={() => setUserMenuOpen(false)}
-                    >
-                      <ListTree className="w-4 h-4 text-[#7ee7ff]/70" />
-                      {viText.nav.learningPath}
-                    </Link>
-                    <Link
-                      href="/explore"
-                      role="menuitem"
-                      className="flex items-center gap-2.5 px-3 py-2 text-[13px] text-slate-200 hover:bg-[#7ee7ff]/10 hover:text-[#7ee7ff] transition-colors"
-                      onClick={() => setUserMenuOpen(false)}
-                    >
-                      <Compass className="w-4 h-4 text-[#7ee7ff]/70" />
-                      {viText.nav.explore}
-                    </Link>
-                    <Link
-                      href="/search"
-                      role="menuitem"
-                      className="flex items-center gap-2.5 px-3 py-2 text-[13px] text-slate-200 hover:bg-[#7ee7ff]/10 hover:text-[#7ee7ff] transition-colors"
-                      onClick={() => setUserMenuOpen(false)}
-                    >
-                      <Search className="w-4 h-4 text-[#7ee7ff]/70" />
-                      {viText.nav.search}
-                    </Link>
-                    {isTeacher && (
+                    {headerMobileItems
+                      .filter((item) => item.id in dropdownIconById)
+                      .map((item) => {
+                        const Icon = dropdownIconById[item.id as keyof typeof dropdownIconById]
+                        return (
+                          <Link
+                            key={`dropdown-${item.id}`}
+                            href={item.href}
+                            role="menuitem"
+                            className="flex items-center gap-2.5 px-3 py-2 text-[13px] text-slate-200 hover:bg-[#7ee7ff]/10 hover:text-[#7ee7ff] transition-colors"
+                            onClick={() => setUserMenuOpen(false)}
+                          >
+                            <Icon className="w-4 h-4 text-[#7ee7ff]/70" />
+                            {navLabel(item)}
+                          </Link>
+                        )
+                      })}
+                    {showStudio && (
                       <>
                         <div className="my-1 h-px bg-[#7ee7ff]/15" />
                         <p className="px-3 py-1.5 text-[10px] uppercase tracking-[0.22em] font-bold text-[#7ee7ff]/80">// Giảng viên</p>
@@ -249,6 +224,17 @@ export function AppHeader() {
                         </Link>
                       </>
                     )}
+                    {showStudioOverride && (
+                      <Link
+                        href="/studio"
+                        role="menuitem"
+                        className="flex items-center gap-2.5 px-3 py-2 text-[13px] text-amber-200/80 hover:bg-amber-500/12 hover:text-amber-100 transition-colors"
+                        onClick={() => setUserMenuOpen(false)}
+                      >
+                        <Clapperboard className="w-4 h-4 text-amber-400/70" />
+                        Studio (override)
+                      </Link>
+                    )}
                     {showModerate && (
                       <Link
                         href="/dashboard/moderate"
@@ -260,7 +246,7 @@ export function AppHeader() {
                         {viText.nav.moderate}
                       </Link>
                     )}
-                    {isAdmin && (
+                    {showAdmin && (
                       <Link
                         href="/admin"
                         role="menuitem"
@@ -318,6 +304,7 @@ export function AppHeader() {
         </div>
 
         <div className="flex items-center gap-2 md:hidden shrink-0">
+          {user ? <NotificationBell /> : null}
           <Link
             href="/search"
             className="h-10 w-10 inline-flex items-center justify-center rounded-xl border-2 border-white/10 bg-white/[0.04] text-slate-300 hover:bg-white/[0.08] hover:text-white active:scale-[0.98] transition"
@@ -344,47 +331,46 @@ export function AppHeader() {
               <div className="px-3 py-2 text-sm text-slate-500">{viText.common.loading}</div>
             ) : user ? (
               <>
-                <Link
-                  href="/dashboard"
-                  className={`flex items-center gap-2 rounded-xl px-3 py-3 text-sm font-medium ${
-                    navActive(pathname, '/dashboard') ? 'bg-cyan-500/15 text-cyan-100' : 'text-slate-200 hover:bg-white/[0.06]'
-                  }`}
-                >
-                  <LayoutDashboard className="w-4 h-4" />
-                  {viText.nav.dashboard}
-                </Link>
-                <Link
-                  href="/community"
-                  className={`flex items-center gap-2 rounded-xl px-3 py-3 text-sm font-medium ${
-                    navActive(pathname, '/community') ? 'bg-violet-500/15 text-violet-100' : 'text-slate-200 hover:bg-white/[0.06]'
-                  }`}
-                >
-                  <MessageCircle className="w-4 h-4" />
-                  {viText.nav.community}
-                </Link>
+                {headerMobileItems
+                  .filter((item) => mobileTopItemIds.has(item.id))
+                  .map((item) => {
+                    const Icon = desktopIconById[item.id as keyof typeof desktopIconById]
+                    const activeCls =
+                      item.id === 'dashboard' ? 'bg-cyan-500/15 text-cyan-100' : 'bg-violet-500/15 text-violet-100'
+                    return (
+                      <Link
+                        key={`mobile-top-${item.id}`}
+                        href={item.href}
+                        className={`flex items-center gap-2 rounded-xl px-3 py-3 text-sm font-medium ${
+                          navActive(pathname, item.href) ? activeCls : 'text-slate-200 hover:bg-white/[0.06]'
+                        }`}
+                      >
+                        <Icon className="w-4 h-4" />
+                        {navLabel(item)}
+                      </Link>
+                    )
+                  })}
                 <div className="my-2 h-px bg-white/[0.06]" />
                 <p className="px-3 text-[10px] uppercase tracking-wider text-slate-500">{viText.nav.more}</p>
-                <Link href="/profile" className="block rounded-xl px-3 py-2.5 text-sm text-slate-300 hover:bg-white/[0.06]">
-                  {viText.nav.profile}
-                </Link>
-                <Link href="/my-courses" className="block rounded-xl px-3 py-2.5 text-sm text-slate-300 hover:bg-white/[0.06]">
-                  {viText.nav.myLearning}
-                </Link>
-                <Link href="/courses" className="block rounded-xl px-3 py-2.5 text-sm text-slate-300 hover:bg-white/[0.06]">
-                  {viText.nav.courses}
-                </Link>
-                <Link href="/tutorial" className="block rounded-xl px-3 py-2.5 text-sm text-slate-300 hover:bg-white/[0.06]">
-                  {viText.nav.learningPath}
-                </Link>
-                <Link href="/explore" className="block rounded-xl px-3 py-2.5 text-sm text-slate-300 hover:bg-white/[0.06]">
-                  {viText.nav.explore}
-                </Link>
-                <Link href="/search" className="block rounded-xl px-3 py-2.5 text-sm text-slate-300 hover:bg-white/[0.06]">
-                  {viText.nav.search}
-                </Link>
-                {isTeacher && (
+                {headerMobileItems
+                  .filter((item) => mobileMoreItemIds.has(item.id))
+                  .map((item) => (
+                    <Link
+                      key={`mobile-more-${item.id}`}
+                      href={item.href}
+                      className="block rounded-xl px-3 py-2.5 text-sm text-slate-300 hover:bg-white/[0.06]"
+                    >
+                      {navLabel(item)}
+                    </Link>
+                  ))}
+                {showStudio && (
                   <Link href="/studio" className="block rounded-xl px-3 py-2.5 text-sm text-slate-300 hover:bg-white/[0.06]">
                     Studio
+                  </Link>
+                )}
+                {showStudioOverride && (
+                  <Link href="/studio" className="block rounded-xl px-3 py-2.5 text-sm text-amber-200/80 hover:bg-amber-500/10">
+                    Studio (override)
                   </Link>
                 )}
                 {showModerate && (
@@ -396,7 +382,7 @@ export function AppHeader() {
                     {viText.nav.moderate}
                   </Link>
                 )}
-                {isAdmin && (
+                {showAdmin && (
                   <Link href="/admin" className="block rounded-xl px-3 py-2.5 text-sm text-amber-200/90 hover:bg-amber-500/10">
                     {viText.nav.admin}
                   </Link>

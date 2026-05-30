@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useAuthStore } from '@/store/useAuthStore'
+import { useAuthStore } from '@/features/auth/public'
 import type { LearningConcept, LearningModule, DepthLevel } from '@/data/learningPathCurriculum'
 import { DEPTH_META, DEPTH_ORDER } from '@/data/learningPathCurriculum'
 import {
@@ -13,8 +13,8 @@ import {
   saveEditorConcepts,
   saveTaxonomyRegistryEditor,
   type TaxonomyRegistry,
-} from '@/lib/conceptsApi'
-import { fetchEditorLearningPath } from '@/lib/learningPathApi'
+} from '@/features/concepts/public'
+import { fetchEditorLearningPath } from '@/features/learning-path/public'
 
 // ─── UI constants ─────────────────────────────────────────────────────────────
 const inputCls =

@@ -6,17 +6,19 @@ import {
   BookOpen, ChevronRight, Flame, Gem, TrendingUp,
   Star, Users2, Wallet, CheckCircle2,
 } from 'lucide-react'
-import { useAuthStore } from '@/store/useAuthStore'
-import { useLearningPath } from '@/hooks/useLearningPath'
+import { useAuthStore } from '@/features/auth/public'
+import { useLearningPath } from '@/features/learning-path/public'
 import {
   computeProgressPercent,
   loadLessonCompletion,
   loadLastLearningPathLessonId,
   syncLearningPathCompletion,
-} from '@/lib/learningPathProgress'
-import { loadCompletedMilestoneIds, syncSolarJourneyProgress } from '@/lib/solarJourneyProgress'
+} from '@/features/learning-path/public'
+import { loadCompletedMilestoneIds, syncSolarJourneyProgress } from '@/features/rewards/public'
 import { getLessonById } from '@/data/learningPathCurriculum'
-import { loadGemWallet, syncGemWallet } from '@/lib/gemWallet'
+import { loadGemWallet, syncGemWallet } from '@/features/rewards/public'
+import { fetchLearnerTiersWithProgress, type LearnerTierProgress } from '@/features/rewards/public'
+import { useLiveClock } from '@/hooks/useLiveClock'
 
 const chamfer = (cut = 18) => ({
   clipPath: `polygon(${cut}px 0,100% 0,100% calc(100% - ${cut}px),calc(100% - ${cut}px) 100%,0 100%,0 ${cut}px)`,
@@ -78,24 +80,13 @@ export default function DashboardOverviewPage() {
   const [solarDoneCount, setSolarDoneCount] = useState(0)
   const [lastLessonId, setLastLessonId] = useState<string | null>(null)
   const [gemBalance, setGemBalance] = useState(0)
-  const [utcTime, setUtcTime] = useState('')
+  const [tierProgress, setTierProgress] = useState<LearnerTierProgress | null>(null)
+  const { time: localTime, zoneLabel } = useLiveClock()
 
-  const gemNextMilestone = 100
-  const gemProgressPct = Math.min(100, Math.round((gemBalance / gemNextMilestone) * 100))
-  const gemToNext = Math.max(0, gemNextMilestone - gemBalance)
-
-  useEffect(() => {
-    const tick = () => {
-      const now = new Date()
-      const h = String(now.getUTCHours()).padStart(2, '0')
-      const m = String(now.getUTCMinutes()).padStart(2, '0')
-      const s = String(now.getUTCSeconds()).padStart(2, '0')
-      setUtcTime(`${h}:${m}:${s}`)
-    }
-    tick()
-    const id = setInterval(tick, 1000)
-    return () => clearInterval(id)
-  }, [])
+  const gemProgressPct = tierProgress?.progressPct ?? 0
+  const gemToNext = tierProgress?.gemsToNext ?? 0
+  const tierCurrent = tierProgress?.current ?? null
+  const tierNext = tierProgress?.next ?? null
 
   useEffect(() => {
     const refreshGems = () => setGemBalance(loadGemWallet(userId).balance)
@@ -104,6 +95,17 @@ export default function DashboardOverviewPage() {
     window.addEventListener('gem-wallet-changed', refreshGems)
     return () => window.removeEventListener('gem-wallet-changed', refreshGems)
   }, [userId])
+
+  useEffect(() => {
+    let cancelled = false
+    void fetchLearnerTiersWithProgress().then((res) => {
+      if (!res || cancelled) return
+      setTierProgress(res.progress)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   useEffect(() => {
     const localMap = loadLessonCompletion(userId)
@@ -180,7 +182,7 @@ export default function DashboardOverviewPage() {
         <div className="text-right" style={{ alignSelf: 'flex-start', paddingTop: 4 }}>
           <p className="dash-mono text-sm flex items-center justify-end gap-2" style={{ color: '#7ee7ff' }}>
             <span className="inline-block w-1.5 h-1.5 rounded-full" style={{ background: '#6dffb0', boxShadow: '0 0 5px #6dffb0' }} />
-            UTC {utcTime}
+            {zoneLabel} {localTime}
           </p>
           <p className="dash-mono text-[11px] mt-0.5" style={{ color: '#5c6886' }}>
             PHIÊN <span style={{ color: '#7ee7ff' }}>#A-7321</span>
@@ -209,13 +211,21 @@ export default function DashboardOverviewPage() {
               <Star size={22} style={{ color: '#f5a524' }} strokeWidth={1.6} />
             </div>
             <div>
-              <p className="text-[22px] font-semibold leading-tight" style={{ color: '#eaf6ff' }}>Mầm non</p>
-              <p className="dash-mono text-[10px] mt-0.5" style={{ color: '#5c6886' }}>Học tập & khám phá</p>
+              <p className="text-[22px] font-semibold leading-tight" style={{ color: '#eaf6ff' }}>
+                {tierCurrent?.nameVi || 'Mầm non'}
+              </p>
+              <p className="dash-mono text-[10px] mt-0.5" style={{ color: '#5c6886' }}>
+                {tierCurrent ? `Đã kiếm ${tierProgress?.gemsEarned ?? 0} gem` : 'Học tập & khám phá'}
+              </p>
             </div>
           </div>
           <div className="flex justify-between mb-1.5">
-            <span className="dash-mono text-[10px]" style={{ color: '#5c6886' }}>10 Gem</span>
-            <span className="dash-mono text-[10px]" style={{ color: '#5c6886' }}>100 Gem</span>
+            <span className="dash-mono text-[10px]" style={{ color: '#5c6886' }}>
+              {tierCurrent ? `${tierCurrent.minGemsEarned} Gem` : '0 Gem'}
+            </span>
+            <span className="dash-mono text-[10px]" style={{ color: '#5c6886' }}>
+              {tierNext ? `${tierNext.minGemsEarned} Gem` : 'MAX'}
+            </span>
           </div>
           <div
             className="relative overflow-hidden"
@@ -243,8 +253,14 @@ export default function DashboardOverviewPage() {
             )}
           </div>
           <p className="text-xs mt-2" style={{ color: '#9aa8c4' }}>
-            <span className="font-semibold" style={{ color: '#f5a524' }}>{gemToNext} Gem</span>
-            {' '}đến cấp độ tiếp theo
+            {tierNext ? (
+              <>
+                <span className="font-semibold" style={{ color: '#f5a524' }}>{gemToNext} Gem</span>
+                {' '}đến cấp độ tiếp theo
+              </>
+            ) : (
+              <span className="font-semibold" style={{ color: '#6dffb0' }}>Đã đạt hạng cao nhất</span>
+            )}
           </p>
         </HudPanel>
 

@@ -7,9 +7,22 @@ const ACTION_REG = /\[ACTION:(\w+):([^\]\s]+)\]/g
 export type TutorAction =
   | { type: 'open_lesson'; lessonSlug: string }
   | { type: 'go_to_explore'; stageTime: number }
+  | {
+      type: 'focus_showcase_entity'
+      entityId: string
+      entityName?: string
+      openHistory?: boolean
+    }
   | { type: 'open_courses' }
   | { type: 'open_dashboard' }
   | { type: 'open_my_courses' }
+
+export type LpLessonAction = {
+  type: 'open_learning_path_lesson'
+  lessonId: string
+  moduleId: string
+  nodeId: string
+}
 
 /** Phản hồi từ Python service (đã validate). */
 export type ApiToolCall = {
@@ -21,6 +34,7 @@ export type ApiToolCall = {
 function actionKey(a: TutorAction): string {
   if (a.type === 'open_lesson') return `lesson:${a.lessonSlug}`
   if (a.type === 'go_to_explore') return `explore:${a.stageTime}`
+  if (a.type === 'focus_showcase_entity') return `focus:${a.entityId}`
   return a.type
 }
 
@@ -36,6 +50,21 @@ export function toolCallsToTutorActions(calls: unknown): TutorAction[] {
     if (name === 'open_lesson') {
       const slug = args.lesson_slug
       if (typeof slug === 'string' && slug.trim()) out.push({ type: 'open_lesson', lessonSlug: slug.trim() })
+    } else if (name === 'focus_showcase_entity') {
+      const entityId = args.entity_id ?? args.entityId
+      if (typeof entityId === 'string' && entityId.trim()) {
+        out.push({
+          type: 'focus_showcase_entity',
+          entityId: entityId.trim(),
+          entityName:
+            typeof args.entity_name === 'string'
+              ? args.entity_name
+              : typeof args.entityName === 'string'
+                ? args.entityName
+                : undefined,
+          openHistory: args.open_history === true || args.openHistory === true,
+        })
+      }
     } else if (name === 'go_to_explore') {
       const ma = args.stage_time_ma
       const n = typeof ma === 'number' ? ma : Number(ma)
@@ -46,6 +75,10 @@ export function toolCallsToTutorActions(calls: unknown): TutorAction[] {
       out.push({ type: 'open_dashboard' })
     } else if (name === 'open_my_courses') {
       out.push({ type: 'open_my_courses' })
+    } else if (name === 'navigate_to_narrative' || name === 'go_to_explore') {
+      const ma = args.stage_time_ma ?? args.stageTime
+      const n = typeof ma === 'number' ? ma : Number(ma)
+      if (!Number.isNaN(n)) out.push({ type: 'go_to_explore', stageTime: n })
     }
   }
   return out

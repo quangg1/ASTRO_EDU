@@ -9,6 +9,13 @@ const postSchema = new mongoose.Schema({
   courseId: { type: String, default: null },
   courseSlug: { type: String, default: null },
   lessonSlug: { type: String, default: null },
+  /** course | learning-path — nguồn câu hỏi học tập */
+  pathSource: { type: String, enum: ['course', 'learning-path'], default: null },
+  /** Nhãn hiển thị: "Khóa X · Bài Y" hoặc "Mô-đun · Node · Bài" */
+  contextTitle: { type: String, default: null },
+  learningModuleId: { type: String, default: null },
+  learningNodeId: { type: String, default: null },
+  learningLessonId: { type: String, default: null },
   sourceUrl: { type: String, default: null },
   sourceName: { type: String, default: null },
   publishedAt: { type: Date, default: null },
@@ -18,10 +25,16 @@ const postSchema = new mongoose.Schema({
   isExternalArticle: { type: Boolean, default: false },
   /** Từ RSS: thẻ &lt;category&gt;, dc:subject… — dùng filter trong app */
   rssCategories: { type: [String], default: [] },
+  /** Hashtag thảo luận (#tag trong nội dung hoặc gửi kèm). */
+  tags: { type: [String], default: [] },
   voteCount: { type: Number, default: 0 },
   commentCount: { type: Number, default: 0 },
   viewCount: { type: Number, default: 0 },
   isPinned: { type: Boolean, default: false },
+  isHidden: { type: Boolean, default: false },
+  hiddenAt: { type: Date, default: null },
+  hiddenBy: { type: String, default: null },
+  reportCount: { type: Number, default: 0 },
 }, { timestamps: true });
 
 postSchema.index({ forumId: 1, createdAt: -1 });
@@ -29,5 +42,9 @@ postSchema.index({ authorId: 1 });
 postSchema.index({ isCrawled: 1, publishedAt: -1 });
 postSchema.index({ sourceUrl: 1 }, { unique: true, sparse: true });
 postSchema.index({ forumId: 1, rssCategories: 1 });
+postSchema.index({ forumId: 1, tags: 1 });
+postSchema.index({ tags: 1, createdAt: -1 });
+postSchema.index({ forumId: 1, courseSlug: 1, lessonSlug: 1 });
+postSchema.index({ forumId: 1, learningLessonId: 1 });
 
 module.exports = mongoose.model('Post', postSchema);

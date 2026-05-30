@@ -6,8 +6,7 @@ import { motion } from 'framer-motion'
 import type { LearningModule, LearningNode } from '@/data/learningPathCurriculum'
 import { getLearningPathNeighbors } from '@/data/learningPathCurriculum'
 import NodeDepthPanel from '@/components/learning-path/NodeDepthPanel'
-import { useLearningPath } from '@/hooks/useLearningPath'
-import { trackLearningPathBehavior } from '@/lib/learningPathBehavior'
+import { trackLearningPathBehavior, useLearningPath } from '@/features/learning-path/public'
 
 type Props = {
   module: LearningModule

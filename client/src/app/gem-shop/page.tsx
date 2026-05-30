@@ -2,8 +2,17 @@
 
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
-import { loadGemWallet } from '@/lib/gemWallet'
-import { useAuthStore } from '@/store/useAuthStore'
+import { GemShopDecorationCatalog } from '@/components/gem-shop/GemShopDecorationCatalog'
+import {
+  fetchDecorationCatalog,
+  fetchGemShopBootstrap,
+  loadGemWallet,
+  syncGemWallet,
+  type AvatarDecorationCategorySection,
+  type GemShopBootstrapDTO,
+} from '@/features/rewards/public'
+import { useAuthStore } from '@/features/auth/public'
+import { useLiveClock } from '@/hooks/useLiveClock'
 
 const chamfer = (cut = 14) => ({
   clipPath: `polygon(${cut}px 0,100% 0,100% calc(100% - ${cut}px),calc(100% - ${cut}px) 100%,0 100%,0 ${cut}px)`,
@@ -78,24 +87,43 @@ export default function GemShopPage() {
   const { user } = useAuthStore()
   const userId = user?.id ?? null
   const [balance, setBalance] = useState(0)
-  const [utcTime, setUtcTime] = useState('')
+  const { time: localTime, zoneLabel } = useLiveClock()
+  const [bootstrap, setBootstrap] = useState<GemShopBootstrapDTO | null>(null)
+  const [categories, setCategories] = useState<AvatarDecorationCategorySection[]>([])
+  const [loadingCatalog, setLoadingCatalog] = useState(true)
+  const [catalogError, setCatalogError] = useState('')
 
   useEffect(() => {
     setBalance(loadGemWallet(userId).balance)
     const refresh = () => setBalance(loadGemWallet(userId).balance)
+    void syncGemWallet(userId).then((next) => setBalance(next.balance))
     window.addEventListener('gem-wallet-changed', refresh)
     return () => window.removeEventListener('gem-wallet-changed', refresh)
   }, [userId])
 
   useEffect(() => {
-    const tick = () => {
-      const now = new Date()
-      const pad = (n: number) => String(n).padStart(2, '0')
-      setUtcTime(`${pad(now.getUTCHours())}:${pad(now.getUTCMinutes())}:${pad(now.getUTCSeconds())}`)
+    let cancelled = false
+    setLoadingCatalog(true)
+    setCatalogError('')
+    Promise.allSettled([fetchGemShopBootstrap(), fetchDecorationCatalog()])
+      .then((results) => {
+        if (cancelled) return
+        const [bootstrapRes, catalogRes] = results
+        if (bootstrapRes.status === 'fulfilled') setBootstrap(bootstrapRes.value)
+        if (catalogRes.status === 'fulfilled') {
+          setCategories(catalogRes.value.categories || [])
+          setCatalogError('')
+        } else {
+          setCatalogError(catalogRes.reason instanceof Error ? catalogRes.reason.message : 'Không tải được catalog Gem Shop.')
+          setCategories([])
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingCatalog(false)
+      })
+    return () => {
+      cancelled = true
     }
-    tick()
-    const id = setInterval(tick, 1000)
-    return () => clearInterval(id)
   }, [])
 
   const mono: React.CSSProperties = { fontFamily: "'JetBrains Mono', monospace" }
@@ -118,8 +146,12 @@ export default function GemShopPage() {
         </span>
         <div className="flex items-center gap-5" style={{ ...mono, fontSize: 10, letterSpacing: '0.12em', color: '#5c6886' }}>
           <span>Wallet · <span style={{ color: '#f5a524' }}>{balance} GEM</span></span>
-          <span style={{ color: '#ff5cd4' }}>● LAUNCHING SOON</span>
-          <span className="hidden sm:inline">UTC · <span style={{ color: '#9aa8c4' }}>{utcTime}</span></span>
+          <span style={{ color: categories.length > 0 ? '#6dffb0' : '#ff5cd4' }}>
+            {categories.length > 0 ? '● LIVE' : '● LAUNCHING SOON'}
+          </span>
+          <span className="hidden sm:inline">
+            {zoneLabel} · <span style={{ color: '#9aa8c4' }}>{localTime}</span>
+          </span>
         </div>
       </div>
 
@@ -157,19 +189,19 @@ export default function GemShopPage() {
           <div
             className="flex-shrink-0 flex flex-col items-center justify-center text-center px-8 py-5"
             style={{
-              background: 'rgba(255,92,212,0.05)',
-              border: '1px solid rgba(255,92,212,0.22)',
+              background: categories.length > 0 ? 'rgba(109,255,176,0.07)' : 'rgba(255,92,212,0.05)',
+              border: categories.length > 0 ? '1px solid rgba(109,255,176,0.25)' : '1px solid rgba(255,92,212,0.22)',
               ...chamfer(14),
             }}
           >
             <div style={{ ...mono, fontSize: 9, letterSpacing: '0.22em', color: '#5c6886', marginBottom: 8, textTransform: 'uppercase' }}>
               — Trạng thái hệ thống
             </div>
-            <div style={{ ...mono, fontSize: 13, letterSpacing: '0.1em', color: '#ff5cd4', fontWeight: 600 }}>
-              ● COMING SOON
+            <div style={{ ...mono, fontSize: 13, letterSpacing: '0.1em', color: categories.length > 0 ? '#6dffb0' : '#ff5cd4', fontWeight: 600 }}>
+              {categories.length > 0 ? '● LIVE DECORATIONS' : '● COMING SOON'}
             </div>
             <div style={{ ...mono, fontSize: 9, color: '#5c6886', marginTop: 6, letterSpacing: '0.1em' }}>
-              Q3 / 2025
+              {bootstrap?.seasonalEndsAt ? `SEASON ENDS · ${new Date(bootstrap.seasonalEndsAt).toLocaleDateString('vi-VN')}` : 'Q3 / 2025'}
             </div>
           </div>
         </div>
@@ -187,93 +219,101 @@ export default function GemShopPage() {
               // 02 · catalog · planned items
             </div>
             <h2 style={{ fontSize: 'clamp(20px, 2.5vw, 30px)', fontWeight: 500, letterSpacing: '-0.02em', color: '#eaf6ff' }}>
-              Vật phẩm{' '}
-              <em style={{ fontStyle: 'italic', fontWeight: 300, color: '#f5a524' }}>sắp có</em>
+              Cửa hàng{' '}
+              <em style={{ fontStyle: 'italic', fontWeight: 300, color: '#f5a524' }}>trang trí</em>
             </h2>
           </div>
           <span style={{ ...mono, fontSize: 9, letterSpacing: '0.16em', color: '#3d4f6e', textTransform: 'uppercase' }}>
-            {String(PLANNED_ITEMS.length).padStart(2, '0')} Items · Preview
+            {loadingCatalog ? 'SYNCING...' : `${String(categories.reduce((sum, c) => sum + (c.items?.length || 0), 0)).padStart(2, '0')} Items · Live`}
           </span>
         </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {PLANNED_ITEMS.map((item, i) => (
-            <div
-              key={i}
-              className="relative flex items-start gap-4 p-5"
-              style={{
-                background: 'rgba(6,9,26,0.72)',
-                border: '1px solid rgba(126,231,255,0.1)',
-                opacity: 0.75,
-                cursor: 'not-allowed',
-                ...chamfer(12),
-              }}
-            >
-              {/* Corner dot */}
-              <span
-                style={{
-                  position: 'absolute', top: 10, left: 10,
-                  width: 6, height: 6, borderRadius: '50%',
-                  background: item.tagColor,
-                  boxShadow: `0 0 6px ${item.tagColor}`,
-                  opacity: 0.5,
-                }}
-              />
-
-              {/* Icon */}
+        {loadingCatalog ? (
+          <div style={{ ...mono, fontSize: 11, color: '#5c6886', letterSpacing: '0.12em', textTransform: 'uppercase' }}>
+            ● loading catalog...
+          </div>
+        ) : categories.length > 0 ? (
+          <GemShopDecorationCatalog
+            categories={categories}
+            avatarUrl={user?.avatar || null}
+            displayName={user?.displayName || user?.email || 'Learner'}
+            email={user?.email || null}
+          />
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {PLANNED_ITEMS.map((item, i) => (
               <div
+                key={i}
+                className="relative flex items-start gap-4 p-5"
                 style={{
-                  flexShrink: 0,
-                  width: 46, height: 46,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  color: item.tagColor,
-                  background: `${item.tagColor}12`,
-                  border: `1px solid ${item.tagColor}30`,
-                  ...chamfer(8),
+                  background: 'rgba(6,9,26,0.72)',
+                  border: '1px solid rgba(126,231,255,0.1)',
+                  opacity: 0.75,
+                  cursor: 'not-allowed',
+                  ...chamfer(12),
                 }}
               >
-                {item.icon}
-              </div>
-
-              {/* Content */}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1 flex-wrap">
-                  <span style={{ fontSize: 15, fontWeight: 500, color: '#eaf6ff' }}>{item.label}</span>
-                  <span
-                    style={{
-                      ...mono, fontSize: 9, letterSpacing: '0.14em', textTransform: 'uppercase',
-                      color: item.tagColor, background: `${item.tagColor}14`,
-                      border: `1px solid ${item.tagColor}30`,
-                      padding: '1px 7px',
-                      ...chamfer(4),
-                    }}
-                  >
-                    {item.tag}
-                  </span>
-                </div>
-                <p style={{ fontSize: 13, color: '#9aa8c4', lineHeight: 1.5, marginBottom: 10 }}>{item.desc}</p>
+                <span
+                  style={{
+                    position: 'absolute', top: 10, left: 10,
+                    width: 6, height: 6, borderRadius: '50%',
+                    background: item.tagColor,
+                    boxShadow: `0 0 6px ${item.tagColor}`,
+                    opacity: 0.5,
+                  }}
+                />
                 <div
                   style={{
-                    ...mono, fontSize: 11, fontWeight: 600, letterSpacing: '0.06em',
-                    color: '#5c6886',
-                    display: 'inline-flex', alignItems: 'center', gap: 5,
-                    background: 'rgba(126,231,255,0.04)',
-                    border: '1px solid rgba(126,231,255,0.08)',
-                    padding: '3px 10px',
-                    ...chamfer(5),
+                    flexShrink: 0,
+                    width: 46, height: 46,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    color: item.tagColor,
+                    background: `${item.tagColor}12`,
+                    border: `1px solid ${item.tagColor}30`,
+                    ...chamfer(8),
                   }}
                 >
-                  🔒 {item.cost}
+                  {item.icon}
                 </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1 flex-wrap">
+                    <span style={{ fontSize: 15, fontWeight: 500, color: '#eaf6ff' }}>{item.label}</span>
+                    <span
+                      style={{
+                        ...mono, fontSize: 9, letterSpacing: '0.14em', textTransform: 'uppercase',
+                        color: item.tagColor, background: `${item.tagColor}14`,
+                        border: `1px solid ${item.tagColor}30`,
+                        padding: '1px 7px',
+                        ...chamfer(4),
+                      }}
+                    >
+                      {item.tag}
+                    </span>
+                  </div>
+                  <p style={{ fontSize: 13, color: '#9aa8c4', lineHeight: 1.5, marginBottom: 10 }}>{item.desc}</p>
+                  <div
+                    style={{
+                      ...mono, fontSize: 11, fontWeight: 600, letterSpacing: '0.06em',
+                      color: '#5c6886',
+                      display: 'inline-flex', alignItems: 'center', gap: 5,
+                      background: 'rgba(126,231,255,0.04)',
+                      border: '1px solid rgba(126,231,255,0.08)',
+                      padding: '3px 10px',
+                      ...chamfer(5),
+                    }}
+                  >
+                    🔒 {item.cost}
+                  </div>
+                </div>
+                <span style={{ ...mono, fontSize: 9, color: '#3d4f6e', letterSpacing: '0.1em', flexShrink: 0 }}>
+                  {String(i + 1).padStart(2, '0')}
+                </span>
               </div>
-
-              {/* Item number */}
-              <span style={{ ...mono, fontSize: 9, color: '#3d4f6e', letterSpacing: '0.1em', flexShrink: 0 }}>
-                {String(i + 1).padStart(2, '0')}
-              </span>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
+        {!!catalogError && (
+          <p className="mt-3 text-xs text-amber-300">{catalogError}</p>
+        )}
       </div>
 
       {/* Bottom CTA panel */}

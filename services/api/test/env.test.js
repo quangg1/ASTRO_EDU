@@ -4,14 +4,16 @@ const { validateApiEnv } = require('../config/env');
 
 test('validateApiEnv throws when required env is missing', () => {
   const original = {
+    PORT: process.env.PORT,
     MONGODB_URI: process.env.MONGODB_URI,
     CLIENT_URL: process.env.CLIENT_URL,
     JWT_SECRET: process.env.JWT_SECRET,
     INTERNAL_API_SECRET: process.env.INTERNAL_API_SECRET,
   };
 
+  process.env.PORT = '3002';
   delete process.env.MONGODB_URI;
-  process.env.CLIENT_URL = 'http://localhost:3000';
+  process.env.CLIENT_URL = 'http://example.test';
   process.env.JWT_SECRET = 'secret';
   process.env.INTERNAL_API_SECRET = 'internal';
 

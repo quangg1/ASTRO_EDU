@@ -3,12 +3,23 @@
 import { useEffect, useRef, useState } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
-import { useAuthStore } from '@/store/useAuthStore'
+import { useAuthStore } from '@/features/auth/public'
 import { useRouter } from 'next/navigation'
-import { fetchPost, addComment, votePost, pinPost, deletePost, type Post, type Comment } from '@/lib/communityApi'
+import {
+  fetchPost,
+  addComment,
+  votePost,
+  pinPost,
+  deletePost,
+  type Post,
+  type Comment,
+  firstImageSrcFromHtml,
+  looksLikeHtml,
+  stripFirstImgTag,
+  recordPostDetailView,
+  recordPostSourceOpen,
+} from '@/features/community/public'
 import { canModerate } from '@/lib/roles'
-import { firstImageSrcFromHtml, looksLikeHtml, stripFirstImgTag } from '@/lib/postContent'
-import { recordPostDetailView, recordPostSourceOpen } from '@/lib/postEngagement'
 import { PostMarkdown } from '@/components/community/PostMarkdown'
 
 function formatDate(date?: string): string {

@@ -2,20 +2,23 @@
 
 Project giáo dục thiên văn với đăng nhập (email, Google, Facebook), khóa học và mô phỏng 3D.
 
+## Deploy lên Render
+
+Blueprint: [`render.yaml`](render.yaml) — API Node + Next **Web Service** (`npm start`). Hướng dẫn Dashboard: [`docs/render-deploy.md`](docs/render-deploy.md).
+
 ## Khuyến nghị: API gộp (Modular Monolith)
 
 **Một backend gộp** `services/api` (port **3002**) thay cho auth, courses, media, community, payment. Kiến trúc theo **feature** để dễ branch/PR từng tính năng trên GitHub. Chi tiết: [docs/ARCHITECTURE_MERGED.md](docs/ARCHITECTURE_MERGED.md).
 
 - Chạy API gộp: `npm run dev:api`
-- Client: đặt `NEXT_PUBLIC_API_BASE_URL=http://localhost:3002` trong `.env.local` để trỏ mọi request về API gộp.
-- **Vẫn tách riêng** (scale độc lập): earth-history (3001), embedding (5004), ai (5005).
+- Client: copy `client/.env.local.example` → `.env.local`, điền `NEXT_PUBLIC_API_BASE_URL` và `API_PROXY_TARGET` (cùng gốc unified API).
+- **Vẫn tách riêng** (scale độc lập): embedding (5004), ai (5005).
 
 ## Các service (khi chạy tách từng service)
 
 | Service      | Port | Mô tả |
 |-------------|------|--------|
 | **client**  | 3000 | Next.js – UI, visualization, trang khóa học, đăng nhập/đăng ký |
-| **earth-history** | 3001 | API Earth History (fossils, phyla, paleo) – MongoDB |
 | **api** (gộp) | 3002 | **Unified API**: auth, courses, tutorials, payment, community, media |
 | **auth**    | 3002 | (legacy) Đăng ký/đăng nhập – dùng **api** thay thế |
 | **courses** | 3003 | (legacy) Khóa học, Tutorial – dùng **api** thay thế |
@@ -34,7 +37,6 @@ Project giáo dục thiên văn với đăng nhập (email, Google, Facebook), k
 npm run install:all
 
 # Hoặc từng thư mục:
-cd services/earth-history && npm install
 cd client && npm install
 cd services/auth && npm install
 cd services/courses && npm install
@@ -74,17 +76,19 @@ Xem chi tiết trong [docs/ARCHITECTURE_MERGED.md](docs/ARCHITECTURE_MERGED.md#d
 - **services/community**: copy `services/community/.env.example` → `.env`  
   - `JWT_SECRET`: trùng với auth
 
-- **services/payment**: copy `services/payment/.env.example` → `.env`  
-  - `INTERNAL_API_SECRET`: trùng với courses (để confirm-enroll)
-  - `VNPAY_TMN_CODE`, `VNPAY_HASH_SECRET`: từ VNPay sandbox/production
-  - `COURSES_SERVICE_URL`: http://localhost:3003/api
+- **Thanh toán khóa học (checkout nội bộ, demo)** — không cần VNPay:
+  - `GET /api/payments/checkout-quote` → báo giá + voucher gem
+  - `POST /api/payments/checkout` → tạo đơn `pending`
+  - `POST /api/payments/checkout/:txnRef/confirm` → xác nhận (demo thẻ), enroll + trừ gem
+  - Client: `/courses/[slug]/checkout` — form thẻ validate trên browser, không gửi số thẻ lên server
 
 - **services/courses**: thêm `INTERNAL_API_SECRET` (trùng payment) vào `.env` nếu dùng payment.
 
-- **services/api** (API gộp): ngoài `MONGODB_URI`, `JWT_SECRET`, `CLIENT_URL`, `INTERNAL_API_SECRET`, có thể bật **email thông báo** (đơn giảng viên duyệt/từ chối) bằng SMTP tùy chọn:
+- **services/api** (API gộp): ngoài `MONGODB_URI`, `JWT_SECRET`, `CLIENT_URL`, `INTERNAL_API_SECRET`, có thể bật **email SMTP** (tùy chọn, `services/api/shared/mailer.js`):
   - `SMTP_HOST`, `SMTP_USER`, `SMTP_PASS`, `MAIL_FROM` (ví dụ `Cosmo Learn <noreply@example.com>`)
   - `SMTP_PORT` (mặc định `587`), `SMTP_SECURE=true` nếu dùng cổng 465 (SSL)
-  - Nếu không cấu hình, API vẫn chạy bình thường; chỉ bỏ qua gửi email.
+  - Nếu không cấu hình, API vẫn chạy; email bị bỏ qua (quên MK: dev non-production vẫn trả `resetLink` trong JSON để test).
+  - Luồng gửi mail: **đăng ký** (chào mừng), **quên mật khẩu** (link reset), **thanh toán khóa** (hóa đơn), **mã lớp cohort**, **duyệt/từ chối đơn giảng viên**.
 
 - **client**: khi dùng **API gộp**, tạo `client/.env.local` với (copy từ `client/.env.local.example`):
   - `NEXT_PUBLIC_API_BASE_URL=http://localhost:3002`
@@ -97,14 +101,14 @@ Xem chi tiết trong [docs/ARCHITECTURE_MERGED.md](docs/ARCHITECTURE_MERGED.md#d
   - Chạy: `uvicorn server:app --host 0.0.0.0 --port 5004`  
   - Model: BGE-M3 (BAAI/bge-m3), đa ngôn ngữ (tiếng Việt). Client gọi qua `POST /api/embed`.
 
-- **services/ai** (Python): xem `services/ai/README.md`. RAG cần embedding (5004). LLM: set `OPENROUTER_API_KEY` (OpenRouter; free tier có thể dùng `OPENROUTER_MODEL=openrouter/free`) hoặc để trống key và chạy LM Studio + `LM_STUDIO_URL` / `LM_STUDIO_MODEL`.
+- **services/ai** (Python): xem `services/ai/README.md`. RAG cần embedding (5004). LLM chain: `LLM_PROVIDER_ORDER=openrouter,lmstudio,groq` — OpenRouter trước, tự fallback sang LM Studio local khi hết credit/lỗi; copy `services/ai/example.env` → `.env`.
 
 ### 4. Chạy từng terminal
 
 ```bash
-# Terminal 1 – API Earth History
+# Terminal 1 – Unified API
 npm run dev:server
-# (dev:server runs services/earth-history)
+# (dev:server runs services/api)
 
 # Terminal 2 – Auth
 npm run dev:auth

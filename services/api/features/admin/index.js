@@ -1,18 +1,56 @@
 const express = require('express');
-const { authMiddleware, requireRole } = require('../../shared/jwtAuth');
-const { listAdminUsers, updateAdminUserRole, updateAdminUserStatus } = require('../../services/adminUserService');
-const { listApplicationsForAdmin, reviewApplication } = require('../../services/teacherApplicationService');
-const { getAdminOrderOverview } = require('../../services/adminOrderService');
+const { authMiddleware } = require('../../shared/jwtAuth');
+const { requireAdminScope, requireFullAdmin } = require('../../shared/adminScopes');
+const {
+  listAdminUsers,
+  updateAdminUserRole,
+  updateAdminUserScopes,
+  updateAdminUserStatus,
+  deleteAdminUserPermanently,
+} = require('./services/adminUserService');
+const {
+  listApplicationsForAdmin,
+  reviewApplication,
+  markCvReviewed,
+} = require('../auth/services/teacherApplicationService');
+const { getAdminOrderOverview } = require('./services/adminOrderService');
 const User = require('../auth/models/User');
 const Enrollment = require('../courses/models/Enrollment');
 const TutorialProgress = require('../courses/models/TutorialProgress');
 const Course = require('../courses/models/Course');
 const Order = require('../payment/models/Order');
 const Post = require('../community/models/Post');
-const LearningPathEvent = require('../courses/models/LearningPathEvent');
-const LearningPath = require('../courses/models/LearningPath');
+const LearningPathEvent = require('../learning-path/models/LearningPathEvent');
+const LearningPath = require('../learning-path/models/LearningPath');
+const gemEconomyRouter = require('./gemEconomy');
+const adminPromoRoutes = require('../promotions/adminPromoRoutes');
+const adminOpsRoutes = require('./routes/adminOpsRoutes');
+const { broadcastAdminNotification, VALID_ROLES } = require('./adminBroadcastService');
+const { requireString } = require('../../shared/validation');
+const { amountToVndAggExpr, getUsdToVndRate } = require('../../shared/money/revenueVnd');
 
 const router = express.Router();
+
+router.use('/gem-economy', gemEconomyRouter);
+router.use('/promo-codes', adminPromoRoutes);
+router.use(adminOpsRoutes);
+
+router.post('/notifications/broadcast', authMiddleware, requireAdminScope('broadcast'), async (req, res) => {
+  try {
+    const titleVi = requireString(req.body?.titleVi, 'titleVi', 'Tiêu đề').slice(0, 200);
+    const bodyVi = typeof req.body?.bodyVi === 'string' ? req.body.bodyVi.trim().slice(0, 2000) : '';
+    const href = typeof req.body?.href === 'string' && req.body.href.trim() ? req.body.href.trim().slice(0, 500) : null;
+    const roles = Array.isArray(req.body?.roles)
+      ? req.body.roles.filter((r) => VALID_ROLES.includes(String(r)))
+      : null;
+
+    const result = await broadcastAdminNotification({ titleVi, bodyVi, href, roles });
+    res.json({ success: true, data: result });
+  } catch (err) {
+    console.error('Admin broadcast error:', err);
+    res.status(400).json({ success: false, error: err.message || 'Không gửi được thông báo' });
+  }
+});
 
 const RANGE_TO_DAYS = {
   '7d': 7,
@@ -52,6 +90,12 @@ function buildLearningPathLookup(doc) {
   const moduleMap = new Map();
   const nodeMap = new Map();
   const lessonMap = new Map();
+  const conceptMap = new Map();
+  for (const c of Array.isArray(doc?.concepts) ? doc.concepts : []) {
+    const id = String(c?.id || '').trim();
+    if (!id) continue;
+    conceptMap.set(id, String(c.title || c.short_description || id).trim() || id);
+  }
 
   for (const module of modules) {
     moduleMap.set(String(module.id), {
@@ -83,24 +127,30 @@ function buildLearningPathLookup(doc) {
     }
   }
 
-  return { modules, moduleMap, nodeMap, lessonMap };
+  return { modules, moduleMap, nodeMap, lessonMap, conceptMap };
 }
 
 function ensureArray(value) {
   return Array.isArray(value) ? value : [];
 }
 
-router.get('/users', authMiddleware, requireRole('admin'), async (req, res) => {
+router.get('/users', authMiddleware, requireAdminScope('users'), async (req, res) => {
   try {
-    const data = await listAdminUsers();
-    res.json({ success: true, data });
+    const data = await listAdminUsers({
+      q: String(req.query.q || ''),
+      role: String(req.query.role || '').trim() || undefined,
+      accountStatus: String(req.query.accountStatus || '').trim() || undefined,
+      page: parseInt(req.query.page, 10) || 1,
+      limit: parseInt(req.query.limit, 10) || 50,
+    });
+    res.json({ success: true, data: data.items, total: data.total, page: data.page, limit: data.limit });
   } catch (err) {
     req.logger?.error('admin_list_users_failed', { error: err.message });
     res.status(err.status || 500).json({ success: false, code: err.code || 'ADMIN_USERS_LIST_FAILED', error: err.message || 'Lỗi tải danh sách người dùng' });
   }
 });
 
-router.patch('/users/:id/role', authMiddleware, requireRole('admin'), async (req, res) => {
+router.patch('/users/:id/role', authMiddleware, requireAdminScope('users'), async (req, res) => {
   try {
     const user = await updateAdminUserRole({
       actorUserId: req.userId,
@@ -114,7 +164,21 @@ router.patch('/users/:id/role', authMiddleware, requireRole('admin'), async (req
   }
 });
 
-router.get('/teacher-applications', authMiddleware, requireRole('admin'), async (req, res) => {
+router.patch('/users/:id/scopes', authMiddleware, requireFullAdmin(), async (req, res) => {
+  try {
+    const user = await updateAdminUserScopes({
+      actorUserId: req.userId,
+      targetUserId: req.params.id,
+      adminScopes: req.body?.adminScopes,
+    });
+    res.json({ success: true, user });
+  } catch (err) {
+    req.logger?.error('admin_update_scopes_failed', { error: err.message, targetUserId: req.params.id });
+    res.status(err.status || 500).json({ success: false, code: err.code || 'ADMIN_USER_SCOPES_UPDATE_FAILED', error: err.message || 'Lỗi cập nhật phạm vi admin' });
+  }
+});
+
+router.get('/teacher-applications', authMiddleware, requireAdminScope('teachers'), async (req, res) => {
   try {
     const status = String(req.query.status || 'pending');
     const data = await listApplicationsForAdmin({ status });
@@ -125,7 +189,20 @@ router.get('/teacher-applications', authMiddleware, requireRole('admin'), async 
   }
 });
 
-router.patch('/teacher-applications/:id', authMiddleware, requireRole('admin'), async (req, res) => {
+router.post('/teacher-applications/:id/cv-reviewed', authMiddleware, requireAdminScope('teachers'), async (req, res) => {
+  try {
+    const application = await markCvReviewed({
+      actorUserId: req.userId,
+      applicationId: req.params.id,
+    });
+    res.json({ success: true, application });
+  } catch (err) {
+    req.logger?.error('admin_teacher_cv_review_failed', { error: err.message, id: req.params.id });
+    res.status(err.status || 500).json({ success: false, code: err.code, error: err.message || 'Lỗi xác nhận CV' });
+  }
+});
+
+router.patch('/teacher-applications/:id', authMiddleware, requireAdminScope('teachers'), async (req, res) => {
   try {
     const application = await reviewApplication({
       actorUserId: req.userId,
@@ -140,7 +217,7 @@ router.patch('/teacher-applications/:id', authMiddleware, requireRole('admin'), 
   }
 });
 
-router.patch('/users/:id/status', authMiddleware, requireRole('admin'), async (req, res) => {
+router.patch('/users/:id/status', authMiddleware, requireAdminScope('users'), async (req, res) => {
   try {
     const user = await updateAdminUserStatus({
       actorUserId: req.userId,
@@ -155,7 +232,32 @@ router.patch('/users/:id/status', authMiddleware, requireRole('admin'), async (r
   }
 });
 
-router.get('/orders/overview', authMiddleware, requireRole('admin'), async (req, res) => {
+router.delete('/users/:id', authMiddleware, requireAdminScope('users'), async (req, res) => {
+  try {
+    const result = await deleteAdminUserPermanently({
+      actorUserId: req.userId,
+      targetUserId: req.params.id,
+      confirmEmail: req.body?.confirmEmail,
+      reason: req.body?.reason,
+    });
+    res.json({
+      success: true,
+      message: result.emailSent
+        ? 'Đã gửi email thông báo và xóa vĩnh viễn tài khoản.'
+        : 'Đã xóa vĩnh viễn (email thông báo chưa gửi được — môi trường dev).',
+      ...result,
+    });
+  } catch (err) {
+    req.logger?.error('admin_delete_user_failed', { error: err.message, targetUserId: req.params.id });
+    res.status(err.status || 500).json({
+      success: false,
+      code: err.code || 'ADMIN_USER_DELETE_FAILED',
+      error: err.message || 'Lỗi xóa người dùng',
+    });
+  }
+});
+
+router.get('/orders/overview', authMiddleware, requireAdminScope('orders'), async (req, res) => {
   try {
     const { stats, orders } = await getAdminOrderOverview();
     res.json({ success: true, stats, orders });
@@ -165,7 +267,7 @@ router.get('/orders/overview', authMiddleware, requireRole('admin'), async (req,
   }
 });
 
-router.get('/analytics/overview', authMiddleware, requireRole('admin'), async (req, res) => {
+router.get('/analytics/overview', authMiddleware, requireAdminScope('analytics'), async (req, res) => {
   try {
     const range = String(req.query.range || '30d');
     const days = parseRangeDays(range);
@@ -198,7 +300,7 @@ router.get('/analytics/overview', authMiddleware, requireRole('admin'), async (r
       Post.countDocuments({ createdAt: { $gte: startDate } }),
       Order.aggregate([
         { $match: { status: 'completed', createdAt: { $gte: startDate } } },
-        { $group: { _id: null, total: { $sum: '$amount' } } },
+        { $group: { _id: null, total: { $sum: amountToVndAggExpr() } } },
       ]),
       User.countDocuments({}),
       User.aggregate([
@@ -228,7 +330,7 @@ router.get('/analytics/overview', authMiddleware, requireRole('admin'), async (r
         {
           $group: {
             _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
-            total: { $sum: '$amount' },
+            total: { $sum: amountToVndAggExpr() },
           },
         },
         { $sort: { _id: 1 } },
@@ -241,7 +343,7 @@ router.get('/analytics/overview', authMiddleware, requireRole('admin'), async (r
       ]),
     ]);
 
-    const revenue = revenueAgg[0]?.total || 0;
+    const revenue = Math.round(revenueAgg[0]?.total || 0);
     const totalLessonRecords = await Enrollment.aggregate([
       { $unwind: '$progress' },
       { $group: { _id: null, total: { $sum: 1 } } },
@@ -273,6 +375,8 @@ router.get('/analytics/overview', authMiddleware, requireRole('admin'), async (r
     res.json({
       success: true,
       range,
+      revenueCurrency: 'VND',
+      usdToVndRate: getUsdToVndRate(),
       kpis: {
         totalUsers,
         newUsers,
@@ -296,7 +400,7 @@ router.get('/analytics/overview', authMiddleware, requireRole('admin'), async (r
   }
 });
 
-router.get('/analytics/funnel', authMiddleware, requireRole('admin'), async (req, res) => {
+router.get('/analytics/funnel', authMiddleware, requireAdminScope('analytics'), async (req, res) => {
   try {
     const range = String(req.query.range || '30d');
     const days = parseRangeDays(range);
@@ -340,7 +444,7 @@ router.get('/analytics/funnel', authMiddleware, requireRole('admin'), async (req
   }
 });
 
-router.get('/analytics/retention', authMiddleware, requireRole('admin'), async (req, res) => {
+router.get('/analytics/retention', authMiddleware, requireAdminScope('analytics'), async (req, res) => {
   try {
     const range = String(req.query.range || '30d');
     const days = parseRangeDays(range);
@@ -416,7 +520,7 @@ router.get('/analytics/retention', authMiddleware, requireRole('admin'), async (
   }
 });
 
-router.get('/analytics/cohort', authMiddleware, requireRole('admin'), async (req, res) => {
+router.get('/analytics/cohort', authMiddleware, requireAdminScope('analytics'), async (req, res) => {
   try {
     const range = String(req.query.range || '90d');
     const days = parseRangeDays(range);
@@ -463,7 +567,19 @@ router.get('/analytics/cohort', authMiddleware, requireRole('admin'), async (req
   }
 });
 
-router.get('/analytics/learning-path', authMiddleware, requireRole('admin'), async (req, res) => {
+router.get('/analytics/agent', authMiddleware, requireAdminScope('analytics'), async (req, res) => {
+  try {
+    const range = String(req.query.range || '30d');
+    const { getAgentAdminAnalytics } = require('../agent/services/adminAgentAnalyticsService');
+    const data = await getAgentAdminAnalytics({ range });
+    res.json({ success: true, ...data });
+  } catch (err) {
+    req.logger?.error('admin_analytics_agent_failed', { error: err.message });
+    res.status(500).json({ success: false, error: 'Lỗi tải agent analytics' });
+  }
+});
+
+router.get('/analytics/learning-path', authMiddleware, requireAdminScope('analytics'), async (req, res) => {
   try {
     const range = String(req.query.range || '30d');
     const days = parseRangeDays(range);
@@ -508,6 +624,9 @@ router.get('/analytics/learning-path', authMiddleware, requireRole('admin'), asy
                   0,
                 ],
               },
+            },
+            lessonMastered: {
+              $sum: { $cond: [{ $eq: ['$eventName', 'lp_lesson_mastered'] }, 1, 0] },
             },
             depthSwitches: {
               $sum: {
@@ -590,7 +709,20 @@ router.get('/analytics/learning-path', authMiddleware, requireRole('admin'), asy
         { $sort: { opens: -1, completions: -1 } },
       ]),
       LearningPathEvent.aggregate([
-        { $match: { ...baseMatch, eventName: { $in: ['lp_module_viewed', 'lp_node_viewed', 'lp_lesson_opened', 'lp_lesson_completed_toggled'] } } },
+        {
+          $match: {
+            ...baseMatch,
+            eventName: {
+              $in: [
+                'lp_module_viewed',
+                'lp_node_viewed',
+                'lp_lesson_opened',
+                'lp_lesson_completed_toggled',
+                'lp_lesson_mastered',
+              ],
+            },
+          },
+        },
         {
           $group: {
             _id: null,
@@ -617,6 +749,9 @@ router.get('/analytics/learning-path', authMiddleware, requireRole('admin'), asy
                 ],
               },
             },
+            lessonMastered: {
+              $sum: { $cond: [{ $eq: ['$eventName', 'lp_lesson_mastered'] }, 1, 0] },
+            },
           },
         },
       ]),
@@ -633,10 +768,24 @@ router.get('/analytics/learning-path', authMiddleware, requireRole('admin'), asy
     ]);
     const dwellByModule = new Map(dwellAgg.map((row) => [String(row._id || ''), row.avgDurationSec || 0]));
 
+    const conceptEngagementAgg = await LearningPathEvent.aggregate([
+      { $match: { ...baseMatch, eventName: 'lp_concept_opened' } },
+      { $match: { 'metadata.conceptId': { $exists: true, $nin: [null, ''] } } },
+      {
+        $group: {
+          _id: { $toString: '$metadata.conceptId' },
+          opens: { $sum: 1 },
+          users: { $addToSet: '$userId' },
+        },
+      },
+      { $sort: { opens: -1 } },
+      { $limit: 25 },
+    ]);
+
     const summaryRow = summaryAgg[0] || {};
     const uniqueUsers = ensureArray(summaryRow.uniqueUsers).filter(Boolean);
     const uniqueSessions = ensureArray(summaryRow.uniqueSessions).filter(Boolean);
-    const funnel = funnelAgg[0] || { moduleViewed: 0, nodeViewed: 0, lessonOpened: 0, lessonCompleted: 0 };
+    const funnel = funnelAgg[0] || { moduleViewed: 0, nodeViewed: 0, lessonOpened: 0, lessonCompleted: 0, lessonMastered: 0 };
 
     const funnelSteps = [
       { step: 'session_started', label: 'Phiên học', value: uniqueSessions.length },
@@ -644,6 +793,7 @@ router.get('/analytics/learning-path', authMiddleware, requireRole('admin'), asy
       { step: 'node_viewed', label: 'Xem chủ đề', value: funnel.nodeViewed || 0 },
       { step: 'lesson_opened', label: 'Mở bài học', value: funnel.lessonOpened || 0 },
       { step: 'lesson_completed', label: 'Hoàn thành bài', value: funnel.lessonCompleted || 0 },
+      { step: 'lesson_mastered', label: 'Vượt kiểm tra (mastery)', value: funnel.lessonMastered || 0 },
     ];
     const base = funnelSteps[0].value || 1;
     const funnelWithRates = funnelSteps.map((row, idx) => ({
@@ -676,6 +826,7 @@ router.get('/analytics/learning-path', authMiddleware, requireRole('admin'), asy
         uniqueSessions: uniqueSessions.length,
         lessonOpens: summaryRow.lessonOpens || 0,
         lessonCompletions: summaryRow.lessonCompletions || 0,
+        lessonMastered: summaryRow.lessonMastered || 0,
         depthSwitches: summaryRow.depthSwitches || 0,
       },
       funnel: funnelWithRates,
@@ -717,6 +868,15 @@ router.get('/analytics/learning-path', authMiddleware, requireRole('admin'), asy
         })
         .sort((a, b) => b.dropOffCount - a.dropOffCount || b.completions - a.completions || b.opens - a.opens)
         .slice(0, 15),
+      topConcepts: conceptEngagementAgg.map((row) => {
+        const conceptId = String(row._id || '').trim();
+        return {
+          conceptId,
+          conceptTitle: lookup.conceptMap.get(conceptId) || conceptId,
+          opens: row.opens || 0,
+          uniqueUsers: ensureArray(row.users).filter(Boolean).length,
+        };
+      }),
     });
   } catch (err) {
     req.logger?.error('admin_analytics_learning_path_failed', { error: err.message, range: req.query.range });

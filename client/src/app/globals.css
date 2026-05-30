@@ -59,6 +59,27 @@ body {
   z-index: 1;
 }
 
+/* Explore: WebGL canvas stays below portaled agent UI (z-index 1001) */
+.explore-scene-canvas {
+  z-index: 0;
+}
+
+.explore-scene-canvas canvas {
+  touch-action: none;
+}
+
+/* CosmoLearn AI widget — wrapper không bắt click; chỉ FAB/panel */
+.cosmo-assistant-portal {
+  position: fixed;
+  inset: 0;
+  z-index: 1001;
+  pointer-events: none;
+}
+
+.cosmo-assistant-portal > * {
+  pointer-events: auto;
+}
+
 /* Explore: full-screen cockpit — hide site chrome, expand canvas */
 body.explore-cockpit-fullscreen .app-header {
   display: none !important;
@@ -74,12 +95,10 @@ body.explore-cockpit-fullscreen .canvas-container:not(.cockpit-canvas-target-loc
   height: 100vh !important;
   height: 100dvh !important;
 }
-body.explore-cockpit-fullscreen [data-pwa-badge],
-body.explore-cockpit-fullscreen [data-ai-tutor-fab],
-body.explore-cockpit-fullscreen [data-ai-tutor-panel],
 body.explore-cockpit-fullscreen [data-mobile-bottom-nav] {
   display: none !important;
 }
+/* CosmoLearn AI (data-ai-tutor-*) vẫn hiển thị ở góc phải trong cockpit */
 
 /* UI overlay */
 .ui-overlay {
@@ -88,8 +107,92 @@ body.explore-cockpit-fullscreen [data-mobile-bottom-nav] {
   pointer-events: none;
 }
 
-.ui-overlay > * {
+.ui-overlay > *:not(.explore-deep-history-shell) {
   pointer-events: auto;
+}
+
+/* Explore Deep History — panel ở rail trái/phải, cột giữa để trống cho WebGL globe */
+.explore-deep-history-shell {
+  pointer-events: none;
+  position: fixed;
+  inset: 3.5rem 0 0;
+  z-index: 10;
+  display: grid;
+  min-height: 0;
+  min-width: 0;
+  grid-template-columns: min(21rem, 32vw) minmax(0, 1fr) min(22rem, 30vw);
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-areas:
+    'header header header'
+    'timeline stage info'
+    'controls controls controls';
+  gap: 0.625rem;
+  padding: 0.625rem;
+}
+
+.explore-deep-history-header {
+  grid-area: header;
+  pointer-events: auto;
+}
+
+.explore-deep-history-timeline {
+  grid-area: timeline;
+  pointer-events: auto;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+  align-items: stretch;
+  justify-content: flex-start;
+}
+
+.explore-deep-history-stage {
+  grid-area: stage;
+  pointer-events: none;
+  min-height: 0;
+  min-width: 0;
+}
+
+.explore-deep-history-info {
+  grid-area: info;
+  pointer-events: auto;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+  align-items: stretch;
+  justify-content: flex-end;
+  overflow: hidden;
+}
+
+.explore-deep-history-controls {
+  grid-area: controls;
+  pointer-events: none;
+  min-height: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+@media (max-width: 900px) {
+  .explore-deep-history-shell {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(38vh, 1fr) auto auto auto;
+    grid-template-areas:
+      'header'
+      'stage'
+      'timeline'
+      'info'
+      'controls';
+  }
+
+  .explore-deep-history-timeline,
+  .explore-deep-history-info {
+    justify-content: stretch;
+  }
+
+  .explore-deep-history-timeline .max-w-\[21rem\],
+  .explore-deep-history-info aside {
+    max-width: none;
+  }
 }
 
 /* Glass effect */
@@ -486,4 +589,71 @@ body.explore-cockpit-fullscreen [data-mobile-bottom-nav] {
 }
 @media (prefers-reduced-motion: reduce) {
   .dash-scanline { animation: none; }
+}
+
+/* ── Studio form controls (dark HUD) ─────────────────────── */
+.studio-field {
+  width: 100%;
+  border-radius: 0.5rem;
+  border: 1px solid rgba(126, 231, 255, 0.24);
+  background: rgba(3, 10, 20, 0.88);
+  color: #eaf6ff;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  line-height: 1.35;
+  outline: none;
+  transition:
+    border-color 0.16s ease,
+    box-shadow 0.16s ease,
+    background-color 0.16s ease;
+}
+
+.studio-field::placeholder {
+  color: rgba(154, 168, 196, 0.7);
+}
+
+.studio-field:hover {
+  border-color: rgba(126, 231, 255, 0.34);
+}
+
+.studio-field:focus,
+.studio-field:focus-visible {
+  border-color: rgba(126, 231, 255, 0.65);
+  box-shadow: 0 0 0 3px rgba(126, 231, 255, 0.12);
+}
+
+textarea.studio-field {
+  min-height: 2.75rem;
+  resize: vertical;
+}
+
+select.studio-field {
+  -webkit-appearance: none;
+  appearance: none;
+  background-image:
+    linear-gradient(45deg, transparent 50%, rgba(126, 231, 255, 0.75) 50%),
+    linear-gradient(135deg, rgba(126, 231, 255, 0.75) 50%, transparent 50%);
+  background-position:
+    calc(100% - 14px) calc(50% - 2px),
+    calc(100% - 9px) calc(50% - 2px);
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+  padding-right: 1.9rem;
+}
+
+/* Keep browser autofill from forcing white fields in Studio */
+input.studio-field:-webkit-autofill,
+input.studio-field:-webkit-autofill:hover,
+input.studio-field:-webkit-autofill:focus,
+textarea.studio-field:-webkit-autofill,
+textarea.studio-field:-webkit-autofill:hover,
+textarea.studio-field:-webkit-autofill:focus,
+select.studio-field:-webkit-autofill,
+select.studio-field:-webkit-autofill:hover,
+select.studio-field:-webkit-autofill:focus {
+  -webkit-text-fill-color: #eaf6ff;
+  -webkit-box-shadow: 0 0 0 1000px rgba(3, 10, 20, 0.94) inset;
+  box-shadow: 0 0 0 1000px rgba(3, 10, 20, 0.94) inset;
+  border: 1px solid rgba(126, 231, 255, 0.24);
+  transition: background-color 9999s ease-out 0s;
 }

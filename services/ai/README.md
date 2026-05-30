@@ -1,6 +1,6 @@
 # AI Service (Python) – RAG, Security, Multimodal (text + ảnh)
 
-Service AI tập trung: bảo mật đầu vào, RAG (embedding + retrieval), hội thoại đa phương thức (text + hình ảnh). Sinh câu trả lời qua **OpenRouter** (khi có `OPENROUTER_API_KEY`) hoặc **LM Studio** (OpenAI-compatible local) nếu không cấu hình OpenRouter.
+Service AI tập trung: bảo mật đầu vào, RAG (embedding + retrieval), hội thoại đa phương thức (text + hình ảnh). LLM qua API **OpenAI-compatible** với **chuỗi fallback**: OpenRouter → LM Studio (local) → Groq (tùy chọn).
 
 ## Tính năng
 
@@ -23,15 +23,25 @@ pip install -r requirements.txt
 
 | Biến | Mặc định | Mô tả |
 |------|----------|--------|
-| `OPENROUTER_API_KEY` | *(trống)* | Nếu set → dùng [OpenRouter](https://openrouter.ai/) (`POST …/chat/completions`). Free tier: đặt `OPENROUTER_MODEL=openrouter/free` (router chọn model miễn phí, hỗ trợ cả ảnh khi phù hợp). |
-| `OPENROUTER_BASE_URL` | https://openrouter.ai/api/v1 | Base URL API OpenRouter |
-| `OPENROUTER_MODEL` | openrouter/free | Model chat (text); tier miễn phí nên dùng router hoặc slug model có hậu tố `:free` trên trang Models |
-| `OPENROUTER_VLM_MODEL` | *(trống)* | Nếu set: khi có ảnh (`image_base64`) dùng model này thay cho `OPENROUTER_MODEL` (vd. một VLM `:free` cố định). Trống = dùng chung `OPENROUTER_MODEL` |
-| `OPENROUTER_HTTP_REFERER` | *(trống)* | Tùy chọn — OpenRouter khuyến nghị URL site (xếp hạng / attribution) |
-| `OPENROUTER_APP_TITLE` | Galaxies Edu AI | Header `X-Title` gửi kèm request |
-| `OPENROUTER_MERGE_SYSTEM` | 1 | `1` = không gửi role `system` tới OpenRouter; gộp system+RAG vào tin **user đầu** (tránh lỗi Google/Gemma *Developer instruction is not enabled*). `0` = gửi `system` như cũ (model phải hỗ trợ). |
-| `LM_STUDIO_URL` | http://localhost:1234 | Chỉ khi **không** có `OPENROUTER_API_KEY`: LM Studio API local |
-| `LM_STUDIO_MODEL` | local | Model local khi dùng LM Studio |
+| `LLM_PROVIDER_ORDER` | `openrouter,lmstudio,groq` (nếu có `OPENROUTER_API_KEY`) | Thứ tự thử provider; hết credit OpenRouter → tự sang LM Studio |
+| `OPENROUTER_API_KEY` | *(trống)* | Một API key OpenRouter (legacy) |
+| `OPENROUTER_API_KEYS` | *(trống)* | Nhiều key CSV — thử lần lượt trước khi sang provider khác |
+| `OPENROUTER_BASE_URL` | https://openrouter.ai/api/v1 | Base URL OpenRouter |
+| `OPENROUTER_MODEL` | openrouter/free | Model mặc định (text) |
+| `OPENROUTER_MODELS` | *(fallback `OPENROUTER_MODEL`)* | Danh sách model CSV, ghép theo index với `OPENROUTER_API_KEYS` |
+| `OPENROUTER_VLM_MODEL` | *(fallback `OPENROUTER_MODEL`)* | Model vision (một key) |
+| `OPENROUTER_VLM_MODELS` | *(fallback `OPENROUTER_VLM_MODEL`)* | Model vision CSV khi dùng nhiều key |
+| `OPENROUTER_SITE_URL` | *(tùy chọn)* | Header `HTTP-Referer` |
+| `OPENROUTER_APP_NAME` | Galaxies Edu | Header `X-Title` |
+| `LM_STUDIO_BASE_URL` | http://127.0.0.1:1234/v1 | LM Studio local server (`LM_STUDIO_URL` cũng được) |
+| `LM_STUDIO_MODEL` | *(bắt buộc để dùng fallback)* | Tên model đang load trong LM Studio |
+| `LM_STUDIO_API_KEY` | lm-studio | API key giả (LM Studio thường không kiểm tra) |
+| `LM_STUDIO_VLM_MODEL` | *(tùy chọn)* | Model vision local |
+| `GROQ_API_KEY` | *(trống)* | Một API key Groq |
+| `GROQ_API_KEYS` | *(trống)* | Nhiều key Groq CSV — fallback tuần tự |
+| `GROQ_BASE_URL` | https://api.groq.com/openai/v1 | Base URL Groq |
+| `GROQ_MODEL` | llama-3.3-70b-versatile | Model Groq mặc định |
+| `GROQ_MODELS` | *(fallback `GROQ_MODEL`)* | Danh sách model CSV ghép với `GROQ_API_KEYS` |
 | `EMBEDDING_URL` | http://localhost:5004 | Embedding service (Flag BGE-M3) |
 | `USE_RAG` | 1 | Bật/tắt RAG (1 hoặc 0) |
 | `RAG_INDEX_PATH` | data/rag_index.json | Đường dẫn file index RAG |
@@ -43,19 +53,35 @@ pip install -r requirements.txt
 | `KNOWLEDGE_ADMIN_TOKEN` | *(trống)* | Nếu set, các `POST /knowledge/*` (trừ khi chỉ đọc) cần `Authorization: Bearer …` hoặc header `X-Knowledge-Token` |
 | `USE_AGENT_TOOLS` | 1 | Bật gửi `tools` tới LLM (0 = tắt, chỉ còn fallback `[ACTION:…]` phía course) |
 
-### Đặt OpenRouter API key (local)
+### Cấu hình OpenRouter + fallback LM Studio (khuyến nghị)
 
-1. Lấy key tại [openrouter.ai/keys](https://openrouter.ai/keys) (dạng `sk-or-v1-…`).
-2. Trong thư mục `services/ai`, tạo file **`.env`** (đã bị git ignore). Có thể copy mẫu: `copy example.env .env` (Windows) rồi sửa giá trị.
-3. Trong `.env` ghi một dòng: `OPENROUTER_API_KEY=sk-or-v1-...` (không có dấu ngoặc kép).
-4. Cài lại phụ thuộc nếu chưa có: `pip install -r requirements.txt` (có `python-dotenv` để tự đọc `.env` khi chạy `server.py`).
-5. Chạy lại từ `services/ai`: `uvicorn server:app --host 0.0.0.0 --port 5005`.
+1. Copy mẫu: `copy example.env .env` (Windows) trong `services/ai`.
+2. Đặt `OPENROUTER_API_KEY=sk-or-...` và model (`OPENROUTER_MODEL`).
+3. Cài [LM Studio](https://lmstudio.ai/), load model (vd. Qwen 7B), bật **Local Server** (port 1234).
+4. Trong `.env`: `LM_STUDIO_MODEL=<tên model trong LM Studio>` (vd. `qwen2.5-7b-instruct`).
+5. Giữ `LLM_PROVIDER_ORDER=openrouter,lmstudio,groq` — khi OpenRouter hết credit / 429, service tự gọi LM Studio.
+6. Chạy: `uvicorn server:app --host 0.0.0.0 --port 5005`.
+7. Kiểm tra: `GET http://localhost:5005/health` → xem `llm.text` / `llm.vision` có đủ provider.
 
-**Cách khác (PowerShell, chỉ phiên hiện tại):** trước khi chạy uvicorn:
+**Nhiều key cùng provider (fallback tuần tự):**
 
-`$env:OPENROUTER_API_KEY = "sk-or-v1-..."`
+```env
+LLM_PROVIDER_ORDER=openrouter,groq,lmstudio
 
-**Biến hệ thống Windows (bền):** Cài đặt → Hệ thống → Giới thiệu → Cài đặt hệ thống nâng cao → Biến môi trường → Thêm biến người dùng `OPENROUTER_API_KEY`, rồi mở terminal mới.
+# OpenRouter: key 1 hết credit → key 2 → sang Groq
+OPENROUTER_API_KEYS=sk-or-v1-account-a,sk-or-v1-account-b
+OPENROUTER_MODELS=openrouter/free,openrouter/free
+
+# Groq: nhiều key free tier
+GROQ_API_KEYS=gsk_aaa...,gsk_bbb...
+GROQ_MODELS=llama-3.3-70b-versatile,llama-3.1-8b-instant
+```
+
+- `OPENROUTER_API_KEY` (đơn) vẫn hoạt động; có thể kết hợp với `OPENROUTER_API_KEYS` (key đơn đứng đầu, không trùng).
+- Model thiếu so với số key → dùng model cuối trong list hoặc `OPENROUTER_MODEL` / `GROQ_MODEL`.
+- Mỗi slot lỗi (402, 429, hết quota, 5xx, …) → thử slot kế trong chuỗi.
+
+**Chỉ dùng local (không OpenRouter):** `LLM_PROVIDER_ORDER=lmstudio` và chỉ cấu hình `LM_STUDIO_*`.
 
 ## Chạy
 
@@ -64,7 +90,7 @@ uvicorn server:app --host 0.0.0.0 --port 5005
 ```
 
 - Cần **embedding service** chạy (5004) nếu bật RAG.
-- Cần **OpenRouter** (`OPENROUTER_API_KEY`) hoặc **LM Studio** local với model phù hợp (vision nếu gửi ảnh).
+- Cần ít nhất một provider trong chain: **OpenRouter** và/hoặc **LM Studio** (vision: `OPENROUTER_VLM_MODEL` / `LM_STUDIO_VLM_MODEL`).
 
 ## Feed kiến thức liên tục (corpus)
 

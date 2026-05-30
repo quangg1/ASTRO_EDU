@@ -1,0 +1,92 @@
+[
+  {
+    "name": "Nong Lam University",
+    "nameVi": "Đại học Nông Lâm Thành phố Hồ Chí Minh",
+    "aliases": ["nong lam", "nông lâm", "hcmuaf"],
+    "domains": ["hcmuaf.edu.vn"],
+    "country": "Vietnam",
+    "alpha_two_code": "VN",
+    "state-province": "Ho Chi Minh City"
+  },
+  {
+    "name": "Vietnam National University, Hanoi",
+    "nameVi": "Đại học Quốc gia Hà Nội",
+    "aliases": ["vnu", "quoc gia ha noi", "đhqghn"],
+    "domains": ["vnu.edu.vn"],
+    "country": "Vietnam",
+    "alpha_two_code": "VN",
+    "state-province": "Hanoi"
+  },
+  {
+    "name": "Vietnam National University Ho Chi Minh City",
+    "nameVi": "Đại học Quốc gia Thành phố Hồ Chí Minh",
+    "aliases": ["vnu hcm", "quoc gia tphcm"],
+    "domains": ["vnuhcm.edu.vn"],
+    "country": "Vietnam",
+    "alpha_two_code": "VN",
+    "state-province": "Ho Chi Minh City"
+  },
+  {
+    "name": "Hanoi University of Science and Technology",
+    "nameVi": "Đại học Bách khoa Hà Nội",
+    "aliases": ["bach khoa", "bách khoa", "hust"],
+    "domains": ["hust.edu.vn"],
+    "country": "Vietnam",
+    "alpha_two_code": "VN",
+    "state-province": "Hanoi"
+  },
+  {
+    "name": "Ho Chi Minh City University of Technology",
+    "nameVi": "Đại học Bách khoa Thành phố Hồ Chí Minh",
+    "aliases": ["bach khoa hcm", "hcmut"],
+    "domains": ["hcmut.edu.vn"],
+    "country": "Vietnam",
+    "alpha_two_code": "VN",
+    "state-province": "Ho Chi Minh City"
+  },
+  {
+    "name": "Can Tho University",
+    "nameVi": "Đại học Cần Thơ",
+    "aliases": ["can tho", "ctu"],
+    "domains": ["ctu.edu.vn"],
+    "country": "Vietnam",
+    "alpha_two_code": "VN",
+    "state-province": "Can Tho"
+  },
+  {
+    "name": "Ton Duc Thang University",
+    "nameVi": "Đại học Tôn Đức Thắng",
+    "aliases": ["ton duc thang", "tdt", "tdtu"],
+    "domains": ["tdtu.edu.vn"],
+    "country": "Vietnam",
+    "alpha_two_code": "VN",
+    "state-province": "Ho Chi Minh City"
+  },
+  {
+    "name": "Ho Chi Minh City University of Education",
+    "nameVi": "Đại học Sư phạm Thành phố Hồ Chí Minh",
+    "aliases": ["su pham hcm", "hcmue", "sư phạm"],
+    "domains": ["hcmue.edu.vn"],
+    "country": "Vietnam",
+    "alpha_two_code": "VN",
+    "state-province": "Ho Chi Minh City"
+  },
+  {
+    "name": "Foreign Trade University",
+    "nameVi": "Đại học Ngoại thương",
+    "aliases": ["ngoai thuong", "ftu"],
+    "domains": ["ftu.edu.vn"],
+    "country": "Vietnam",
+    "alpha_two_code": "VN",
+    "state-province": "Hanoi"
+  },
+  {
+    "name": "University of Economics Ho Chi Minh City",
+    "nameVi": "Đại học Kinh tế TP.HCM",
+    "aliases": ["ueh", "kinh te hcm"],
+    "domains": ["ueh.edu.vn"],
+    "country": "Vietnam",
+    "alpha_two_code": "VN",
+    "state-province": "Ho Chi Minh City"
+  }
+]

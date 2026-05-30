@@ -1,8 +1,23 @@
 'use client'
 
-import { useEffect } from 'react'
-import { useAuthStore } from '@/store/useAuthStore'
-import { getToken, fetchMe, clearToken, getUserFromStoredToken } from '@/lib/authApi'
+import { useEffect, useRef } from 'react'
+import { useAuthStore } from '@/features/auth/public'
+import { getToken, fetchMe, clearToken, getUserFromStoredToken } from '@/features/auth/api/authApi'
+import type { AuthUser } from '@/features/auth/api/authApi'
+import { shouldRunVisibleRefresh } from '@/lib/visibleRefresh'
+
+function sameAuthUser(a: AuthUser | null, b: AuthUser | null): boolean {
+  if (!a || !b) return a === b
+  const scopesA = (a.adminScopes || []).join(',')
+  const scopesB = (b.adminScopes || []).join(',')
+  return (
+    a.id === b.id &&
+    a.role === b.role &&
+    a.displayName === b.displayName &&
+    a.email === b.email &&
+    scopesA === scopesB
+  )
+}
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { setUser, setLoading, setChecked } = useAuthStore()
@@ -38,14 +53,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       })
   }, [setUser, setLoading, setChecked])
 
+  const meInFlightRef = useRef(false)
+
   useEffect(() => {
     function onVisible() {
-      if (document.visibilityState !== 'visible') return
+      if (!shouldRunVisibleRefresh('auth:me', 120_000)) return
       const token = getToken()
-      if (!token) return
-      fetchMe().then((res) => {
-        if (res.success && res.user) setUser(res.user)
-      })
+      if (!token || meInFlightRef.current) return
+      meInFlightRef.current = true
+      fetchMe()
+        .then((res) => {
+          if (res.success && res.user) {
+            const prev = useAuthStore.getState().user
+            if (!sameAuthUser(prev, res.user)) setUser(res.user)
+          }
+        })
+        .finally(() => {
+          meInFlightRef.current = false
+        })
     }
     document.addEventListener('visibilitychange', onVisible)
     return () => document.removeEventListener('visibilitychange', onVisible)

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Plus } from 'lucide-react'
-import { fetchForums, fetchNews, fetchNewsCategories, type Forum, type Post } from '@/lib/communityApi'
+import { fetchForums, fetchNews, fetchNewsCategories, type Forum, type Post } from '@/features/community/public'
 import { NewsHeroSlider } from '@/components/community/NewsHeroSlider'
 import { NewsHotRow } from '@/components/community/NewsHotRow'
 import { NewsTopicChips } from '@/components/community/NewsTopicChips'

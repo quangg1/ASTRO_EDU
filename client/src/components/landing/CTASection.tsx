@@ -5,8 +5,19 @@ import Link from 'next/link'
 import { ArrowRight, Sparkles } from 'lucide-react'
 import { CornerBrackets } from './CornerBrackets'
 import { SectionEyebrow } from './SectionEyebrow'
+import { useAuthStore } from '@/features/auth/public'
 
 export function CTASection() {
+  const { user, checked } = useAuthStore()
+  const isLoggedIn = checked && !!user
+  const primaryHref = isLoggedIn ? '/my-courses' : '/register'
+  const primaryLabel = isLoggedIn ? 'Tiếp tục học' : 'Đăng ký miễn phí'
+  const secondaryHref = isLoggedIn ? '/dashboard' : '/courses'
+  const secondaryLabel = isLoggedIn ? 'Mở bảng điều khiển' : 'Tìm hiểu thêm'
+  const leadText = isLoggedIn
+    ? 'Tiếp tục lộ trình học của bạn ngay hôm nay: quay lại khóa học đang học hoặc mở dashboard để theo dõi tiến độ.'
+    : 'Tham gia cùng 50,000+ người yêu thiên văn. Miễn phí để bắt đầu hành trình khám phá vũ trụ.'
+
   return (
     <section className="py-20 md:py-28 relative overflow-hidden">
       <div className="container mx-auto px-4 sm:px-6 relative z-10 max-w-[1440px]">
@@ -29,16 +40,18 @@ export function CTASection() {
 
           <h2
             className="hud-em font-heading text-4xl md:text-6xl lg:text-[clamp(48px,6vw,80px)] font-medium text-white mb-6 leading-[1] tracking-[-0.03em]"
-            dangerouslySetInnerHTML={{ __html: 'Bắt đầu hành trình <em>của bạn</em>' }}
+            dangerouslySetInnerHTML={{
+              __html: isLoggedIn ? 'Tiếp tục hành trình <em>của bạn</em>' : 'Bắt đầu hành trình <em>của bạn</em>',
+            }}
           />
 
           <p className="text-white/55 text-[16px] mb-10 max-w-md mx-auto leading-[1.6]">
-            Tham gia cùng 50,000+ người yêu thiên văn. Miễn phí để bắt đầu hành trình khám phá vũ trụ.
+            {leadText}
           </p>
 
           <div className="flex flex-col sm:flex-row justify-center gap-3 mb-8">
             <Link
-              href="/register"
+              href={primaryHref}
               className="hud-chamfer group inline-flex items-center justify-center gap-2 px-8 py-4 text-sm font-semibold transition-all"
               style={{
                 background: 'var(--hud-amber)',
@@ -47,18 +60,18 @@ export function CTASection() {
               }}
             >
               <Sparkles className="h-4 w-4" />
-              Đăng ký miễn phí
+              {primaryLabel}
               <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
             </Link>
             <Link
-              href="/courses"
+              href={secondaryHref}
               className="hud-chamfer inline-flex items-center justify-center px-8 py-4 text-sm font-semibold text-white transition-all"
               style={{
                 background: 'rgba(126,231,255,0.06)',
                 border: '2px solid rgba(126,231,255,0.3)',
               }}
             >
-              Tìm hiểu thêm
+              {secondaryLabel}
             </Link>
           </div>
 

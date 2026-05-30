@@ -1,10 +1,7 @@
 import { notFound } from 'next/navigation'
 import { getLessonById } from '@/data/learningPathCurriculum'
-import { getMergedLearningPathData } from '@/lib/learningPathServer'
+import { getMergedLearningPathData } from '@/features/learning-path/public'
 import LearningLessonView from '@/components/learning-path/LearningLessonView'
-
-/** Luôn lấy learning path + concepts mới (conceptAnchors, nội dung bài). */
-export const dynamic = 'force-dynamic'
 
 type Props = { params: { moduleId: string; nodeId: string; lessonId: string } }
 

@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation'
-import { getMergedLearningModules } from '@/lib/learningPathServer'
+import { getMergedLearningModules } from '@/features/learning-path/public'
 import LearningNodeView from '@/components/learning-path/LearningNodeView'
 
 type Props = { params: { moduleId: string; nodeId: string } }
@@ -14,8 +14,6 @@ export async function generateMetadata({ params }: Props) {
     description: `${mod.emoji} ${node.title}`,
   }
 }
-
-export const dynamic = 'force-dynamic'
 
 export default async function TutorialNodePage({ params }: Props) {
   const modules = await getMergedLearningModules()

@@ -1,5 +1,6 @@
 const { verifyToken } = require('@galaxies/auth-shared');
 const { AppError } = require('./errors');
+const { hasAdminScope, isFullAdmin } = require('./adminScopes');
 const User = require('../features/auth/models/User');
 
 async function authMiddleware(req, res, next) {
@@ -13,7 +14,7 @@ async function authMiddleware(req, res, next) {
     return res.status(401).json({ success: false, error: 'Token không hợp lệ hoặc đã hết hạn' });
   }
   try {
-    const user = await User.findById(payload.sub).select('role accountStatus');
+    const user = await User.findById(payload.sub).select('role accountStatus adminScopes');
     if (!user) {
       return res.status(401).json({ success: false, error: 'Người dùng không tồn tại' });
     }
@@ -30,18 +31,30 @@ async function authMiddleware(req, res, next) {
   }
 }
 
-function optionalAuth(req, res, next) {
+/** Giống authMiddleware nhưng không bắt buộc token — role luôn đọc từ DB (JWT có thể cũ). */
+async function optionalAuth(req, res, next) {
   const authHeader = req.headers.authorization;
   const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
-  if (token) {
-    const payload = verifyToken(token);
-    if (payload) {
-      req.userId = payload.sub;
-      req.user = payload;
-      req.userRole = payload.role || 'student';
-    }
+  if (!token) {
+    return next();
   }
-  next();
+  const payload = verifyToken(token);
+  if (!payload) {
+    return next();
+  }
+  try {
+    const user = await User.findById(payload.sub).select('role accountStatus adminScopes');
+    if (!user || user.accountStatus === 'deactivated') {
+      return next();
+    }
+    req.userDoc = user;
+    req.userId = payload.sub;
+    req.user = payload;
+    req.userRole = user.role || payload.role || 'student';
+    next();
+  } catch (error) {
+    next(error);
+  }
 }
 
 function requireRole(...roles) {
@@ -71,8 +84,25 @@ function canEditTutorial(tutorial, actor) {
   return !tutorial.authorId || String(tutorial.authorId) === String(actor.id);
 }
 
+/** Kiểm duyệt diễn đàn — chỉ moderator (admin dùng override riêng). */
 function canModerate(actor) {
-  return !!actor && ['admin', 'moderator'].includes(actor.role);
+  return !!actor && actor.role === 'moderator';
+}
+
+function canModerateOrAdminOverride(actor) {
+  return !!actor && (actor.role === 'moderator' || actor.role === 'admin');
+}
+
+function canManagePlatform(actor) {
+  return !!actor && actor.role === 'admin';
+}
+
+function canEditContentAsTeacher(actor) {
+  return !!actor && actor.role === 'teacher';
+}
+
+function canEditContentWithAdminOverride(actor) {
+  return !!actor && actor.role === 'admin';
 }
 
 function requirePolicy(check, code = 'FORBIDDEN', message = 'Không có quyền truy cập') {
@@ -85,4 +115,19 @@ function requirePolicy(check, code = 'FORBIDDEN', message = 'Không có quyền 
   };
 }
 
-module.exports = { authMiddleware, optionalAuth, requireRole, requireAdmin, canEditCourse, canEditTutorial, canModerate, requirePolicy };
+module.exports = {
+  authMiddleware,
+  optionalAuth,
+  requireRole,
+  requireAdmin,
+  canEditCourse,
+  canEditTutorial,
+  canModerate,
+  canModerateOrAdminOverride,
+  canManagePlatform,
+  canEditContentAsTeacher,
+  canEditContentWithAdminOverride,
+  requirePolicy,
+  hasAdminScope,
+  isFullAdmin,
+};

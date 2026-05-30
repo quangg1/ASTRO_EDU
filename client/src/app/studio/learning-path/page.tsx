@@ -23,15 +23,19 @@ import {
   type LessonItem,
   type TopicWeight,
 } from '@/data/learningPathCurriculum'
-import { fetchEditorLearningPath, saveEditorLearningPath } from '@/lib/learningPathApi'
+import { fetchEditorLearningPath, saveEditorLearningPath } from '@/features/learning-path/public'
 import {
   FALLBACK_TAXONOMY_REGISTRY,
   fetchEditorConcepts,
   fetchTaxonomyRegistryEditor,
   type TaxonomyRegistry,
-} from '@/lib/conceptsApi'
-import type { Lesson } from '@/lib/coursesApi'
-import { useAuthStore } from '@/store/useAuthStore'
+} from '@/features/concepts/public'
+import {
+  buildLessonSectionTocNavItems,
+  groupLessonSectionTocItems,
+  type Lesson,
+} from '@/features/courses/public'
+import { useAuthStore } from '@/features/auth/public'
 import {
   BookOpen,
   ChevronDown,
@@ -380,31 +384,13 @@ function LearningPathLessonEditor({
     }),
     [activeLesson],
   )
-  const sectionOutline = useMemo(
-    () =>
-      sections.map((sec, idx) => ({
-        idx,
-        id: `lp-studio-block-${idx}`,
-        title: sec.title?.trim() || `Block ${idx + 1}`,
-        type: sec.type,
-        level: sec.sectionLevel ?? 'main',
-      })),
-    [sections],
-  )
   const tocGroups = useMemo(() => {
-    type OutlineItem = (typeof sectionOutline)[number]
-    const groups: Array<{ parent: OutlineItem; children: OutlineItem[] }> = []
-    let lastParent = -1
-    for (const item of sectionOutline) {
-      if (item.level === 'sub' && lastParent >= 0) {
-        groups[lastParent].children.push(item)
-      } else {
-        groups.push({ parent: item, children: [] })
-        lastParent = groups.length - 1
-      }
-    }
-    return groups
-  }, [sectionOutline])
+    const nav = buildLessonSectionTocNavItems(sections, {
+      idPrefix: 'lp-studio-block',
+      fallbackStyle: 'muc',
+    })
+    return groupLessonSectionTocItems(nav)
+  }, [sections])
 
   const moveSection = (from: number, to: number) => {
     if (to < 0 || to >= sections.length || from === to) return
@@ -725,7 +711,7 @@ function LearningPathLessonEditor({
         </div>
       </div>
 
-      <div style={{ position: 'relative', background: 'rgba(3,7,14,0.95)', border: '1px solid rgba(255,255,255,0.08)', overflow: 'hidden' }}>
+      <div style={{ position: 'relative', background: 'rgba(3,7,14,0.95)', border: '1px solid rgba(255,255,255,0.08)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '8px 12px', borderBottom: '1px solid rgba(255,255,255,0.08)', background: 'rgba(0,0,0,0.5)' }}>
           <button
             type="button"
@@ -775,8 +761,8 @@ function LearningPathLessonEditor({
         </div>
 
         {editorTab === 'blocks' && (
-          <div className="p-4">
-            <div className="space-y-3 min-w-0">
+          <div className="p-4 grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(220px,280px)] gap-4 items-start">
+            <div className="space-y-3 min-w-0 order-2 lg:order-1">
               {sections.map((sec, bi) => (
                 <div
                   key={bi}
@@ -842,18 +828,21 @@ function LearningPathLessonEditor({
               ))}
               <BlockPalette onAdd={(sec) => patchLesson({ sections: [...sections, sec] })} />
             </div>
-            <aside className="hidden xl:block fixed right-4 top-24 w-[300px] z-30">
-                <div style={{ position: 'relative', background: 'rgba(4,8,18,0.97)', border: '1px solid rgba(126,231,255,0.14)', clipPath: 'polygon(10px 0%,100% 0%,100% calc(100% - 10px),calc(100% - 10px) 100%,0% 100%,0% 10px)', padding: 12, backdropFilter: 'blur(12px)' }}>
+            <aside className="order-1 lg:order-2 w-full lg:sticky lg:top-6 lg:z-20 self-start lg:max-h-[calc(100vh-6.5rem)]">
+                <div
+                  className="flex max-h-[inherit] flex-col"
+                  style={{ position: 'relative', background: 'rgba(4,8,18,0.97)', border: '1px solid rgba(126,231,255,0.14)', clipPath: 'polygon(10px 0%,100% 0%,100% calc(100% - 10px),calc(100% - 10px) 100%,0% 100%,0% 10px)', padding: 12, backdropFilter: 'blur(12px)' }}
+                >
                   <SCorner color="#7ee7ff" size={8} thick={1} />
                   <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 10, letterSpacing: '0.2em', color: '#7ee7ff', textTransform: 'uppercase', marginBottom: 10 }}>// toc · lesson view</div>
-                  <div className="space-y-1.5 max-h-[65vh] overflow-y-auto pr-1">
+                  <div className="min-h-0 flex-1 space-y-1.5 overflow-y-auto overscroll-contain pr-1">
                     {tocGroups.map((group) => {
                       return (
                         <div key={`studio-toc-${group.parent.id}`} className="space-y-1">
                           <button
                             type="button"
                             onClick={() =>
-                              document.getElementById(group.parent.id)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                              document.getElementById(group.parent.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
                             }
                             className="w-full text-left rounded-md px-2.5 py-2 text-xs transition-colors border border-transparent text-slate-300 hover:bg-white/5 hover:border-cyan-500/30"
                           >
@@ -866,7 +855,7 @@ function LearningPathLessonEditor({
                                   key={child.id}
                                   type="button"
                                   onClick={() =>
-                                    document.getElementById(child.id)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                                    document.getElementById(child.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
                                   }
                                   className="w-full text-left rounded-md px-2 py-1 text-[11px] transition-colors text-slate-500 hover:text-slate-300 hover:bg-white/5 border border-transparent hover:border-cyan-500/20"
                                 >
@@ -1290,7 +1279,7 @@ export default function StudioLearningPathPage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#03060f', position: 'relative', overflow: 'hidden', fontFamily: "'Space Grotesk',sans-serif" }}>
+    <div style={{ minHeight: '100vh', background: '#03060f', position: 'relative', fontFamily: "'Space Grotesk',sans-serif" }}>
 
       {/* ── Animations ── */}
       <style>{`
@@ -1866,7 +1855,7 @@ export default function StudioLearningPathPage() {
             </aside>
 
             {/* Cột phải: danh sách bài trong tầng + form một bài */}
-            <div className="flex-1 min-w-0 flex flex-col overflow-hidden" style={{ background: 'rgba(3,7,14,0.97)', border: '1px solid rgba(255,255,255,0.08)' }}>
+            <div className="flex-1 min-w-0 flex flex-col min-h-0" style={{ background: 'rgba(3,7,14,0.97)', border: '1px solid rgba(255,255,255,0.08)' }}>
               {/* Breadcrumb */}
               <div style={{ padding: '10px 20px', borderBottom: '1px solid rgba(255,255,255,0.07)', background: 'rgba(0,0,0,0.4)', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
                 <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 10, letterSpacing: '0.14em', color: '#263042', textTransform: 'uppercase' }}>// editing:</span>
@@ -1985,7 +1974,7 @@ export default function StudioLearningPathPage() {
                 </div>
 
                 {/* Form chi tiết — một bài (block kit như Course) */}
-                <div className="flex-1 p-4 md:p-6 overflow-y-auto min-h-[320px]">
+                <div className="flex-1 p-4 md:p-6 overflow-visible min-h-[320px]">
                   {!currentModule || !currentNode || !depth || !activeLesson ? (
                     <p className="text-slate-500 text-sm">Chọn đủ Module → Chủ đề → Tầng → Bài để soạn nội dung.</p>
                   ) : (

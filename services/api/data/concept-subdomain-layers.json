@@ -1,0 +1,30 @@
+{
+  "astronomy": {
+    "fundamentals": 0,
+    "observational-astronomy": 1,
+    "positional-astronomy": 1,
+    "orbital-mechanics": 2,
+    "stellar-physics": 2,
+    "galactic-cosmology": 3
+  },
+  "physics": {
+    "mechanics": 0,
+    "thermodynamics": 1,
+    "electromagnetism": 1
+  },
+  "chemistry": {
+    "astrochemistry": 1,
+    "atmospheric-chemistry": 1,
+    "geochemistry": 2
+  },
+  "geology": {
+    "planetary-geology": 0,
+    "tectonics": 1,
+    "volcanology": 1
+  },
+  "biology": {
+    "evolution": 0,
+    "ecology": 1,
+    "paleontology": 1
+  }
+}
