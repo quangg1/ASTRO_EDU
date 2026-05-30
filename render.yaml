@@ -73,7 +73,7 @@ services:
     region: singapore
     plan: starter
     rootDir: client
-    buildCommand: npm ci && npx next build
+    buildCommand: cd ../packages/contracts && npm ci --include=dev && npm run build && cd ../../client && npm ci && npx next build
     startCommand: npm start
     autoDeploy: true
     envVars:
