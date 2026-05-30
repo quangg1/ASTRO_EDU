@@ -10,7 +10,7 @@ if (-not $bucket) {
 }
 
 $public = "client/public"
-$folders = @("course-media", "models", "textures", "images")
+$folders = @("course-media", "models", "textures", "images", "videos", "live2d")
 
 foreach ($folder in $folders) {
     $path = Join-Path $public $folder

@@ -18,6 +18,7 @@ import {
   suggestPostTitle,
 } from '@/features/community/lib/composeContext'
 import { isHtmlFragmentEmpty } from '@/features/community/lib/postContent'
+import { syncCommunityGemReward } from '@/features/community/lib/communityGemReward'
 import { LearningComposeBanner } from '@/components/community/learning/LearningComposeBanner'
 import { CommunitySearchBar } from '@/components/community/shared/CommunitySearchBar'
 import { PostSortBar } from '@/components/community/shared/PostSortBar'
@@ -124,6 +125,7 @@ export function DiscussionForumView({ forum, slug, user }: Props) {
     })
     setSubmitting(false)
     if (res.success && res.data) {
+      void syncCommunityGemReward(res.gemReward)
       setShowNewPost(false)
       setNewTitle('')
       setNewContent('')

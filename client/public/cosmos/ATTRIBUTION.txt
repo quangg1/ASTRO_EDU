@@ -1,0 +1,4 @@
+MIT License — galaxy simulation data and core script vendored from
+https://github.com/RiteshSingh/galaxies (Web Simulation of 3D distribution of galaxies < 200 Mpc).
+
+Embedded in CosmoLearn /cosmos for the stargazing onboarding flow.

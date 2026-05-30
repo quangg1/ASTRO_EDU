@@ -1,7 +1,7 @@
 import LearningPathHub from '@/components/learning-path/LearningPathHub'
 
 export const metadata = {
-  title: 'Learning Path | Galaxies',
+  title: 'Learning Path',
   description: 'Lộ trình học thiên văn 6 module — từ quy mô vũ trụ đến vũ trụ học.',
 }
 

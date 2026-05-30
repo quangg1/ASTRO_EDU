@@ -23,6 +23,8 @@ const learningPathEventSchema = new mongoose.Schema(
         'scene_concept_overlay_shown',
         'scene_contextual_quiz_prompted',
         'scene_entity_discovered',
+        'deep_history_beat_dwell',
+        'deep_history_site_opened',
       ],
       index: true,
     },

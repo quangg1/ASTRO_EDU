@@ -81,6 +81,10 @@ const GEM_EARN_LABELS: Record<string, string> = {
   scene_entity_discovered: 'Khám phá vật thể 3D mới',
   dh_beat_dwell: 'Xem Deep History (đủ thời gian)',
   dh_site_opened: 'Mở điểm Deep History',
+  community_post: 'Cộng đồng — đăng bài thảo luận',
+  community_helpful_answer: 'Cộng đồng — câu trả lời hữu ích',
+  community_helpful_vote: 'Cộng đồng — nhận upvote hữu ích',
+  onboarding_complete: 'Hoàn thành onboarding cá nhân hóa',
 }
 
 export function labelGemEarnConstant(key: string | undefined | null): string {

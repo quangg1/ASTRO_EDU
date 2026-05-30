@@ -12,6 +12,10 @@ const {
   recordQuizOutcome,
 } = require('../services/coachPolicyService');
 const { saveSessionSummary } = require('../services/sessionSummaryService');
+const {
+  listAgentSessions,
+  getAgentSessionHistory,
+} = require('../services/sessionHistoryService');
 const { getSpacedReviewDue, recordSpacedReview } = require('../services/spacedReviewService');
 const { recordDepthPreference } = require('../services/depthAdaptationService');
 const { assertAgentNotQuizLocked } = require('../lib/agentQuizLock');
@@ -153,6 +157,33 @@ router.post('/session-summary', authMiddleware, async (req, res, next) => {
       messageCount: Number(messageCount) || 0,
     });
     res.json({ success: true, ...out });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get('/sessions', authMiddleware, async (req, res, next) => {
+  try {
+    const limit = Number(req.query.limit) || 20;
+    const sessions = await listAgentSessions(req.userId, { limit });
+    res.json({ success: true, sessions });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get('/sessions/:sessionId', authMiddleware, async (req, res, next) => {
+  try {
+    const sessionId =
+      typeof req.params.sessionId === 'string' ? req.params.sessionId.trim() : '';
+    if (!sessionId) {
+      return res.status(400).json({ success: false, error: 'sessionId required' });
+    }
+    const session = await getAgentSessionHistory(req.userId, sessionId);
+    if (!session) {
+      return res.status(404).json({ success: false, error: 'Session not found' });
+    }
+    res.json({ success: true, session });
   } catch (err) {
     next(err);
   }

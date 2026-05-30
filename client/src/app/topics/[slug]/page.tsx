@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
 import { TopicExploreView } from '@/components/learning-path/TopicExploreView'
@@ -16,5 +17,9 @@ export function generateMetadata({ params }: Props): Metadata {
 
 export default function TopicPage({ params }: Props) {
   if (!isValidTopicSlug(params.slug)) notFound()
-  return <TopicExploreView slug={params.slug} />
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-ds-base pt-20 px-4 text-ds-subtle text-sm">Đang tải…</div>}>
+      <TopicExploreView slug={params.slug} />
+    </Suspense>
+  )
 }

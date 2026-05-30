@@ -6,6 +6,8 @@ Các thư mục sau **không** nằm trong Git (quá nặng), cần lưu trên c
 - `client/public/models/` – file .glb (3D)
 - `client/public/textures/` – ảnh texture (planets, paleo)
 - `client/public/images/` – ảnh dùng chung (vd nebula-home.jpg)
+- `client/public/videos/` – video UI (vd onboarding launch transition)
+- `client/public/live2d/` – avatar Live2D CosmoLearn AI (nito + motions + Cubism Core)
 
 ---
 
@@ -39,6 +41,13 @@ bucket-hoac-folder/
     ...
   images/
     nebula-home.jpg
+  videos/
+    onboarding-launch.mp4
+  live2d/
+    nito.model3.json
+    nito/
+    motion/
+    scripts/
 ```
 
 - **Cloudinary**: tạo folder tương ứng (course-media, models, textures, images), upload từng thư mục.
@@ -61,6 +70,10 @@ App đã dùng **`getStaticAssetUrl(path)`** và **`resolveMediaUrl(url)`** từ
 
 - Nếu **chưa set** `NEXT_PUBLIC_MEDIA_CDN`: app dùng path local (vd `/models/xxx.glb`) từ `client/public/`.
 - Khi **đã set**: app load tất cả static media từ CDN; upload từ editor (POST /upload) trả về URL từ S3 khi API cấu hình S3 (xem mục 3b).
+
+**Video onboarding (`/videos/onboarding-launch.mp4`):** khi bật CDN, cần sync thư mục `videos/` lên bucket (xem script `scripts/sync-media-to-s3.ps1`). App thử CDN trước; nếu 404 sẽ fallback về `/videos/...` trên cùng origin Next.js.
+
+**Live2D avatar (`/live2d/…`):** sync cả thư mục `live2d/` (model nito, 21 motion, `scripts/live2dcubismcore.min.js`). App load qua `getStaticAssetUrl()` — CDN trước, fallback `/live2d/...` trên Next.js nếu CDN chưa có file.
 
 ### 3b. Cấu hình API (upload lên S3)
 

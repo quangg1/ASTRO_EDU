@@ -25,6 +25,7 @@ const UNIFIED_API_ROUTE_SEGMENTS = [
   'news',
   'admin',
   'agent',
+  'onboarding',
 ];
 
 function trimEndSlash(s) {

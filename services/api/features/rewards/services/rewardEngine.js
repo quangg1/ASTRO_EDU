@@ -4,8 +4,8 @@ const UserReward = require('../models/UserReward');
 const GemTransaction = require('../models/GemTransaction');
 const Achievement = require('../models/Achievement');
 const UserAchievement = require('../models/UserAchievement');
-const { DWELL_SEC_MIN, GEM_EARN, depthGemsMap } = require('../constants/gemEarn');
-const { getCachedSeasonalMultiplier, scaleEarn } = require('./gemRuntimeConfigService');
+const { DWELL_SEC_MIN, DH_BEAT_DWELL_SEC_MIN, DH_MAX_BEAT_REWARDS_PER_SESSION, DH_EARN_REASONS, GEM_EARN, depthGemsMap } = require('../constants/gemEarn');
+const { getCachedSeasonalMultiplier, getWeeklyDeepHistoryCap, scaleEarn } = require('./gemRuntimeConfigService');
 const { handleLearnerTierProgression } = require('./learnerTierService');
 
 const DEPTH_GEMS = depthGemsMap();
@@ -163,6 +163,49 @@ async function sceneDiscoveryRewarded(userId, entityId) {
   return c > 0;
 }
 
+async function deepHistoryGemsEarnedThisWeek(userId) {
+  const since = new Date(Date.now() - 7 * 86400_000);
+  const agg = await GemTransaction.aggregate([
+    {
+      $match: {
+        userId,
+        reason: { $in: [...DH_EARN_REASONS] },
+        createdAt: { $gte: since },
+        delta: { $gt: 0 },
+      },
+    },
+    { $group: { _id: null, total: { $sum: '$delta' } } },
+  ]);
+  return Number(agg[0]?.total) || 0;
+}
+
+async function deepHistoryBeatRewardsInSession(userId, sessionId) {
+  if (!sessionId) return DH_MAX_BEAT_REWARDS_PER_SESSION;
+  return GemTransaction.countDocuments({
+    userId,
+    sessionId,
+    reason: 'dh_beat_dwell',
+  });
+}
+
+async function deepHistoryBeatRewarded(userId, entityId, beatId) {
+  return GemTransaction.exists({
+    userId,
+    entityId,
+    reason: 'dh_beat_dwell',
+    'metadata.beatId': beatId,
+  });
+}
+
+async function deepHistorySiteRewarded(userId, entityId, siteId) {
+  return GemTransaction.exists({
+    userId,
+    entityId,
+    reason: 'dh_site_opened',
+    'metadata.siteId': siteId,
+  });
+}
+
 /**
  * @returns {Promise<null|{ gemsEarned: number, newBalance: number, levelUp: boolean, newAchievements: any[], streakResult: any, label: string }>}
  */
@@ -316,6 +359,77 @@ async function processLearningPathRewardEvent(userId, ev) {
     };
   }
 
+  if (ev.eventName === 'deep_history_beat_dwell') {
+    const meta = ev.metadata && typeof ev.metadata === 'object' ? ev.metadata : {};
+    const entityId = String(meta.entityId || '').trim();
+    const beatId = Number(meta.beatId);
+    const dwellSec = Number(meta.dwellSec ?? ev.durationSec ?? 0);
+    const sessionId = String(ev.sessionId || '');
+    if (!entityId || !Number.isFinite(beatId)) return null;
+    if (dwellSec < DH_BEAT_DWELL_SEC_MIN) return null;
+
+    const beatSessionCount = await deepHistoryBeatRewardsInSession(userId, sessionId);
+    if (beatSessionCount >= DH_MAX_BEAT_REWARDS_PER_SESSION) return null;
+    if (await deepHistoryBeatRewarded(userId, entityId, beatId)) return null;
+
+    const weeklyCap = await getWeeklyDeepHistoryCap();
+    const earnedWeek = await deepHistoryGemsEarnedThisWeek(userId);
+    const amt = scaleEarn(GEM_EARN.dh_beat_dwell, seasonalMult);
+    if (amt <= 0 || earnedWeek + amt > weeklyCap) return null;
+
+    const agg = await applyGemEarn(userId, amt, {
+      reason: 'dh_beat_dwell',
+      entityId,
+      sessionId: sessionId || null,
+      metadata: { beatId, dwellSec, seasonalMultiplier: seasonalMult },
+    });
+    if (!agg) return null;
+    const urAfter = await UserReward.findOne({ userId }).lean();
+    const streakResult = await updateStreak(userId, urAfter);
+    const newAchievements = await checkAchievements(userId);
+    return {
+      gemsEarned: amt,
+      newBalance: agg.updated.gemBalance,
+      levelUp: agg.levelUp,
+      newAchievements,
+      streakResult,
+      label: 'Deep History — xem giai đoạn',
+    };
+  }
+
+  if (ev.eventName === 'deep_history_site_opened') {
+    const meta = ev.metadata && typeof ev.metadata === 'object' ? ev.metadata : {};
+    const entityId = String(meta.entityId || '').trim();
+    const siteId = String(meta.siteId || '').trim();
+    const sessionId = String(ev.sessionId || '');
+    if (!entityId || !siteId) return null;
+    if (await deepHistorySiteRewarded(userId, entityId, siteId)) return null;
+
+    const weeklyCap = await getWeeklyDeepHistoryCap();
+    const earnedWeek = await deepHistoryGemsEarnedThisWeek(userId);
+    const amt = scaleEarn(GEM_EARN.dh_site_opened, seasonalMult);
+    if (amt <= 0 || earnedWeek + amt > weeklyCap) return null;
+
+    const agg = await applyGemEarn(userId, amt, {
+      reason: 'dh_site_opened',
+      entityId,
+      sessionId: sessionId || null,
+      metadata: { siteId, seasonalMultiplier: seasonalMult },
+    });
+    if (!agg) return null;
+    const urAfter = await UserReward.findOne({ userId }).lean();
+    const streakResult = await updateStreak(userId, urAfter);
+    const newAchievements = await checkAchievements(userId);
+    return {
+      gemsEarned: amt,
+      newBalance: agg.updated.gemBalance,
+      levelUp: agg.levelUp,
+      newAchievements,
+      streakResult,
+      label: 'Deep History — mở điểm',
+    };
+  }
+
   return null;
 }
 
@@ -350,6 +464,8 @@ function mergeRewardSegments(segments) {
 
 module.exports = {
   computeLevel,
+  utcDayBounds,
+  applyGemEarn,
   processLearningPathRewardEvent,
   mergeRewardSegments,
 };

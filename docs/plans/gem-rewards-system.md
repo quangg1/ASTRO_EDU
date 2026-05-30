@@ -112,8 +112,8 @@ flowchart TB
 | `recall_quiz_first` | +8 | Quiz nhớ lần đầu đạt |
 | `recall_quiz_retry` | +3 | Retry sau lần đầu |
 | `scene_entity_discovered` | +5 | 1×/entity/user lifetime |
-| `dh_beat_dwell` | +4 | **Constants có — handler chưa wire** |
-| `dh_site_opened` | +2 | **Constants có — handler chưa wire** |
+| `dh_beat_dwell` | +4 | Deep History — xem beat ≥30s, max 5/session, cap tuần |
+| `dh_site_opened` | +2 | Deep History — mở pin/site lần đầu/entity |
 | `GEM_SPEND_SHOWCASE.story` | −40 | |
 | `GEM_SPEND_SHOWCASE.orbit` | −55 | |
 | `DWELL_SEC_MIN` | 60 | Giây tối thiểu mở bài → complete |
@@ -146,6 +146,8 @@ flowchart TB
 | Depth lần đầu | cùng event + `depth` | Chưa có tx `depth_complete` cho lesson+depth | +8/+14/+20 | `depth_complete` | cùng handler |
 | Quiz nhớ | `lp_lesson_mastered` | Pass recall | +8 lần đầu, +3 retry | `recall_quiz_first` / `recall_quiz_retry` | L253–284 |
 | Khám phá entity 3D | `scene_entity_discovered` | ≥1 bài LP completed; chưa reward entity | +5 | `scene_entity_discovered` | L286–317 |
+| Deep History beat dwell | `deep_history_beat_dwell` | ≥30s trên beat; chưa reward beat; ≤5/session | +4 | `dh_beat_dwell` | rewardEngine |
+| Deep History site mở | `deep_history_site_opened` | Pin/site lần đầu (entity+siteId) | +2 | `dh_site_opened` | rewardEngine |
 | Admin | manual adjust | Cap ±500/action | tùy | `admin_manual_adjust` | `manualGemAdjustmentService.js` |
 
 **Nơi client emit event earn-relevant**
@@ -166,13 +168,11 @@ flowchart TB
 
 | Hành vi | Trạng thái |
 |---------|------------|
-| Deep History beat dwell (`dh_beat_dwell`) | Constant có; **không handler** trong `rewardEngine` |
-| Deep History pin mở (`dh_site_opened`) | Constant có; **không handler** |
-| `weeklyDeepHistoryCap` trong `GemRuntimeConfig` | Lưu DB; **không enforce** trong engine |
-| Forum +5, course complete +50, streak 7d +20 | Copy trên `/gem` (NODE_CONFIGS) — **không server path** |
-| Achievement `gemBonus` | Luôn 0 trong catalog |
-| `streakShields` field | Schema có; **không earn/spend** |
-| `awardGemsForLearningPathLesson` (client-only) | Export trong `gemWallet.ts` — **không được gọi** (nếu bật → double-pay risk) |
+| `weeklyDeepHistoryCap` trong `GemRuntimeConfig` | **Enforce** trong engine (rolling 7 ngày, reasons `dh_*`) |
+| Forum +5, course complete +50, streak 7d +20 | **Đã gỡ khỏi `/gem`** — xem Phase Q (`gem-economy-expansion.md`) |
+| Achievement `gemBonus` | Luôn 0 trong catalog; engine chưa đọc — Phase Q0 |
+| `streakShields` field | Schema có; shop **Sắp ra mắt** (G8) |
+| `awardGemsForLearningPathLesson` (client-only) | **Đã xóa** (G7) |
 | Agent quota bằng gem | **Chính sách cấm** — không implement |
 
 ---
@@ -270,13 +270,13 @@ flowchart TB
 |--------|--------------|
 | **Learning path** | Earn chính: lesson, depth, recall quiz |
 | **Explore showcase** | Spend unlock 40/55; earn discovery +5; badge balance top bar |
-| **Deep History** | **Không earn/spend** hiện tại; agent có narrative context |
+| **Deep History** | Earn beat (+4) / site (+2); cap tuần admin; timeline vẫn free |
 | **Showcase CMS** | Catalog bundle cho gamification; unlock state `ShowcaseUnlock` |
 | **Courses / payment** | Voucher burn gem; learner tier discount (không trừ gem) |
 | **Agent** | `gemBalance` trong enriched context; tool `focus_showcase_entity` — không gem sink |
 | **Community / forum** | **Không** |
 | **Solar journey** | **Không** |
-| **Guest** | `createStarterWallet()` local balance 10 + fake tx — **không sync server earn** |
+| **Guest** | Balance 0 local; copy hướng đăng ký — **không sync server earn** |
 
 ---
 
@@ -296,16 +296,18 @@ flowchart TB
 
 ## 12. Gaps & inconsistencies (ưu tiên fix)
 
-| # | Vấn đề | Hậu quả |
-|---|--------|---------|
-| G1 | `/gem` copy forum/course/streak | User kỳ vọng earn không tồn tại |
-| G2 | `dh_*` constants không có handler | Deep History học không thưởng gem |
-| G3 | `weeklyDeepHistoryCap` không enforce | Config admin vô hiệu |
-| G4 | Discovery không require `mode=showcase` | Có thể nhầm khi mở rộng history events |
-| G5 | Cap dwell = **UTC day** không rolling 24h | Edge timezone midnight |
-| G6 | Guest starter wallet 10 gem local | Confusing trước login |
-| G7 | `awardGemsForLearningPathLesson` dead code | Risk double-pay nếu ai gọi lại |
-| G8 | Gem-shop "Streak Shield 50" | PLANNED only |
+| # | Vấn đề | Trạng thái (2026-05-30) |
+|---|--------|-------------------------|
+| G1 | `/gem` copy forum/course/streak | **Fixed** — chỉ list earn thật |
+| G2 | `dh_*` constants không có handler | **Fixed** — events + rewardEngine |
+| G3 | `weeklyDeepHistoryCap` không enforce | **Fixed** — cap rolling 7d trên `dh_*` |
+| G4 | Discovery không require `mode=showcase` | Open — Phase G0 hygiene |
+| G5 | Cap dwell = **UTC day** không rolling 24h | Open |
+| G6 | Guest starter wallet 10 gem local | **Fixed** — balance 0 + copy đăng ký |
+| G7 | `awardGemsForLearningPathLesson` dead code | **Fixed** — removed |
+| G8 | Gem-shop "Streak Shield 50" | **Fixed UI** — badge Sắp ra mắt, không mua được |
+
+**Expansion (quest / community / referral):** `docs/plans/gem-economy-expansion.md`
 
 ---
 
@@ -365,6 +367,7 @@ flowchart TB
 
 | Ngày | Nội dung |
 |------|----------|
+| 2026-05-30 | **G1/G2/G3/G6/G7/G8** — fix copy `/gem`, DH earn + weekly cap, guest wallet, remove dead client earn, shop planned badge; expansion spec `gem-economy-expansion.md` |
 | 2026-05-29 | **Full codebase audit** — map earn/spend, client, admin, gaps; cập nhật paths Explore (`useExploreRewards`, grid Deep History) |
 | 2026-05-20 | Shop + admin hybrid model, inflation caps, agent no gem sink |
 | 2026-05-19 | Plan Deep History Tier C, beatKey, rolling 24h |

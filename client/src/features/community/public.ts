@@ -20,6 +20,7 @@ export {
   addComment,
   votePost,
   voteComment,
+  markCommentHelpful,
   pinPost,
   deletePost,
 } from './api/communityApi'
@@ -28,6 +29,7 @@ export type {
   Post,
   Comment,
   CommunityTagCount,
+  CommunityGemReward,
 } from './api/communityApi'
 
 export {
@@ -63,6 +65,8 @@ export {
   recordPostDetailView,
   recordPostSourceOpen,
 } from './lib/postEngagement'
+
+export { syncCommunityGemReward } from './lib/communityGemReward'
 
 export {
   submitCommunityReport,

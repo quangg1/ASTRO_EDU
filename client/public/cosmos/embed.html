@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CosmoLearn · Bản đồ thiên hà</title>
+  <style>
+    * { margin: 0; box-sizing: border-box; font-family: 'Segoe UI', system-ui, sans-serif; }
+    body { overflow: hidden; background: #000; }
+    .panel {
+      position: absolute;
+      color: #fff;
+      padding: 0.5em 1em;
+      background-color: rgba(6, 9, 26, 0.55);
+      border: 1px solid rgba(126, 231, 255, 0.15);
+      font-size: 12px;
+      line-height: 1.45;
+      max-width: min(360px, 92vw);
+      pointer-events: auto;
+    }
+    .panel h1, .panel h2, .panel h3 { font-size: 13px; margin: 0.35em 0; }
+    .panel a { color: #7ee7ff; }
+    #srchkey { background: rgba(0,0,0,0.4); border: 1px solid rgba(126,231,255,0.25); color: #fff; padding: 4px 8px; width: 160px; }
+    #srchbtn { background: rgba(126,231,255,0.15); border: 1px solid rgba(126,231,255,0.35); color: #7ee7ff; padding: 4px 10px; cursor: pointer; }
+    .hide-ui .panel { display: none; }
+  </style>
+  <script src="three/three.min.js"></script>
+  <script src="three/TrackballControls.js"></script>
+  <script src="three/tween.js"></script>
+</head>
+<body>
+  <div id="info-tr" class="panel" style="top: 8px; right: 8px;">
+    <h2>Thiên hà &lt; 200 Mpc</h2>
+    Mỗi điểm ≈ 26,8 kpc (đường kính MW)<br />
+    Click trái: center (vàng) · Phải: chọn (xanh) · MW: <span style="color:#f0f">magenta</span>
+  </div>
+  <div id="search-panel" class="panel" style="bottom: 10px; left: 8px;">
+    <h1>Tìm thiên hà</h1>
+    <input type="text" placeholder="Tên / mã catalog" id="srchkey" />
+    <button type="button" onclick="searchfunc();" id="srchbtn">Tìm</button>
+    <p style="margin-top:8px;opacity:0.7">
+      <a href="https://github.com/RiteshSingh/galaxies" target="_blank" rel="noopener">MIT · RiteshSingh/galaxies</a>
+    </p>
+  </div>
+  <div class="panel" style="top: 8px; left: 8px;">
+    <h1 id="galaxyName2">Milky Way</h1>
+    <p id="galaxyNames">Milky Way</p>
+    <p id="galaxyDist">Khoảng cách: 0,0 Mpc</p>
+  </div>
+  <div class="panel" style="bottom: 8px; right: 8px;">
+    <p><span id="galaxyName">Milky Way</span> · <span id="galaxyColor" style="color:#f0f">magenta</span></p>
+    Khoảng cách: <span id="centerdist">200</span> Mpc (<span id="centerdistly">652.31</span> Mly)
+  </div>
+  <img id="image" alt="" style="display:none" />
+  <div id="aladin-lite-div" style="display:none"></div>
+  <a id="cds" style="display:none" href="#">CDS</a>
+  <a id="simbad" style="display:none" href="#">Simbad</a>
+  <a id="aladin" style="display:none" href="#">Aladin</a>
+  <a id="ned" style="display:none" href="#">NED</a>
+  <p id="startstring" style="display:none"></p>
+  <script src="galaxy-sim.js"></script>
+  <script>
+    (function () {
+      var params = new URLSearchParams(window.location.search);
+      if (params.get('ui') === 'minimal') document.body.classList.add('hide-ui');
+      if (params.get('focus') === 'search') {
+        setTimeout(function () {
+          var el = document.getElementById('srchkey');
+          if (el) el.focus();
+        }, 800);
+      }
+      if (params.get('focus') === 'mw' && typeof updateGalaxyPage === 'function') {
+        setTimeout(function () { updateGalaxyPage(0); }, 600);
+      }
+    })();
+  </script>
+</body>
+</html>

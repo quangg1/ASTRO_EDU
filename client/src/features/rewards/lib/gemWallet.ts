@@ -10,7 +10,7 @@ export { fetchGemWalletFromServer }
 
 const PREFIX = 'cosmo-gem-wallet-v1'
 
-/** Thưởng khi đánh dấu hoàn thành 1 bài trong Learning Path (client, local-first). */
+/** Mirror server base — chỉ hiển thị UI; earn thật do server quyết định (× seasonal). */
 export const GEM_REWARD_LEARNING_PATH_LESSON = 5
 
 function walletKey(userId?: string | null): string {
@@ -18,38 +18,25 @@ function walletKey(userId?: string | null): string {
   return `${PREFIX}:user:${id}`
 }
 
-function createStarterWallet(): GemWalletState {
-  const now = Date.now()
-  return {
-    balance: 10,
-    transactions: [
-      {
-        id: `tx-${now - 2 * 60 * 60 * 1000}`,
-        amount: 5,
-        reason: 'Earned for completing a lesson',
-        type: 'lesson_complete',
-        createdAt: new Date(now - 2 * 60 * 60 * 1000).toISOString(),
-      },
-      {
-        id: `tx-${now - 24 * 60 * 60 * 1000}`,
-        amount: 5,
-        reason: 'Earned for completing a lesson',
-        type: 'lesson_complete',
-        createdAt: new Date(now - 24 * 60 * 60 * 1000).toISOString(),
-      },
-    ],
-  }
+export function isGuestGemUser(userId?: string | null): boolean {
+  return userId == null || String(userId).trim() === ''
+}
+
+/** Khách chưa đăng nhập — không fake balance (G6). */
+function createGuestWallet(): GemWalletState {
+  return { balance: 0, transactions: [] }
+}
+
+function emptyAuthenticatedWallet(): GemWalletState {
+  return { balance: 0, transactions: [] }
 }
 
 export function loadGemWallet(userId?: string | null): GemWalletState {
-  if (typeof window === 'undefined') return createStarterWallet()
+  if (isGuestGemUser(userId)) return createGuestWallet()
+  if (typeof window === 'undefined') return emptyAuthenticatedWallet()
   try {
     const raw = localStorage.getItem(walletKey(userId))
-    if (!raw) {
-      const starter = createStarterWallet()
-      localStorage.setItem(walletKey(userId), JSON.stringify(starter))
-      return starter
-    }
+    if (!raw) return emptyAuthenticatedWallet()
     const parsed = JSON.parse(raw) as Partial<GemWalletState>
     const tx = Array.isArray(parsed?.transactions) ? parsed.transactions : []
     const balance = typeof parsed?.balance === 'number' ? parsed.balance : 0
@@ -67,12 +54,12 @@ export function loadGemWallet(userId?: string | null): GemWalletState {
         .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt)),
     }
   } catch {
-    return createStarterWallet()
+    return emptyAuthenticatedWallet()
   }
 }
 
 export function saveGemWallet(state: GemWalletState, userId?: string | null) {
-  if (typeof window === 'undefined') return
+  if (typeof window === 'undefined' || isGuestGemUser(userId)) return
   try {
     localStorage.setItem(walletKey(userId), JSON.stringify(state))
   } catch {
@@ -102,36 +89,9 @@ export function addGemTransaction(
   return next
 }
 
-function hasLessonGemReward(wallet: GemWalletState, lessonId: string): boolean {
-  const id = String(lessonId || '').trim()
-  if (!id) return true
-  return wallet.transactions.some(
-    (t) => t.type === 'lesson_complete' && String(t.meta?.lessonId || '').trim() === id,
-  )
-}
-
-export function awardGemsForLearningPathLesson(
-  lessonId: string,
-  userId?: string | null,
-  amount: number = GEM_REWARD_LEARNING_PATH_LESSON,
-): GemWalletState | null {
-  const lid = String(lessonId || '').trim()
-  if (!lid) return null
-  const current = loadGemWallet(userId)
-  if (hasLessonGemReward(current, lid)) return null
-  return addGemTransaction(
-    {
-      amount,
-      reason: 'Hoàn thành bài học trong lộ trình',
-      type: 'lesson_complete',
-      meta: { lessonId: lid },
-    },
-    userId,
-  )
-}
-
 export async function syncGemWallet(userId?: string | null): Promise<GemWalletState> {
   const uid = userId ?? getUserFromStoredToken()?.id ?? null
+  if (isGuestGemUser(uid)) return createGuestWallet()
   const local = loadGemWallet(uid)
   const token = typeof window !== 'undefined' ? localStorage.getItem('galaxies_token') : null
   if (!token || !uid) return local

@@ -7,6 +7,7 @@ const { callAiChat, mapContextForAi } = require('./aiClient');
 const { toolsForTier } = require('../lib/toolSchema');
 const { executeAuthorizedTool, loadCourseForTools } = require('./toolAuthorizers/executeTool');
 const AgentSession = require('../models/AgentSession');
+const { persistChatTurn } = require('./sessionHistoryService');
 const { logAgentMetrics } = require('./agentMetrics');
 
 async function stepResolveGuestSession(req) {
@@ -63,8 +64,19 @@ async function authorizeToolCalls(toolCalls, ctx) {
   return { tool_results };
 }
 
-async function stepPersistSession(userId, sessionId, sessionMeta, agentContext) {
+async function stepPersistSession(userId, sessionId, sessionMeta, agentContext, turnPayload) {
   if (!userId) return;
+  if (turnPayload?.userContent && turnPayload?.assistantContent) {
+    await persistChatTurn(userId, sessionId, {
+      tier: sessionMeta.tier,
+      agentContext,
+      sessionContext: turnPayload.sessionContext,
+      userContent: turnPayload.userContent,
+      assistantContent: turnPayload.assistantContent,
+      hasImage: Boolean(turnPayload.hasImage),
+    });
+    return;
+  }
   await AgentSession.findOneAndUpdate(
     { sessionId, userId },
     {

@@ -83,6 +83,120 @@ const PLANNED_ITEMS = [
   },
 ]
 
+const PLANNED_UTILITY_ITEMS = PLANNED_ITEMS.filter(
+  (i) => i.label === 'Streak Shield' || i.label === 'Course Unlock',
+)
+
+function PlannedItemCard({
+  item,
+  index,
+  mono,
+}: {
+  item: (typeof PLANNED_ITEMS)[number]
+  index: number
+  mono: React.CSSProperties
+}) {
+  return (
+    <div
+      className="relative flex items-start gap-4 p-5"
+      style={{
+        background: 'rgba(6,9,26,0.72)',
+        border: '1px solid rgba(126,231,255,0.1)',
+        opacity: 0.72,
+        cursor: 'not-allowed',
+        ...chamfer(12),
+      }}
+    >
+      <span
+        style={{
+          position: 'absolute',
+          top: 10,
+          left: 10,
+          width: 6,
+          height: 6,
+          borderRadius: '50%',
+          background: item.tagColor,
+          boxShadow: `0 0 6px ${item.tagColor}`,
+          opacity: 0.5,
+        }}
+      />
+      <div
+        style={{
+          flexShrink: 0,
+          width: 46,
+          height: 46,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: item.tagColor,
+          background: `${item.tagColor}12`,
+          border: `1px solid ${item.tagColor}30`,
+          ...chamfer(8),
+        }}
+      >
+        {item.icon}
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 mb-1 flex-wrap">
+          <span style={{ fontSize: 15, fontWeight: 500, color: '#eaf6ff' }}>{item.label}</span>
+          <span
+            style={{
+              ...mono,
+              fontSize: 9,
+              letterSpacing: '0.14em',
+              textTransform: 'uppercase',
+              color: item.tagColor,
+              background: `${item.tagColor}14`,
+              border: `1px solid ${item.tagColor}30`,
+              padding: '1px 7px',
+              ...chamfer(4),
+            }}
+          >
+            {item.tag}
+          </span>
+          <span
+            style={{
+              ...mono,
+              fontSize: 8,
+              letterSpacing: '0.12em',
+              textTransform: 'uppercase',
+              color: '#ff5cd4',
+              background: 'rgba(255,92,212,0.08)',
+              border: '1px solid rgba(255,92,212,0.22)',
+              padding: '1px 6px',
+              ...chamfer(4),
+            }}
+          >
+            Sắp ra mắt
+          </span>
+        </div>
+        <p style={{ fontSize: 13, color: '#9aa8c4', lineHeight: 1.5, marginBottom: 10 }}>{item.desc}</p>
+        <div
+          style={{
+            ...mono,
+            fontSize: 11,
+            fontWeight: 600,
+            letterSpacing: '0.06em',
+            color: '#5c6886',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 5,
+            background: 'rgba(126,231,255,0.04)',
+            border: '1px solid rgba(126,231,255,0.08)',
+            padding: '3px 10px',
+            ...chamfer(5),
+          }}
+        >
+          🔒 {item.cost}
+        </div>
+      </div>
+      <span style={{ ...mono, fontSize: 9, color: '#3d4f6e', letterSpacing: '0.1em', flexShrink: 0 }}>
+        {String(index + 1).padStart(2, '0')}
+      </span>
+    </div>
+  )
+}
+
 export default function GemShopPage() {
   const { user } = useAuthStore()
   const userId = user?.id ?? null
@@ -232,82 +346,28 @@ export default function GemShopPage() {
             ● loading catalog...
           </div>
         ) : categories.length > 0 ? (
-          <GemShopDecorationCatalog
-            categories={categories}
-            avatarUrl={user?.avatar || null}
-            displayName={user?.displayName || user?.email || 'Learner'}
-            email={user?.email || null}
-          />
+          <>
+            <GemShopDecorationCatalog
+              categories={categories}
+              avatarUrl={user?.avatar || null}
+              displayName={user?.displayName || user?.email || 'Learner'}
+              email={user?.email || null}
+            />
+            <div className="mt-8">
+              <div style={{ ...mono, fontSize: 10, letterSpacing: '0.18em', color: '#5c6886', marginBottom: 10, textTransform: 'uppercase' }}>
+                // 03 · utility · sắp ra mắt
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {PLANNED_UTILITY_ITEMS.map((item, i) => (
+                  <PlannedItemCard key={item.label} item={item} index={i} mono={mono} />
+                ))}
+              </div>
+            </div>
+          </>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {PLANNED_ITEMS.map((item, i) => (
-              <div
-                key={i}
-                className="relative flex items-start gap-4 p-5"
-                style={{
-                  background: 'rgba(6,9,26,0.72)',
-                  border: '1px solid rgba(126,231,255,0.1)',
-                  opacity: 0.75,
-                  cursor: 'not-allowed',
-                  ...chamfer(12),
-                }}
-              >
-                <span
-                  style={{
-                    position: 'absolute', top: 10, left: 10,
-                    width: 6, height: 6, borderRadius: '50%',
-                    background: item.tagColor,
-                    boxShadow: `0 0 6px ${item.tagColor}`,
-                    opacity: 0.5,
-                  }}
-                />
-                <div
-                  style={{
-                    flexShrink: 0,
-                    width: 46, height: 46,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    color: item.tagColor,
-                    background: `${item.tagColor}12`,
-                    border: `1px solid ${item.tagColor}30`,
-                    ...chamfer(8),
-                  }}
-                >
-                  {item.icon}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1 flex-wrap">
-                    <span style={{ fontSize: 15, fontWeight: 500, color: '#eaf6ff' }}>{item.label}</span>
-                    <span
-                      style={{
-                        ...mono, fontSize: 9, letterSpacing: '0.14em', textTransform: 'uppercase',
-                        color: item.tagColor, background: `${item.tagColor}14`,
-                        border: `1px solid ${item.tagColor}30`,
-                        padding: '1px 7px',
-                        ...chamfer(4),
-                      }}
-                    >
-                      {item.tag}
-                    </span>
-                  </div>
-                  <p style={{ fontSize: 13, color: '#9aa8c4', lineHeight: 1.5, marginBottom: 10 }}>{item.desc}</p>
-                  <div
-                    style={{
-                      ...mono, fontSize: 11, fontWeight: 600, letterSpacing: '0.06em',
-                      color: '#5c6886',
-                      display: 'inline-flex', alignItems: 'center', gap: 5,
-                      background: 'rgba(126,231,255,0.04)',
-                      border: '1px solid rgba(126,231,255,0.08)',
-                      padding: '3px 10px',
-                      ...chamfer(5),
-                    }}
-                  >
-                    🔒 {item.cost}
-                  </div>
-                </div>
-                <span style={{ ...mono, fontSize: 9, color: '#3d4f6e', letterSpacing: '0.1em', flexShrink: 0 }}>
-                  {String(i + 1).padStart(2, '0')}
-                </span>
-              </div>
+              <PlannedItemCard key={item.label} item={item} index={i} mono={mono} />
             ))}
           </div>
         )}

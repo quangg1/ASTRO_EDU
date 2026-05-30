@@ -27,41 +27,61 @@ function FacebookIcon({ className = 'size-6' }: { className?: string }) {
   )
 }
 
-type Props = { redirectTo?: string }
+type Props = {
+  redirectTo?: string
+  onSuccess?: () => void
+  variant?: 'default' | 'onboarding'
+  layout?: 'stack' | 'row'
+}
 
 const pillClass =
-  'h-[56px] relative w-full flex items-center justify-center gap-3 font-[Space_Grotesk,sans-serif] text-[14px] font-medium text-[#eaf6ff] transition-all duration-200'
+  'h-[52px] relative w-full flex items-center justify-center gap-2.5 text-[14px] font-medium transition-all duration-200'
 
-const pillStyle: React.CSSProperties = {
+const defaultPillStyle: React.CSSProperties = {
   background: 'rgba(10,16,36, 0.9)',
   border: '1px solid rgba(126,231,255,0.28)',
   clipPath:
     'polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px)',
 }
 
-/** Hai nút Google / Facebook — giao diện như trước; bên dưới là Firebase popup + API verify token. */
-export function FirebaseAuthButtons({ redirectTo = '/dashboard' }: Props) {
+const onboardingPillStyle: React.CSSProperties = {
+  background: '#0f1222',
+  border: '1px solid #252b42',
+  borderRadius: '12px',
+  color: '#eaf0ff',
+}
+
+export function FirebaseAuthButtons({
+  redirectTo = '/dashboard',
+  onSuccess,
+  variant = 'default',
+  layout = 'stack',
+}: Props) {
   const router = useRouter()
   const setUser = useAuthStore((s) => s.setUser)
   const [mounted, setMounted] = useState(false)
   const [loading, setLoading] = useState<'google' | 'facebook' | null>(null)
   const [err, setErr] = useState('')
 
+  const pillStyle = variant === 'onboarding' ? onboardingPillStyle : defaultPillStyle
+  const labelClass = variant === 'onboarding' ? '' : 'font-[Space_Grotesk,sans-serif] text-[#eaf6ff]'
+  const containerClass = layout === 'row' ? 'grid grid-cols-2 gap-3' : 'flex flex-col gap-3'
+  const isOnboarding = variant === 'onboarding'
+
   useEffect(() => {
     setMounted(true)
   }, [])
 
-  /** Tránh gọi Firebase / đọc env khác nhau giữa SSR và lần hydrate đầu tiên (gây hydration mismatch). */
   if (!mounted) {
     return (
-      <div className="flex flex-col gap-3" aria-busy="true">
-        <div className={`${pillClass} opacity-50 pointer-events-none select-none`} style={pillStyle}>
+      <div className={containerClass} aria-busy="true">
+        <div className={`${pillClass} opacity-50 pointer-events-none select-none ${labelClass}`} style={pillStyle}>
           <GoogleIcon className="size-5 shrink-0" />
-          <span>Continue with Google</span>
+          <span>Google</span>
         </div>
-        <div className={`${pillClass} opacity-50 pointer-events-none select-none`} style={pillStyle}>
+        <div className={`${pillClass} opacity-50 pointer-events-none select-none ${labelClass}`} style={pillStyle}>
           <FacebookIcon className="size-5 shrink-0" />
-          <span>Continue with Facebook</span>
+          <span>Facebook</span>
         </div>
       </div>
     )
@@ -70,16 +90,16 @@ export function FirebaseAuthButtons({ redirectTo = '/dashboard' }: Props) {
   const auth = getFirebaseAuth()
   if (!auth) {
     return (
-      <div className="flex flex-col gap-3">
-        <div className={`${pillClass} opacity-50 cursor-not-allowed`} style={pillStyle} aria-disabled>
+      <div className={containerClass}>
+        <div className={`${pillClass} opacity-50 cursor-not-allowed ${labelClass}`} style={pillStyle} aria-disabled>
           <GoogleIcon className="size-5 shrink-0" />
-          <span>Continue with Google</span>
+          <span>Google</span>
         </div>
-        <div className={`${pillClass} opacity-50 cursor-not-allowed`} style={pillStyle} aria-disabled>
+        <div className={`${pillClass} opacity-50 cursor-not-allowed ${labelClass}`} style={pillStyle} aria-disabled>
           <FacebookIcon className="size-5 shrink-0" />
-          <span>Continue with Facebook</span>
+          <span>Facebook</span>
         </div>
-        <div className="rounded-xl border border-amber-400/30 bg-amber-500/10 px-4 py-3 text-[13px] text-amber-100/90">
+        <div className="col-span-2 rounded-xl border border-amber-400/30 bg-amber-500/10 px-4 py-3 text-[13px] text-amber-100/90">
           Bật đăng nhập: thêm{' '}
           <code className="rounded bg-black/30 px-1 py-0.5 text-[11px]">NEXT_PUBLIC_FIREBASE_*</code> vào{' '}
           <code className="rounded bg-black/30 px-1 py-0.5 text-[11px]">.env.local</code> và khởi động lại dev server.
@@ -92,15 +112,18 @@ export function FirebaseAuthButtons({ redirectTo = '/dashboard' }: Props) {
     setErr('')
     setLoading(kind)
     try {
-      const provider =
-        kind === 'google' ? new GoogleAuthProvider() : new FacebookAuthProvider()
+      const provider = kind === 'google' ? new GoogleAuthProvider() : new FacebookAuthProvider()
       provider.addScope('email')
       const cred = await signInWithPopup(auth, provider)
       const idToken = await cred.user.getIdToken()
       const res = await loginWithFirebaseIdToken(idToken)
       if (res.success && res.user) {
         setUser(res.user)
-        router.push(redirectTo)
+        if (onSuccess) {
+          onSuccess()
+        } else {
+          router.push(redirectTo)
+        }
         return
       }
       setErr(res.error || 'Đăng nhập thất bại')
@@ -112,42 +135,45 @@ export function FirebaseAuthButtons({ redirectTo = '/dashboard' }: Props) {
     }
   }
 
+  const hoverProps = isOnboarding
+    ? { whileHover: { scale: loading ? 1 : 1.01 }, whileTap: { scale: loading ? 1 : 0.98 } }
+    : {
+        whileHover: {
+          y: loading ? 0 : -1,
+          borderColor: loading ? 'rgba(126,231,255,0.28)' : 'rgba(128,231,255,0.7)',
+          boxShadow: loading ? 'none' : '0 0 24px -8px rgba(128,231,255,0.7)',
+        },
+        whileTap: { scale: loading ? 1 : 0.98 },
+      }
+
   return (
-    <div className="flex flex-col gap-3">
+    <div className={containerClass}>
       {err ? (
-        <div className="p-3 bg-red-500/20 text-red-300 text-sm border border-red-400/30">{err}</div>
+        <div className="col-span-2 p-3 bg-red-500/20 text-red-300 text-sm border border-red-400/30 rounded-xl">
+          {err}
+        </div>
       ) : null}
       <motion.button
         type="button"
         disabled={!!loading}
         onClick={() => void run('google')}
-        whileHover={{
-          y: loading ? 0 : -1,
-          borderColor: loading ? 'rgba(126,231,255,0.28)' : 'rgba(128,231,255,0.7)',
-          boxShadow: loading ? 'none' : '0 0 24px -8px rgba(128,231,255,0.7)',
-        }}
-        whileTap={{ scale: loading ? 1 : 0.98 }}
-        className={`${pillClass} disabled:opacity-50`}
+        {...hoverProps}
+        className={`${pillClass} disabled:opacity-50 ${labelClass}`}
         style={pillStyle}
       >
         <GoogleIcon className="size-5 shrink-0" />
-        <span>{loading === 'google' ? '…' : 'Continue with Google'}</span>
+        <span>{loading === 'google' ? '…' : isOnboarding ? 'Google' : 'Continue with Google'}</span>
       </motion.button>
       <motion.button
         type="button"
         disabled={!!loading}
         onClick={() => void run('facebook')}
-        whileHover={{
-          y: loading ? 0 : -1,
-          borderColor: loading ? 'rgba(126,231,255,0.28)' : 'rgba(128,231,255,0.7)',
-          boxShadow: loading ? 'none' : '0 0 24px -8px rgba(128,231,255,0.7)',
-        }}
-        whileTap={{ scale: loading ? 1 : 0.98 }}
-        className={`${pillClass} disabled:opacity-50`}
+        {...hoverProps}
+        className={`${pillClass} disabled:opacity-50 ${labelClass}`}
         style={pillStyle}
       >
         <FacebookIcon className="size-5 shrink-0" />
-        <span>{loading === 'facebook' ? '…' : 'Continue with Facebook'}</span>
+        <span>{loading === 'facebook' ? '…' : isOnboarding ? 'Facebook' : 'Continue with Facebook'}</span>
       </motion.button>
     </div>
   )

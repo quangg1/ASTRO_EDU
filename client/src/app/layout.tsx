@@ -15,7 +15,7 @@ import { ToastProvider } from '@/design-system'
 
 export const metadata: Metadata = {
   title: { default: 'Cosmo Learn – Học thiên văn tương tác 3D', template: '%s | Cosmo Learn' },
-  applicationName: 'Cosmo Learn',
+  applicationName: 'CosmoLearn',
   description: 'Học thiên văn qua khóa học và mô phỏng 3D: Lịch sử Trái Đất, Hệ Mặt Trời và Ngân Hà. Có lộ trình, khóa học chuyên sâu và cộng đồng.',
   keywords: ['thiên văn', 'lịch sử trái đất', 'hệ mặt trời', 'ngân hà', 'khóa học', 'giáo dục', '3D'],
   openGraph: {

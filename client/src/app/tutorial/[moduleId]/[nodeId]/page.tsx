@@ -8,7 +8,7 @@ export async function generateMetadata({ params }: Props) {
   const modules = await getMergedLearningModules()
   const mod = modules.find((m) => m.id === params.moduleId)
   const node = mod?.nodes.find((n) => n.id === params.nodeId)
-  if (!mod || !node) return { title: 'Chủ đề | Galaxies' }
+  if (!mod || !node) return { title: 'Chủ đề' }
   return {
     title: `${node.titleVi} | ${mod.titleVi}`,
     description: `${mod.emoji} ${node.title}`,

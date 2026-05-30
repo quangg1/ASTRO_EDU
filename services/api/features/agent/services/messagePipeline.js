@@ -167,7 +167,12 @@ async function runMessagePipeline(req, res) {
   const content = aiResult.message?.content ?? '';
   const tFirstToken = Date.now();
 
-  await stepPersistSession(req.userId, sessionId, sessionMeta, agentContext);
+  await stepPersistSession(req.userId, sessionId, sessionMeta, agentContext, {
+    sessionContext,
+    userContent: userMessage,
+    assistantContent: content,
+    hasImage: Boolean(body.image_base64),
+  });
 
   logAgentMetrics({
     sessionId,

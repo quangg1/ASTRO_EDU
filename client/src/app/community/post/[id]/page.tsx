@@ -21,6 +21,7 @@ import {
 } from '@/features/community/public'
 import { canModerate } from '@/lib/roles'
 import { PostMarkdown } from '@/components/community/PostMarkdown'
+import { CommentThread } from '@/components/community/comments/CommentThread'
 
 function formatDate(date?: string): string {
   if (!date) return ''
@@ -34,8 +35,6 @@ export default function PostPage() {
   const { user } = useAuthStore()
   const [data, setData] = useState<{ post: Post & { comments: Comment[]; myVote?: number | null } } | null>(null)
   const [loading, setLoading] = useState(true)
-  const [commentText, setCommentText] = useState('')
-  const [submitting, setSubmitting] = useState(false)
   const [modAction, setModAction] = useState<'pin' | 'delete' | null>(null)
   const detailViewRecorded = useRef(false)
 
@@ -58,13 +57,10 @@ export default function PostPage() {
     })
   }, [id, data?.post?._id, loading])
 
-  const handleAddComment = async () => {
-    if (!data || !user || !commentText.trim()) return
-    setSubmitting(true)
-    const res = await addComment(data.post._id, commentText.trim())
-    setSubmitting(false)
+  const handleAddComment = async (content: string, parentId?: string) => {
+    if (!data || !user || !content.trim()) return false
+    const res = await addComment(data.post._id, content.trim(), parentId)
     if (res.success && res.data) {
-      setCommentText('')
       setData((d) =>
         d
           ? {
@@ -75,11 +71,40 @@ export default function PostPage() {
                 commentCount: d.post.commentCount + 1,
               },
             }
-          : null
+          : null,
       )
-    } else {
-      alert(res.error || 'Error')
+      return true
     }
+    alert(res.error || 'Error')
+    return false
+  }
+
+  const handleVoteComment = (commentId: string, voteCount: number, myVote: number | null | undefined) => {
+    setData((d) => {
+      if (!d) return null
+      return {
+        ...d,
+        post: {
+          ...d.post,
+          comments: d.post.comments.map((c) =>
+            c._id === commentId ? { ...c, voteCount, myVote: myVote ?? null } : c,
+          ),
+        },
+      }
+    })
+  }
+
+  const handleMarkHelpful = (commentId: string, updated: Comment) => {
+    setData((d) => {
+      if (!d) return null
+      return {
+        ...d,
+        post: {
+          ...d.post,
+          comments: d.post.comments.map((c) => (c._id === commentId ? { ...c, ...updated } : c)),
+        },
+      }
+    })
   }
 
   const handleVote = async (value: 1 | -1) => {
@@ -330,50 +355,19 @@ export default function PostPage() {
 
         <section className="mt-8">
           <h2 className="text-lg font-semibold text-white mb-4">Bình luận</h2>
-
-          {user && (
-            <div className="mb-6 rounded-xl border border-white/10 bg-white/[0.03] p-4">
-              <textarea
-                placeholder="Bình luận (Markdown được hỗ trợ)..."
-                value={commentText}
-                onChange={(e) => setCommentText(e.target.value)}
-                rows={3}
-                className="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-gray-500 resize-y min-h-[80px] text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50"
-              />
-              <div className="mt-3 flex justify-end">
-                <button
-                  type="button"
-                  onClick={handleAddComment}
-                  disabled={submitting || !commentText.trim()}
-                  className="px-4 py-2 rounded-lg bg-cyan-600 text-white font-medium disabled:opacity-50"
-                >
-                  {submitting ? 'Đang gửi...' : 'Gửi bình luận'}
-                </button>
-              </div>
-            </div>
+          {!isLinkOutNews && !isNewsArticle ? (
+            <CommentThread
+              comments={post.comments}
+              user={user}
+              postAuthorId={post.authorId}
+              isNewsForum={false}
+              onAddComment={handleAddComment}
+              onVoteComment={handleVoteComment}
+              onMarkHelpful={handleMarkHelpful}
+            />
+          ) : (
+            <p className="text-sm text-gray-500">Bình luận không khả dụng cho bài tin tổng hợp.</p>
           )}
-
-          <div className="space-y-4">
-            {post.comments.map((c) => (
-              <div
-                key={c._id}
-                className="rounded-xl border border-white/10 bg-white/5 p-4"
-              >
-                <div className="flex items-center gap-2 text-sm">
-                  <span className="font-medium text-white">{c.authorName}</span>
-                  <span className="text-gray-500">{formatDate(c.createdAt)}</span>
-                </div>
-                <div className="mt-2 text-gray-200 text-sm">
-                  <PostMarkdown source={c.content} />
-                </div>
-              </div>
-            ))}
-            {!post.comments.length && (
-              <div className="rounded-xl border border-dashed border-white/20 bg-white/[0.03] p-6 text-center text-gray-400">
-                Chưa có bình luận nào. Hãy là người mở đầu cuộc thảo luận.
-              </div>
-            )}
-          </div>
         </section>
       </div>
     </div>

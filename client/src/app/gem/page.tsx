@@ -8,6 +8,7 @@ import {
   GEM_REWARD_LEARNING_PATH_LESSON,
   gemActivityDirection,
   gemActivityDirectionLabel,
+  isGuestGemUser,
   labelGemActivityVi,
   loadGemWallet,
   syncGemWallet,
@@ -53,10 +54,11 @@ function Brackets({ c = '#7ee7ff', s = 12, o = 6 }: { c?: string; s?: number; o?
 }
 
 const NODE_CONFIGS = [
-  { cx: 80,  cy: 155, r: 12, color: '#7ee7ff', shortLabel: 'BÀI HỌC' },
-  { cx: 290, cy: 115, r: 12, color: '#7ee7ff', shortLabel: 'DIỄN ĐÀN' },
-  { cx: 560, cy: 60,  r: 12, color: '#f5a524', shortLabel: 'KHÓA HỌC' },
-  { cx: 800, cy: 105, r: 12, color: '#f5a524', shortLabel: 'STREAK 7D' },
+  { cx: 60,  cy: 155, r: 11, color: '#7ee7ff', shortLabel: 'BÀI HỌC' },
+  { cx: 210, cy: 115, r: 11, color: '#7ee7ff', shortLabel: 'ĐỘ SÂU' },
+  { cx: 380, cy: 75,  r: 11, color: '#7ee7ff', shortLabel: 'QUIZ' },
+  { cx: 540, cy: 115, r: 11, color: '#6dffb0', shortLabel: 'EXPLORE' },
+  { cx: 720, cy: 155, r: 11, color: '#f5a524', shortLabel: 'DEEP HIST' },
 ]
 
 export default function GemPage() {
@@ -127,13 +129,17 @@ export default function GemPage() {
 
   const earnWays = useMemo(
     () => [
-      { label: 'Hoàn thành một bài trong lộ trình', reward: `+${GEM_REWARD_LEARNING_PATH_LESSON} Gem` },
-      { label: 'Trả lời câu hỏi trong diễn đàn', reward: '+5 Gem' },
-      { label: 'Hoàn thành khóa học', reward: '+50 Gem' },
-      { label: 'Duy trì chuỗi 7 ngày', reward: '+20 Gem' },
+      { label: 'Hoàn thành bài lộ trình (đủ thời gian đọc)', reward: `+${GEM_REWARD_LEARNING_PATH_LESSON} Gem` },
+      { label: 'Độ sâu bài học lần đầu (Beginner / Explorer / Researcher)', reward: '+8 / +14 / +20 Gem' },
+      { label: 'Quiz nhớ đạt (lần đầu / ôn lại)', reward: '+8 / +3 Gem' },
+      { label: 'Khám phá thể 3D mới trên Explore', reward: '+5 Gem' },
+      { label: 'Deep History — xem giai đoạn / mở điểm', reward: '+4 / +2 Gem' },
+      { label: 'Cộng đồng — đăng bài / trả lời hữu ích / upvote', reward: '+3 / +8 / +1 Gem' },
     ],
     [],
   )
+
+  const guestMode = isGuestGemUser(userId)
 
   const groupedTransactions = useMemo(() => {
     const map = new Map<string, Array<{ tx: GemWalletState['transactions'][0]; idx: number }>>()
@@ -166,6 +172,23 @@ export default function GemPage() {
 
     if (entityId && reason === 'scene_entity_discovered') {
       return { label: base, detail: entityNameById[entityId] || `Vật thể: ${entityId}` }
+    }
+
+    if (
+      entityId &&
+      (reason === 'dh_beat_dwell' || reason === 'dh_site_opened')
+    ) {
+      return { label: base, detail: entityNameById[entityId] || `Deep History: ${entityId}` }
+    }
+
+    if (
+      entityId &&
+      (reason === 'community_post' ||
+        reason === 'community_helpful_answer' ||
+        reason === 'community_helpful_vote')
+    ) {
+      const postTitle = String(tx.meta?.postTitle || '').trim()
+      return { label: base, detail: postTitle || `Bài #${entityId.slice(-6)}` }
     }
 
     return { label: base, detail: null }
@@ -221,8 +244,31 @@ export default function GemPage() {
             <em style={{ fontStyle: 'italic', fontWeight: 300, color: '#f5a524' }}>một ngôi sao.</em>
           </h1>
           <p style={{ fontSize: 14, color: '#9aa8c4', lineHeight: 1.65, maxWidth: 460, marginBottom: 36 }}>
-            Bốn cách kiếm Gem, mỗi cách là một node trong chòm sao tiến bộ của bạn. Đổi thưởng tại Cửa hàng Gem khi đã sẵn sàng.
+            Sáu cách kiếm Gem đang hoạt động — lộ trình học, Explore 3D, Deep History và cộng đồng.
+            Đổi thưởng tại Cửa hàng Gem khi đã sẵn sàng.
           </p>
+
+          {guestMode ? (
+            <p
+              style={{
+                fontSize: 13,
+                color: '#7ee7ff',
+                lineHeight: 1.55,
+                maxWidth: 460,
+                marginBottom: 20,
+                padding: '10px 14px',
+                border: '1px solid rgba(126,231,255,0.25)',
+                background: 'rgba(126,231,255,0.06)',
+                ...chamfer(8),
+              }}
+            >
+              Bạn chưa đăng nhập — Gem chỉ được lưu sau khi có tài khoản. Học thử rồi{' '}
+              <Link href="/register" style={{ color: '#f5a524', textDecoration: 'underline' }}>
+                đăng ký
+              </Link>{' '}
+              để nhận thưởng thật trên ví server.
+            </p>
+          ) : null}
 
           {/* Constellation SVG */}
           <div style={{ width: '100%', height: 210, position: 'relative' }}>
@@ -240,9 +286,10 @@ export default function GemPage() {
               ))}
 
               {/* Connection lines */}
-              <line x1="80"  y1="155" x2="290" y2="115" stroke="rgba(126,231,255,0.2)" strokeWidth="1" strokeDasharray="5 6" />
-              <line x1="290" y1="115" x2="560" y2="60"  stroke="rgba(126,231,255,0.2)" strokeWidth="1" strokeDasharray="5 6" />
-              <line x1="560" y1="60"  x2="800" y2="105" stroke="rgba(126,231,255,0.2)" strokeWidth="1" strokeDasharray="5 6" />
+              <line x1="60"  y1="155" x2="210" y2="115" stroke="rgba(126,231,255,0.2)" strokeWidth="1" strokeDasharray="5 6" />
+              <line x1="210" y1="115" x2="380" y2="75"  stroke="rgba(126,231,255,0.2)" strokeWidth="1" strokeDasharray="5 6" />
+              <line x1="380" y1="75"  x2="540" y2="115" stroke="rgba(126,231,255,0.2)" strokeWidth="1" strokeDasharray="5 6" />
+              <line x1="540" y1="115" x2="720" y2="155" stroke="rgba(126,231,255,0.2)" strokeWidth="1" strokeDasharray="5 6" />
 
               {/* Nodes from earnWays */}
               {earnWays.map((way, i) => {

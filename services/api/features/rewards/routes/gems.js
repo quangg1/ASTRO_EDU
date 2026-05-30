@@ -135,6 +135,7 @@ router.get('/wallet', authMiddleware, async (req, res) => {
         lessonId: t.lessonId || undefined,
         entityId: t.entityId || undefined,
         depth: t.depth || undefined,
+        postTitle: t.metadata?.postTitle || undefined,
       },
     }));
     const totalGemsEarned = ur?.totalGemsEarned ?? 0;

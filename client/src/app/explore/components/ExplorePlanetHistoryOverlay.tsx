@@ -9,6 +9,7 @@ import {
 } from '@/features/content3d/narrative/public'
 import { NarrativeEarthFossilPanel } from '@/features/content3d/narrative/ui/NarrativeEarthFossilPanel'
 import type { ExploreLessonLink } from '../hooks/types'
+import { useDeepHistoryGemRewards } from '../hooks/useDeepHistoryGemRewards'
 
 type Props = {
   planetHistoryLabel: string
@@ -30,6 +31,7 @@ export function ExplorePlanetHistoryOverlay({
   onClose,
 }: Props) {
   const isEarth = planetHistoryEntityId === EARTH_ENTITY_ID
+  useDeepHistoryGemRewards(Boolean(planetHistoryEntityId))
 
   return (
     <div className={isEarth ? 'explore-deep-history-shell explore-deep-history-shell--earth' : 'explore-deep-history-shell'}>

@@ -1,6 +1,12 @@
 import { getApiPathBase } from '@/lib/apiConfig'
 import { getToken } from '@/features/auth/public'
-import type { AgentMessageResponse, LearnerSnapshot, SessionContext } from '../types'
+import type {
+  AgentMessageResponse,
+  AgentSessionDetail,
+  AgentSessionSummary,
+  LearnerSnapshot,
+  SessionContext,
+} from '../types'
 
 const GUEST_KEY = 'galaxies_agent_guest_session'
 
@@ -316,4 +322,28 @@ export async function postAgentSessionSummary(body: {
     headers: agentHeaders(false),
     body: JSON.stringify(body),
   }).catch(() => {})
+}
+
+export async function fetchAgentSessions(limit = 20): Promise<AgentSessionSummary[]> {
+  const token = getToken()
+  if (!token) return []
+  const res = await fetch(`${getAgentApiBase()}/sessions?limit=${limit}`, {
+    headers: agentHeaders(false),
+  }).catch(() => null)
+  if (!res?.ok) return []
+  const data = (await res.json().catch(() => ({}))) as { sessions?: AgentSessionSummary[] }
+  return Array.isArray(data.sessions) ? data.sessions : []
+}
+
+export async function fetchAgentSessionDetail(
+  sessionId: string,
+): Promise<AgentSessionDetail | null> {
+  const token = getToken()
+  if (!token || !sessionId) return null
+  const res = await fetch(`${getAgentApiBase()}/sessions/${encodeURIComponent(sessionId)}`, {
+    headers: agentHeaders(false),
+  }).catch(() => null)
+  if (!res?.ok) return null
+  const data = (await res.json().catch(() => ({}))) as { session?: AgentSessionDetail }
+  return data.session ?? null
 }

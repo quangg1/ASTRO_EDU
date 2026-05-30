@@ -9,7 +9,7 @@ export async function generateMetadata({ params }: Props) {
   const id = decodeURIComponent(params.lessonId)
   const { modules } = await getMergedLearningPathData()
   const hit = getLessonById(id, modules)
-  if (!hit) return { title: 'Bài học | Galaxies' }
+  if (!hit) return { title: 'Bài học' }
   return {
     title: `${hit.lesson.titleVi} | ${hit.node.titleVi}`,
     description: hit.lesson.title || hit.lesson.titleVi,

@@ -1,6 +1,6 @@
 'use client'
 
-import { Suspense, useEffect, useRef, useState } from 'react'
+import { Suspense, useEffect, useRef, useState, useMemo } from 'react'
 import dynamic from 'next/dynamic'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
@@ -11,6 +11,7 @@ import {
   fetchForumPosts,
   fetchNewsCategories,
   createPost,
+  syncCommunityGemReward,
   type Forum,
   type Post,
   plainTextExcerpt,
@@ -18,6 +19,8 @@ import {
   isHtmlFragmentEmpty,
 } from '@/features/community/public'
 import { CornerBrackets } from '@/components/landing/CornerBrackets'
+import { OnboardingWelcomeBanner } from '@/components/onboarding/OnboardingWelcomeBanner'
+import { parseOnboardingLanding } from '@/lib/onboardingLanding'
 
 const RichTextEditor = dynamic(() => import('@/components/studio/RichTextEditor'), {
   ssr: false,
@@ -56,6 +59,11 @@ function ForumPageContent() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const newsFiltersRef = useRef({ q: '', cat: '' })
   const searchInputRef = useRef<HTMLInputElement>(null)
+  const landing = parseOnboardingLanding(searchParams)
+
+  useEffect(() => {
+    if (landing.sortOverride) setSort(landing.sortOverride)
+  }, [landing.sortOverride])
 
   useEffect(() => {
     if (!slug) return
@@ -114,6 +122,18 @@ function ForumPageContent() {
     }
   }, [checked, user, forum, slug, router])
 
+  const displayPosts = useMemo(() => {
+    if (!landing.fromOnboarding || !landing.topics.length) return posts
+    const needles = landing.topics.map((t) => t.toLowerCase())
+    const filtered = posts.filter((p) => {
+      const tags = (p.tags ?? []).map((t) => t.toLowerCase())
+      if (tags.some((t) => needles.some((n) => t.includes(n) || n.includes(t)))) return true
+      const title = p.title.toLowerCase()
+      return needles.some((n) => title.includes(n.replace(/-/g, ' ')))
+    })
+    return filtered.length ? filtered : posts
+  }, [posts, landing.fromOnboarding, landing.topics])
+
   /* ⌘K / Ctrl+K → focus search */
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -133,6 +153,7 @@ function ForumPageContent() {
     const res = await createPost(slug, { title: newTitle.trim().slice(0, 300), content: contentPayload })
     setSubmitting(false)
     if (res.success && res.data) {
+      void syncCommunityGemReward(res.gemReward)
       setShowNewPost(false)
       setNewTitle('')
       setNewContent('')
@@ -902,6 +923,44 @@ function ForumPageContent() {
               </div>
             </div>
 
+            {landing.fromOnboarding ? (
+              <OnboardingWelcomeBanner
+                dismissKey={`onboarding-forum-${slug}`}
+                title="Diễn đàn được ghép theo chủ đề onboarding"
+                description={
+                  landing.pinNewbie
+                    ? 'Bắt đầu với Q&A cho người mới — đừng ngại hỏi bất cứ điều gì!'
+                    : landing.sortOverride === 'hot'
+                      ? 'Đang ưu tiên thảo luận sôi nổi và nội dung chuyên sâu.'
+                      : 'Feed được lọc nhẹ theo chủ đề bạn đã chọn.'
+                }
+              />
+            ) : null}
+
+            {landing.pinNewbie ? (
+              <div
+                className="mb-6 p-4 border border-amber-400/30 bg-amber-500/5 rounded-xl"
+              >
+                <p className="text-xs uppercase tracking-wider text-amber-300 mb-1">Gợi ý cho người mới</p>
+                <p className="text-sm text-white font-medium">Q&A — Đừng ngại hỏi bất cứ gì!</p>
+                <p className="text-xs text-gray-400 mt-1">
+                  Bấm «Tạo bài viết» và mô tả thắc mắc — cộng đồng CosmoLearn sẽ giúp bạn.
+                </p>
+                {user ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowNewPost(true)
+                      setNewTitle('Câu hỏi cho người mới: ')
+                    }}
+                    className="mt-3 text-xs text-amber-300 hover:text-amber-100"
+                  >
+                    Viết câu hỏi đầu tiên →
+                  </button>
+                ) : null}
+              </div>
+            ) : null}
+
             {showNewPost && (
               <div className="mb-6 rounded-2xl border border-cyan-500/30 bg-[#060e1c]/90 p-5">
                 <h2 className="text-white font-semibold mb-3">Tạo bài viết mới</h2>
@@ -953,7 +1012,7 @@ function ForumPageContent() {
               </div>
             ) : (
               <div className="space-y-3">
-                {posts.map((p) => (
+                {displayPosts.map((p) => (
                   <Link
                     key={p._id}
                     href={`/community/post/${p._id}`}

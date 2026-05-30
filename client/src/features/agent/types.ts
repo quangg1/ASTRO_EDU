@@ -160,3 +160,30 @@ export type AgentMessageResponse = {
   error?: string
   code?: string
 }
+
+export type AgentSessionSummary = {
+  sessionId: string
+  title: string
+  preview: string
+  contextLabel: string
+  messageCount: number
+  createdAt?: string
+  updatedAt?: string
+}
+
+export type AgentStoredMessage = {
+  role: 'user' | 'assistant'
+  content: string
+  hasImage?: boolean
+  createdAt?: string
+}
+
+export type AgentSessionDetail = {
+  sessionId: string
+  title: string
+  contextLabel: string
+  messageCount: number
+  messages: AgentStoredMessage[]
+  createdAt?: string
+  updatedAt?: string
+}

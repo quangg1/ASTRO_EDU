@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import type { DepthLevel } from '@/data/learningPathCurriculum'
 import type { TutorAction } from '@/components/ai-tutor/parseTutorActions'
 import { useAuthStore } from '@/features/auth/public'
-import { postAgentMessage, postDepthPreference, prefetchAgentContext } from '../api/agentApi'
+import { postAgentMessage, postDepthPreference, prefetchAgentContext, fetchAgentSessionDetail } from '../api/agentApi'
 import { executeAgentClientAction, mergeAgentToolCalls } from '../lib/executeToolCall'
 import type { AgentChip } from '../ui/AgentChips'
 import type { CommunityThreadSuggestion, LearnerSnapshot, SessionContext } from '../types'
@@ -367,6 +367,42 @@ export function useCosmoAssistantChat({
     [router, navigateLpLesson, learnerSnapshot?.spacedReviewDue?.dueLessons],
   )
 
+  const startNewConversation = useCallback(() => {
+    setSessionId(undefined)
+    setMessages([])
+    setInput('')
+    setError(null)
+    setFallbackChips([])
+    setDepthBanner(null)
+    setRelatedLessons([])
+    setCommunityThreads([])
+  }, [])
+
+  const loadHistorySession = useCallback(async (targetSessionId: string) => {
+    const detail = await fetchAgentSessionDetail(targetSessionId)
+    if (!detail?.messages?.length) return false
+    setSessionId(detail.sessionId)
+    setMessages(
+      detail.messages.map((m, i) => ({
+        id: `h-${detail.sessionId}-${i}`,
+        role: m.role,
+        content: m.hasImage && !m.content.trim() ? '📷 Ảnh đính kèm' : m.content,
+      })),
+    )
+    setInput('')
+    setError(null)
+    setFallbackChips([])
+    setDepthBanner(null)
+    setRelatedLessons([])
+    setCommunityThreads([])
+    window.dispatchEvent(
+      new CustomEvent('galaxies:agent-session', {
+        detail: { sessionId: detail.sessionId },
+      }),
+    )
+    return true
+  }, [])
+
   return {
     user,
     isContextual,
@@ -391,5 +427,7 @@ export function useCosmoAssistantChat({
     navigateLpLesson,
     postDepthPreference,
     onSuggestDepth,
+    startNewConversation,
+    loadHistorySession,
   }
 }

@@ -194,11 +194,20 @@ function effectiveGemPrice(basePriceGem, skuId, itemPriceOverrides) {
   return o;
 }
 
+async function getWeeklyDeepHistoryCap() {
+  const doc = await getOrCreateConfigDoc();
+  const cap = Number(doc?.weeklyDeepHistoryCap);
+  const { min, max } = RUNTIME_CONFIG_BOUNDS.weeklyDeepHistoryCap;
+  if (Number.isFinite(cap) && cap >= min && cap <= max) return cap;
+  return 50;
+}
+
 module.exports = {
   CONFIG_KEY,
   getOrCreateConfigDoc,
   patchRuntimeConfig,
   getCachedSeasonalMultiplier,
+  getWeeklyDeepHistoryCap,
   scaleEarn,
   effectiveSeasonalMultiplier,
   invalidateMultiplierCache,

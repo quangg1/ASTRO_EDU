@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 
 export const metadata = {
-  title: 'Bản đồ tri thức | Galaxies',
+  title: 'Bản đồ tri thức',
   description: 'Knowledge star map — đồ thị concept và prerequisite theo domain.',
 }
 

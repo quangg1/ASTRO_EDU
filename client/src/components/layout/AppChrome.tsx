@@ -5,6 +5,7 @@ import { AppHeader } from '@/components/ui/AppHeader'
 import { AppShell } from '@/components/layout/AppShell'
 import { useLayoutChrome } from '@/components/layout/LayoutChromeContext'
 import { PromoCampaignBar } from '@/components/promotions/PromoCampaignBar'
+import { OnboardingRedirect } from '@/components/onboarding/OnboardingRedirect'
 
 export function AppChrome({ children }: { children: React.ReactNode }) {
   const { options } = useLayoutChrome()
@@ -24,7 +25,9 @@ export function AppChrome({ children }: { children: React.ReactNode }) {
       {options.showHeader ? <AppHeader /> : null}
       {options.showHeader ? <PromoCampaignBar /> : null}
       <AppShell showMobileNav={options.showMobileNav} showStarfield={options.showStarfield}>
-        <div className={options.showHeader && promoBarVisible ? 'pt-11' : undefined}>{children}</div>
+        <div className={options.showHeader && promoBarVisible ? 'pt-11' : undefined}>
+          <OnboardingRedirect>{children}</OnboardingRedirect>
+        </div>
       </AppShell>
     </>
   )

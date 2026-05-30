@@ -68,7 +68,7 @@ async function applyVote({
     }
   }
 
-  return { delta, myVote };
+  return { delta, myVote, shouldNotifyUpvote };
 }
 
 /**

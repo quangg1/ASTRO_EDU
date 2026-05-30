@@ -33,6 +33,7 @@ const { startOrderMaintenanceScheduler } = require('./features/payment/jobs/orde
 const mediaRouter = require('./features/media');
 const adminRouter = require('./features/admin');
 const { agentRouter } = require('./features/agent');
+const { onboardingRouter } = require('./features/onboarding');
 const { attachNotificationWebSocket, WS_PATH } = require('./features/notifications/ws/attachNotificationWs');
 const { isMailConfigured } = require('./shared/mailer');
 
@@ -72,6 +73,7 @@ app.use('/api/news', newsRouter);
 app.use('/api/community', communityRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api/agent', agentRouter);
+app.use('/api/onboarding', onboardingRouter);
 app.use(mediaRouter); // POST /upload, GET /files/*
 app.use(errorMiddleware);
 

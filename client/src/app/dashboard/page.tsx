@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { Suspense, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import {
   BookOpen, ChevronRight, Flame, Gem, TrendingUp,
@@ -19,6 +19,8 @@ import { getLessonById } from '@/data/learningPathCurriculum'
 import { loadGemWallet, syncGemWallet } from '@/features/rewards/public'
 import { fetchLearnerTiersWithProgress, type LearnerTierProgress } from '@/features/rewards/public'
 import { useLiveClock } from '@/hooks/useLiveClock'
+import { DashboardForYouPanel } from '@/components/onboarding/DashboardForYouPanel'
+import { DashboardOnboardingWelcome } from '@/components/onboarding/DashboardOnboardingWelcome'
 
 const chamfer = (cut = 18) => ({
   clipPath: `polygon(${cut}px 0,100% 0,100% calc(100% - ${cut}px),calc(100% - ${cut}px) 100%,0 100%,0 ${cut}px)`,
@@ -189,6 +191,11 @@ export default function DashboardOverviewPage() {
           </p>
         </div>
       </header>
+
+      <Suspense fallback={null}>
+        <DashboardOnboardingWelcome />
+      </Suspense>
+      <DashboardForYouPanel />
 
       {/* Stats Row — 3 cards */}
       <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">

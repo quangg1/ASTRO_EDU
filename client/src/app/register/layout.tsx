@@ -1,4 +1,10 @@
+import type { Metadata } from 'next'
 import { LayoutChromeBoundary } from '@/components/layout/LayoutChromeBoundary'
+import { APP_DISPLAY_NAME } from '@/lib/appBrand'
+
+export const metadata: Metadata = {
+  title: `Đăng ký · ${APP_DISPLAY_NAME}`,
+}
 
 export default function RegisterLayout({ children }: { children: React.ReactNode }) {
   return (

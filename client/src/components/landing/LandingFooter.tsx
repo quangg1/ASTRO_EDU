@@ -26,8 +26,8 @@ const NAV_COLS = [
     links: [
       { label: 'Bảng điều khiển', href: '/dashboard' },
       { label: 'Studio', href: '/studio' },
-      { label: 'Trạng thái hệ thống', href: '#' },
-      { label: 'Liên hệ', href: '#' },
+      { label: 'Trạng thái hệ thống', href: '/dashboard' },
+      { label: 'Liên hệ', href: '/community/phan-hoi-ung-dung' },
     ],
   },
 ]
@@ -64,7 +64,7 @@ export function LandingFooter() {
               </h4>
               <ul className="space-y-3">
                 {col.links.map((link) => (
-                  <li key={link.href}>
+                  <li key={`${col.title}-${link.label}`}>
                     <Link
                       href={link.href}
                       className="text-sm text-white/50 hover:text-[color:var(--hud-amber)] transition-colors"

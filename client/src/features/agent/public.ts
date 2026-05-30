@@ -2,6 +2,9 @@ export type {
   SessionContext,
   LearnerSnapshot,
   AgentMessageResponse,
+  AgentSessionSummary,
+  AgentSessionDetail,
+  AgentStoredMessage,
   CommunityThreadSuggestion,
   LearnerTierSummary,
 } from './types'
@@ -28,6 +31,8 @@ export {
   postAgentSessionSummary,
   postSpacedReviewComplete,
   postDepthPreference,
+  fetchAgentSessions,
+  fetchAgentSessionDetail,
   getAgentApiBase,
 } from './api/agentApi'
 export {

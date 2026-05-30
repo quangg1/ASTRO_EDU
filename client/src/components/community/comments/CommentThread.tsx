@@ -2,7 +2,10 @@
 
 import { useMemo, useState } from 'react'
 import type { Comment } from '@/features/community/api/communityApi'
-import { voteComment } from '@/features/community/public'
+import { voteComment, markCommentHelpful } from '@/features/community/public'
+import { syncCommunityGemReward } from '@/features/community/lib/communityGemReward'
+import { canModerate } from '@/lib/roles'
+import { useToast } from '@/design-system'
 import { CommentBody } from '@/components/community/comments/CommentBody'
 import { CommentComposer } from '@/components/community/comments/CommentComposer'
 import { UserProfileLink } from '@/components/profile/UserProfileLink'
@@ -34,11 +37,24 @@ function buildTree(comments: Comment[]): CommentNode[] {
   return roots
 }
 
+function canMarkCommentHelpful(
+  user: { id: string; role?: string } | null,
+  postAuthorId: string,
+  commentAuthorId: string,
+): boolean {
+  if (!user || user.id === commentAuthorId) return false
+  if (canModerate(user as Parameters<typeof canModerate>[0]) || user.role === 'teacher') return true
+  return user.id === postAuthorId
+}
+
 type Props = {
   comments: Comment[]
-  user: { id: string } | null
+  user: { id: string; role?: string } | null
+  postAuthorId: string
+  isNewsForum?: boolean
   onAddComment: (content: string, parentId?: string) => Promise<boolean>
   onVoteComment?: (commentId: string, voteCount: number, myVote: number | null | undefined) => void
+  onMarkHelpful?: (commentId: string, updated: Comment) => void
 }
 
 function CommentVoteButtons({
@@ -50,6 +66,7 @@ function CommentVoteButtons({
   user: { id: string } | null
   onVote: (commentId: string, voteCount: number, myVote: number | null | undefined) => void
 }) {
+  const toast = useToast()
   const [busy, setBusy] = useState(false)
 
   const handleVote = async (value: 1 | -1) => {
@@ -59,6 +76,13 @@ function CommentVoteButtons({
     setBusy(false)
     if (res.success && res.voteCount != null) {
       onVote(node._id, res.voteCount, res.myVote)
+      if (res.gemReward && user.id === node.authorId) {
+        void syncCommunityGemReward(res.gemReward).then((synced) => {
+          if (synced) {
+            toast.show(`+${res.gemReward!.gemsEarned} Gem · ${res.gemReward!.label}`, { tone: 'success' })
+          }
+        })
+      }
     }
   }
 
@@ -100,20 +124,56 @@ function CommentItem({
   node,
   depth,
   user,
+  postAuthorId,
+  isNewsForum,
   onAddComment,
   onVoteComment,
+  onMarkHelpful,
 }: {
   node: CommentNode
   depth: number
-  user: { id: string } | null
+  user: { id: string; role?: string } | null
+  postAuthorId: string
+  isNewsForum?: boolean
   onAddComment: (content: string, parentId?: string) => Promise<boolean>
   onVoteComment?: Props['onVoteComment']
+  onMarkHelpful?: Props['onMarkHelpful']
 }) {
+  const toast = useToast()
   const [replyOpen, setReplyOpen] = useState(false)
+  const [markBusy, setMarkBusy] = useState(false)
   const maxDepth = 6
 
   const handleVote = (commentId: string, voteCount: number, myVote: number | null | undefined) => {
     onVoteComment?.(commentId, voteCount, myVote)
+  }
+
+  const showHelpfulAction =
+    !isNewsForum &&
+    !node.isHelpful &&
+    canMarkCommentHelpful(user, postAuthorId, node.authorId)
+
+  const handleMarkHelpful = async () => {
+    if (!user || markBusy || node.isHelpful) return
+    setMarkBusy(true)
+    const res = await markCommentHelpful(node._id)
+    setMarkBusy(false)
+    if (res.success && res.data) {
+      onMarkHelpful?.(node._id, res.data)
+      if (res.gemReward && user.id === node.authorId) {
+        void syncCommunityGemReward(res.gemReward).then((synced) => {
+          if (synced) {
+            toast.show(`+${res.gemReward!.gemsEarned} Gem · ${res.gemReward!.label}`, { tone: 'success' })
+          }
+        })
+      } else if (res.gemReward) {
+        toast.show('Đã đánh dấu hữu ích — tác giả nhận thưởng Gem', { tone: 'success' })
+      } else {
+        toast.show('Đã đánh dấu hữu ích', { tone: 'success' })
+      }
+    } else if (res.error) {
+      toast.show(res.error, { tone: 'danger' })
+    }
   }
 
   return (
@@ -130,6 +190,11 @@ function CommentItem({
             showName
             nameClassName="font-medium text-white"
           />
+          {node.isHelpful ? (
+            <span className="text-[10px] uppercase tracking-wide px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
+              Hữu ích
+            </span>
+          ) : null}
           <span className="text-gray-500 text-xs">{formatDate(node.createdAt)}</span>
         </div>
         <div className="mt-2">
@@ -137,6 +202,16 @@ function CommentItem({
         </div>
         <div className="mt-2 flex flex-wrap items-center gap-3">
           <CommentVoteButtons node={node} user={user} onVote={handleVote} />
+          {showHelpfulAction ? (
+            <button
+              type="button"
+              disabled={markBusy}
+              onClick={() => void handleMarkHelpful()}
+              className="text-xs text-emerald-400/90 hover:text-emerald-300 disabled:opacity-50"
+            >
+              {markBusy ? '...' : 'Hữu ích ✓'}
+            </button>
+          ) : null}
           {user && depth < maxDepth && (
             <button
               type="button"
@@ -173,8 +248,11 @@ function CommentItem({
               node={r}
               depth={depth + 1}
               user={user}
+              postAuthorId={postAuthorId}
+              isNewsForum={isNewsForum}
               onAddComment={onAddComment}
               onVoteComment={onVoteComment}
+              onMarkHelpful={onMarkHelpful}
             />
           ))}
         </div>
@@ -183,7 +261,15 @@ function CommentItem({
   )
 }
 
-export function CommentThread({ comments, user, onAddComment, onVoteComment }: Props) {
+export function CommentThread({
+  comments,
+  user,
+  postAuthorId,
+  isNewsForum,
+  onAddComment,
+  onVoteComment,
+  onMarkHelpful,
+}: Props) {
   const tree = useMemo(() => buildTree(comments), [comments])
 
   return (
@@ -194,27 +280,24 @@ export function CommentThread({ comments, user, onAddComment, onVoteComment }: P
         </div>
       )}
 
-      {!user && (
-        <p className="text-sm text-amber-200/80 rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-3">
-          Đăng nhập để bình luận với emoji, ảnh và trả lời theo chuỗi.
-        </p>
-      )}
-
-      {tree.map((node) => (
-        <CommentItem
-          key={node._id}
-          node={node}
-          depth={0}
-          user={user}
-          onAddComment={onAddComment}
-          onVoteComment={onVoteComment}
-        />
-      ))}
-
-      {!tree.length && (
+      {tree.length === 0 ? (
         <div className="rounded-xl border border-dashed border-white/20 bg-white/[0.03] p-6 text-center text-gray-400">
-          Chưa có bình luận. Hãy mở đầu cuộc thảo luận.
+          Chưa có bình luận nào. Hãy là người mở đầu cuộc thảo luận.
         </div>
+      ) : (
+        tree.map((node) => (
+          <CommentItem
+            key={node._id}
+            node={node}
+            depth={0}
+            user={user}
+            postAuthorId={postAuthorId}
+            isNewsForum={isNewsForum}
+            onAddComment={onAddComment}
+            onVoteComment={onVoteComment}
+            onMarkHelpful={onMarkHelpful}
+          />
+        ))
       )}
     </div>
   )

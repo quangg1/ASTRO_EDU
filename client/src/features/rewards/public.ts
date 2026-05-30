@@ -3,8 +3,8 @@
  */
 export {
   addGemTransaction,
-  awardGemsForLearningPathLesson,
   GEM_REWARD_LEARNING_PATH_LESSON,
+  isGuestGemUser,
   loadGemWallet,
   saveGemWallet,
   syncGemWallet,

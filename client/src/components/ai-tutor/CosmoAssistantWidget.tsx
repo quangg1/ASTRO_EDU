@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import dynamic from 'next/dynamic'
 import clsx from 'clsx'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
@@ -16,11 +17,18 @@ import {
 import { inferSessionContextFromPath } from '@/features/agent/lib/inferSessionContextFromPath'
 import { useAgentPageContextStore } from '@/features/agent/stores/useAgentPageContextStore'
 import { useCosmoAssistantChat } from '@/features/agent/hooks/useCosmoAssistantChat'
+import { CosmoChatHistoryPanel } from '@/features/agent/ui/CosmoChatHistoryPanel'
 import type { OpenCosmoAssistantDetail } from '@/features/agent/lib/openCosmoAssistant'
 import type { SessionContext } from '@/features/agent/types'
 import { isAgentQuizLocked } from '@/features/agent/lib/agentQuizLock'
 import { SearchParamsSuspense } from '@/components/layout/SearchParamsSuspense'
 import { AssistantMarkdown } from './AssistantMarkdown'
+import type { Live2DAvatarHandle } from './Live2DAvatar'
+import { NITO_DOCK_RAIL_WIDTH, NITO_SIZE } from '@/lib/live2d/nitoConfig'
+
+const Live2DAvatar = dynamic(() => import('./Live2DAvatar').then((m) => m.Live2DAvatar), {
+  ssr: false,
+})
 
 function routeLabel(pathname: string): string | undefined {
   if (!pathname || pathname === '/') return 'Trang chủ'
@@ -70,9 +78,13 @@ function CosmoAssistantInner() {
   const [guestInput, setGuestInput] = useState('')
   const [guestError, setGuestError] = useState<string | null>(null)
   const [attachmentImage, setAttachmentImage] = useState<{ base64: string; type: string } | null>(null)
+  const [historyOpen, setHistoryOpen] = useState(false)
   const listEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const avatarRef = useRef<Live2DAvatarHandle>(null)
+  const prevLoadingRef = useRef(false)
+  const prevMessageCountRef = useRef(0)
 
   const isCourseMode = mode === 'course' && course
   const sessionContext = useMemo(() => {
@@ -145,6 +157,24 @@ function CosmoAssistantInner() {
     listEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, loading])
 
+  useEffect(() => {
+    if (loading && !prevLoadingRef.current) {
+      avatarRef.current?.onThinking()
+    }
+    prevLoadingRef.current = loading
+  }, [loading])
+
+  useEffect(() => {
+    const count = messages.length
+    if (count > prevMessageCountRef.current) {
+      const last = messages[count - 1]
+      if (last?.role === 'assistant') {
+        avatarRef.current?.onAssistantReply()
+      }
+    }
+    prevMessageCountRef.current = count
+  }, [messages])
+
   const onDragStart = (e: React.MouseEvent) => {
     setDragging(true)
     dragStart.current = { x: e.clientX, y: e.clientY, px: pos.x, py: pos.y }
@@ -168,7 +198,10 @@ function CosmoAssistantInner() {
     }
   }, [dragging])
 
-  const closePanel = useCallback(() => setOpen(false), [])
+  const closePanel = useCallback(() => {
+    setOpen(false)
+    setHistoryOpen(false)
+  }, [])
 
   const applyImageFromFile = useCallback((file: File) => {
     if (!file.type.startsWith('image/')) return
@@ -209,6 +242,7 @@ function CosmoAssistantInner() {
   const sendGuest = async () => {
     const text = guestInput.trim()
     if (!text || guestLoading) return
+    avatarRef.current?.onUserMessage(text)
     setGuestInput('')
     setGuestError(null)
     const userMsg = { id: `u-${Date.now()}`, role: 'user' as const, content: text }
@@ -245,6 +279,9 @@ function CosmoAssistantInner() {
       void sendGuest()
       return
     }
+    const text = chat.input.trim()
+    if (!text && !attachmentImage) return
+    if (text) avatarRef.current?.onUserMessage(text)
     const snap = attachmentImage
       ? { base64: attachmentImage.base64, mediaType: attachmentImage.type }
       : undefined
@@ -259,62 +296,173 @@ function CosmoAssistantInner() {
     }
   }
 
+  const isEmptyChat = messages.length === 0 && !loading
+  const showHero = open && isEmptyChat
+  const showDock = open && !isEmptyChat
+
+  const welcomeMessage = useMemo(() => {
+    if (!canUseAI) {
+      return 'Mình là nito — trợ lý CosmoLearn AI. Đăng nhập để hỏi bài và lưu hội thoại nhé!'
+    }
+    if (sessionContext.coachTrigger === 'quiz_failed') {
+      return 'Bạn vừa chưa đạt quiz ôn — hỏi mình theo hướng gợi mở, mình sẽ giúp!'
+    }
+    if (isContextual) {
+      return 'Hỏi mình về nội dung đang xem — mình đã nạp ngữ cảnh trang này rồi!'
+    }
+    return 'Chào bạn! Hỏi về Trái Đất, hóa thạch, thiên văn hoặc nhờ mở Khám phá.'
+  }, [canUseAI, sessionContext.coachTrigger, isContextual])
+
+  const promptChips =
+    chat.fallbackChips.length > 0
+      ? chat.fallbackChips
+      : chat.defaultSuggestions.map((s) => ({ label: s, action: 'prompt' as const }))
+
+  useEffect(() => {
+    if (!showHero) return
+    const t = window.setTimeout(() => avatarRef.current?.onWelcome(), 500)
+    return () => window.clearTimeout(t)
+  }, [showHero])
+
   const panelHeight = isContextual
     ? 'h-[min(480px,52vh)]'
     : 'h-[min(560px,calc(100vh-8rem))]'
 
+  const panelShellClass =
+    'flex w-full flex-col overflow-hidden rounded-2xl animate-slide-up-fade pointer-events-auto shrink-0'
+
+  const inputBar = (
+    <div className="relative z-10 shrink-0 border-t border-cyan-400/15 bg-[rgba(6,22,42,0.98)] p-3">
+      {canUseAI && (
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={onAttachImage}
+          aria-label="Đính kèm ảnh"
+        />
+      )}
+      {canUseAI && attachmentImage && (
+        <div className="mb-2 flex items-center gap-2 rounded-xl border border-white/10 bg-black/20 p-1.5 pr-2">
+          <img
+            src={`data:${attachmentImage.type};base64,${attachmentImage.base64}`}
+            alt=""
+            className="h-11 w-11 shrink-0 rounded-lg object-cover"
+          />
+          <span className="flex-1 truncate text-xs text-gray-400">Ảnh đính kèm</span>
+          <button
+            type="button"
+            onClick={() => setAttachmentImage(null)}
+            className="shrink-0 px-1 text-lg leading-none text-gray-400 hover:text-white"
+            aria-label="Bỏ ảnh"
+          >
+            ×
+          </button>
+        </div>
+      )}
+      <div className="flex items-end gap-2 rounded-xl border border-cyan-400/20 bg-black/30 focus-within:border-cyan-400/40">
+        {canUseAI && (
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="m-2 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-white/10 hover:text-white"
+            aria-label="Đính kèm ảnh"
+            disabled={loading}
+          >
+            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={1.75}
+                d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"
+              />
+            </svg>
+          </button>
+        )}
+        <textarea
+          ref={inputRef}
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={handleKeyDown}
+          onPaste={canUseAI ? handlePasteImage : undefined}
+          rows={2}
+          placeholder={
+            canUseAI
+              ? attachmentImage
+                ? 'Hỏi về ảnh này…'
+                : 'Hỏi CosmoLearn AI…'
+              : 'Đăng nhập để chat đầy đủ'
+          }
+          className="max-h-28 min-h-[44px] flex-1 resize-none bg-transparent px-1 py-2.5 text-sm text-white placeholder:text-gray-500 focus:outline-none"
+          disabled={loading}
+        />
+        <button
+          type="button"
+          onClick={handleSend}
+          disabled={loading || (!input.trim() && !attachmentImage)}
+          className="m-2 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-cyan-400 transition-all hover:bg-cyan-400/15 hover:text-cyan-300 disabled:cursor-not-allowed disabled:opacity-35"
+          aria-label="Gửi"
+        >
+          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+          </svg>
+        </button>
+      </div>
+    </div>
+  )
+
   const fab = quizLocked ? null : (
     <div className="cosmo-assistant-portal pointer-events-none fixed inset-0 z-[1001]">
-      <button
-        type="button"
+      <div
+        className={clsx(
+          'pointer-events-auto fixed z-[1002] flex flex-col items-end',
+          'right-0 pr-[env(safe-area-inset-right,0px)]',
+          'bottom-[calc(4.25rem+env(safe-area-inset-bottom,0px))] md:bottom-[env(safe-area-inset-bottom,0px)]',
+        )}
         data-ai-tutor-fab
         data-cosmo-assistant-fab
-        onClick={() => setOpen((o) => !o)}
-        className={clsx(
-          'fixed bottom-[calc(5.25rem+env(safe-area-inset-bottom,0px))] right-6 flex h-14 w-14 items-center justify-center rounded-full shadow-xl transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:ring-offset-2 focus:ring-offset-black pointer-events-auto',
-          canUseAI ? 'hover:scale-110' : 'opacity-90 hover:opacity-100',
-        )}
-        style={{
-          background: 'linear-gradient(135deg, #06b6d4 0%, #0891b2 50%, #0e7490 100%)',
-          boxShadow: '0 4px 24px rgba(6, 182, 212, 0.45)',
-        }}
-        title={tag ?? 'CosmoLearn AI — trợ lý học tập'}
-        aria-label="Mở CosmoLearn AI"
       >
-        <span className="text-2xl" aria-hidden>
-          ✨
-        </span>
-      </button>
+        {!open && (
+          <Live2DAvatar
+            ref={avatarRef}
+            onClick={() => setOpen(true)}
+            width={NITO_SIZE.peek.width}
+            height={NITO_SIZE.peek.height}
+            align="dock"
+            title={tag ?? 'Mở CosmoLearn AI'}
+            className="drop-shadow-[0_8px_32px_rgba(6,182,212,0.35)]"
+          />
+        )}
 
-      {open && !quizLocked && (
-        <div
-          data-ai-tutor-panel
-          data-cosmo-assistant-panel
-          className={clsx(
-            'fixed flex flex-col overflow-hidden rounded-2xl animate-slide-up-fade pointer-events-auto',
-            panelHeight,
-            'w-[min(380px,calc(100vw-2rem))]',
-          )}
-          style={{
-            bottom: `${96 - pos.y}px`,
-            right: `${24 - pos.x}px`,
-            background:
-              'linear-gradient(180deg, rgba(10, 25, 47, 0.97) 0%, rgba(6, 22, 42, 0.98) 100%)',
-            boxShadow: '0 0 0 1px rgba(6, 182, 212, 0.25), 0 24px 48px rgba(0,0,0,0.5)',
-          }}
-          role="dialog"
-          aria-label="CosmoLearn AI"
-        >
+        {open && (
+          <div
+            data-ai-tutor-panel
+            data-cosmo-assistant-panel
+            className={clsx(panelShellClass, panelHeight, 'relative')}
+            style={{
+              width: 'min(440px, calc(100vw - 12px - env(safe-area-inset-right, 0px)))',
+              minHeight: isContextual ? 'min(360px, 48vh)' : 'min(420px, 55vh)',
+              maxHeight:
+                'min(560px, calc(100vh - 5rem - env(safe-area-inset-bottom, 0px)))',
+              transform: pos.x || pos.y ? `translate(${-pos.x}px, ${-pos.y}px)` : undefined,
+              background:
+                'linear-gradient(180deg, rgba(10, 25, 47, 0.97) 0%, rgba(6, 22, 42, 0.98) 100%)',
+              boxShadow: '0 0 0 1px rgba(6, 182, 212, 0.25), 0 24px 48px rgba(0,0,0,0.5)',
+            }}
+            role="dialog"
+            aria-label="CosmoLearn AI"
+          >
           <div
             className="flex shrink-0 cursor-grab items-center justify-between border-b border-cyan-400/20 px-4 py-3 active:cursor-grabbing select-none"
             onMouseDown={onDragStart}
           >
             <div className="min-w-0 flex-1 pr-2">
               <div className="flex items-center gap-2">
-                <span className="text-xl" aria-hidden>
-                  ✨
+                <span className="text-sm font-semibold text-cyan-300">CosmoLearn AI</span>
+                <span className="rounded-full bg-cyan-500/15 px-2 py-0.5 text-[10px] text-cyan-200/80">
+                  nito
                 </span>
-                <span className="font-semibold text-cyan-300">CosmoLearn AI</span>
               </div>
               {tag ? (
                 <p className="mt-1 truncate text-[11px] text-cyan-100/85">{tag}</p>
@@ -322,78 +470,183 @@ function CosmoAssistantInner() {
                 <p className="mt-0.5 text-[11px] text-gray-500">Chế độ tổng quan</p>
               )}
             </div>
-            <button
-              type="button"
-              onClick={() => setOpen(false)}
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-white/10 hover:text-white"
-              aria-label="Đóng"
-            >
-              ×
-            </button>
-          </div>
-
-          <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
-            {!canUseAI && (
-              <div className="px-2 py-8 text-center">
-                <p className="mb-2 text-sm text-gray-300">Đăng nhập để dùng CosmoLearn AI và lưu hội thoại.</p>
-                <Link
-                  href={`/login?redirect=${encodeURIComponent(pathname || '/')}`}
-                  className="inline-block rounded-xl bg-cyan-500 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-cyan-400"
+            <div className="flex shrink-0 items-center gap-1">
+              {canUseAI && (
+                <button
+                  type="button"
+                  onClick={() => setHistoryOpen(true)}
+                  className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-white/10 hover:text-cyan-200"
+                  aria-label="Lịch sử chat"
+                  title="Lịch sử chat"
                 >
-                  Đăng nhập
-                </Link>
-              </div>
-            )}
-
-            {canUseAI && chat.depthBanner && (
-              <div className="rounded-xl border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-100">
-                <p>{chat.depthBanner.reason}</p>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    className="rounded-lg bg-amber-500/25 px-2 py-1 hover:bg-amber-500/40"
-                    onClick={() => {
-                      void chat.postDepthPreference(chat.depthBanner!.depth)
-                      chat.onSuggestDepth?.(chat.depthBanner!.depth, chat.depthBanner!.reason)
-                      chat.setDepthBanner(null)
-                    }}
-                  >
-                    Chuyển sang {chat.depthBanner.depth}
-                  </button>
-                  <button
-                    type="button"
-                    className="rounded-lg px-2 py-1 text-amber-200/70 hover:text-amber-100"
-                    onClick={() => chat.setDepthBanner(null)}
-                  >
-                    Giữ mức hiện tại
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {canUseAI && sessionContext.surface === 'learning_path' && sessionContext.lessonTitle && (
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={1.75}
+                      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                </button>
+              )}
               <button
                 type="button"
-                onClick={() => chat.explainActiveSection()}
-                className="w-full rounded-xl border border-cyan-400/30 bg-cyan-500/10 px-3 py-2 text-left text-xs text-cyan-100 hover:bg-cyan-500/20"
+                onClick={() => setOpen(false)}
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-white/10 hover:text-white"
+                aria-label="Đóng"
               >
-                {sessionContext.activeSectionTitle
-                  ? `📖 Giải thích mục đang đọc: “${sessionContext.activeSectionTitle}”`
-                  : `📖 Giải thích bài “${sessionContext.lessonTitle}”`}
+                ×
               </button>
-            )}
+            </div>
+          </div>
 
-            {canUseAI && messages.length === 0 && !loading && (
-              <p className="text-xs text-gray-400">
-                {sessionContext.coachTrigger === 'quiz_failed'
-                  ? 'Bạn vừa chưa đạt quiz ôn — hỏi theo hướng gợi mở.'
-                  : isContextual
-                    ? 'Hỏi về nội dung đang xem — trợ lý đã nạp ngữ cảnh trang này.'
-                    : 'Chào bạn! Hỏi về Trái Đất, hóa thạch, thiên văn hoặc nhờ mở Khám phá.'}
-              </p>
-            )}
+          {canUseAI && (
+            <CosmoChatHistoryPanel
+              open={historyOpen}
+              onClose={() => setHistoryOpen(false)}
+              activeSessionId={chat.sessionId}
+              onNewChat={() => chat.startNewConversation()}
+              onSelectSession={async (sessionId) => {
+                const ok = await chat.loadHistorySession(sessionId)
+                if (!ok) chat.setError('Không mở được cuộc trò chuyện này.')
+              }}
+            />
+          )}
 
-            {messages.map((m) => {
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+            {showHero ? (
+              <>
+              <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
+                <div className="flex min-h-full flex-col items-center justify-start px-4 pb-6 pt-5">
+                  <Live2DAvatar
+                    ref={avatarRef}
+                    width={NITO_SIZE.hero.width}
+                    height={NITO_SIZE.hero.height}
+                    align="center"
+                    interactive={false}
+                    className="drop-shadow-[0_12px_40px_rgba(6,182,212,0.25)] shrink-0"
+                  />
+                  <div
+                    className="relative mt-4 w-full max-w-[92%] rounded-2xl rounded-bl-sm border border-cyan-400/30 bg-gradient-to-br from-cyan-500/15 to-cyan-900/10 px-4 py-3 text-center text-sm leading-relaxed text-cyan-50/95 shadow-[0_0_24px_rgba(6,182,212,0.12)]"
+                    role="status"
+                  >
+                    <span className="absolute -top-2 left-8 h-3 w-3 rotate-45 border-l border-t border-cyan-400/30 bg-cyan-500/15" />
+                    {welcomeMessage}
+                  </div>
+
+                  {!canUseAI && (
+                    <Link
+                      href={`/login?redirect=${encodeURIComponent(pathname || '/')}`}
+                      className="mt-4 inline-block rounded-full bg-cyan-500 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-cyan-400"
+                    >
+                      Đăng nhập
+                    </Link>
+                  )}
+
+                  {canUseAI && sessionContext.surface === 'learning_path' && sessionContext.lessonTitle && (
+                    <button
+                      type="button"
+                      onClick={() => chat.explainActiveSection()}
+                      className="mt-4 w-full max-w-[92%] rounded-xl border border-cyan-400/30 bg-cyan-500/10 px-3 py-2.5 text-left text-xs text-cyan-100 hover:bg-cyan-500/20"
+                    >
+                      {sessionContext.activeSectionTitle
+                        ? `📖 Giải thích mục đang đọc: “${sessionContext.activeSectionTitle}”`
+                        : `📖 Giải thích bài “${sessionContext.lessonTitle}”`}
+                    </button>
+                  )}
+
+                  {canUseAI && promptChips.length > 0 && (
+                    <AgentChips
+                      variant="prominent"
+                      chips={promptChips}
+                      onChip={(c) => {
+                        if (c.action === 'prompt') chat.setInput(c.label)
+                        else chat.handleChip(c)
+                      }}
+                      className="mt-5 px-1"
+                    />
+                  )}
+                </div>
+              </div>
+                {inputBar}
+              </>
+            ) : (
+              <div className="flex min-h-0 flex-1 overflow-hidden">
+                {showDock && (
+                  <aside
+                    className="relative z-0 flex shrink-0 flex-col items-center justify-end overflow-hidden border-r border-cyan-400/15 bg-gradient-to-b from-cyan-950/40 to-transparent pb-2 pt-2"
+                    style={{ width: NITO_DOCK_RAIL_WIDTH }}
+                    aria-hidden
+                  >
+                    <Live2DAvatar
+                      ref={avatarRef}
+                      width={NITO_SIZE.dock.width}
+                      height={NITO_SIZE.dock.height}
+                      align="center"
+                      interactive={false}
+                      className="shrink-0 drop-shadow-[0_8px_24px_rgba(6,182,212,0.3)]"
+                    />
+                  </aside>
+                )}
+                <div className="relative z-10 flex min-h-0 min-w-0 flex-1 flex-col">
+                  <div className="min-h-0 flex-1 overflow-y-auto">
+                    <div className="space-y-3 p-3 sm:p-4">
+                {!canUseAI && (
+                  <div className="px-2 py-6 text-center">
+                    <p className="mb-2 text-sm text-gray-300">
+                      Đăng nhập để dùng CosmoLearn AI và lưu hội thoại.
+                    </p>
+                    <Link
+                      href={`/login?redirect=${encodeURIComponent(pathname || '/')}`}
+                      className="inline-block rounded-xl bg-cyan-500 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-cyan-400"
+                    >
+                      Đăng nhập
+                    </Link>
+                  </div>
+                )}
+
+                {canUseAI && chat.depthBanner && (
+                  <div className="rounded-xl border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-100">
+                    <p>{chat.depthBanner.reason}</p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        className="rounded-lg bg-amber-500/25 px-2 py-1 hover:bg-amber-500/40"
+                        onClick={() => {
+                          void chat.postDepthPreference(chat.depthBanner!.depth)
+                          chat.onSuggestDepth?.(chat.depthBanner!.depth, chat.depthBanner!.reason)
+                          chat.setDepthBanner(null)
+                        }}
+                      >
+                        Chuyển sang {chat.depthBanner.depth}
+                      </button>
+                      <button
+                        type="button"
+                        className="rounded-lg px-2 py-1 text-amber-200/70 hover:text-amber-100"
+                        onClick={() => chat.setDepthBanner(null)}
+                      >
+                        Giữ mức hiện tại
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {canUseAI &&
+                  sessionContext.surface === 'learning_path' &&
+                  sessionContext.lessonTitle &&
+                  !showHero && (
+                    <button
+                      type="button"
+                      onClick={() => chat.explainActiveSection()}
+                      className="w-full rounded-xl border border-cyan-400/30 bg-cyan-500/10 px-3 py-2 text-left text-xs text-cyan-100 hover:bg-cyan-500/20"
+                    >
+                      {sessionContext.activeSectionTitle
+                        ? `📖 Giải thích mục đang đọc: “${sessionContext.activeSectionTitle}”`
+                        : `📖 Giải thích bài “${sessionContext.lessonTitle}”`}
+                    </button>
+                  )}
+
+                {messages.map((m) => {
               const assistantActions =
                 m.role === 'assistant' &&
                 'actions' in m &&
@@ -461,140 +714,63 @@ function CosmoAssistantInner() {
               </div>
             )})}
 
-            {loading && <p className="animate-pulse text-xs text-gray-500">Đang suy nghĩ…</p>}
-            {error && <p className="text-xs text-red-300">{error}</p>}
-            <div ref={listEndRef} />
-          </div>
+                      {loading && <p className="animate-pulse text-xs text-gray-500">Đang suy nghĩ…</p>}
+                      {error && <p className="text-xs text-red-300">{error}</p>}
+                      <div ref={listEndRef} />
+                    </div>
+                  </div>
 
-          {canUseAI && chat.relatedLessons.length > 0 && (
-            <AgentChips
-              chips={chat.relatedLessons.map((l) => ({
-                label: l.title,
-                action: 'open_lp_lesson',
-                lessonId: l.lessonId,
-                moduleId: l.moduleId,
-                nodeId: l.nodeId,
-              }))}
-              onChip={(c) => {
-                chat.navigateLpLesson(c, closePanel)
-              }}
-              className="px-4 pb-2"
-            />
-          )}
+                  {canUseAI && chat.relatedLessons.length > 0 && (
+                    <AgentChips
+                      chips={chat.relatedLessons.map((l) => ({
+                        label: l.title,
+                        action: 'open_lp_lesson',
+                        lessonId: l.lessonId,
+                        moduleId: l.moduleId,
+                        nodeId: l.nodeId,
+                      }))}
+                      onChip={(c) => {
+                        chat.navigateLpLesson(c, closePanel)
+                      }}
+                      className="px-3 pb-2 sm:px-4"
+                    />
+                  )}
 
-          {canUseAI && chat.communityThreads.length > 0 && (
-            <AgentChips
-              chips={chat.communityThreads.map((t) => ({
-                label: t.title.length > 42 ? `${t.title.slice(0, 42)}…` : t.title,
-                action: 'community_thread',
-                href: t.href,
-              }))}
-              onChip={(c) => {
-                if (c.href) {
-                  router.push(c.href)
-                  closePanel()
-                }
-              }}
-              className="px-4 pb-2"
-            />
-          )}
+                  {canUseAI && chat.communityThreads.length > 0 && (
+                    <AgentChips
+                      chips={chat.communityThreads.map((t) => ({
+                        label: t.title.length > 42 ? `${t.title.slice(0, 42)}…` : t.title,
+                        action: 'community_thread',
+                        href: t.href,
+                      }))}
+                      onChip={(c) => {
+                        if (c.href) {
+                          router.push(c.href)
+                          closePanel()
+                        }
+                      }}
+                      className="px-3 pb-2 sm:px-4"
+                    />
+                  )}
 
-          {canUseAI && (messages.length === 0 || chat.fallbackChips.length > 0) && (
-            <AgentChips
-              chips={
-                chat.fallbackChips.length > 0
-                  ? chat.fallbackChips
-                  : chat.defaultSuggestions.map((s) => ({ label: s, action: 'prompt' }))
-              }
-              onChip={(c) => {
-                if (c.action === 'prompt') chat.setInput(c.label)
-                else chat.handleChip(c)
-              }}
-              className="px-4 pb-2"
-            />
-          )}
-
-          <div className="shrink-0 border-t border-cyan-400/15 p-3">
-            {canUseAI && (
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={onAttachImage}
-                aria-label="Đính kèm ảnh"
-              />
-            )}
-            {canUseAI && attachmentImage && (
-              <div className="mb-2 flex items-center gap-2 rounded-xl border border-white/10 bg-black/20 p-1.5 pr-2">
-                <img
-                  src={`data:${attachmentImage.type};base64,${attachmentImage.base64}`}
-                  alt=""
-                  className="h-11 w-11 shrink-0 rounded-lg object-cover"
-                />
-                <span className="flex-1 truncate text-xs text-gray-400">Ảnh đính kèm</span>
-                <button
-                  type="button"
-                  onClick={() => setAttachmentImage(null)}
-                  className="shrink-0 px-1 text-lg leading-none text-gray-400 hover:text-white"
-                  aria-label="Bỏ ảnh"
-                >
-                  ×
-                </button>
+                  {canUseAI && messages.length > 0 && chat.fallbackChips.length > 0 && (
+                    <AgentChips
+                      chips={chat.fallbackChips}
+                      onChip={(c) => {
+                        if (c.action === 'prompt') chat.setInput(c.label)
+                        else chat.handleChip(c)
+                      }}
+                      className="px-3 pb-2 sm:px-4"
+                    />
+                  )}
+                  {inputBar}
+                </div>
               </div>
             )}
-            <div className="flex items-end gap-2 rounded-xl border border-cyan-400/20 bg-black/30 focus-within:border-cyan-400/40">
-              {canUseAI && (
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="m-2 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-white/10 hover:text-white"
-                  aria-label="Đính kèm ảnh"
-                  disabled={loading}
-                >
-                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={1.75}
-                      d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"
-                    />
-                  </svg>
-                </button>
-              )}
-              <textarea
-                ref={inputRef}
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={handleKeyDown}
-                onPaste={canUseAI ? handlePasteImage : undefined}
-                rows={2}
-                placeholder={
-                  canUseAI
-                    ? attachmentImage
-                      ? 'Hỏi về ảnh này…'
-                      : 'Hỏi CosmoLearn AI…'
-                    : 'Đăng nhập để chat đầy đủ'
-                }
-                className="max-h-28 min-h-[44px] flex-1 resize-none bg-transparent px-1 py-2.5 text-sm text-white placeholder:text-gray-500 focus:outline-none"
-                disabled={loading}
-              />
-              <button
-                type="button"
-                onClick={handleSend}
-                disabled={loading || (!input.trim() && !attachmentImage)}
-                className="m-2 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-40"
-                style={{ background: 'linear-gradient(135deg, #06b6d4, #0891b2)' }}
-                aria-label="Gửi"
-              >
-                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                </svg>
-              </button>
-            </div>
           </div>
         </div>
-      )}
+        )}
+      </div>
     </div>
   )
 

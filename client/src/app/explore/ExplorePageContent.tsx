@@ -1,16 +1,22 @@
 'use client'
 
-import { useMemo } from 'react'
+import { Suspense, useMemo, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { AgentPageProvider, buildSessionContext } from '@/features/agent/public'
+import { parseOnboardingLanding } from '@/lib/onboardingLanding'
 import { useExplorePage } from './hooks/useExplorePage'
 import { usePlanetHistoryEarthScene } from './hooks/usePlanetHistoryEarthScene'
 import { ExploreSceneCanvas } from './components/ExploreSceneCanvas'
 import { ExploreEarthOverlay } from './components/ExploreEarthOverlay'
 import { ExplorePlanetHistoryOverlay } from './components/ExplorePlanetHistoryOverlay'
 import { ExploreShowcaseOverlay } from './components/ExploreShowcaseOverlay'
+import { ExploreOnboardingTour } from './components/ExploreOnboardingTour'
 
-export function ExplorePageContent() {
+function ExplorePageInner() {
   const explore = useExplorePage()
+  const searchParams = useSearchParams()
+  const landing = parseOnboardingLanding(searchParams)
+  const [tourOpen, setTourOpen] = useState(landing.fromOnboarding && landing.tour)
   const earthHistoryScene = usePlanetHistoryEarthScene(
     explore.planetHistoryOpen,
     explore.planetHistoryEntityId,
@@ -78,7 +84,16 @@ export function ExplorePageContent() {
           <ExploreShowcaseOverlay {...explore} />
         )}
       </div>
+      <ExploreOnboardingTour open={tourOpen} onClose={() => setTourOpen(false)} />
     </main>
     </AgentPageProvider>
+  )
+}
+
+export function ExplorePageContent() {
+  return (
+    <Suspense fallback={<main className="min-h-screen bg-black" />}>
+      <ExplorePageInner />
+    </Suspense>
   )
 }

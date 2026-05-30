@@ -8,6 +8,7 @@ const { isNewsForum } = require('../constants/forumCatalog');
 const { buildForumPostFilter } = require('../lib/postListQuery');
 const { mergePostTags } = require('../lib/postTags');
 const { assertCohortForumAccess } = require('../lib/cohortForumGate');
+const { maybeRewardCommunityPost } = require('../services/communityGemService');
 
 const router = express.Router();
 
@@ -117,7 +118,19 @@ router.post('/:slug/posts', authMiddleware, async (req, res) => {
 
     await Forum.findByIdAndUpdate(forum._id, { $inc: { postCount: 1 } });
     const [enriched] = await enrichPostsWithAuthors([post.toObject ? post.toObject() : post]);
-    res.status(201).json({ success: true, data: enriched });
+
+    let gemReward = null;
+    try {
+      gemReward = await maybeRewardCommunityPost({
+        userId: req.userId,
+        post: post.toObject ? post.toObject() : post,
+        forum: forum.toObject ? forum.toObject() : forum,
+      });
+    } catch (gemErr) {
+      console.error('Community post gem reward error:', gemErr);
+    }
+
+    res.status(201).json({ success: true, data: enriched, gemReward });
   } catch (err) {
     console.error('Create post error:', err);
     res.status(500).json({ success: false, error: 'Lỗi server' });

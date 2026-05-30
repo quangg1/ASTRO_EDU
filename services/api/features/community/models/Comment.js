@@ -11,6 +11,9 @@ const commentSchema = new mongoose.Schema({
   hiddenAt: { type: Date, default: null },
   hiddenBy: { type: String, default: null },
   reportCount: { type: Number, default: 0 },
+  isHelpful: { type: Boolean, default: false },
+  helpfulMarkedBy: { type: String, default: null },
+  helpfulMarkedAt: { type: Date, default: null },
 }, { timestamps: true });
 
 commentSchema.index({ postId: 1, createdAt: 1 });
