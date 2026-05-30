@@ -4,7 +4,7 @@ import { useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { X } from 'lucide-react'
-import type { RecallQuizDeliveryQuestion, RecallQuizSubmitResult } from '@/features/learning-path/api/learningPathApi'
+import type { RecallQuizDeliveryQuestion, RecallQuizSubmitResult } from '@/features/learning-path/public'
 import { LessonRecallQuiz } from '@/components/learning-path/LessonRecallQuiz'
 
 type Props = {

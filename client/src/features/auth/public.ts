@@ -64,3 +64,5 @@ export {
   updateMyTeacherProfile,
 } from './api/teacherProfileApi'
 export type { PublicTeacherProfile } from './api/teacherProfileApi'
+export { uploadProfileAvatar } from './api/avatarUploadApi'
+export type { AvatarUploadResult } from './api/avatarUploadApi'

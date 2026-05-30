@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { CheckCircle2, ChevronLeft, ChevronRight, Sparkles, XCircle } from 'lucide-react'
-import type { RecallQuizDeliveryQuestion, RecallQuizSubmitResult } from '@/features/learning-path/api/learningPathApi'
+import type { RecallQuizDeliveryQuestion, RecallQuizSubmitResult } from '@/features/learning-path/public'
 
 type Props = {
   questions: RecallQuizDeliveryQuestion[]

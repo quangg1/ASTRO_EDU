@@ -4,9 +4,9 @@ import { useEffect, useState } from 'react'
 import {
   fetchMyTeacherProfile,
   updateMyTeacherProfile,
+  uploadProfileAvatar,
   type PublicTeacherProfile,
 } from '@/features/auth/public'
-import { uploadAvatar } from '@/features/auth/api/avatarUploadApi'
 import { resolveMediaUrl } from '@/lib/apiConfig'
 
 export function TeacherProfileEditor() {
@@ -99,7 +99,7 @@ export function TeacherProfileEditor() {
           onChange={async (e) => {
             const f = e.target.files?.[0]
             if (!f) return
-            const up = await uploadAvatar(f)
+            const up = await uploadProfileAvatar(f)
             if (up.success && up.url) {
               await save({ avatarUrl: up.url })
             }

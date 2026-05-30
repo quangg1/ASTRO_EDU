@@ -1,6 +1,6 @@
 'use client'
 
-import type { PublicTeacherProfile } from '@/features/auth/api/teacherProfileApi'
+import type { PublicTeacherProfile } from '@/features/auth/public'
 import { resolveMediaUrl } from '@/lib/apiConfig'
 
 export function CourseInstructorCard({ teacher }: { teacher: PublicTeacherProfile }) {
