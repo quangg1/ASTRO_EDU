@@ -1,4 +1,5 @@
 /** Tiền tố `/api/...` do unified API (`services/api`) — không gồm route nội bộ Next như `/api/chat`. */
+const path = require('path');
 const ENV = require('../shared/envNames');
 
 const UNIFIED_API_ROUTE_SEGMENTS = [
@@ -126,6 +127,16 @@ const nextConfig = {
   },
 
   webpack: (config, { dev, isServer }) => {
+    // file:../packages/contracts — webpack resolve zod từ client/node_modules
+    config.resolve.alias = {
+      ...(config.resolve.alias || {}),
+      zod: require.resolve('zod'),
+    };
+    config.resolve.modules = [
+      path.resolve(__dirname, 'node_modules'),
+      ...(config.resolve.modules || ['node_modules']),
+    ];
+
     if (dev && !isServer && process.env.WATCHPACK_POLLING === '1') {
       config.watchOptions = {
         ...config.watchOptions,

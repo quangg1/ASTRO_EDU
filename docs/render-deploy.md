@@ -43,7 +43,7 @@ Render → **New → Web Service**.
 | Ô | Giá trị |
 |---|--------|
 | **Root Directory** | `client` |
-| **Build Command** | `npm ci && npx next build` |
+| **Build Command** | `npm ci && npm run build` |
 | **Start Command** | `npm start` |
 | **Publish Directory** | *(để trống)* |
 

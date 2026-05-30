@@ -8,10 +8,11 @@
   "scripts": {
     "dev": "next dev",
     "dev:poll": "cross-env WATCHPACK_POLLING=1 next dev",
-    "prebuild": "npm run check:guards",
+    "prebuild": "node scripts/prepare-contracts.mjs && npm run check:guards",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "postinstall": "node scripts/prepare-contracts.mjs",
     "check:guards": "npm run check:boundaries && npm run check:earth-ssot && npm run check:app-public && npm run check:store-imports && npm run check:components-public",
     "check:store-imports": "node scripts/check-store-imports.mjs",
     "check:components-public": "node scripts/check-components-public.mjs",
