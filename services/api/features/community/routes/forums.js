@@ -7,12 +7,13 @@ const { enrichPostsWithAuthors } = require('../../users/publicProfileService');
 const { isNewsForum } = require('../constants/forumCatalog');
 const { buildForumPostFilter } = require('../lib/postListQuery');
 const { mergePostTags } = require('../lib/postTags');
+const { assertCohortForumAccess } = require('../lib/cohortForumGate');
 
 const router = express.Router();
 
 router.get('/', optionalAuth, async (req, res) => {
   try {
-    const forums = await Forum.find().sort({ order: 1, title: 1 }).lean();
+    const forums = await Forum.find({ cohortId: null }).sort({ order: 1, title: 1 }).lean();
     res.json({ success: true, data: forums });
   } catch (err) {
     console.error('List forums error:', err);
@@ -24,11 +25,15 @@ router.get('/:slug', optionalAuth, async (req, res) => {
   try {
     const forum = await Forum.findOne({ slug: req.params.slug }).lean();
     if (!forum) return res.status(404).json({ success: false, error: 'Không tìm thấy diễn đàn' });
+    await assertCohortForumAccess(forum, req.userId, req.userRole);
     res.json({
       success: true,
       data: { ...forum, isNews: isNewsForum(forum) },
     });
   } catch (err) {
+    if (err.status) {
+      return res.status(err.status).json({ success: false, error: err.message });
+    }
     console.error('Get forum error:', err);
     res.status(500).json({ success: false, error: 'Lỗi server' });
   }
@@ -38,6 +43,7 @@ router.get('/:slug/posts', optionalAuth, async (req, res) => {
   try {
     const forum = await Forum.findOne({ slug: req.params.slug }).lean();
     if (!forum) return res.status(404).json({ success: false, error: 'Không tìm thấy diễn đàn' });
+    await assertCohortForumAccess(forum, req.userId, req.userRole);
 
     const { page = 1, limit = 20, sort = 'newest' } = req.query;
     const skip = (Math.max(1, parseInt(page, 10)) - 1) * Math.min(50, parseInt(limit, 10) || 20);
@@ -46,7 +52,7 @@ router.get('/:slug/posts', optionalAuth, async (req, res) => {
     let sortOpt = { isPinned: -1, createdAt: -1 };
     if (sort === 'top') sortOpt = { isPinned: -1, voteCount: -1, createdAt: -1 };
 
-    const filter = buildForumPostFilter(forum, req.query, req.userRole);
+    const filter = buildForumPostFilter(forum, req.query, req.userRole, req.userDoc);
 
     const posts =
       sort === 'hot'
@@ -66,6 +72,7 @@ router.post('/:slug/posts', authMiddleware, async (req, res) => {
   try {
     const forum = await Forum.findOne({ slug: req.params.slug });
     if (!forum) return res.status(404).json({ success: false, error: 'Không tìm thấy diễn đàn' });
+    await assertCohortForumAccess(forum, req.userId, req.userRole);
     if (isNewsForum(forum)) {
       return res.status(400).json({ success: false, error: 'Không thể đăng bài vào kênh tin tổng hợp' });
     }

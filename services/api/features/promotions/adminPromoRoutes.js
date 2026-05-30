@@ -1,5 +1,6 @@
 const express = require('express');
-const { authMiddleware, requireRole } = require('../../shared/jwtAuth');
+const { authMiddleware } = require('../../shared/jwtAuth');
+const { requireAdminScope } = require('../../shared/adminScopes');
 const { requireString } = require('../../shared/validation');
 const { AppError } = require('../../shared/errors');
 const PromoCode = require('./models/PromoCode');
@@ -7,7 +8,7 @@ const { normalizeCode, promoToAdminDto } = require('./services/promoCodeService'
 
 const router = express.Router();
 
-router.use(authMiddleware, requireRole('admin'));
+router.use(authMiddleware, requireAdminScope('promo'));
 
 router.get('/', async (_req, res) => {
   try {

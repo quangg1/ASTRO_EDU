@@ -88,10 +88,19 @@ const courseSchema = new mongoose.Schema({
   price: { type: Number, default: 0 },
   currency: { type: String, enum: ['VND', 'USD'], default: 'VND' },
   isPaid: { type: Boolean, default: false },
+  /** Giá mặc định khi đăng ký lớp (thường cao hơn catalog). null = dùng price catalog. */
+  cohortPrice: { type: Number, default: null },
+  cohortCurrency: { type: String, enum: ['VND', 'USD'], default: null },
   /** Giáo viên sở hữu khóa học (teacher); null = chưa gán (cũ) */
   teacherId: { type: String, default: null, index: true },
   /** Catalog = mở quanh năm; cohort = có thể gắn nhiều lớp (delivery layer) */
   catalogEnabled: { type: Boolean, default: true },
+  /** self_paced | instructor_led | hybrid — đồng bộ với catalogEnabled khi lưu */
+  distributionStrategy: {
+    type: String,
+    enum: ['self_paced', 'instructor_led', 'hybrid'],
+    default: 'hybrid',
+  },
   /** Link CTA học miễn phí (Learning Path Hub), ví dụ /tutorial */
   crossSellTutorialHref: { type: String, default: '/tutorial' },
   crossSellTutorialLabelVi: { type: String, default: 'Học thêm miễn phí · Lộ trình' },

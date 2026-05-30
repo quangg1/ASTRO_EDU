@@ -1,5 +1,10 @@
 import { getApiPathBase } from '@/lib/apiConfig'
-import type { NasaCatalogItem, NasaStory, ShowcaseCatalogBundleDTO, ShowcaseOrbitEntity } from '@/lib/showcaseEntities'
+import type {
+  NasaCatalogItem,
+  NasaStory,
+  ShowcaseCatalogBundleDTO,
+  ShowcaseOrbitEntity,
+} from '@/features/content3d/showcase/lib/showcaseCatalogRuntime'
 
 const API = `${getApiPathBase()}/showcase-catalog`
 

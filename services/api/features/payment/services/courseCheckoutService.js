@@ -11,6 +11,10 @@ const {
   computePromoDiscount,
   normalizeCode,
 } = require('../../promotions/services/promoCodeService')
+const { loadEnrollableCohort } = require('../../courses/services/cohortEnrollmentService')
+const { resolveCohortCheckoutPrice } = require('../../courses/lib/cohortCheckoutPricing')
+const { assertCatalogNotAlreadyOwned } = require('../lib/orderPurchaseGuard')
+const CohortEnrollment = require('../../courses/models/CohortEnrollment')
 
 function clampDiscountPct(pct, maxCap) {
   const p = Math.round(Number(pct) || 0)
@@ -35,24 +39,75 @@ async function assertPaidCoursePurchasable({ userId, courseId }) {
   if (!course.isPaid || !(course.price > 0)) {
     throw new AppError(400, 'NOT_PAID_COURSE', 'Khóa học không yêu cầu thanh toán')
   }
-  const existing = await Enrollment.findOne({ userId, courseId: String(course._id) }).lean()
-  if (existing) {
-    throw new AppError(400, 'ALREADY_ENROLLED', 'Bạn đã ghi danh khóa học này')
-  }
+  await assertCatalogNotAlreadyOwned({ userId, courseId: course._id })
   return course
+}
+
+async function assertCohortCheckoutPurchasable({ userId, courseId, cohortId }) {
+  const course = await Course.findOne({ _id: courseId, published: true }).lean()
+  if (!course) throw new AppError(404, 'COURSE_NOT_FOUND', 'Không tìm thấy khóa học')
+  const cohort = await loadEnrollableCohort({ courseId: course._id, cohortId })
+  const pricing = await resolveCohortCheckoutPrice({ userId, cohort, course })
+  if (!pricing.requiresPayment) {
+    const msg = pricing.isCatalogUpgrade
+      ? 'Bạn đã trả đủ học phí tự học — đăng ký lớp trực tiếp, không cần thanh toán thêm.'
+      : 'Lớp này không yêu cầu thanh toán — dùng đăng ký lớp trực tiếp.'
+    throw new AppError(400, pricing.isCatalogUpgrade ? 'COHORT_UPGRADE_FREE' : 'COHORT_FREE', msg)
+  }
+  const inCohort = await CohortEnrollment.findOne({ userId, cohortId: cohort._id }).lean()
+  if (inCohort) {
+    throw new AppError(400, 'ALREADY_IN_COHORT', 'Bạn đã ở trong lớp này')
+  }
+  return {
+    course,
+    cohort,
+    listPrice: pricing.listPrice,
+    currency: pricing.currency,
+    cohortFullPrice: pricing.cohortFullPrice,
+    catalogCredit: pricing.catalogCredit,
+    isCatalogUpgrade: pricing.isCatalogUpgrade,
+  }
 }
 
 /**
  * Báo giá checkout — một nguồn giảm: coupon | gem voucher | learner tier.
  */
-async function getCheckoutQuote({ userId, courseId, voucherTierId, promoCode, useLearnerTierDiscount }) {
-  const course = await assertPaidCoursePurchasable({ userId, courseId })
+async function getCheckoutQuote({
+  userId,
+  courseId,
+  voucherTierId,
+  promoCode,
+  useLearnerTierDiscount,
+  cohortId = null,
+}) {
+  let course
+  let listPrice
+  let checkoutCurrency
+  let cohortCheckout = null
+  let cohortFullPrice = null
+  let catalogCredit = 0
+  let isCatalogUpgrade = false
+
+  if (cohortId) {
+    const bundle = await assertCohortCheckoutPurchasable({ userId, courseId, cohortId })
+    course = bundle.course
+    cohortCheckout = bundle.cohort
+    listPrice = bundle.listPrice
+    checkoutCurrency = bundle.currency
+    cohortFullPrice = bundle.cohortFullPrice
+    catalogCredit = bundle.catalogCredit
+    isCatalogUpgrade = bundle.isCatalogUpgrade
+  } else {
+    course = await assertPaidCoursePurchasable({ userId, courseId })
+    listPrice = Math.round(Number(course.price) || 0)
+    checkoutCurrency = course.currency || 'VND'
+  }
+
   const cfg = await getOrCreateConfigDoc()
   const maxCap = cfg?.voucherMaxDiscountPct ?? 15
   const ur = await UserReward.findOne({ userId }).lean()
   const gemBalance = ur?.gemBalance ?? 0
   const totalGemsEarned = ur?.totalGemsEarned ?? 0
-  const listPrice = Math.round(Number(course.price) || 0)
   const learnerProgress = getWalletLearnerMeta(totalGemsEarned)
   const learnerTier = learnerProgress.current
   const tierCheckoutPct = clampDiscountPct(learnerTier.checkoutDiscountPct, maxCap)
@@ -196,8 +251,14 @@ async function getCheckoutQuote({ userId, courseId, voucherTierId, promoCode, us
     courseId: String(course._id),
     courseSlug: course.slug,
     courseTitle: course.title,
-    currency: course.currency || 'VND',
+    cohortId: cohortCheckout ? String(cohortCheckout._id) : null,
+    cohortTitle: cohortCheckout?.title || null,
+    checkoutKind: cohortCheckout ? 'cohort' : 'catalog',
+    currency: checkoutCurrency,
     listPrice,
+    cohortFullPrice: cohortCheckout ? cohortFullPrice : null,
+    catalogCredit: cohortCheckout ? catalogCredit : 0,
+    isCatalogUpgrade: cohortCheckout ? isCatalogUpgrade : false,
     gemBalance,
     totalGemsEarned,
     maxDiscountPct: Math.min(15, maxCap),

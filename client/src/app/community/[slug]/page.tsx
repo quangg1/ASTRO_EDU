@@ -878,10 +878,10 @@ function ForumPageContent() {
                 <span className="text-xs uppercase tracking-wide text-gray-500">Sắp xếp:</span>
                 {(
                   [
-                    { value: 'newest' as const, label: 'Mới nhất' },
-                    { value: 'hot' as const, label: 'Nổi bật' },
-                    { value: 'top' as const, label: 'Top vote' },
-                  ]
+                      { value: 'newest' as const, label: 'Mới nhất' },
+                      { value: 'hot' as const, label: 'Nổi bật' },
+                      { value: 'top' as const, label: 'Top vote' },
+                    ]
                 ).map((option) => (
                   <button
                     key={option.value}
@@ -946,10 +946,10 @@ function ForumPageContent() {
             )}
 
             {loading ? (
-              <div className="space-y-3">
-                <div className="h-24 rounded-xl border border-white/10 bg-white/5 animate-pulse" />
-                <div className="h-24 rounded-xl border border-white/10 bg-white/5 animate-pulse" />
-                <div className="h-24 rounded-xl border border-white/10 bg-white/5 animate-pulse" />
+                <div className="space-y-3">
+                  <div className="h-24 rounded-xl border border-white/10 bg-white/5 animate-pulse" />
+                  <div className="h-24 rounded-xl border border-white/10 bg-white/5 animate-pulse" />
+                  <div className="h-24 rounded-xl border border-white/10 bg-white/5 animate-pulse" />
               </div>
             ) : (
               <div className="space-y-3">

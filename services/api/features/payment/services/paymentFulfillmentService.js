@@ -13,6 +13,7 @@ const Cohort = require('../../courses/models/Cohort');
 const User = require('../../auth/models/User');
 const { placeStudentInCohort } = require('../../courses/services/cohortEnrollmentService');
 const { sendPaymentReceiptEmail } = require('../../../shared/mailer');
+const { cancelOtherPendingOrders } = require('../lib/orderPurchaseGuard');
 
 async function completeOrderAndEnroll({ txnRef, transactionId }) {
   const session = await mongoose.startSession();
@@ -131,6 +132,15 @@ async function completeOrderAndEnroll({ txnRef, transactionId }) {
 
     if (purchaseNotification) {
       pushNotificationRealtime(purchaseNotification);
+    }
+
+    if (receiptContext?.order && !receiptContext.order.cohortId) {
+      await cancelOtherPendingOrders({
+        userId: receiptContext.order.userId,
+        courseId: receiptContext.order.courseId,
+        cohortId: null,
+        exceptTxnRef: receiptContext.order.txnRef,
+      });
     }
 
     if (receiptContext) {

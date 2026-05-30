@@ -41,8 +41,16 @@ export interface CheckoutQuote {
   courseId: string
   courseSlug: string
   courseTitle: string
+  cohortId?: string | null
+  cohortTitle?: string | null
+  checkoutKind?: 'catalog' | 'cohort'
   currency: string
   listPrice: number
+  /** Giá lớp đủ (trước trừ gói tự học) — chỉ cohort checkout */
+  cohortFullPrice?: number | null
+  /** Số đã trả cho catalog được trừ khi nâng lên lớp */
+  catalogCredit?: number
+  isCatalogUpgrade?: boolean
   gemBalance: number
   totalGemsEarned?: number
   maxDiscountPct: number
@@ -74,10 +82,12 @@ export async function fetchCheckoutQuote(params: {
   courseId: string
   voucherTierId?: string | null
   promoCode?: string | null
+  cohortId?: string | null
 }): Promise<FetchCheckoutQuoteResult> {
   const q = new URLSearchParams({ courseId: params.courseId })
   if (params.voucherTierId) q.set('voucherTierId', params.voucherTierId)
   if (params.promoCode) q.set('promoCode', params.promoCode)
+  if (params.cohortId) q.set('cohortId', params.cohortId)
   const res = await fetch(`${PAYMENT_BASE}/payments/checkout-quote?${q.toString()}`, {
     headers: authHeaders(),
   })
@@ -106,6 +116,7 @@ export interface CheckoutSession {
   discountSource?: string
   expiresAt: string
   demoMode: boolean
+  reusedPending?: boolean
 }
 
 export type CreateCheckoutSessionResult =
@@ -196,11 +207,21 @@ export async function fetchPaymentStatus(
   return null
 }
 
+export type OrderKind = 'catalog' | 'cohort' | 'cohort_upgrade'
+
 export interface Order {
   _id: string
   courseId: string
   courseSlug: string
+  cohortId?: string | null
+  cohortTitle?: string | null
+  orderKind?: OrderKind
   amount: number
+  listPrice?: number
+  discountPct?: number
+  discountAmount?: number
+  discountSource?: 'promo' | 'gem_voucher' | 'learner_tier' | 'none'
+  promoCode?: string | null
   currency: string
   status: PaymentStatus
   gateway: string
@@ -208,13 +229,39 @@ export interface Order {
   txnRef: string
   createdAt: string
   paidAt?: string | null
+  expiresAt?: string | null
+  catalogCredit?: number | null
+  cohortFullPrice?: number | null
+  upgradeFromCatalog?: boolean
+}
+
+export interface AdminOrder extends Order {
+  userId?: string
+  buyerEmail?: string | null
+  buyerName?: string | null
+  cohortTitle?: string | null
+  adminNote?: string
+  discountPct?: number
+  discountAmount?: number
+  discountSource?: string
+  promoCode?: string | null
+  gemsCommitted?: number
+  gateway?: string
+  refundedAt?: string | null
+  refundReason?: string
 }
 
 export interface AdminOrderStats {
   totalOrders: number
   completedOrders: number
   failedOrders: number
+  refundedOrders?: number
+  cancelledOrders?: number
+  pendingOrders?: number
+  /** Tổng đã quy đổi VND (USD × tỷ giá) */
   totalRevenue: number
+  revenueCurrency?: 'VND'
+  usdToVndRate?: number
 }
 
 export async function fetchMyOrders(): Promise<Order[]> {
@@ -226,7 +273,7 @@ export async function fetchMyOrders(): Promise<Order[]> {
 
 export async function fetchAdminOrderStats(): Promise<{
   stats: AdminOrderStats | null
-  orders: Order[]
+  orders: AdminOrder[]
 }> {
   try {
     const res = await fetch(`${PAYMENT_BASE}/admin/orders/overview`, { headers: authHeaders() })
@@ -234,7 +281,7 @@ export async function fetchAdminOrderStats(): Promise<{
     if (!res.ok || !data.success) return { stats: null, orders: [] }
     return {
       stats: data.stats as AdminOrderStats,
-      orders: Array.isArray(data.orders) ? (data.orders as Order[]) : [],
+      orders: Array.isArray(data.orders) ? (data.orders as AdminOrder[]) : [],
     }
   } catch {
     return { stats: null, orders: [] }

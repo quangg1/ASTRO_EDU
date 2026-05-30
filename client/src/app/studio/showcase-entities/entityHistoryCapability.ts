@@ -1,5 +1,7 @@
 /** Deep History CMS + Explore viewer — generic mọi entity; chỉ fossil là ngoại lệ Earth. */
 
+import { entityHasDeepHistorySync } from '@/app/explore/lib/exploreDeepHistoryAvailability'
+
 const FOSSILS_ENTITY_ID = 'planet-earth'
 
 /** Tab Hóa thạch — ngoại lệ duy nhất (Earth). */
@@ -11,9 +13,9 @@ export function entitySupportsHistory(_entityId: string): boolean {
   return true
 }
 
-/** Mọi entity showcase có thể mở Deep History trên Explore (globe + timeline + pin). */
-export function entityHasExploreHistoryViewer(_entityId: string): boolean {
-  return true
+/** Chỉ entity có beats (preset hoặc DB) mới mở Deep History trên Explore. */
+export function entityHasExploreHistoryViewer(entityId: string): boolean {
+  return entityHasDeepHistorySync(entityId)
 }
 
 export function entityExploreHref(entityId: string): string {

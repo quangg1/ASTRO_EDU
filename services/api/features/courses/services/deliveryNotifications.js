@@ -50,7 +50,19 @@ async function notifyAssignmentSubmitted({ teacherId, courseTitle, courseSlug, c
   });
 }
 
-async function notifyAssignmentGraded({ userId, courseTitle, courseSlug, lessonTitle, grade }) {
+async function notifyAssignmentGraded({
+  userId,
+  courseTitle,
+  courseSlug,
+  cohortId,
+  lessonSlug,
+  lessonTitle,
+  grade,
+}) {
+  const href =
+    cohortId && lessonSlug
+      ? `/courses/${courseSlug}/cohort/${cohortId}/assignment/${lessonSlug}`
+      : `/courses/${courseSlug}`;
   return createNotification({
     userId,
     type: 'assignment_graded',
@@ -59,8 +71,8 @@ async function notifyAssignmentGraded({ userId, courseTitle, courseSlug, lessonT
       grade != null
         ? `«${lessonTitle}» — ${courseTitle}: điểm ${grade}.`
         : `«${lessonTitle}» — ${courseTitle} đã có phản hồi.`,
-    href: `/courses/${courseSlug}`,
-    metadata: { courseSlug, lessonTitle, grade },
+    href,
+    metadata: { courseSlug, cohortId, lessonSlug, lessonTitle, grade },
   });
 }
 

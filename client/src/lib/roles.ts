@@ -1,4 +1,5 @@
 import type { AuthUser } from '@/features/auth/public'
+import { adminScopeForPath, type AdminScope } from '@/features/admin/lib/adminLabelsVi'
 
 export const ROLES = ['student', 'teacher', 'moderator', 'admin'] as const
 export type UserRole = (typeof ROLES)[number]
@@ -11,6 +12,34 @@ export function isTeacher(user: AuthUser | null): boolean {
 /** Admin — vận hành hệ thống (user, tiền, cấu hình). */
 export function isAdmin(user: AuthUser | null): boolean {
   return user?.role === 'admin'
+}
+
+/** Admin toàn quyền — không giới hạn phạm vi con. */
+export function isFullAdmin(user: AuthUser | null): boolean {
+  if (!isAdmin(user)) return false
+  const scopes = user?.adminScopes
+  if (!scopes?.length) return true
+  return scopes.includes('*')
+}
+
+/** Admin có quyền trong phạm vi cụ thể (hoặc toàn quyền). */
+export function hasAdminScope(user: AuthUser | null, scope: AdminScope): boolean {
+  if (!isAdmin(user)) return false
+  if (isFullAdmin(user)) return true
+  return (user?.adminScopes || []).includes(scope)
+}
+
+/** Vào khu vực /admin — cần role admin. */
+export function canAccessAdmin(user: AuthUser | null): boolean {
+  return isAdmin(user)
+}
+
+/** Kiểm tra quyền theo đường dẫn trang admin. */
+export function canAccessAdminPath(user: AuthUser | null, pathname: string): boolean {
+  if (!canAccessAdmin(user)) return false
+  const scope = adminScopeForPath(pathname)
+  if (!scope) return true
+  return hasAdminScope(user, scope)
 }
 
 /** Moderator — chỉ diễn đàn (hàng đợi, cảnh báo, ẩn/xóa). */
@@ -38,9 +67,10 @@ export function canEditContent(user: AuthUser | null): boolean {
 }
 
 export function canManageUsers(user: AuthUser | null): boolean {
-  return isAdmin(user)
+  return hasAdminScope(user, 'users')
 }
 
+/** @deprecated Dùng hasAdminScope — giữ tương thích: bất kỳ admin nào cũng pass. */
 export function canManagePlatform(user: AuthUser | null): boolean {
   return isAdmin(user)
 }
@@ -50,7 +80,7 @@ export function canModerate(user: AuthUser | null): boolean {
   return isModerator(user)
 }
 
-/** Admin can thiệp khẩn cấp (ẩn bài, xóa) khi cần */
+/** Admin can thiệp khẩn cấp (ẩn bài, xóa) khi có phạm vi moderation hoặc là moderator */
 export function canModerateOrAdminOverride(user: AuthUser | null): boolean {
-  return isModerator(user) || isAdmin(user)
+  return isModerator(user) || hasAdminScope(user, 'moderation')
 }

@@ -1,5 +1,6 @@
 const { verifyToken } = require('@galaxies/auth-shared');
 const { AppError } = require('./errors');
+const { hasAdminScope, isFullAdmin } = require('./adminScopes');
 const User = require('../features/auth/models/User');
 
 async function authMiddleware(req, res, next) {
@@ -13,7 +14,7 @@ async function authMiddleware(req, res, next) {
     return res.status(401).json({ success: false, error: 'Token không hợp lệ hoặc đã hết hạn' });
   }
   try {
-    const user = await User.findById(payload.sub).select('role accountStatus');
+    const user = await User.findById(payload.sub).select('role accountStatus adminScopes');
     if (!user) {
       return res.status(401).json({ success: false, error: 'Người dùng không tồn tại' });
     }
@@ -42,7 +43,7 @@ async function optionalAuth(req, res, next) {
     return next();
   }
   try {
-    const user = await User.findById(payload.sub).select('role accountStatus');
+    const user = await User.findById(payload.sub).select('role accountStatus adminScopes');
     if (!user || user.accountStatus === 'deactivated') {
       return next();
     }
@@ -127,4 +128,6 @@ module.exports = {
   canEditContentAsTeacher,
   canEditContentWithAdminOverride,
   requirePolicy,
+  hasAdminScope,
+  isFullAdmin,
 };

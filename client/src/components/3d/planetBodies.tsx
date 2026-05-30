@@ -361,7 +361,7 @@ function PlanetRing({
   )
 }
 
-function PlanetDefaultSphere({
+function PlanetTexturedSphere({
   data,
   bodyScale,
   unlitTexture,
@@ -439,6 +439,88 @@ function PlanetDefaultSphere({
         />
       ) : null}
     </>
+  )
+}
+
+function PlanetDefaultSphere({
+  data,
+  bodyScale,
+  unlitTexture,
+  profile,
+  bodyMeshRef,
+  interactive,
+  handlePlanetPick,
+  onHoverChange,
+}: {
+  data: PlanetData
+  bodyScale: number
+  unlitTexture: boolean
+  profile: PlanetRenderProfile
+  bodyMeshRef: RefObject<THREE.Mesh | null>
+  interactive: boolean
+  handlePlanetPick: () => void
+  onHoverChange?: (hovered: boolean) => void
+}) {
+  const fallbackColor = data.orbitColor || '#b48a5a'
+  const texturePath = String(data.texture || '').trim()
+
+  if (!texturePath) {
+    return (
+      <>
+        <mesh
+          ref={bodyMeshRef as unknown as RefObject<THREE.Mesh>}
+          onClick={
+            interactive
+              ? (e) => {
+                  e.stopPropagation()
+                  handlePlanetPick()
+                }
+              : undefined
+          }
+          onPointerOver={interactive ? () => { document.body.style.cursor = 'pointer' } : undefined}
+          onPointerOut={interactive ? () => { document.body.style.cursor = 'auto' } : undefined}
+          onPointerEnter={interactive ? () => onHoverChange?.(true) : undefined}
+          onPointerLeave={interactive ? () => onHoverChange?.(false) : undefined}
+        >
+          <sphereGeometry args={[data.radius * bodyScale, 96, 96]} />
+          <meshStandardMaterial color={fallbackColor} roughness={0.92} metalness={0.04} />
+        </mesh>
+        {!unlitTexture && profile.atmosphereColor && profile.atmosphereOpacity > 0 && (
+          <mesh scale={[profile.atmosphereScale, profile.atmosphereScale, profile.atmosphereScale]}>
+            <sphereGeometry args={[data.radius * bodyScale, 64, 64]} />
+            <meshBasicMaterial
+              color={profile.atmosphereColor}
+              transparent
+              opacity={profile.atmosphereOpacity}
+              side={THREE.BackSide}
+              blending={THREE.AdditiveBlending}
+              depthWrite={false}
+            />
+          </mesh>
+        )}
+        {data.ringTexture ? (
+          <PlanetRing
+            inner={data.ringInner! * data.radius * bodyScale}
+            outer={data.ringOuter! * data.radius * bodyScale}
+            texturePath={getStaticAssetUrl(data.ringTexture)}
+            interactive={interactive}
+          />
+        ) : null}
+      </>
+    )
+  }
+
+  return (
+    <PlanetTexturedSphere
+      data={data}
+      bodyScale={bodyScale}
+      unlitTexture={unlitTexture}
+      profile={profile}
+      bodyMeshRef={bodyMeshRef}
+      interactive={interactive}
+      handlePlanetPick={handlePlanetPick}
+      onHoverChange={onHoverChange}
+    />
   )
 }
 

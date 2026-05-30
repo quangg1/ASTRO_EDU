@@ -12,10 +12,8 @@ export function Timeline() {
   if (!showTimeline) return null
 
   return (
-    <div className="fixed left-2 top-24 bottom-28 z-30 flex w-80 max-w-[calc(100vw-2rem)] min-h-0 flex-col overflow-hidden">
-      <div className="glass flex h-full min-h-0 flex-1 flex-col overflow-hidden rounded-r-xl shadow-xl">
-        {/* Header */}
-        <div className="shrink-0 border-b border-cyan-400/30 p-4">
+    <aside className="pointer-events-auto fixed left-3 top-[5.75rem] z-30 flex w-[min(18rem,calc(100vw-6.5rem))] max-w-[18rem] min-w-0 max-h-[min(68vh,34rem)] flex-col overflow-hidden rounded-xl border border-cyan-400/30 bg-black/55 shadow-[0_8px_32px_rgba(0,0,0,0.45)] backdrop-blur-md">
+      <div className="shrink-0 border-b border-cyan-400/30 p-3">
           <div className="flex text-xs text-gray-400 font-medium">
             <span className="w-12">EON</span>
             <span className="w-16">ERA</span>
@@ -69,8 +67,7 @@ export function Timeline() {
             </button>
           ))}
         </div>
-      </div>
-    </div>
+    </aside>
   )
 }
 

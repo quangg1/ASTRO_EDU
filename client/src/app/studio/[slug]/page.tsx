@@ -20,6 +20,11 @@ import { useAuthStore } from '@/features/auth/public'
 import { canEnterStudio } from '@/lib/roles'
 import { useBlockEditorActions } from '@/components/studio/hooks/useBlockEditorActions'
 import { CourseStorefrontEditor } from '@/components/studio/CourseStorefrontEditor'
+import { CohortStudioNavLink } from '@/components/studio/CohortStudioNavLink'
+import {
+  catalogPricingVisibleForStrategy,
+  resolveDistributionStrategy,
+} from '@/features/courses/lib/distributionStrategy'
 import { ModuleMaterialsEditor } from '@/components/studio/ModuleMaterialsEditor'
 import { courseRequiresPayment } from '@/components/courses/courseCatalogMeta'
 import {
@@ -27,6 +32,7 @@ import {
   saveStudioEditorDraft,
   studioDraftIsDirty,
 } from '@/features/courses/lib/studioEditorDraft'
+import { LessonTypeIcon, lessonTypeIconKey } from '@/features/courses/cohort/LessonTypeIcon'
 import { emptyMcqQuestion, mcqAnswerIndex, mcqOptionTexts, patchMcqOption, setMcqAnswer } from '@/shared/types/quizQuestion'
 
 const BlockEditor = dynamic(() => import('@/components/studio/BlockEditor'), { ssr: false })
@@ -43,7 +49,7 @@ function genId() { return `m${Date.now()}-${Math.random().toString(36).slice(2, 
 
 function makeModule(n: number): CourseModule {
   const id = genId()
-  return { _id: id, title: `Module ${n + 1}`, slug: `module-${n + 1}`, description: '', icon: '', order: n, materials: [] }
+  return { _id: id, title: `Chương ${n + 1}`, slug: `chuong-${n + 1}`, description: '', icon: '', order: n, materials: [] }
 }
 
 function makeLesson(n: number, moduleId?: string): Lesson {
@@ -55,9 +61,13 @@ function makeQuiz(): QuizQuestion {
 }
 
 function normalizeEditorCourse(c: CourseEditorPayload): EditorCourse {
+  const distributionStrategy = resolveDistributionStrategy(c)
   return {
     ...c,
     id: String(c.id ?? c.slug),
+    published: c.published ?? false,
+    distributionStrategy,
+    catalogEnabled: c.catalogEnabled !== false,
     modules: (c.modules ?? []) as CourseModule[],
     lessons: c.lessons ?? [],
   }
@@ -154,16 +164,18 @@ export default function StudioEditorPage() {
       const modules = base.modules
       let nextCourse: EditorCourse
       if (modules.length === 0 && base.lessons.length > 0) {
-        const weekSet = new Set(base.lessons.map((l) => l.week ?? 1))
-        const autoModules: CourseModule[] = Array.from(weekSet).sort((a, b) => a - b).map((w, i) => ({
-          _id: `auto-w${w}`,
-          title: `Module ${w}`,
-          slug: `module-${w}`,
-          description: '',
-          icon: '',
-          order: i,
-        }))
-        const fixedLessons = base.lessons.map((l) => ({ ...l, moduleId: l.moduleId || `auto-w${l.week ?? 1}` }))
+        const defaultId = 'chuong-1'
+        const autoModules: CourseModule[] = [
+          {
+            _id: defaultId,
+            title: 'Chương 1',
+            slug: 'chuong-1',
+            description: '',
+            icon: '',
+            order: 0,
+          },
+        ]
+        const fixedLessons = base.lessons.map((l) => ({ ...l, moduleId: l.moduleId || defaultId }))
         nextCourse = { ...base, modules: autoModules, lessons: fixedLessons }
       } else {
         nextCourse = base
@@ -205,9 +217,9 @@ export default function StudioEditorPage() {
   const addModule = () => { uc((p) => ({ ...p, modules: [...p.modules, makeModule(p.modules.length)].map((m, i) => ({ ...m, order: i })) })) }
   const renameModule = (id: string, title: string) => { uc((p) => ({ ...p, modules: p.modules.map((m) => m._id === id ? { ...m, title, slug: slugify(title) } : m) })); setEditingModId(null) }
   const deleteModule = (id: string) => {
-    if (!confirm('Delete this module and unassign its lessons?')) return
+    if (!confirm('Xóa chương này và bỏ gán bài?')) return
     if (materialsModId === id) setMaterialsModId(null)
-    if (course) setUndoSnapshot({ label: 'Đã xóa module.', course: clone(course) })
+    if (course) setUndoSnapshot({ label: 'Đã xóa chương.', course: clone(course) })
     uc((p) => ({
       ...p,
       modules: p.modules.filter((m) => m._id !== id).map((m, i) => ({ ...m, order: i })),
@@ -248,6 +260,7 @@ export default function StudioEditorPage() {
       crossSellTutorialLabelVi: course.crossSellTutorialLabelVi ?? '',
       crossSellTutorialBodyVi: course.crossSellTutorialBodyVi ?? '',
       catalogEnabled: course.catalogEnabled !== false,
+      distributionStrategy: resolveDistributionStrategy(course),
       modules: course.modules.map((m, i) => ({ ...m, order: i })),
       lessons: course.lessons.map((l, i) => ({ ...l, order: i })),
     })
@@ -279,6 +292,8 @@ export default function StudioEditorPage() {
 
   const pubCls = course.published ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' : 'bg-amber-500/20 text-amber-300 border-amber-500/30'
   const unassigned = course.lessons.filter((l) => !l.moduleId || !modules.find((m) => m._id === l.moduleId))
+  const strategy = resolveDistributionStrategy(course)
+  const showTopBarPricing = catalogPricingVisibleForStrategy(strategy)
 
   return (
     <div className="min-h-screen bg-ds-base pt-16 pb-10">
@@ -302,25 +317,25 @@ export default function StudioEditorPage() {
               >
                 &larr; Studio
               </Link>
-              <button onClick={() => uc((p) => ({ ...p, published: !p.published }))} className={`ml-auto text-[10px] px-2 py-0.5 rounded-full border ${pubCls}`}>
-                {course.published ? 'Published' : 'Draft'}
+              <button
+                type="button"
+                title={course.published ? 'Đang công khai — bấm để chuyển nháp' : 'Đang nháp — bấm để xuất bản'}
+                onClick={() => uc((p) => ({ ...p, published: !p.published }))}
+                className={`ml-auto text-[10px] px-2 py-0.5 rounded-full border ${pubCls}`}
+              >
+                {course.published ? 'Đã xuất bản' : 'Bản nháp'}
               </button>
             </div>
             <p className={`text-[11px] ${isDirty ? 'text-amber-300' : 'text-emerald-300'}`}>{isDirty ? 'Chưa lưu' : 'Đã lưu'}</p>
             <h2 className="text-sm font-semibold text-white truncate">{course.title}</h2>
-            <p className="text-[11px] text-ds-subtle mt-0.5">{modules.length} modules &middot; {course.lessons.length} lessons</p>
-            <Link
-              href={`/studio/${slug}/cohorts`}
-              className="mt-2 block text-center text-[11px] py-2 rounded-lg border border-purple-500/30 text-purple-200 hover:bg-purple-500/10"
-            >
-              Lớp học theo kỳ →
-            </Link>
+            <p className="text-[11px] text-ds-subtle mt-0.5">{modules.length} chương &middot; {course.lessons.length} bài</p>
+            <CohortStudioNavLink slug={slug} course={course} />
           </div>
 
           <div className="rounded-2xl border border-ds-border bg-ds-overlay backdrop-blur p-2 space-y-1">
             <div className="flex items-center justify-between px-1 pb-1 border-b border-white/5">
-              <span className="text-[10px] uppercase tracking-wider text-ds-subtle">Modules</span>
-              <button onClick={addModule} className="text-[10px] px-2 py-0.5 rounded-md bg-cyan-600 text-white hover:bg-cyan-500 transition-colors">+ Module</button>
+              <span className="text-[10px] uppercase tracking-wider text-ds-subtle">Chương</span>
+              <button onClick={addModule} className="text-[10px] px-2 py-0.5 rounded-md bg-cyan-600 text-white hover:bg-cyan-500 transition-colors">+ Chương</button>
             </div>
             <div className="space-y-0.5 max-h-[calc(100vh-300px)] overflow-auto pr-1">
               {modules.map((mod, mi) => {
@@ -365,7 +380,7 @@ export default function StudioEditorPage() {
                               ? 'text-cyan-200 bg-cyan-500/20 border border-cyan-500/30'
                               : 'text-ds-muted hover:text-ds-accent border border-transparent'
                           }`}
-                          title="Tài liệu module (PDF, liên kết)"
+                          title="Tài liệu chương (PDF, liên kết)"
                         >
                           Tài liệu
                         </button>
@@ -386,10 +401,13 @@ export default function StudioEditorPage() {
                             <div
                               key={l.slug}
                               onClick={() => setSi(gi)}
-                              className={`group rounded-md px-2 py-1.5 cursor-pointer transition-all ${gi === si ? 'bg-ds-accent-soft border border-ds-accent-strong' : 'border border-transparent hover:bg-white/5'}`}
+                              className={`group rounded-md px-2 py-1.5 cursor-pointer transition-all flex gap-2 ${gi === si ? 'bg-ds-accent-soft border border-ds-accent-strong' : 'border border-transparent hover:bg-white/5'}`}
                             >
-                              <p className="text-[11px] text-white truncate">{l.title}</p>
-                              <p className="text-[10px] text-ds-subtle">{l.type} &middot; {(l.sections?.length ?? 0)} blocks</p>
+                              <LessonTypeIcon type={lessonTypeIconKey(l)} size="xs" className="mt-0.5" />
+                              <div className="min-w-0 flex-1">
+                                <p className="text-[11px] text-white truncate">{l.title}</p>
+                                <p className="text-[10px] text-ds-subtle">{(l.sections?.length ?? 0)} khối</p>
+                              </div>
                               <div className={`flex items-center gap-1 mt-0.5 ${gi === si ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-opacity`}>
                                 <button onClick={(e) => { e.stopPropagation(); dupLesson(gi) }} className="text-[10px] text-ds-subtle hover:text-ds-accent">dup</button>
                                 <button onClick={(e) => { e.stopPropagation(); delLesson(gi) }} className="text-[10px] text-red-500/50 hover:text-red-400 ml-auto">&times;</button>
@@ -495,19 +513,28 @@ export default function StudioEditorPage() {
                 </select>
               </label>
               <label className="text-xs text-ds-muted">Weeks<input type="number" value={course.durationWeeks ?? ''} onChange={(e) => uc((p) => ({ ...p, durationWeeks: e.target.value ? Number(e.target.value) : null }))} className={`mt-1 studio-field`} /></label>
-              <label className="text-xs text-ds-muted flex items-center gap-2">
-                <input type="checkbox" checked={!!course.isPaid} onChange={(e) => uc((p) => ({ ...p, isPaid: e.target.checked }))} />
-                Paid course
-              </label>
-              {course.isPaid && (
+              {showTopBarPricing ? (
                 <>
-                  <label className="text-xs text-ds-muted">Price (VND / USD)<input type="number" min={0} value={course.price ?? 0} onChange={(e) => uc((p) => ({ ...p, price: Math.max(0, Number(e.target.value) || 0) }))} className={`mt-1 studio-field`} /></label>
-                  <label className="text-xs text-ds-muted">Currency
-                    <select value={course.currency ?? 'VND'} onChange={(e) => uc((p) => ({ ...p, currency: e.target.value }))} className={`mt-1 studio-field`}>
-                      <option value="VND">VND</option><option value="USD">USD</option>
-                    </select>
+                  <label className="text-xs text-ds-muted flex items-center gap-2">
+                    <input type="checkbox" checked={!!course.isPaid} onChange={(e) => uc((p) => ({ ...p, isPaid: e.target.checked }))} />
+                    Paid course (catalog)
                   </label>
+                  {course.isPaid && (
+                    <>
+                      <label className="text-xs text-ds-muted">Price (VND / USD)<input type="number" min={0} value={course.price ?? 0} onChange={(e) => uc((p) => ({ ...p, price: Math.max(0, Number(e.target.value) || 0) }))} className={`mt-1 studio-field`} /></label>
+                      <label className="text-xs text-ds-muted">Currency
+                        <select value={course.currency ?? 'VND'} onChange={(e) => uc((p) => ({ ...p, currency: e.target.value }))} className={`mt-1 studio-field`}>
+                          <option value="VND">VND</option><option value="USD">USD</option>
+                        </select>
+                      </label>
+                    </>
+                  )}
                 </>
+              ) : (
+                <p className="text-[11px] text-ds-subtle md:col-span-2 leading-relaxed">
+                  Giá catalog ẩn — khóa theo lớp. Cấu hình phí khi tạo cohort trong{' '}
+                  <span className="text-purple-200">Lớp học theo kỳ</span>.
+                </p>
               )}
             </div>
           </div>
@@ -528,6 +555,8 @@ export default function StudioEditorPage() {
               currency: course.currency,
               requiresPayment: courseRequiresPayment(course),
               catalogEnabled: course.catalogEnabled !== false,
+              distributionStrategy: resolveDistributionStrategy(course),
+              published: !!course.published,
             }}
             onChange={(patch) => uc((p) => ({ ...p, ...patch }))}
           />
@@ -575,7 +604,7 @@ export default function StudioEditorPage() {
                   <div className="flex items-center gap-3 mt-1">
                     <p className="text-[11px] text-ds-subtle">slug: {lesson.slug}</p>
                     <label className="text-[11px] text-ds-subtle flex items-center gap-1">
-                      Module:
+                      Chương:
                       <select
                         value={lesson.moduleId ?? ''}
                         onChange={(e) => ul((l) => ({ ...l, moduleId: e.target.value || null }))}
@@ -686,6 +715,10 @@ export default function StudioEditorPage() {
                         <option value="text">Text</option><option value="visualization">Visualization</option><option value="quiz">Quiz</option><option value="assignment">Assignment</option><option value="live_session">Live session</option>
                       </select>
                     </label>
+                    <p className="text-[11px] text-ds-subtle md:col-span-2 rounded-lg border border-ds-border/60 bg-white/[0.03] px-3 py-2">
+                      Lịch theo tuần được đặt ở <strong className="text-white/90">Cohort → Ánh xạ Chương → Tuần</strong>, không
+                      gán trong Studio.
+                    </p>
                     {lesson.type === 'quiz' && (
                       <>
                         <label className="text-xs text-ds-muted">Reveal đáp án

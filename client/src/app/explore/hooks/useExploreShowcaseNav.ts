@@ -19,6 +19,7 @@ type NavArgs = {
   setSelectedSolarPlanetIndex: (idx: number | null) => void
   activeResolved: ResolvedNasaCatalogItem | null
   planetHistoryOpen: boolean
+  earthHistoryOpen: boolean
   planetBeatAccent: string
   pushBridgeDebug: (msg: string) => void
 }
@@ -33,6 +34,7 @@ export function useExploreShowcaseNav({
   setSelectedSolarPlanetIndex,
   activeResolved,
   planetHistoryOpen,
+  earthHistoryOpen,
   planetBeatAccent,
   pushBridgeDebug,
 }: NavArgs) {
@@ -70,13 +72,14 @@ export function useExploreShowcaseNav({
   const handleShowcaseEntityClicked = useCallback(
     (entityId: string, source: string) => {
       setShowcaseActiveItemId(entityId)
+      syncSelectedPlanetFromItem(entityId)
       trackLearningPathBehavior({
         eventName: 'scene_entity_clicked',
         metadata: { schemaVersion: 'scene_event_v2', entityId, source },
       })
       pushBridgeDebug(`click ${entityId} (${source})`)
     },
-    [setShowcaseActiveItemId, pushBridgeDebug],
+    [setShowcaseActiveItemId, syncSelectedPlanetFromItem, pushBridgeDebug],
   )
 
   const handleShowcaseCameraSettled = useCallback(
@@ -105,13 +108,21 @@ export function useExploreShowcaseNav({
   )
 
   useEffect(() => {
-    const entityParam = searchParams.get('entity') || ''
+    const entityParam = searchParams.get('entity')?.trim()
     if (!entityParam) return
     const exists = NASA_SHOWCASE_ITEMS.some((item) => item.id === entityParam)
-    if (exists) setShowcaseActiveItemId(entityParam)
-  }, [searchParams, setShowcaseActiveItemId])
+    if (exists) {
+      setShowcaseActiveItemId(entityParam)
+      syncSelectedPlanetFromItem(entityParam)
+    }
+  }, [searchParams, setShowcaseActiveItemId, syncSelectedPlanetFromItem])
 
   useEffect(() => {
+    if (earthHistoryOpen || searchParams.get('history') === '1') return
+
+    const entityParam = searchParams.get('entity')?.trim()
+    if (entityParam && entityParam !== showcaseActiveItemId) return
+
     const next = new URLSearchParams(searchParams.toString())
     next.set('mode', 'showcase')
     if (showcaseActiveItemId) {
@@ -120,10 +131,11 @@ export function useExploreShowcaseNav({
       if (item?.group) next.set('group', item.group)
       if (item?.linkedPlanetName) next.set('target', item.linkedPlanetName.toLowerCase())
     }
+    next.delete('stage')
     const updated = next.toString()
     if (updated === searchParams.toString()) return
     router.replace(`${pathname}?${updated}`, { scroll: false })
-  }, [pathname, router, searchParams, showcaseActiveItemId])
+  }, [pathname, router, searchParams, showcaseActiveItemId, earthHistoryOpen])
 
   return {
     initialShowcaseSpherical,

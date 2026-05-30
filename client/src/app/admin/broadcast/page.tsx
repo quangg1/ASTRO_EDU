@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useAuthStore } from '@/features/auth/public'
-import { canManagePlatform } from '@/lib/roles'
+import { canAccessAdmin, canAccessAdminPath } from '@/lib/roles'
 import { sendAdminBroadcast, type BroadcastRole } from '@/features/admin/public'
 import { Button, Card, Input, Textarea } from '@/design-system'
 import { PageHeader } from '@/components/ui/PageHeader'
@@ -29,7 +29,7 @@ export default function AdminBroadcastPage() {
 
   useEffect(() => {
     if (checked && !user) router.replace('/login?redirect=/admin/broadcast')
-    if (checked && user && !canManagePlatform(user)) router.replace('/')
+    if (checked && user && !canAccessAdmin(user)) router.replace('/')
   }, [checked, user, router])
 
   const toggleRole = (role: BroadcastRole) => {
@@ -68,7 +68,7 @@ export default function AdminBroadcastPage() {
     }
   }
 
-  if (!checked || !user || !canManagePlatform(user)) {
+  if (!checked || !user || !canAccessAdminPath(user, '/admin/broadcast')) {
     return (
       <div className="min-h-screen bg-ds-base flex items-center justify-center text-ds-muted">
         Đang kiểm tra quyền…

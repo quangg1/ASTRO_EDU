@@ -39,8 +39,8 @@ function stepRateLimit(tier, userId, guestSessionId) {
   throw new AppError(401, 'AUTH_REQUIRED', 'Đăng nhập để dùng agent.');
 }
 
-async function stepBuildContext(userId, sessionContext, learnerSnapshot) {
-  return buildAgentContext(userId, sessionContext, learnerSnapshot);
+async function stepBuildContext(userId, sessionContext, learnerSnapshot, userRole) {
+  return buildAgentContext(userId, sessionContext, learnerSnapshot, userRole);
 }
 
 async function authorizeToolCalls(toolCalls, ctx) {
@@ -56,6 +56,7 @@ async function authorizeToolCalls(toolCalls, ctx) {
       courseId: ctx.courseId,
       courseSlug: ctx.courseSlug,
       courseLessons: ctx.courseLessons,
+      userMessage: ctx.userMessage,
     });
     tool_results.push({ id: call?.id, name, ...result });
   }

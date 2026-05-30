@@ -34,6 +34,11 @@ const userSchema = new mongoose.Schema(
       enum: ['student', 'teacher', 'moderator', 'admin'],
       default: 'student',
     },
+    /** Phạm vi quản trị con — rỗng hoặc ['*'] = toàn quyền. Chỉ áp dụng khi role === admin. */
+    adminScopes: {
+      type: [String],
+      default: [],
+    },
     accountStatus: {
       type: String,
       enum: ['active', 'deactivated'],

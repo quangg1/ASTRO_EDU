@@ -17,6 +17,7 @@ const coreTools = [
   'open_learning_path_lesson',
   'go_to_explore',
   'navigate_to_narrative',
+  'focus_showcase_entity',
   'suggest_depth_switch',
   'highlight_concept_in_map',
   'show_related_lessons',

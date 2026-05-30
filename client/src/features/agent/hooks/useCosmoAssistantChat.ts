@@ -8,7 +8,7 @@ import { useAuthStore } from '@/features/auth/public'
 import { postAgentMessage, postDepthPreference, prefetchAgentContext } from '../api/agentApi'
 import { executeAgentClientAction, mergeAgentToolCalls } from '../lib/executeToolCall'
 import type { AgentChip } from '../ui/AgentChips'
-import type { LearnerSnapshot, SessionContext } from '../types'
+import type { CommunityThreadSuggestion, LearnerSnapshot, SessionContext } from '../types'
 
 export type CosmoChatMessage = {
   id: string
@@ -49,6 +49,7 @@ export function useCosmoAssistantChat({
   const [relatedLessons, setRelatedLessons] = useState<
     Array<{ lessonId: string; title: string; moduleId: string; nodeId: string }>
   >([])
+  const [communityThreads, setCommunityThreads] = useState<CommunityThreadSuggestion[]>([])
   const streamContentRef = useRef('')
 
   const isContextual =
@@ -56,21 +57,50 @@ export function useCosmoAssistantChat({
     sessionContext.surface === 'explore' ||
     sessionContext.surface === 'course'
 
+  const prefetchKey = useMemo(
+    () =>
+      [
+        sessionContext.surface,
+        sessionContext.lessonId ?? '',
+        sessionContext.moduleId ?? '',
+        sessionContext.activeSectionId ?? '',
+        sessionContext.planet ?? '',
+        sessionContext.narrativeKey ?? '',
+        sessionContext.coachTrigger ?? '',
+        sessionContext.quizLock ?? '',
+        sessionContext.recallQuizActive ? '1' : '0',
+        learnerSnapshot?.recentLessonIds?.[0] ?? '',
+        learnerSnapshot?.depthSuggestion?.suggestedDepth ?? '',
+      ].join('|'),
+    [
+      sessionContext.surface,
+      sessionContext.lessonId,
+      sessionContext.moduleId,
+      sessionContext.activeSectionId,
+      sessionContext.planet,
+      sessionContext.narrativeKey,
+      sessionContext.coachTrigger,
+      sessionContext.quizLock,
+      sessionContext.recallQuizActive,
+      learnerSnapshot?.recentLessonIds,
+      learnerSnapshot?.depthSuggestion?.suggestedDepth,
+    ],
+  )
+
+  const sessionContextRef = useRef(sessionContext)
+  const learnerSnapshotRef = useRef(learnerSnapshot)
+  sessionContextRef.current = sessionContext
+  learnerSnapshotRef.current = learnerSnapshot
+
   useEffect(() => {
-    if (user?.id && isContextual) {
-      void prefetchAgentContext(sessionContext, learnerSnapshot)
-    }
-  }, [
-    user?.id,
-    isContextual,
-    sessionContext.lessonId,
-    sessionContext.moduleId,
-    sessionContext.planet,
-    sessionContext.activeSectionId,
-    sessionContext.coachTrigger,
-    sessionContext.narrativeKey,
-    learnerSnapshot,
-  ])
+    if (!user?.id || !isContextual) return
+    const timer = window.setTimeout(() => {
+      const ctx = sessionContextRef.current
+      if (ctx.quizLock || ctx.recallQuizActive) return
+      void prefetchAgentContext(ctx, learnerSnapshotRef.current)
+    }, 450)
+    return () => window.clearTimeout(timer)
+  }, [user?.id, isContextual, prefetchKey])
 
   useEffect(() => {
     const sug = learnerSnapshot?.depthSuggestion
@@ -88,9 +118,9 @@ export function useCosmoAssistantChat({
         ? suggestions
         : sessionContext.surface === 'explore'
           ? [
+              'Di chuyển tới Venus',
               'Giải thích thời kỳ đang xem',
               'Có hóa thạch nào đặc biệt không?',
-              'Mở timeline Cambrian',
             ]
           : sessionContext.lessonTitle
             ? [
@@ -106,6 +136,19 @@ export function useCosmoAssistantChat({
 
   const runAction = useCallback(
     (action: TutorAction, onClose?: () => void) => {
+      if (action.type === 'focus_showcase_entity') {
+        executeAgentClientAction(
+          router,
+          {
+            type: 'focus_showcase_entity',
+            entityId: action.entityId,
+            entityName: action.entityName ?? null,
+            openHistory: action.openHistory,
+          },
+          { onNavigate: onClose },
+        )
+        return
+      }
       if (action.type === 'go_to_explore') {
         router.push(`/explore?stage=${action.stageTime}`)
         onClose?.()
@@ -162,6 +205,7 @@ export function useCosmoAssistantChat({
       setInput('')
       setError(null)
       setFallbackChips([])
+      setCommunityThreads([])
       const userContent = trimmed || 'Giải thích hình ảnh này.'
       const userMsg: CosmoChatMessage = {
         id: `u-${Date.now()}`,
@@ -203,7 +247,11 @@ export function useCosmoAssistantChat({
 
         if (!res.success) {
           setMessages((m) => m.filter((msg) => msg.id !== assistantId))
-          setError(res.error || 'Không nhận được phản hồi.')
+          if (res.code === 'AGENT_QUIZ_LOCKED') {
+            setError('Trợ lý AI tắt trong lúc làm kiểm tra. Đóng bài kiểm tra để tiếp tục.')
+          } else {
+            setError(res.error || 'Không nhận được phản hồi.')
+          }
           return false
         }
 
@@ -237,6 +285,10 @@ export function useCosmoAssistantChat({
           if (!tr.ok || !tr.clientAction) continue
           if (tr.clientAction.type === 'show_related_lessons') {
             setRelatedLessons(tr.clientAction.lessons)
+            continue
+          }
+          if (tr.clientAction.type === 'suggest_community_thread') {
+            setCommunityThreads(tr.clientAction.threads)
             continue
           }
           if (tr.clientAction.type === 'suggest_depth_switch') {
@@ -330,6 +382,7 @@ export function useCosmoAssistantChat({
     depthBanner,
     setDepthBanner,
     relatedLessons,
+    communityThreads,
     defaultSuggestions,
     send,
     explainActiveSection,

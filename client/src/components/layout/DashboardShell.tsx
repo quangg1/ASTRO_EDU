@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
-  LayoutDashboard, BookMarked, BookOpen, Map, Globe,
+  LayoutDashboard, BookMarked, BookOpen, Map, Globe, Receipt,
   MessageCircle, Search, Gem, ShoppingBag, Video,
   Shield, Newspaper, Settings, UserPlus,
 } from 'lucide-react'
@@ -109,6 +109,7 @@ function NavSection({ title, items, pathname }: { title: string; items: NavItem[
 const learnItems: NavItem[] = [
   { href: '/dashboard', label: 'Tổng quan', icon: LayoutDashboard },
   { href: '/my-courses', label: 'Khóa của tôi', icon: BookMarked },
+  { href: '/my-orders', label: 'Thanh toán', icon: Receipt },
   { href: '/courses', label: 'Khóa học', icon: BookOpen },
   { href: '/tutorial', label: 'Lộ trình', icon: Map },
   { href: '/explore', label: 'Khám phá 3D', icon: Globe },

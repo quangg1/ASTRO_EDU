@@ -77,6 +77,14 @@ function mapContextForAi(tier, agentContext, sessionContext, coursePayload) {
     spaced_review_due: agentContext?.spacedReviewDue?.dueLessons?.slice(0, 3) ?? null,
     depth_suggestion: agentContext?.depthSuggestion ?? null,
     entity_id: sessionContext?.entityId ?? null,
+    active_cohort: agentContext?.activeCohort ?? null,
+    concept_graph: agentContext?.conceptGraphCtx ?? null,
+    learner_economy: agentContext?.learnerEconomy ?? null,
+    studio_assist: agentContext?.studioAssist ?? null,
+    deep_history_confidence: agentContext?.narrativeContext?.confidence ?? null,
+    deep_history_disclaimer: agentContext?.narrativeContext?.confidenceDisclaimerVi ?? null,
+    earth_fossil_context: agentContext?.earthFossilContext ?? null,
+    showcase_context: agentContext?.showcaseContext ?? null,
   };
 
   let learning_path = null;

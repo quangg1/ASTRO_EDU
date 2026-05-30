@@ -7,7 +7,14 @@ export default async function CourseSlugPage({
   searchParams,
 }: {
   params: { slug: string }
-  searchParams?: { lesson?: string; enrolled?: string; checkout?: string; cohortPlaced?: string; preview?: string }
+  searchParams?: {
+    lesson?: string
+    enrolled?: string
+    owned?: string
+    checkout?: string
+    cohortPlaced?: string
+    preview?: string
+  }
 }) {
   const { slug } = params
 
@@ -30,6 +37,7 @@ export default async function CourseSlugPage({
       initialCourse={outline ?? undefined}
       previewBootstrap={preview && !outline}
       enrolledFlash={searchParams?.enrolled === '1'}
+      ownedFlash={searchParams?.owned === '1'}
       cohortPlacedFlash={searchParams?.cohortPlaced === '1'}
     />
   )

@@ -30,7 +30,11 @@ import {
   fetchTaxonomyRegistryEditor,
   type TaxonomyRegistry,
 } from '@/features/concepts/public'
-import type { Lesson } from '@/features/courses/public'
+import {
+  buildLessonSectionTocNavItems,
+  groupLessonSectionTocItems,
+  type Lesson,
+} from '@/features/courses/public'
 import { useAuthStore } from '@/features/auth/public'
 import {
   BookOpen,
@@ -380,31 +384,13 @@ function LearningPathLessonEditor({
     }),
     [activeLesson],
   )
-  const sectionOutline = useMemo(
-    () =>
-      sections.map((sec, idx) => ({
-        idx,
-        id: `lp-studio-block-${idx}`,
-        title: sec.title?.trim() || `Block ${idx + 1}`,
-        type: sec.type,
-        level: sec.sectionLevel ?? 'main',
-      })),
-    [sections],
-  )
   const tocGroups = useMemo(() => {
-    type OutlineItem = (typeof sectionOutline)[number]
-    const groups: Array<{ parent: OutlineItem; children: OutlineItem[] }> = []
-    let lastParent = -1
-    for (const item of sectionOutline) {
-      if (item.level === 'sub' && lastParent >= 0) {
-        groups[lastParent].children.push(item)
-      } else {
-        groups.push({ parent: item, children: [] })
-        lastParent = groups.length - 1
-      }
-    }
-    return groups
-  }, [sectionOutline])
+    const nav = buildLessonSectionTocNavItems(sections, {
+      idPrefix: 'lp-studio-block',
+      fallbackStyle: 'muc',
+    })
+    return groupLessonSectionTocItems(nav)
+  }, [sections])
 
   const moveSection = (from: number, to: number) => {
     if (to < 0 || to >= sections.length || from === to) return

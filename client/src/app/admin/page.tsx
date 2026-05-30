@@ -16,7 +16,8 @@ import {
   YAxis,
 } from 'recharts'
 import { useAuthStore } from '@/features/auth/public'
-import { canManagePlatform } from '@/lib/roles'
+import { canAccessAdmin, canAccessAdminPath } from '@/lib/roles'
+import { labelAccountStatusVi, labelUserRoleVi } from '@/features/admin/lib/adminLabelsVi'
 import {
   fetchAdminUsers,
   deleteUserPermanently,
@@ -24,6 +25,7 @@ import {
   updateUserStatus,
   fetchAdminTeacherApplications,
   reviewTeacherApplication,
+  markTeacherApplicationCvReviewed,
   fetchAdminAnalyticsCohort,
   fetchAdminAnalyticsFunnel,
   fetchAdminLearningPathAnalytics,
@@ -42,13 +44,21 @@ import {
   type AnalyticsRange,
 } from '@/features/admin/public'
 import { fetchCourses } from '@/features/courses/public'
-import { fetchAdminOrderStats, type AdminOrderStats, type Order } from '@/features/payment/public'
+import { fetchAdminOrderStats, type AdminOrder, type AdminOrderStats } from '@/features/payment/public'
+import { formatOrderAmount } from '@/lib/money'
+import {
+  formatOrderDateVi,
+  orderKindLabelVi,
+  orderStatusLabelVi,
+  orderStatusTone,
+} from '@/features/payment/lib/orderLabels'
 import { trackEvent } from '@/lib/analytics/tracking'
 import { viText } from '@/messages/vi'
 import { Badge, Card, Tabs, Tab, TabList, Select } from '@/design-system'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Spinner } from '@/components/ui/Spinner'
+import { AdminTeacherApplicationsPanel } from '@/components/admin/AdminTeacherApplicationsPanel'
 
 export default function AdminPage() {
   const router = useRouter()
@@ -56,7 +66,7 @@ export default function AdminPage() {
   const [users, setUsers] = useState<AdminUser[]>([])
   const [courseCount, setCourseCount] = useState<number | null>(null)
   const [orderStats, setOrderStats] = useState<AdminOrderStats | null>(null)
-  const [recentOrders, setRecentOrders] = useState<Order[]>([])
+  const [recentOrders, setRecentOrders] = useState<AdminOrder[]>([])
   const [analyticsRange, setAnalyticsRange] = useState<AnalyticsRange>('30d')
   const [analyticsTab, setAnalyticsTab] = useState<
     'overview' | 'funnel' | 'retention' | 'cohort' | 'learning-path' | 'agent'
@@ -93,12 +103,12 @@ export default function AdminPage() {
 
   useEffect(() => {
     if (checked && !user) router.replace('/login?redirect=/admin')
-    if (checked && user && !canManagePlatform(user)) router.replace('/')
+    if (checked && user && !canAccessAdmin(user)) router.replace('/')
   }, [checked, user, router])
 
   useEffect(() => {
     if (!user) return
-    if (!canManagePlatform(user)) return
+    if (!canAccessAdminPath(user, '/admin')) return
     setLoading(true)
     void Promise.allSettled([
       fetchAdminUsers(),
@@ -166,7 +176,7 @@ export default function AdminPage() {
   }, [user, analyticsRange, learningPathFilter])
 
   useEffect(() => {
-    if (!user || !canManagePlatform(user)) return
+    if (!user || !canAccessAdminPath(user, '/admin')) return
     setTeacherAppLoading(true)
     fetchAdminTeacherApplications(teacherAppFilter)
       .then((res) => {
@@ -177,7 +187,7 @@ export default function AdminPage() {
   }, [user, teacherAppFilter])
 
   useEffect(() => {
-    if (!user || !canManagePlatform(user)) return
+    if (!user || !canAccessAdminPath(user, '/admin')) return
     if (analyticsTab !== 'agent') return
     setAgentAnalyticsLoading(true)
     void fetchAdminAgentAnalytics(analyticsRange)
@@ -189,7 +199,7 @@ export default function AdminPage() {
   }, [user, analyticsTab, analyticsRange])
 
   useEffect(() => {
-    if (!user || !canManagePlatform(user)) return
+    if (!user || !canAccessAdminPath(user, '/admin')) return
     trackEvent('admin_dashboard_viewed', { range: analyticsRange })
   }, [user, analyticsRange])
 
@@ -197,7 +207,7 @@ export default function AdminPage() {
     return <div className="min-h-screen bg-black pt-20 px-4 text-gray-400">Đang kiểm tra phiên đăng nhập...</div>
   }
 
-  if (!canManagePlatform(user)) {
+  if (!canAccessAdminPath(user, '/admin')) {
     return null
   }
 
@@ -220,9 +230,31 @@ export default function AdminPage() {
     }
   }
 
-  const handleReviewTeacherApp = async (app: TeacherApplicationWithUser, action: 'approve' | 'reject') => {
-    const note =
-      action === 'reject' ? window.prompt('Ghi chú từ chối (tuỳ chọn, hiển thị cho người nộp đơn):', '') ?? '' : ''
+  const handleMarkCvReviewed = async (app: TeacherApplicationWithUser) => {
+    setReviewingAppId(app.id)
+    setMessage(null)
+    setError('')
+    const res = await markTeacherApplicationCvReviewed(app.id)
+    setReviewingAppId(null)
+    if (res.success && res.application) {
+      setTeacherApps((prev) => prev.map((a) => (a.id === app.id ? { ...a, ...res.application! } : a)))
+      setMessage('success')
+    } else {
+      setError(res.error || 'Xác nhận CV thất bại')
+      setMessage('error')
+    }
+  }
+
+  const handleReviewTeacherApp = async (
+    app: TeacherApplicationWithUser,
+    action: 'approve' | 'reject',
+    note = '',
+  ) => {
+    if (action === 'approve' && !app.cvReviewedAt) {
+      setError('Cần xác nhận đã xem CV trước khi duyệt.')
+      setMessage('error')
+      return
+    }
     setReviewingAppId(app.id)
     setMessage(null)
     setError('')
@@ -309,14 +341,13 @@ export default function AdminPage() {
   const visibleUsers = users.filter((u) => (userStatusFilter === 'all' ? true : u.accountStatus === userStatusFilter))
 
   return (
-    <div className="min-h-screen bg-black pt-16 px-4 pb-12">
-      <main className="max-w-5xl mx-auto">
+    <div className="max-w-5xl mx-auto">
         <PageHeader
           title={viText.admin.title}
-          description="Người dùng, thanh toán, analytics và cấu hình hệ thống. Kiểm duyệt diễn đàn thuộc moderator; Studio thường ngày thuộc giáo viên."
+          description="Analytics, duyệt GV và liên kết tới các module quản trị."
           action={
-            <Link href="/" className="text-sm text-cyan-400 hover:text-cyan-300">
-              ← Trang chủ
+            <Link href="/admin/users" className="text-sm text-cyan-400 hover:text-cyan-300">
+              Quản lý user →
             </Link>
           }
         />
@@ -345,7 +376,7 @@ export default function AdminPage() {
           <Card className="p-4 border-violet-500/20 bg-violet-500/5">
             <p className="text-xs font-medium text-violet-200/90 uppercase tracking-wide">Moderator</p>
             <p className="text-sm text-slate-400 mt-2 leading-relaxed">
-              Hàng đợi báo cáo, cảnh báo, ẩn/xóa — chỉ diễn đàn. Gán role <code className="text-violet-300">moderator</code> trong bảng người dùng bên dưới.
+              Hàng đợi báo cáo, cảnh báo, ẩn/xóa — chỉ diễn đàn. Gán vai trò {labelUserRoleVi('moderator')} trong bảng người dùng bên dưới.
             </p>
             <p className="mt-3 text-xs text-slate-500">Admin không có /dashboard/moderate — dùng override trên bài viết.</p>
           </Card>
@@ -367,10 +398,22 @@ export default function AdminPage() {
             </p>
           </Card>
           <Card className="p-4">
+            <p className="text-xs text-gray-500 uppercase tracking-wider">Chờ thanh toán</p>
+            <p className="text-2xl font-bold text-amber-300 mt-1">
+              {orderStats?.pendingOrders ?? '...'}
+            </p>
+          </Card>
+          <Card className="p-4">
             <p className="text-xs text-gray-500 uppercase tracking-wider">{viText.admin.revenue} (VND)</p>
             <p className="text-2xl font-bold text-emerald-400 mt-1">
-              {orderStats ? orderStats.totalRevenue.toLocaleString('en-US') : '...'}
+              {orderStats ? orderStats.totalRevenue.toLocaleString('vi-VN') : '...'}
+              {orderStats ? ' ₫' : ''}
             </p>
+            {orderStats?.usdToVndRate != null && (
+              <p className="text-[10px] text-gray-500 mt-1">
+                Đã quy đổi USD × {orderStats.usdToVndRate.toLocaleString('vi-VN')} — đơn vẫn hiển thị USD/VND gốc.
+              </p>
+            )}
           </Card>
           <Link href="/studio" className="rounded-xl border border-cyan-500/30 bg-cyan-500/10 p-4 hover:bg-cyan-500/20 transition-colors">
             <div className="flex items-center justify-between gap-2">
@@ -839,7 +882,7 @@ export default function AdminPage() {
                       Đơn hoàn tất: <span className="text-emerald-300">{analytics.kpis.completedOrders}</span>
                     </p>
                     <p className="text-sm text-gray-300">
-                      Doanh thu: <span className="text-emerald-300">{analytics.kpis.revenue.toLocaleString('en-US')} VND</span>
+                      Doanh thu: <span className="text-emerald-300">{analytics.kpis.revenue.toLocaleString('vi-VN')} ₫</span>
                     </p>
                     <p className="text-sm text-gray-300">
                       Bài viết cộng đồng: <span className="text-cyan-300">{analytics.kpis.communityPosts}</span>
@@ -854,117 +897,20 @@ export default function AdminPage() {
           )}
         </section>
 
-        <section className="rounded-2xl border border-white/10 bg-[#0a0f17] overflow-hidden mb-8">
-          <div className="px-4 py-3 border-b border-white/10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-            <h2 className="font-semibold text-white">Đơn xin quyền giảng viên</h2>
-            <Select
-              value={teacherAppFilter}
-              onChange={(e) => setTeacherAppFilter(e.target.value as typeof teacherAppFilter)}
-              className="text-xs w-auto"
-            >
-              <option value="pending">Chờ duyệt</option>
-              <option value="approved">Đã duyệt</option>
-              <option value="rejected">Đã từ chối</option>
-              <option value="all">Tất cả</option>
-            </Select>
-          </div>
-          {teacherAppLoading ? (
-            <div className="p-8 text-center text-gray-500">
-              <Spinner />
-            </div>
-          ) : teacherApps.length === 0 ? (
-            <div className="p-8">
-              <EmptyState title="Không có đơn" description="Thay đổi bộ lọc hoặc quay lại sau." />
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left">
-                <thead>
-                  <tr className="border-b border-white/10">
-                    <th className="px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Người nộp</th>
-                    <th className="px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Email</th>
-                    <th className="px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Trạng thái</th>
-                    <th className="px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Giới thiệu</th>
-                    <th className="px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Ngày gửi</th>
-                    <th className="px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Thao tác</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {teacherApps.map((app) => (
-                    <tr key={app.id} className="border-b border-white/5 hover:bg-white/5 align-top">
-                      <td className="px-4 py-3 text-sm text-white">{app.user?.displayName || '—'}</td>
-                      <td className="px-4 py-3 text-sm text-gray-300">{app.user?.email || '—'}</td>
-                      <td className="px-4 py-3">
-                        <span
-                          className={`text-xs px-2 py-0.5 rounded-full ${
-                            app.status === 'pending'
-                              ? 'bg-amber-500/20 text-amber-300'
-                              : app.status === 'approved'
-                                ? 'bg-emerald-500/20 text-emerald-300'
-                                : 'bg-red-500/20 text-red-300'
-                          }`}
-                        >
-                          {app.status}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-xs text-gray-400 max-w-[280px]">
-                        <p className="line-clamp-4 whitespace-pre-wrap">{app.bio}</p>
-                        {app.organization ? <p className="text-gray-500 mt-1">Đơn vị: {app.organization}</p> : null}
-                        {app.status === 'rejected' && app.reviewNote ? (
-                          <p className="text-red-300/90 mt-1">Ghi chú: {app.reviewNote}</p>
-                        ) : null}
-                      </td>
-                      <td className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">
-                        {app.createdAt ? new Date(app.createdAt).toLocaleString('vi-VN') : '—'}
-                      </td>
-                      <td className="px-4 py-3">
-                        {app.status === 'pending' ? (
-                          <div className="flex flex-wrap gap-2">
-                            <button
-                              type="button"
-                              disabled={reviewingAppId === app.id}
-                              onClick={() => handleReviewTeacherApp(app, 'approve')}
-                              className="text-xs rounded-lg px-2 py-1.5 border border-emerald-500/40 bg-emerald-500/15 text-emerald-200 hover:bg-emerald-500/25 disabled:opacity-50"
-                            >
-                              Duyệt
-                            </button>
-                            <button
-                              type="button"
-                              disabled={reviewingAppId === app.id}
-                              onClick={() => handleReviewTeacherApp(app, 'reject')}
-                              className="text-xs rounded-lg px-2 py-1.5 border border-red-500/40 bg-red-500/15 text-red-200 hover:bg-red-500/25 disabled:opacity-50"
-                            >
-                              Từ chối
-                            </button>
-                          </div>
-                        ) : (
-                          <span className="text-xs text-gray-500">—</span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </section>
+        <AdminTeacherApplicationsPanel
+          apps={teacherApps}
+          filter={teacherAppFilter}
+          onFilterChange={setTeacherAppFilter}
+          loading={teacherAppLoading}
+          reviewingAppId={reviewingAppId}
+          onMarkCvReviewed={handleMarkCvReviewed}
+          onReview={handleReviewTeacherApp}
+        />
 
         <section className="rounded-2xl border border-white/10 bg-[#0a0f17] overflow-hidden mb-8">
           <div className="px-4 py-3 border-b border-white/10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
             <h2 className="font-semibold text-white">{viText.admin.users}</h2>
-            <div className="flex flex-wrap items-center gap-2">
-              <Select
-                value={userStatusFilter}
-                onChange={(e) => setUserStatusFilter(e.target.value as 'all' | 'active' | 'deactivated')}
-                className="text-xs w-auto"
-              >
-                <option value="all">Tất cả trạng thái</option>
-                <option value="active">Đang hoạt động</option>
-                <option value="deactivated">Ngừng hoạt động</option>
-              </Select>
-              {message === 'success' && <span className="text-sm text-green-400">{viText.admin.roleUpdated}</span>}
-              {message === 'error' && error && <span className="text-sm text-red-400">{error}</span>}
-            </div>
+            <Link href="/admin/users" className="text-xs text-cyan-400 hover:underline">Trang quản lý đầy đủ →</Link>
           </div>
           {loading ? (
             <div className="p-8 text-center text-gray-500">{viText.common.loading}</div>
@@ -989,7 +935,7 @@ export default function AdminPage() {
                       <td className="px-4 py-3 text-sm text-white">{u.displayName || '-'}</td>
                       <td className="px-4 py-3">
                         <span className={`text-xs px-2 py-0.5 rounded-full ${u.accountStatus === 'active' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-red-500/20 text-red-300'}`}>
-                          {u.accountStatus === 'active' ? 'active' : 'deactivated'}
+                          {labelAccountStatusVi(u.accountStatus)}
                         </span>
                       </td>
                       <td className="px-4 py-3">
@@ -1004,7 +950,7 @@ export default function AdminPage() {
                                   : 'bg-white/10 text-gray-400'
                           }`}
                         >
-                          {u.role}
+                          {labelUserRoleVi(u.role)}
                         </span>
                       </td>
                       <td className="px-4 py-3">
@@ -1014,10 +960,10 @@ export default function AdminPage() {
                           disabled={updatingId === u.id || u.id === user?.id}
                           className="text-xs w-auto"
                         >
-                          <option value="student">student</option>
-                          <option value="teacher">teacher</option>
-                          <option value="moderator">moderator</option>
-                          <option value="admin">admin</option>
+                          <option value="student">{labelUserRoleVi('student')}</option>
+                          <option value="teacher">{labelUserRoleVi('teacher')}</option>
+                          <option value="moderator">{labelUserRoleVi('moderator')}</option>
+                          <option value="admin">{labelUserRoleVi('admin')}</option>
                         </Select>
                         {u.id === user?.id && <span className="ml-1 text-xs text-gray-500">(bạn)</span>}
                       </td>
@@ -1058,8 +1004,9 @@ export default function AdminPage() {
         </section>
 
         <section className="rounded-2xl border border-white/10 bg-[#0a0f17] overflow-hidden">
-          <div className="px-4 py-3 border-b border-white/10 flex items-center justify-between">
+          <div className="px-4 py-3 border-b border-white/10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
             <h2 className="font-semibold text-white">Đơn hàng gần đây</h2>
+            <Link href="/admin/orders" className="text-xs text-cyan-400 hover:underline">Quản lý đơn hàng →</Link>
           </div>
           {loading ? (
             <div className="p-8 text-center text-gray-500">{viText.common.loading}</div>
@@ -1067,48 +1014,68 @@ export default function AdminPage() {
             <div className="p-8 text-center text-gray-500">{viText.admin.noOrders}</div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm">
+              <table className="w-full text-left text-sm min-w-[960px]">
                 <thead>
                   <tr className="border-b border-white/10 text-xs text-gray-500 uppercase">
+                    <th className="px-4 py-3">Người mua</th>
                     <th className="px-4 py-3">Khóa học</th>
+                    <th className="px-4 py-3">Loại</th>
+                    <th className="px-4 py-3">Mã đơn</th>
                     <th className="px-4 py-3">Số tiền</th>
                     <th className="px-4 py-3">Trạng thái</th>
-                    <th className="px-4 py-3">Thời gian tạo</th>
+                    <th className="px-4 py-3">Tạo lúc</th>
+                    <th className="px-4 py-3">Hết hạn</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {recentOrders.map((o) => (
-                    <tr key={o._id} className="border-b border-white/5 last:border-0">
-                      <td className="px-4 py-3 text-cyan-300">{o.courseSlug}</td>
-                      <td className="px-4 py-3 text-gray-200">
-                        {o.currency === 'USD'
-                          ? `$${o.amount.toFixed(2)}`
-                          : `${o.amount.toLocaleString('en-US')} ₫`}
-                      </td>
-                      <td className="px-4 py-3">
-                        <span
-                          className={`px-2 py-0.5 rounded-full text-xs ${
-                            o.status === 'completed'
-                              ? 'bg-emerald-500/20 text-emerald-300'
-                              : o.status === 'pending'
-                              ? 'bg-amber-500/20 text-amber-300'
-                              : 'bg-red-500/20 text-red-300'
-                          }`}
-                        >
-                          {o.status}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-gray-400">
-                        {new Date(o.createdAt).toLocaleString('en-US')}
-                      </td>
-                    </tr>
-                  ))}
+                  {recentOrders.map((o) => {
+                    const tone = orderStatusTone(o.status)
+                    const statusCls =
+                      tone === 'success'
+                        ? 'bg-emerald-500/20 text-emerald-300'
+                        : tone === 'warning'
+                          ? 'bg-amber-500/20 text-amber-300'
+                          : 'bg-red-500/20 text-red-300'
+                    const buyer =
+                      o.buyerName || o.buyerEmail
+                        ? [o.buyerName, o.buyerEmail].filter(Boolean).join(' · ')
+                        : o.userId || '—'
+                    const kind = o.orderKind || (o.cohortId ? 'cohort' : 'catalog')
+
+                    return (
+                      <tr key={o._id} className="border-b border-white/5 last:border-0">
+                        <td className="px-4 py-3 text-gray-200 max-w-[180px]">
+                          <span className="block truncate" title={buyer}>
+                            {buyer}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-cyan-300">{o.courseSlug}</td>
+                        <td className="px-4 py-3 text-gray-400 text-xs">{orderKindLabelVi(kind)}</td>
+                        <td className="px-4 py-3 font-mono text-xs text-gray-400">{o.txnRef}</td>
+                        <td className="px-4 py-3 text-gray-200">
+                          {formatOrderAmount(o.amount, o.currency)}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className={`px-2 py-0.5 rounded-full text-xs ${statusCls}`}>
+                            {orderStatusLabelVi(o.status)}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-gray-400 whitespace-nowrap">
+                          {formatOrderDateVi(o.createdAt)}
+                        </td>
+                        <td className="px-4 py-3 text-gray-400 whitespace-nowrap">
+                          {o.status === 'pending' && o.expiresAt
+                            ? formatOrderDateVi(o.expiresAt)
+                            : '—'}
+                        </td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>
           )}
         </section>
-      </main>
     </div>
   )
 }

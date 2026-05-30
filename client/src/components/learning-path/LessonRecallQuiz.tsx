@@ -3,17 +3,20 @@
 import { useMemo, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { CheckCircle2, ChevronLeft, ChevronRight, Sparkles, XCircle } from 'lucide-react'
-import type { RecallQuestion } from '@/features/learning-path/public'
-import { mcqAnswerIndex, mcqOptionTexts } from '@/shared/types/quizQuestion'
+import type { RecallQuizDeliveryQuestion, RecallQuizSubmitResult } from '@/features/learning-path/api/learningPathApi'
 
 type Props = {
-  questions: RecallQuestion[]
+  questions: RecallQuizDeliveryQuestion[]
   passed: boolean
   onPassed: () => void
-  /** Gọi khi nộp bài nhưng chưa đúng hết (Phase 1 coach). */
   onQuizFailed?: () => void
+  onSubmit: (answers: Record<string, number>) => Promise<RecallQuizSubmitResult>
   variant?: 'card' | 'overlay'
   onContinue?: () => void
+}
+
+function optionTexts(q: RecallQuizDeliveryQuestion): string[] {
+  return (q.options ?? []).map((o) => String(o.text ?? ''))
 }
 
 export function LessonRecallQuiz({
@@ -21,6 +24,7 @@ export function LessonRecallQuiz({
   passed,
   onPassed,
   onQuizFailed,
+  onSubmit,
   variant = 'card',
   onContinue,
 }: Props) {
@@ -28,13 +32,14 @@ export function LessonRecallQuiz({
   const [step, setStep] = useState(0)
   const [answers, setAnswers] = useState<Record<string, number>>({})
   const [phase, setPhase] = useState<'idle' | 'wrong' | 'checking'>('idle')
+  const [submitError, setSubmitError] = useState<string | null>(null)
+  const [graded, setGraded] = useState<Record<string, RecallQuizSubmitResult['perQuestion'][0]>>({})
 
   const total = questions.length
   const current = questions[step]
   const answeredAll = useMemo(() => questions.every((q) => answers[q.id] !== undefined), [questions, answers])
   const currentAnswered = current ? answers[current.id] !== undefined : false
-  const selectedIdx = current ? answers[current.id] : undefined
-  const isSelectedCorrect = current && selectedIdx !== undefined ? selectedIdx === mcqAnswerIndex(current) : false
+  const showGrades = phase === 'wrong'
 
   if (questions.length === 0) return null
 
@@ -80,25 +85,36 @@ export function LessonRecallQuiz({
     )
   }
 
-  const goCheck = () => {
-    if (!answeredAll) return
+  const goCheck = async () => {
+    if (!answeredAll || phase === 'checking') return
+    setSubmitError(null)
     setPhase('checking')
-    const ok = questions.every((q) => answers[q.id] === mcqAnswerIndex(q))
-    window.setTimeout(() => {
-      if (ok) {
+    try {
+      const result = await onSubmit(answers)
+      const byId: Record<string, RecallQuizSubmitResult['perQuestion'][0]> = {}
+      for (const row of result.perQuestion) {
+        byId[row.questionId] = row
+      }
+      setGraded(byId)
+      if (result.passed) {
         onPassed()
         setPhase('idle')
       } else {
         setPhase('wrong')
         onQuizFailed?.()
       }
-    }, 380)
+    } catch (e) {
+      setPhase('idle')
+      setSubmitError(e instanceof Error ? e.message : 'Không nộp được bài kiểm tra')
+    }
   }
 
   const retry = () => {
     setPhase('idle')
     setAnswers({})
     setStep(0)
+    setGraded({})
+    setSubmitError(null)
   }
 
   return (
@@ -123,12 +139,12 @@ export function LessonRecallQuiz({
               </span>
               <div>
                 <h2 className="text-base font-semibold tracking-tight text-ds-text">Kiểm tra nhanh</h2>
-                <p className="text-[11px] text-ds-subtle">Studio · {total} câu · làm tuần tự</p>
+                <p className="text-[11px] text-ds-subtle">Studio · {total} câu · chấm trên máy chủ</p>
               </div>
             </div>
           ) : (
             <p className="w-full text-center text-[11px] font-medium uppercase tracking-[0.14em] text-ds-accent">
-              {total} câu · làm tuần tự
+              {total} câu · chấm trên máy chủ
             </p>
           )}
           <div className={`flex gap-1.5 ${isOverlay ? 'w-full justify-center' : ''}`}>
@@ -142,7 +158,7 @@ export function LessonRecallQuiz({
                   onClick={() => {
                     if (phase === 'checking') return
                     setStep(i)
-                    setPhase('idle')
+                    if (phase === 'wrong') setPhase('idle')
                   }}
                   className={`h-2.5 w-2.5 rounded-full transition-all ${
                     active ? 'w-7 bg-ds-accent shadow-[0_0_10px_rgba(34,211,238,0.5)]' : filled ? 'bg-emerald-500/70' : 'bg-white/15 hover:bg-white/25'
@@ -156,41 +172,20 @@ export function LessonRecallQuiz({
       </div>
 
       <div className={`relative flex-1 px-5 py-5 md:px-8 md:py-6 ${isOverlay ? 'min-h-[240px]' : 'min-h-[280px]'}`}>
-        <AnimatePresence mode="wait">
-          {phase === 'wrong' ? (
-            <motion.div
-              key="wrong"
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -6 }}
-              className="flex flex-col items-center justify-center py-8 text-center"
+        {phase === 'wrong' ? (
+          <div className="mb-4 rounded-xl border border-rose-400/30 bg-rose-500/10 px-4 py-3 text-center text-xs text-rose-100">
+            <p className="font-medium">Chưa đúng hết — xem từng câu và giải thích, rồi làm lại. Trợ lý AI chỉ bật sau khi đóng bài kiểm tra.</p>
+            <button
+              type="button"
+              onClick={retry}
+              className="mt-2 rounded-lg border border-ds-border-strong bg-white/5 px-4 py-1.5 text-sm text-ds-text hover:bg-white/10"
             >
-              <p className="text-rose-300 text-sm font-medium">Chưa đúng hết các câu</p>
-              <p className="mt-2 max-w-sm text-xs text-ds-muted">
-                Xem lại từng ý rồi thử lại — hoặc hỏi trợ lý theo hướng gợi mở (không cần nhớ đáp án ngay).
-              </p>
-              <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
-                <button
-                  type="button"
-                  onClick={retry}
-                  className="rounded-xl border border-ds-border-strong bg-white/5 px-5 py-2.5 text-sm font-medium text-ds-text hover:bg-white/10"
-                >
-                  Làm lại từ đầu
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (typeof window !== 'undefined') {
-                      window.dispatchEvent(new CustomEvent('galaxies:agent-open'))
-                    }
-                  }}
-                  className="rounded-xl border border-violet-400/40 bg-violet-500/15 px-5 py-2.5 text-sm font-medium text-violet-100 hover:bg-violet-500/25"
-                >
-                  Hỏi trợ lý (gợi mở)
-                </button>
-              </div>
-            </motion.div>
-          ) : current ? (
+              Làm lại từ đầu
+            </button>
+          </div>
+        ) : null}
+        <AnimatePresence mode="wait">
+          {current ? (
             <motion.div
               key={current.id}
               initial={{ opacity: 0, x: 24 }}
@@ -204,19 +199,22 @@ export function LessonRecallQuiz({
               </p>
               <h3 className="text-lg md:text-xl font-medium text-slate-100 leading-snug">{current.question}</h3>
               <div className="mt-6 grid gap-3">
-                {mcqOptionTexts(current).map((opt, i) => {
-                  const correctIdx = mcqAnswerIndex(current)
+                {optionTexts(current).map((opt, i) => {
+                  const row = graded[current.id]
+                  const correctIdx = showGrades && row ? row.correctIndex : null
                   const selected = answers[current.id] === i
-                  const showEvaluation = selectedIdx !== undefined && (selected || i === correctIdx)
-                  const isCorrectOption = i === correctIdx
+                  const showEvaluation = showGrades && correctIdx !== null && (selected || i === correctIdx)
+                  const isCorrectOption = correctIdx === i
                   return (
                     <motion.button
                       key={`${current.id}-o-${i}`}
                       type="button"
-                      whileTap={{ scale: 0.985 }}
+                      whileTap={{ scale: phase === 'checking' ? 1 : 0.985 }}
+                      disabled={phase === 'checking'}
                       onClick={() => {
+                        if (phase === 'checking') return
                         setAnswers((prev) => ({ ...prev, [current.id]: i }))
-                        setPhase('idle')
+                        if (phase === 'wrong') setPhase('idle')
                       }}
                       className={`flex w-full items-start gap-3 rounded-2xl border px-4 py-3.5 text-left text-sm transition-colors md:py-4 ${
                         showEvaluation
@@ -247,7 +245,7 @@ export function LessonRecallQuiz({
                       </span>
                       <span className="pt-1 leading-relaxed">
                         {opt}
-                        {showEvaluation ? (
+                        {showEvaluation && row?.explanation ? (
                           <span
                             className={`mt-2 block rounded-lg border px-2.5 py-2 text-xs leading-relaxed ${
                               isCorrectOption
@@ -261,7 +259,7 @@ export function LessonRecallQuiz({
                               {isCorrectOption ? <CheckCircle2 className="h-3.5 w-3.5" /> : selected ? <XCircle className="h-3.5 w-3.5" /> : null}
                               {isCorrectOption ? 'Đúng' : selected ? 'Chưa đúng' : 'Giải thích'}
                             </span>
-                            <span className="block">{current.optionExplanations?.[i] || ''}</span>
+                            <span className="block">{row.explanation}</span>
                           </span>
                         ) : null}
                       </span>
@@ -269,14 +267,10 @@ export function LessonRecallQuiz({
                   )
                 })}
               </div>
-              {selectedIdx !== undefined ? (
-                <p className={`mt-4 text-xs ${isSelectedCorrect ? 'text-emerald-300' : 'text-rose-300'}`}>
-                  {isSelectedCorrect ? 'Bạn đang chọn đáp án đúng cho câu này.' : 'Bạn đang chọn đáp án sai cho câu này.'}
-                </p>
-              ) : null}
             </motion.div>
           ) : null}
         </AnimatePresence>
+        {submitError ? <p className="mt-4 text-center text-xs text-rose-300">{submitError}</p> : null}
       </div>
 
       <div
@@ -307,7 +301,7 @@ export function LessonRecallQuiz({
           <button
             type="button"
             disabled={!answeredAll || phase === 'checking'}
-            onClick={goCheck}
+            onClick={() => void goCheck()}
             className="inline-flex items-center gap-2 rounded-xl border border-violet-400/40 bg-gradient-to-r from-violet-600/90 to-fuchsia-600/70 px-6 py-2 text-sm font-semibold text-white shadow-[0_0_24px_rgba(139,92,246,0.25)] hover:from-violet-500 hover:to-fuchsia-500 disabled:cursor-not-allowed disabled:opacity-35"
           >
             {phase === 'checking' ? 'Đang chấm…' : 'Nộp bài kiểm tra'}

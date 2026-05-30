@@ -5,6 +5,8 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { changePassword, deactivateMyAccount, updateProfile, useAuthStore } from '@/features/auth/public'
 import { canModerate } from '@/lib/roles'
+import { TeacherProfileEditor } from '@/components/profile/TeacherProfileEditor'
+import { useLiveClock } from '@/hooks/useLiveClock'
 
 // ── Design primitives ──────────────────────────────────────────────────────────
 
@@ -109,25 +111,11 @@ export default function ProfilePage() {
   const [showCurrent, setShowCurrent] = useState(false)
   const [showNew, setShowNew] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
-  const [utcTime, setUtcTime] = useState('')
+  const { time: localTime, zoneLabel } = useLiveClock()
 
   const isDirty = user
     ? displayName !== (user.displayName || '') || avatar !== (user.avatar || '')
     : false
-
-  useEffect(() => {
-    const tick = () => {
-      const n = new Date()
-      setUtcTime(
-        [n.getUTCHours(), n.getUTCMinutes(), n.getUTCSeconds()]
-          .map(v => String(v).padStart(2, '0'))
-          .join(':')
-      )
-    }
-    tick()
-    const id = setInterval(tick, 1000)
-    return () => clearInterval(id)
-  }, [])
 
   useEffect(() => {
     if (checked && !user) {
@@ -277,8 +265,8 @@ export default function ProfilePage() {
         <span>AUTH</span>
         <span style={{ margin: '0 10px', color: '#eaf6ff' }}>{(user.provider || 'LOCAL').toUpperCase()}</span>
         <span style={{ marginRight: 10, opacity: 0.4 }}>|</span>
-        <span>UTC</span>
-        <span style={{ marginLeft: 8, color: '#7ee7ff', minWidth: 68 }}>{utcTime}</span>
+        <span>{zoneLabel}</span>
+        <span style={{ marginLeft: 8, color: '#7ee7ff', minWidth: 68 }}>{localTime}</span>
         <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 7, color: '#6dffb0' }}>
           <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#6dffb0', display: 'inline-block', boxShadow: '0 0 6px #6dffb0' }} />
           SESSION LIVE
@@ -352,6 +340,16 @@ export default function ProfilePage() {
             ...chamfer(8),
           }}>
             MY LEARNING
+          </Link>
+
+          <Link href="/my-orders" style={{
+            ...mono, padding: '10px 20px', textDecoration: 'none',
+            background: 'rgba(245,165,36,0.08)', border: '1px solid rgba(245,165,36,0.35)',
+            color: '#f5a524', fontSize: 11, letterSpacing: '0.12em',
+            display: 'inline-flex', alignItems: 'center', gap: 8,
+            ...chamfer(8),
+          }}>
+            THANH TOÁN
           </Link>
 
           {(user.role === 'teacher' || user.role === 'admin') && (
@@ -682,6 +680,22 @@ export default function ProfilePage() {
             </div>
           )}
         </div>
+
+        {user.role === 'teacher' ? (
+          <div style={{ ...card, marginBottom: 16 }}>
+            <Brackets s={12} o={9} />
+            <div style={{ display: 'flex', alignItems: 'center', marginBottom: 16 }}>
+              <span style={sectionNum('T')}>T</span>
+              <h2 style={{ ...grotesk, margin: 0, fontSize: 18, fontWeight: 600, color: '#eaf6ff' }}>
+                Hồ sơ giáo viên
+              </h2>
+            </div>
+            <p style={{ ...mono, fontSize: 10, color: '#5c6886', letterSpacing: '0.1em', marginBottom: 12 }}>
+              Hiển thị công khai trên trang khóa học — sinh viên dùng để xác minh giảng viên.
+            </p>
+            <TeacherProfileEditor />
+          </div>
+        ) : null}
 
         {/* ── 03 Danger zone ── */}
         <div style={{

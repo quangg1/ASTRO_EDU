@@ -10,6 +10,11 @@ const cohortSchema = new mongoose.Schema({
   status: { type: String, enum: ['draft', 'open', 'closed'], default: 'draft', index: true },
   inviteCode: { type: String, default: null, index: true },
   teacherId: { type: String, default: null, index: true },
+  /** null = dùng course.cohortPrice hoặc course.price */
+  price: { type: Number, default: null },
+  currency: { type: String, enum: ['VND', 'USD'], default: null },
+  /** moduleId → delivery week (1-based) for this cohort */
+  moduleWeekMap: { type: Map, of: Number, default: undefined },
 }, { timestamps: true });
 
 cohortSchema.index({ courseId: 1, slug: 1 }, { unique: true });

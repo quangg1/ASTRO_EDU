@@ -8,10 +8,8 @@ const {
   defaultQuizSettings,
   sanitizeQuestionForClient,
   findLesson,
-  assertCatalogAccess,
-  assertCohortAccess,
   assertAttemptMatchesRoute,
-  assertQuizWindow,
+  assertQuizDeliveryAccess,
   countFinishedAttempts,
   gradeAnswers,
   getActiveAttempt,
@@ -63,18 +61,26 @@ async function resolveCohort(cohortId, course) {
   return cohort;
 }
 
+async function ensureQuizDeliveryAccess(req, course, lesson) {
+  const cohortId = parseCohortId(req);
+  const cohort = cohortId ? await resolveCohort(cohortId, course) : null;
+  await assertQuizDeliveryAccess({
+    course,
+    lesson,
+    cohortId: cohort?._id || null,
+    userId: req.userId,
+    userRole: req.userRole,
+    CohortActivitySchedule,
+  });
+  return cohort;
+}
+
 /** GET session — questions without answers */
 examRouter.get('/session', authMiddleware, async (req, res) => {
   try {
     const cohortId = parseCohortId(req);
     const { course, lesson, questions } = await loadCourseAndLesson(req.params.slug, req.params.lessonSlug, req);
-    const cohort = await resolveCohort(cohortId, course);
-    if (cohort) {
-      await assertCohortAccess({ cohortId: cohort._id, userId: req.userId, roles: [req.userRole] });
-    } else {
-      await assertCatalogAccess({ course, userId: req.userId });
-    }
-    await assertQuizWindow({ course, lesson, cohortId: cohort?._id, CohortActivitySchedule });
+    const cohort = await ensureQuizDeliveryAccess(req, course, lesson);
 
     const settings = defaultQuizSettings(lesson.quizSettings);
     const shuffleSeed = `${req.userId}:${lesson.slug}:${cohort?._id || 'catalog'}`;
@@ -112,9 +118,7 @@ examRouter.get('/attempts/active', authMiddleware, async (req, res) => {
   try {
     const cohortId = parseCohortId(req);
     const { course, lesson, questions } = await loadCourseAndLesson(req.params.slug, req.params.lessonSlug, req);
-    const cohort = await resolveCohort(cohortId, course);
-    if (cohort) await assertCohortAccess({ cohortId: cohort._id, userId: req.userId, roles: [req.userRole] });
-    else await assertCatalogAccess({ course, userId: req.userId });
+    const cohort = await ensureQuizDeliveryAccess(req, course, lesson);
 
     let attempt = await getActiveAttempt({
       userId: req.userId,
@@ -149,10 +153,7 @@ examRouter.post('/attempts', authMiddleware, async (req, res) => {
   try {
     const cohortId = parseCohortId(req);
     const { course, lesson, questions } = await loadCourseAndLesson(req.params.slug, req.params.lessonSlug, req);
-    const cohort = await resolveCohort(cohortId, course);
-    if (cohort) await assertCohortAccess({ cohortId: cohort._id, userId: req.userId, roles: [req.userRole] });
-    else await assertCatalogAccess({ course, userId: req.userId });
-    await assertQuizWindow({ course, lesson, cohortId: cohort?._id, CohortActivitySchedule });
+    const cohort = await ensureQuizDeliveryAccess(req, course, lesson);
 
     const settings = defaultQuizSettings(lesson.quizSettings);
     const existing = await getActiveAttempt({
@@ -223,7 +224,8 @@ examRouter.post('/attempts', authMiddleware, async (req, res) => {
 examRouter.patch('/attempts/:attemptId/checkpoint', authMiddleware, async (req, res) => {
   try {
     const cohortId = parseCohortId(req);
-    const { course } = await loadCourseAndLesson(req.params.slug, req.params.lessonSlug, req);
+    const { course, lesson } = await loadCourseAndLesson(req.params.slug, req.params.lessonSlug, req);
+    await ensureQuizDeliveryAccess(req, course, lesson);
     const { answers, revision } = req.body || {};
     const attempt = await QuizAttempt.findById(req.params.attemptId);
     if (!attempt || attempt.userId !== req.userId) {
@@ -254,6 +256,7 @@ examRouter.post('/attempts/:attemptId/submit', authMiddleware, async (req, res) 
     const cohortId = parseCohortId(req);
     const { answers } = req.body || {};
     const { course, lesson, questions } = await loadCourseAndLesson(req.params.slug, req.params.lessonSlug, req);
+    await ensureQuizDeliveryAccess(req, course, lesson);
     const attempt = await QuizAttempt.findById(req.params.attemptId);
     if (!attempt || attempt.userId !== req.userId) {
       return res.status(404).json({ success: false, error: 'Không tìm thấy lượt làm bài' });
@@ -308,6 +311,7 @@ examRouter.post('/attempts/:attemptId/confirm-question', authMiddleware, async (
       return res.status(400).json({ success: false, error: 'Thiếu questionId' });
     }
     const { course, lesson, questions } = await loadCourseAndLesson(req.params.slug, req.params.lessonSlug, req);
+    await ensureQuizDeliveryAccess(req, course, lesson);
     const settings = defaultQuizSettings(lesson.quizSettings);
     if (settings.revealMode !== 'after_each_question') {
       return res.status(400).json({ success: false, error: 'Chế độ không hỗ trợ xác nhận từng câu' });

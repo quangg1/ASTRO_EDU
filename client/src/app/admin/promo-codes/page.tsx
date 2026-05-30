@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useAuthStore } from '@/features/auth/public'
-import { canManagePlatform } from '@/lib/roles'
+import { canAccessAdmin, canAccessAdminPath } from '@/lib/roles'
 import {
   createAdminPromoCode,
   deleteAdminPromoCode,
@@ -83,7 +83,11 @@ export default function AdminPromoCodesPage() {
 
   useEffect(() => {
     if (!checked) return
-    if (!user || !canManagePlatform(user)) {
+    if (!user) {
+      router.replace('/login?redirect=/admin/promo-codes')
+      return
+    }
+    if (!canAccessAdminPath(user, '/admin/promo-codes')) {
       router.replace('/')
       return
     }

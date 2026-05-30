@@ -21,15 +21,13 @@ from agent_tools import (
     tools_for_context,
     validate_and_normalize_tool_calls,
 )
+from llm_providers import build_provider_chain, provider_chain_status, should_fallback_to_next_provider
 from rag import reload_index, retrieve
 from security import REFUSAL_MESSAGE_VI, is_request_blocked
 
 # Đọc services/ai/.env (file này nằm trong .gitignore; không commit secret).
 load_dotenv(Path(__file__).resolve().parent / ".env")
 
-GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "").strip()
-GROQ_BASE_URL = os.environ.get("GROQ_BASE_URL", "https://api.groq.com/openai/v1").rstrip("/")
-GROQ_MODEL = os.environ.get("GROQ_MODEL", "llama-3.3-70b-versatile").strip() or "llama-3.3-70b-versatile"
 QUIZ_FAST_MODE = os.environ.get("QUIZ_FAST_MODE", "1") == "1"
 QUIZ_MIN_QUESTIONS = max(3, min(5, int(os.environ.get("QUIZ_MIN_QUESTIONS", "3") or "3")))
 QUIZ_TARGET_QUESTIONS = max(QUIZ_MIN_QUESTIONS, min(5, int(os.environ.get("QUIZ_TARGET_QUESTIONS", "4") or "4")))
@@ -96,9 +94,20 @@ Khi người học vừa trượt quiz ôn tập: coach Socratic — hỏi gợi
 
 
 def build_explore_system() -> str:
-    base = SYSTEM_GENERAL + "\n\nNgười dùng đang ở màn Khám phá 3D / timeline."
+    base = (
+        SYSTEM_GENERAL
+        + "\n\nNgười dùng đang ở màn Khám phá 3D / timeline."
+        + " Khi có danh sách hóa thạch từ CSDL trong ngữ cảnh, chỉ nhắc tên loài cụ thể trong danh sách đó."
+        + " Khi user muốn di chuyển/xem hành tinh hoặc vệ tinh trên quỹ đạo (vd. Venus, Europa),"
+        + " gọi focus_showcase_entity với planet_name hoặc entity_name/entity_id từ showcase_context."
+        + " Timeline Trái Đất: go_to_explore(stage_time_ma). Liệt kê entity theo hành tinh từ showcase_context."
+    )
     if USE_AGENT_TOOLS:
-        return base + "\nTool: navigate_to_narrative(planet, stage_time_ma), go_to_explore — khi cần điều hướng timeline."
+        return (
+            base
+            + "\nTool: focus_showcase_entity(planet_name | entity_name | entity_id),"
+            " navigate_to_narrative / go_to_explore(stage_time_ma) — timeline Ma."
+        )
     return base
 
 
@@ -122,6 +131,10 @@ def augment_system_with_agent_state(system: str, state: "AgentStateBody | None")
         parts.append(f"Query URL: {state.search}")
     if state.route_label:
         parts.append(f"Màn hình: {state.route_label}")
+    if state.planet:
+        parts.append(f"Hành tinh / khung khám phá: {state.planet}")
+    if state.stage_time_ma is not None:
+        parts.append(f"Thời điểm timeline: ~{state.stage_time_ma} triệu năm trước (Ma)")
     if state.lesson_id:
         parts.append(f"Bài học: {state.lesson_title or state.lesson_id}")
     active = getattr(state, "active_section", None)
@@ -136,6 +149,78 @@ def augment_system_with_agent_state(system: str, state: "AgentStateBody | None")
         beat = narrative.get("beat_title") or narrative.get("entity_id")
         summary = narrative.get("beat_summary") or ""
         parts.append(f"Khám phá / narrative: {beat}" + (f" — {summary[:200]}" if summary else ""))
+        conf = narrative.get("confidence")
+        if conf:
+            parts.append(f"Độ tin cậy khoa học (beat): {conf}")
+        disclaimer = narrative.get("confidence_disclaimer_vi") or narrative.get(
+            "confidenceDisclaimerVi"
+        )
+        if isinstance(disclaimer, str) and disclaimer.strip():
+            parts.append(disclaimer.strip()[:240])
+    deep_disc = getattr(state, "deep_history_disclaimer", None)
+    if isinstance(deep_disc, str) and deep_disc.strip() and deep_disc not in (parts[-1] if parts else ""):
+        parts.append(deep_disc.strip()[:240])
+    cohort = getattr(state, "active_cohort", None)
+    if isinstance(cohort, dict) and cohort.get("cohort_title"):
+        pending = cohort.get("pending_assignments", cohort.get("pendingAssignments"))
+        deadlines = cohort.get("upcoming_deadlines") or cohort.get("upcomingDeadlines") or []
+        line = f"Lớp cohort: {cohort.get('cohort_title') or cohort.get('cohortTitle')}"
+        if pending:
+            line += f" — {pending} bài tập chưa nộp"
+        if isinstance(deadlines, list) and deadlines:
+            titles = [
+                str(d.get("title") or d.get("lesson_slug") or "")
+                for d in deadlines[:2]
+                if isinstance(d, dict)
+            ]
+            titles = [t for t in titles if t]
+            if titles:
+                line += f"; deadline sắp tới: {', '.join(titles)}"
+        parts.append(line)
+    concept_graph = getattr(state, "concept_graph", None)
+    if isinstance(concept_graph, dict):
+        missing = concept_graph.get("missing_prerequisites") or concept_graph.get(
+            "missingPrerequisites"
+        )
+        if isinstance(missing, list) and missing:
+            labels = [
+                str(m.get("title") or m.get("concept_id") or m.get("conceptId"))
+                for m in missing[:3]
+                if isinstance(m, dict)
+            ]
+            labels = [x for x in labels if x]
+            if labels:
+                parts.append(f"Tiên quyết chưa đủ: {', '.join(labels)}")
+    economy = getattr(state, "learner_economy", None)
+    if isinstance(economy, dict) and (
+        economy.get("learner_tier") or economy.get("learnerTier")
+    ):
+        tier = economy.get("learner_tier") or economy.get("learnerTier") or {}
+        if isinstance(tier, dict) and (tier.get("name_vi") or tier.get("nameVi")):
+            name = tier.get("name_vi") or tier.get("nameVi")
+            emoji = tier.get("emoji") or ""
+            parts.append(f"Hạng học viên: {emoji} {name}".strip())
+        balance = economy.get("gem_balance", economy.get("gemBalance"))
+        if balance is not None:
+            parts.append(f"Số dư gem: {balance}")
+        unlocks = economy.get("nearby_unlocks") or economy.get("nearbyUnlocks")
+        if isinstance(unlocks, list) and unlocks:
+            labels = [
+                str(u.get("label_vi") or u.get("labelVi") or "")
+                for u in unlocks[:2]
+                if isinstance(u, dict)
+            ]
+            labels = [x for x in labels if x]
+            if labels:
+                parts.append(f"Gần đủ gem mở: {', '.join(labels)}")
+    studio = getattr(state, "studio_assist", None)
+    if isinstance(studio, dict) and studio.get("mode"):
+        hints = studio.get("hints") or []
+        title = studio.get("course_title") or studio.get("courseTitle")
+        if title:
+            parts.append(f"Studio — khóa: {title}")
+        if isinstance(hints, list) and hints:
+            parts.append(str(hints[0])[:200])
     spaced = getattr(state, "spaced_review_due", None)
     if isinstance(spaced, list) and spaced:
         titles = [
@@ -150,6 +235,101 @@ def augment_system_with_agent_state(system: str, state: "AgentStateBody | None")
         parts.append(
             f"Gợi ý depth (chờ user xác nhận): {depth_sug.get('suggested_depth')} — {depth_sug.get('reason', '')[:120]}"
         )
+    earth_fossil = getattr(state, "earth_fossil_context", None)
+    if isinstance(earth_fossil, dict):
+        stage_name = earth_fossil.get("stage_name") or earth_fossil.get("stageName")
+        stage_ma = earth_fossil.get("stage_time_ma", earth_fossil.get("stageTimeMa"))
+        if stage_ma is None:
+            stage_ma = state.stage_time_ma
+        period = earth_fossil.get("period")
+        era = earth_fossil.get("era")
+        time_range = earth_fossil.get("time_range") or earth_fossil.get("timeRange") or {}
+        stage_line = "Trái Đất — giai đoạn timeline"
+        if stage_name:
+            stage_line += f": {stage_name}"
+        if stage_ma is not None:
+            stage_line += f" (~{stage_ma} Ma)"
+        if period or era:
+            stage_line += f" [{', '.join(x for x in [era, period] if x)}]"
+        if isinstance(time_range, dict) and time_range.get("maxMa") is not None:
+            stage_line += (
+                f"; cửa sổ hóa thạch CSDL: {time_range.get('minMa')}–{time_range.get('maxMa')} Ma"
+            )
+        total = earth_fossil.get("total_in_db", earth_fossil.get("totalInDb"))
+        if total is not None:
+            stage_line += f"; ~{total} bản ghi trong CSDL"
+        parts.append(stage_line)
+        top_phyla = earth_fossil.get("top_phyla") or earth_fossil.get("topPhyla") or []
+        if isinstance(top_phyla, list) and top_phyla:
+            phyla_labels = []
+            for row in top_phyla[:8]:
+                if not isinstance(row, dict):
+                    continue
+                name = row.get("phylum")
+                if not name:
+                    continue
+                count = row.get("count")
+                phyla_labels.append(f"{name} ({count})" if count is not None else str(name))
+            if phyla_labels:
+                parts.append(f"Ngạnh phổ biến trong CSDL: {', '.join(phyla_labels)}")
+        notable = earth_fossil.get("notable_fossils") or earth_fossil.get("notableFossils") or []
+        if isinstance(notable, list) and notable:
+            fossil_lines = []
+            for item in notable[:20]:
+                if not isinstance(item, dict):
+                    continue
+                name = item.get("name")
+                if not name:
+                    continue
+                bits = [str(name)]
+                phylum = item.get("phylum")
+                if phylum:
+                    bits.append(f"ngạnh {phylum}")
+                env = item.get("environment")
+                if env:
+                    bits.append(str(env))
+                fossil_lines.append(" — ".join(bits))
+            if fossil_lines:
+                parts.append(
+                    "Hóa thạch tiêu biểu có trong CSDL (chỉ được nhắc tên cụ thể từ danh sách này): "
+                    + "; ".join(fossil_lines)
+                )
+        note = earth_fossil.get("grounding_note_vi") or earth_fossil.get("groundingNoteVi")
+        if isinstance(note, str) and note.strip():
+            parts.append(note.strip())
+    showcase = getattr(state, "showcase_context", None)
+    if isinstance(showcase, dict):
+        active_name = showcase.get("active_entity_name") or showcase.get("activeEntityName")
+        active_id = showcase.get("active_entity_id") or showcase.get("activeEntityId")
+        if active_id:
+            line = f"Showcase đang focus: {active_name or active_id} ({active_id})"
+            linked = showcase.get("active_linked_planet") or showcase.get("activeLinkedPlanet")
+            if linked:
+                line += f" — quỹ đạo {linked}"
+            parts.append(line)
+        planets = showcase.get("planets") or []
+        if isinstance(planets, list) and planets:
+            catalog_lines = []
+            for row in planets[:8]:
+                if not isinstance(row, dict):
+                    continue
+                planet = row.get("planet")
+                pid = row.get("entity_id") or row.get("entityId")
+                children = row.get("moons_and_orbiters") or row.get("moonsAndOrbiters") or []
+                child_names = []
+                if isinstance(children, list):
+                    for c in children[:8]:
+                        if isinstance(c, dict) and c.get("name"):
+                            child_names.append(str(c.get("name")))
+                chunk = f"{planet} ({pid})"
+                if child_names:
+                    chunk += f": {', '.join(child_names)}"
+                catalog_lines.append(chunk)
+            if catalog_lines:
+                parts.append("Catalog showcase theo hành tinh: " + " | ".join(catalog_lines))
+        hint = showcase.get("navigation_hint_vi") or showcase.get("navigationHintVi")
+        if isinstance(hint, str) and hint.strip():
+            parts.append(hint.strip()[:280])
     if state.weak_lessons:
         weak_ids = [w.get("lessonId") for w in state.weak_lessons[:3] if isinstance(w, dict)]
         if weak_ids:
@@ -205,6 +385,13 @@ class AgentStateBody(BaseModel):
     spaced_review_due: list[dict] | None = None
     depth_suggestion: dict | None = None
     entity_id: str | None = None
+    active_cohort: dict | None = None
+    concept_graph: dict | None = None
+    learner_economy: dict | None = None
+    studio_assist: dict | None = None
+    deep_history_disclaimer: str | None = None
+    earth_fossil_context: dict | None = None
+    showcase_context: dict | None = None
 
 
 class ChatRequestBody(BaseModel):
@@ -338,18 +525,75 @@ def _merge_system_for_openrouter(api_messages: list[dict]) -> list[dict]:
     return out
 
 
-def _provider_targets(has_image: bool) -> list[tuple[str, str, dict[str, str], str]]:
-    del has_image
-    if not GROQ_API_KEY:
-        return []
-    return [
-        (
-            f"{GROQ_BASE_URL}/chat/completions",
-            GROQ_MODEL,
-            {"Authorization": f"Bearer {GROQ_API_KEY}"},
-            "Groq Cloud",
+async def _complete_chat(
+    api_messages: list[dict],
+    *,
+    has_image: bool,
+    temperature: float,
+    max_tokens: int,
+    tools: list[dict[str, Any]] | None = None,
+    response_format: dict[str, str] | None = None,
+) -> tuple[httpx.Response | None, str | None, list[str]]:
+    """Thử lần lượt OpenRouter → LM Studio → Groq (theo LLM_PROVIDER_ORDER)."""
+    chain = build_provider_chain(has_image)
+    if not chain:
+        return (
+            None,
+            None,
+            [
+                "Không có LLM provider — đặt OPENROUTER_API_KEY và/hoặc LM_STUDIO_MODEL "
+                "(LM Studio local server phải đang chạy)."
+            ],
         )
-    ]
+
+    provider_errors: list[str] = []
+    async with httpx.AsyncClient(timeout=90.0) as client:
+        for idx, provider in enumerate(chain):
+            msgs = (
+                _merge_system_for_openrouter(api_messages)
+                if provider.merge_system_into_user
+                else api_messages
+            )
+            payload: dict[str, Any] = {
+                "model": provider.model,
+                "messages": msgs,
+                "stream": False,
+                "max_tokens": max_tokens,
+                "temperature": temperature,
+            }
+            if response_format:
+                payload["response_format"] = response_format
+            if tools:
+                payload["tools"] = tools
+                payload["tool_choice"] = "auto"
+            try:
+                r_try = await client.post(
+                    provider.chat_completions_url,
+                    json=payload,
+                    headers=provider.request_headers(),
+                )
+                if tools and r_try.status_code >= 400:
+                    payload_plain = {k: v for k, v in payload.items() if k not in ("tools", "tool_choice")}
+                    r_try = await client.post(
+                        provider.chat_completions_url,
+                        json=payload_plain,
+                        headers=provider.request_headers(),
+                    )
+                if r_try.status_code == 200:
+                    return r_try, provider.label, provider_errors
+
+                err_snip = (r_try.text or "").strip()[:300]
+                provider_errors.append(f"{provider.label}:{r_try.status_code}:{err_snip}")
+                if idx < len(chain) - 1 and should_fallback_to_next_provider(
+                    r_try.status_code, r_try.text or ""
+                ):
+                    continue
+            except Exception as e:
+                provider_errors.append(f"{provider.label}:connect:{e}")
+                if idx < len(chain) - 1:
+                    continue
+
+    return None, None, provider_errors
 
 
 def _extract_first_json_object(raw: str) -> dict[str, Any] | None:
@@ -508,7 +752,7 @@ def health():
         "status": "ok",
         "service": "ai",
         "rag": USE_RAG,
-        "llm": "groq_cloud",
+        "llm": provider_chain_status(),
     }
 
 
@@ -633,32 +877,13 @@ async def chat(body: ChatRequestBody):
         tools_for_context(body.context, body.allowed_tools) if use_tools else None
     )
     temp = 0.7 if body.context == "general" else 0.6
-    provider_errors: list[str] = []
-    r = None
-    for (url, llm_model, llm_headers, llm_label) in _provider_targets(bool(body.image_base64)):
-        try:
-            async with httpx.AsyncClient(timeout=90.0) as client:
-                payload: dict[str, Any] = {
-                    "model": llm_model,
-                    "messages": api_messages,
-                    "stream": False,
-                    "max_tokens": 1024,
-                    "temperature": temp,
-                }
-                if tools:
-                    payload["tools"] = tools
-                    payload["tool_choice"] = "auto"
-                r_try = await client.post(url, json=payload, headers=llm_headers)
-                if r_try.status_code >= 400 and tools:
-                    payload.pop("tools", None)
-                    payload.pop("tool_choice", None)
-                    r_try = await client.post(url, json=payload, headers=llm_headers)
-                if r_try.status_code == 200:
-                    r = r_try
-                    break
-                provider_errors.append(f"{llm_label}:{r_try.status_code}:{(r_try.text or '').strip()[:300]}")
-        except Exception as e:
-            provider_errors.append(f"{llm_label}:connect:{e}")
+    r, llm_provider_used, provider_errors = await _complete_chat(
+        api_messages,
+        has_image=bool(body.image_base64),
+        temperature=temp,
+        max_tokens=1024,
+        tools=tools,
+    )
 
     if r is None:
         detail = " | ".join(provider_errors) if provider_errors else "Không có provider khả dụng"
@@ -689,6 +914,8 @@ async def chat(body: ChatRequestBody):
         content = REFUSAL_MESSAGE_VI
 
     out: dict[str, Any] = {"message": {"role": "assistant", "content": content}}
+    if llm_provider_used:
+        out["llm_provider"] = llm_provider_used
     if validated:
         out["tool_calls"] = validated
     if rag_ms is not None:
@@ -726,32 +953,17 @@ async def generate_quiz(body: QuizGenerateRequestBody):
     )
 
     async def _call_once(user_prompt_input: str) -> tuple[list[dict[str, Any]], list[str]]:
-        targets = _provider_targets(False)
-        payload: dict[str, Any] = {
-            "model": "",
-            "messages": [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt_input},
-            ],
-            "stream": False,
-            "max_tokens": 520 if QUIZ_FAST_MODE else 900,
-            "temperature": 0.1 if QUIZ_FAST_MODE else 0.2,
-        }
-        provider_errors_local: list[str] = []
-        r = None
-        for (url, llm_model, llm_headers, llm_label) in targets:
-            try:
-                async with httpx.AsyncClient(timeout=90.0) as client:
-                    p = dict(payload)
-                    p["model"] = llm_model
-                    p["response_format"] = {"type": "json_object"}
-                    r_try = await client.post(url, json=p, headers=llm_headers)
-                    if r_try.status_code == 200:
-                        r = r_try
-                        break
-                    provider_errors_local.append(f"{llm_label}:{r_try.status_code}:{(r_try.text or '').strip()[:400]}")
-            except Exception as e:
-                provider_errors_local.append(f"{llm_label}:connect:{e}")
+        quiz_messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt_input},
+        ]
+        r, _provider_label, provider_errors_local = await _complete_chat(
+            quiz_messages,
+            has_image=False,
+            temperature=0.1 if QUIZ_FAST_MODE else 0.2,
+            max_tokens=520 if QUIZ_FAST_MODE else 900,
+            response_format={"type": "json_object"},
+        )
 
         if r is None:
             return [], provider_errors_local

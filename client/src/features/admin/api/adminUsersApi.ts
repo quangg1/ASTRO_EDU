@@ -10,10 +10,10 @@
  * the documented exception for cross-domain primitives in DOMAIN_MAP §3 and
  * avoids a barrel cycle (auth/public re-exports the auth Zustand store).
  */
-import { getAuthBase } from '@/lib/apiConfig'
+import { getApiPathBase } from '@/lib/apiConfig'
 import { getToken } from '@/features/auth/api/authApi'
 
-const AUTH_BASE = getAuthBase()
+const API_BASE = getApiPathBase()
 
 function authFetch(url: string, init?: RequestInit): Promise<Response> {
   return fetch(url, {
@@ -34,6 +34,7 @@ export interface AdminUser {
   avatar: string | null
   provider: string
   role: string
+  adminScopes?: string[]
   accountStatus: AccountStatus
   deactivatedAt: string | null
   deactivatedByUserId: string | null
@@ -42,14 +43,34 @@ export interface AdminUser {
   createdAt: string
 }
 
-export async function fetchAdminUsers(): Promise<{ success: boolean; data?: AdminUser[]; error?: string }> {
+export async function fetchAdminUsers(params?: {
+  q?: string
+  role?: UserRole
+  accountStatus?: AccountStatus | 'all'
+  page?: number
+  limit?: number
+}): Promise<{ success: boolean; data?: AdminUser[]; total?: number; page?: number; limit?: number; error?: string }> {
   const token = getToken()
   if (!token) return { success: false, error: 'Not signed in' }
-  const res = await authFetch(`${AUTH_BASE}/api/admin/users`, {
+  const sp = new URLSearchParams()
+  if (params?.q) sp.set('q', params.q)
+  if (params?.role) sp.set('role', params.role)
+  if (params?.accountStatus && params.accountStatus !== 'all') sp.set('accountStatus', params.accountStatus)
+  if (params?.page) sp.set('page', String(params.page))
+  if (params?.limit) sp.set('limit', String(params.limit))
+  const res = await authFetch(`${API_BASE}/admin/users?${sp}`, {
     headers: { Authorization: `Bearer ${token}` },
   })
   const data = await res.json()
-  if (data.success && Array.isArray(data.data)) return { success: true, data: data.data }
+  if (data.success && Array.isArray(data.data)) {
+    return {
+      success: true,
+      data: data.data,
+      total: data.total,
+      page: data.page,
+      limit: data.limit,
+    }
+  }
   return { success: false, error: data.error || 'Lỗi tải danh sách' }
 }
 
@@ -59,7 +80,7 @@ export async function updateUserRole(
 ): Promise<{ success: boolean; user?: AdminUser; error?: string }> {
   const token = getToken()
   if (!token) return { success: false, error: 'Not signed in' }
-  const res = await authFetch(`${AUTH_BASE}/api/admin/users/${encodeURIComponent(userId)}/role`, {
+  const res = await authFetch(`${API_BASE}/admin/users/${encodeURIComponent(userId)}/role`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
     body: JSON.stringify({ role }),
@@ -69,6 +90,22 @@ export async function updateUserRole(
   return { success: false, error: data.error || 'Cập nhật role thất bại' }
 }
 
+export async function updateUserAdminScopes(
+  userId: string,
+  adminScopes: string[],
+): Promise<{ success: boolean; user?: AdminUser; error?: string }> {
+  const token = getToken()
+  if (!token) return { success: false, error: 'Not signed in' }
+  const res = await authFetch(`${API_BASE}/admin/users/${encodeURIComponent(userId)}/scopes`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ adminScopes }),
+  })
+  const data = await res.json()
+  if (data.success && data.user) return { success: true, user: data.user }
+  return { success: false, error: data.error || 'Cập nhật phạm vi admin thất bại' }
+}
+
 export async function updateUserStatus(
   userId: string,
   accountStatus: AccountStatus,
@@ -76,7 +113,7 @@ export async function updateUserStatus(
 ): Promise<{ success: boolean; user?: AdminUser; error?: string }> {
   const token = getToken()
   if (!token) return { success: false, error: 'Not signed in' }
-  const res = await authFetch(`${AUTH_BASE}/api/admin/users/${encodeURIComponent(userId)}/status`, {
+  const res = await authFetch(`${API_BASE}/admin/users/${encodeURIComponent(userId)}/status`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
     body: JSON.stringify({ accountStatus, reason }),
@@ -93,7 +130,7 @@ export async function deleteUserPermanently(
 ): Promise<{ success: boolean; error?: string; message?: string; emailSent?: boolean; code?: string }> {
   const token = getToken()
   if (!token) return { success: false, error: 'Not signed in' }
-  const res = await authFetch(`${AUTH_BASE}/api/admin/users/${encodeURIComponent(userId)}`, {
+  const res = await authFetch(`${API_BASE}/admin/users/${encodeURIComponent(userId)}`, {
     method: 'DELETE',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
     body: JSON.stringify({ confirmEmail, reason }),

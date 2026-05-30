@@ -1,3 +1,4 @@
+import { parseGemShopCatalogItems, type GemShopCatalogItem } from '@galaxies/contracts'
 import { getApiPathBase } from '@/lib/apiConfig'
 import { readApiResponseJson } from '@/lib/fetchApiJson'
 
@@ -26,25 +27,18 @@ export async function fetchGemShopBootstrap(): Promise<GemShopBootstrapDTO> {
   return json.data
 }
 
-export type GemShopCatalogItemDTO = {
-  skuId: string
-  nameVi: string
-  descriptionVi: string
-  category: string
-  basePriceGem: number
-  effectivePriceGem: number
-  metadata: Record<string, unknown>
-}
+/** @deprecated Use `GemShopCatalogItem` from `@galaxies/contracts` */
+export type GemShopCatalogItemDTO = GemShopCatalogItem
 
-export async function fetchGemShopCatalogPublic(): Promise<GemShopCatalogItemDTO[]> {
+export async function fetchGemShopCatalogPublic(): Promise<GemShopCatalogItem[]> {
   const res = await fetch(`${API_BASE}/gems/shop/catalog`)
   const json = await readApiResponseJson<{
     success?: boolean
-    data?: { items?: GemShopCatalogItemDTO[] }
+    data?: { items?: unknown[] }
     error?: string
   }>(res)
   if (!res.ok || !json.success || !json.data?.items) {
     throw new Error(json.error || 'Không tải được danh mục vật phẩm.')
   }
-  return json.data.items
+  return parseGemShopCatalogItems(json.data.items)
 }

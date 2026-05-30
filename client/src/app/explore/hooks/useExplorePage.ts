@@ -9,6 +9,7 @@ import { useExplorePlanetHistoryMode } from './useExplorePlanetHistoryMode'
 import { useExploreRewards } from './useExploreRewards'
 import { useExploreLearningBridge } from './useExploreLearningBridge'
 import { useExploreShowcaseNav } from './useExploreShowcaseNav'
+import { useActiveEntityDeepHistoryAvailable } from './useActiveEntityDeepHistoryAvailable'
 
 /** Composes explore orchestration hooks — keeps `page.tsx` thin. */
 export function useExplorePage() {
@@ -24,6 +25,7 @@ export function useExplorePage() {
     mode.planetHistoryOpen,
     mode.planetHistoryEntityId,
     mode.searchParams,
+    mode.closePlanetHistory,
   )
 
   const activeResolved = useMemo(
@@ -54,6 +56,7 @@ export function useExplorePage() {
   })
 
   const rewards = useExploreRewards(userId, mode.showcaseActiveItemId)
+  const activeEntityHasDeepHistory = useActiveEntityDeepHistoryAvailable(mode.showcaseActiveItemId)
 
   const nav = useExploreShowcaseNav({
     pathname: mode.pathname,
@@ -65,12 +68,14 @@ export function useExplorePage() {
     setSelectedSolarPlanetIndex: mode.setSelectedSolarPlanetIndex,
     activeResolved,
     planetHistoryOpen: mode.planetHistoryOpen,
+    earthHistoryOpen: mode.earthHistoryOpen,
     planetBeatAccent: planet.planetBeatAccent,
     pushBridgeDebug: bridge.pushBridgeDebug,
   })
 
   return {
     user,
+    activeEntityHasDeepHistory,
     ...mode,
     ...catalog,
     ...planet,

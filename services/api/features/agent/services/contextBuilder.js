@@ -6,13 +6,26 @@ const { detectWeakLessons } = require('./struggleDetector');
 const { buildNarrativeContext } = require('./narrativeContextService');
 const { getSpacedReviewDue } = require('./spacedReviewService');
 const { evaluateDepthSuggestion } = require('./depthAdaptationService');
+const {
+  enrichAgentContextExtras,
+  buildCohortContext,
+  buildLearnerEconomyCtx,
+} = require('./agentContextEnrichment');
+const {
+  buildEarthFossilContext,
+  shouldBuildEarthFossilContext,
+} = require('./earthFossilContextService');
+const { buildShowcaseAgentContext } = require('./showcaseNavigationService');
+const UserReward = require('../../rewards/models/UserReward');
+const { getWalletLearnerMeta } = require('../../rewards/services/learnerTierService');
 
 /**
  * @param {string|null|undefined} userId
  * @param {Record<string, unknown>|null|undefined} sessionContext
  * @param {Record<string, unknown>|null|undefined} learnerSnapshot
+ * @param {string|undefined} userRole
  */
-async function buildAgentContext(userId, sessionContext, learnerSnapshot) {
+async function buildAgentContext(userId, sessionContext, learnerSnapshot, userRole) {
   const cached = userId ? getCachedContext(userId, sessionContext || {}) : null;
   if (cached) return cached;
 
@@ -85,10 +98,17 @@ async function buildAgentContext(userId, sessionContext, learnerSnapshot) {
   }
 
   const surface = sessionContext?.surface ?? 'general';
-  let narrativeContext = null;
-  if (surface === 'explore' || sessionContext?.entityId || sessionContext?.narrativeKey) {
-    narrativeContext = await buildNarrativeContext(sessionContext || {});
-  }
+  const exploreNarrative =
+    surface === 'explore' || sessionContext?.entityId || sessionContext?.narrativeKey;
+  const exploreEarthFossils = shouldBuildEarthFossilContext(sessionContext || {});
+  const exploreShowcase = surface === 'explore';
+  const [narrativeContext, earthFossilContext, showcaseContext] = await Promise.all([
+    exploreNarrative ? buildNarrativeContext(sessionContext || {}) : Promise.resolve(null),
+    exploreEarthFossils
+      ? buildEarthFossilContext(sessionContext || {})
+      : Promise.resolve(null),
+    exploreShowcase ? buildShowcaseAgentContext(sessionContext || {}) : Promise.resolve(null),
+  ]);
 
   let spacedReviewDue = { dueLessons: [], totalDue: 0 };
   let depthSuggestion = null;
@@ -121,6 +141,8 @@ async function buildAgentContext(userId, sessionContext, learnerSnapshot) {
     currentLesson,
     activeSection,
     narrativeContext,
+    earthFossilContext,
+    showcaseContext,
     spacedReviewDue,
     depthSuggestion,
     progress: {
@@ -141,6 +163,12 @@ async function buildAgentContext(userId, sessionContext, learnerSnapshot) {
     }
   }
 
+  const extras = await enrichAgentContextExtras(userId, sessionContext || {}, userRole);
+  built.activeCohort = extras.activeCohort;
+  built.conceptGraphCtx = extras.conceptGraphCtx;
+  built.learnerEconomy = extras.learnerEconomy;
+  built.studioAssist = extras.studioAssist;
+
   return built;
 }
 
@@ -154,13 +182,32 @@ async function buildLearnerSnapshot(userId) {
       spacedReviewDue: { dueLessons: [], totalDue: 0 },
     };
   }
-  const [progress, weakLessons, profile, spacedReviewDue, depthSuggestion] = await Promise.all([
-    UserProgress.findOne({ userId }).lean(),
-    detectWeakLessons(userId),
-    LearnerAgentProfile.findOne({ userId }).select('misconceptions depthPrefs').lean(),
-    getSpacedReviewDue(userId, { limit: 3 }),
-    evaluateDepthSuggestion(userId, {}),
-  ]);
+  const [progress, weakLessons, profile, spacedReviewDue, depthSuggestion, economy, activeCohort] =
+    await Promise.all([
+      UserProgress.findOne({ userId }).lean(),
+      detectWeakLessons(userId),
+      LearnerAgentProfile.findOne({ userId }).select('misconceptions depthPrefs').lean(),
+      getSpacedReviewDue(userId, { limit: 3 }),
+      evaluateDepthSuggestion(userId, {}),
+      buildLearnerEconomyCtx(userId, {}),
+      buildCohortContext(userId, {}),
+    ]);
+
+  let learnerTier = null;
+  let gemBalance = economy?.gemBalance ?? 0;
+  if (!economy) {
+    const ur = await UserReward.findOne({ userId }).select('gemBalance totalGemsEarned').lean();
+    gemBalance = ur?.gemBalance ?? 0;
+    const tierMeta = getWalletLearnerMeta(ur?.totalGemsEarned ?? 0);
+    learnerTier = {
+      id: tierMeta.current?.id,
+      nameVi: tierMeta.current?.nameVi,
+      emoji: tierMeta.current?.emoji,
+    };
+  } else {
+    learnerTier = economy.learnerTier;
+  }
+
   return {
     completedLessonCount: progress?.learningPathCompletedLessonIds?.length ?? 0,
     masteredLessonCount: progress?.learningPathMasteredLessonIds?.length ?? 0,
@@ -172,6 +219,16 @@ async function buildLearnerSnapshot(userId) {
     preferredDepth: profile?.depthPrefs?.preferredDepth ?? null,
     spacedReviewDue,
     depthSuggestion,
+    gemBalance,
+    learnerTier,
+    nearbyUnlocks: economy?.nearbyUnlocks ?? [],
+    activeCohort: activeCohort
+      ? {
+          cohortTitle: activeCohort.cohortTitle,
+          pendingAssignments: activeCohort.pendingAssignments,
+          upcomingDeadlineCount: activeCohort.upcomingDeadlines?.length ?? 0,
+        }
+      : null,
     coachChips: await buildSnapshotChips(weakLessons, progress, spacedReviewDue),
   };
 }

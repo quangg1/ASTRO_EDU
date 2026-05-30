@@ -26,6 +26,7 @@ async function searchCommunityPosts({
   page = 1,
   limit = 20,
   viewerRole = null,
+  viewerDoc = null,
 }) {
   let forums = await resolveForumScope(scope);
   if (forumSlug) {
@@ -51,6 +52,7 @@ async function searchCommunityPosts({
     tag,
     category,
     viewerRole,
+    viewerDoc,
   });
 
   const skip = (Math.max(1, page) - 1) * Math.min(50, limit);

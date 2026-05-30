@@ -146,7 +146,6 @@ export function ShowcaseDiffuseGlobe({
             : entityId.startsWith('planet-')
               ? '#b48a5a'
               : entity.color
-  const mayLoadMaps = Boolean(diffuseKey || normalKey || specKey || cloudKey || entity.texturePath || entity.remoteTextureUrl)
 
   useFrame(({ camera }) => {
     if (skipDistanceBasedScale) return
@@ -161,8 +160,6 @@ export function ShowcaseDiffuseGlobe({
     const scale = THREE.MathUtils.lerp(active ? 1.08 : 1, boostFar, t)
     root.scale.setScalar(scale)
   })
-
-  if (!mayLoadMaps) return null
 
   return (
     <group ref={rootRef}>

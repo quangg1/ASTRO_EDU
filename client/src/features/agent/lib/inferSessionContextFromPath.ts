@@ -2,8 +2,21 @@ import { getLessonById } from '@/data/learningPathCurriculum'
 import { buildSessionContext } from './buildSessionContext'
 import type { SessionContext } from '../types'
 
-/** Fallback khi widget global chưa nhận store (ví dụ hydrate) — chỉ LP từ URL. */
+const STUDIO_RESERVED = new Set(['showcase-entities', 'learning-path', 'concepts'])
+
+/** Fallback khi widget global chưa nhận store (ví dụ hydrate) — LP / studio từ URL. */
 export function inferSessionContextFromPath(pathname: string): SessionContext | null {
+  if (pathname.startsWith('/studio')) {
+    const m = pathname.match(/^\/studio\/([^/]+)/)
+    const slug = m && !STUDIO_RESERVED.has(m[1]) ? decodeURIComponent(m[1]) : null
+    return buildSessionContext({
+      pathname,
+      surface: 'studio',
+      courseSlug: slug,
+      routeLabel: 'Studio',
+    })
+  }
+
   const match = pathname.match(/^\/tutorial\/([^/]+)\/([^/]+)\/([^/?#]+)/)
   if (!match) return null
 

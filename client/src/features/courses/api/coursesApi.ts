@@ -1,3 +1,4 @@
+import { parseCourseEditorListResponse } from '@galaxies/contracts'
 import { getToken } from '@/features/auth/public'
 import { getApiPathBase, getMediaBase } from '@/lib/apiConfig'
 import type { QuizQuestion } from '@/shared/types/quizQuestion'
@@ -59,6 +60,11 @@ export interface ModuleMaterial {
   url: string
   uploadedAt?: string | null
 }
+
+export type CourseDeliveryContext =
+  | { mode: 'catalog' }
+  | { mode: 'cohort'; cohortId: string; cohortIds?: string[] }
+  | { mode: 'editor' }
 
 export interface QuizSettings {
   revealMode?: 'after_submit' | 'after_each_question' | 'never'
@@ -133,9 +139,13 @@ export interface Course {
   durationWeeks?: number | null
   price?: number
   currency?: string
+  cohortPrice?: number | null
+  cohortCurrency?: string | null
   isPaid?: boolean
   /** Catalog self-paced enroll; false = chỉ cohort */
   catalogEnabled?: boolean
+  /** self_paced | instructor_led | hybrid */
+  distributionStrategy?: 'self_paced' | 'instructor_led' | 'hybrid'
   published?: boolean
   /** true when GV/admin xem khóa chưa publish */
   editorPreview?: boolean
@@ -152,6 +162,24 @@ export interface Course {
   enrollment?: {
     enrolledAt: string
     progress: { lessonSlug: string; completed: boolean; completedAt: string | null }[]
+  } | null
+  /** Server: catalog vs cohort delivery — cohort wins when user is in a class */
+  deliveryContext?: CourseDeliveryContext
+  teacherId?: string | null
+  teacher?: {
+    userId: string
+    fullName: string
+    headline: string
+    bio: string
+    organization: string
+    expertise: string[]
+    education: string
+    yearsExperience: number | null
+    website: string
+    linkedin: string
+    avatarUrl: string | null
+    email: string | null
+    verified: boolean
   } | null
 }
 
@@ -225,8 +253,12 @@ export async function fetchCourseOutline(
 export async function fetchCoursesForEditor(): Promise<Course[]> {
   const res = await fetch(`${COURSES_BASE}/courses/editor/list`, { headers: authHeaders() })
   const data = await res.json()
-  if (data.success && Array.isArray(data.data)) return data.data
-  return []
+  if (!data?.success) return []
+  try {
+    return parseCourseEditorListResponse(data) as Course[]
+  } catch {
+    return []
+  }
 }
 
 export async function fetchCourse(slug: string): Promise<Course | null> {

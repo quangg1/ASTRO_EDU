@@ -41,6 +41,9 @@ export function AssignmentSubmit({
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState<string | null>(null)
   const [submitted, setSubmitted] = useState(false)
+  const [graded, setGraded] = useState<{ grade: number | null; feedback: string; gradedAt?: string } | null>(
+    null,
+  )
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -52,7 +55,14 @@ export function AssignmentSubmit({
       setFiles(res.data.stagingFiles || [])
       setNote(res.data.note || '')
       setStagingExpired(Boolean(res.data.stagingExpired))
-      if (res.data.status === 'submitted') setSubmitted(true)
+      if (res.data.status === 'submitted' || res.data.status === 'graded') setSubmitted(true)
+      if (res.data.status === 'graded') {
+        setGraded({
+          grade: res.data.grade ?? null,
+          feedback: res.data.feedback || '',
+          gradedAt: res.data.gradedAt,
+        })
+      }
     } else {
       setMsg(res.error || 'Không tải được bài tập')
     }
@@ -170,6 +180,34 @@ export function AssignmentSubmit({
             {busy ? 'Đang xử lý…' : 'Nộp bài'}
           </Button>
         </>
+      )}
+
+      {submitted && graded && (
+        <div className="rounded-2xl border border-emerald-500/35 bg-emerald-950/20 p-5 space-y-2">
+          <p className="text-sm font-semibold text-emerald-200">Giáo viên đã chấm bài</p>
+          {graded.grade != null && (
+            <p className="text-3xl font-semibold text-white tabular-nums">
+              {graded.grade}
+              <span className="text-base text-ds-subtle font-normal"> / 100</span>
+            </p>
+          )}
+          {graded.feedback && (
+            <p className="text-sm text-ds-muted whitespace-pre-wrap border-t border-white/10 pt-3 mt-2">
+              {graded.feedback}
+            </p>
+          )}
+          {graded.gradedAt && (
+            <p className="text-[10px] text-ds-subtle">
+              {new Date(graded.gradedAt).toLocaleString('vi-VN')}
+            </p>
+          )}
+        </div>
+      )}
+
+      {submitted && !graded && (
+        <p className="text-sm text-ds-muted rounded-xl border border-ds-border px-4 py-3">
+          Đã nộp bài — giáo viên sẽ chấm và phản hồi tại đây.
+        </p>
       )}
 
       {msg && <p className="text-sm text-ds-muted">{msg}</p>}

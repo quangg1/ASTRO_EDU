@@ -10,6 +10,14 @@ export function clientActionToTutorAction(action: AgentClientAction): TutorActio
   if (action.type === 'open_lesson') {
     return { type: 'open_lesson', lessonSlug: action.lessonSlug }
   }
+  if (action.type === 'focus_showcase_entity') {
+    return {
+      type: 'focus_showcase_entity',
+      entityId: action.entityId,
+      entityName: action.entityName ?? undefined,
+      openHistory: action.openHistory,
+    }
+  }
   if (action.type === 'go_to_explore' || action.type === 'navigate_to_narrative') {
     return { type: 'go_to_explore', stageTime: action.stageTimeMa }
   }
@@ -44,13 +52,30 @@ export function executeAgentClientAction(
     return
   }
 
+  if (action.type === 'focus_showcase_entity') {
+    const q = new URLSearchParams()
+    q.set('mode', 'showcase')
+    q.set('entity', action.entityId)
+    if (action.openHistory) {
+      q.set('history', '1')
+    }
+    router.push(`/explore?${q.toString()}`)
+    options?.onNavigate?.()
+    return
+  }
+
   if (action.type === 'navigate_to_narrative' || action.type === 'go_to_explore') {
     const q = new URLSearchParams()
-    q.set('stage', String(action.stageTimeMa))
+    if (action.type === 'go_to_explore' || action.planet === 'earth') {
+      q.set('stage', String(action.stageTimeMa))
+    }
     if (action.type === 'navigate_to_narrative') {
-      if (action.planet && action.planet !== 'earth') q.set('entity', action.planet)
       if (action.entityId) q.set('entity', action.entityId)
+      else if (action.planet && action.planet !== 'earth') q.set('entity', action.planet)
       if (action.pinId) q.set('pin', action.pinId)
+      if (action.entityId && !q.has('stage')) {
+        q.set('mode', 'showcase')
+      }
     }
     router.push(`/explore?${q.toString()}`)
     options?.onNavigate?.()
@@ -64,6 +89,10 @@ export function executeAgentClientAction(
   }
 
   if (action.type === 'show_related_lessons') {
+    return
+  }
+
+  if (action.type === 'suggest_community_thread') {
     return
   }
 
@@ -122,17 +151,25 @@ export function mergeAgentToolCalls(
   toolCalls: unknown,
   toolResults: Array<{ ok: boolean; clientAction?: AgentClientAction }> | undefined,
 ): TutorAction[] {
-  const fromCalls = toolCallsToTutorActions(toolCalls)
   const fromResults = toolResultsToTutorActions(toolResults)
+  const hasFocus = fromResults.some((a) => a.type === 'focus_showcase_entity')
+  const fromCalls = toolCallsToTutorActions(toolCalls).filter(
+    (a) => !(hasFocus && a.type === 'go_to_explore'),
+  )
+  const filteredResults = hasFocus
+    ? fromResults.filter((a) => a.type !== 'go_to_explore')
+    : fromResults
   const seen = new Set<string>()
   const out: TutorAction[] = []
-  for (const a of [...fromResults, ...fromCalls]) {
+  for (const a of [...filteredResults, ...fromCalls]) {
     const key =
       a.type === 'open_lesson'
         ? `lesson:${a.lessonSlug}`
         : a.type === 'go_to_explore'
           ? `explore:${a.stageTime}`
-          : a.type
+          : a.type === 'focus_showcase_entity'
+            ? `focus:${a.entityId}`
+            : a.type
     if (seen.has(key)) continue
     seen.add(key)
     out.push(a)

@@ -170,7 +170,10 @@ export function NarrativeInfoPanel({
 
   if (layout === 'dock') {
     return (
-      <aside className="relative z-0 flex h-full min-h-0 w-full min-w-0 flex-col" style={{ ['--beat-accent' as string]: accent }}>
+      <aside
+        className="relative z-0 flex h-full min-h-0 w-full min-w-0 max-w-[22rem] flex-col justify-start"
+        style={{ ['--beat-accent' as string]: accent }}
+      >
         {shell}
       </aside>
     )

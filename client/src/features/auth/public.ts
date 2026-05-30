@@ -47,8 +47,20 @@ export type { RegisterStartResponse } from './api/authApi'
 export {
   submitTeacherApplication,
   fetchMyTeacherApplicationStatus,
+  markTeacherApplicationCvReviewed,
 } from './api/teacherApplicationsApi'
 export type {
   TeacherApplication,
   TeacherApplicationWithUser,
+  TeacherApplicationSubmitBody,
 } from './api/teacherApplicationsApi'
+export {
+  uploadTeacherApplicationCv,
+  uploadTeacherApplicationCertificate,
+  uploadAvatarForApplication,
+} from './api/teacherApplicationMediaApi'
+export {
+  fetchMyTeacherProfile,
+  updateMyTeacherProfile,
+} from './api/teacherProfileApi'
+export type { PublicTeacherProfile } from './api/teacherProfileApi'

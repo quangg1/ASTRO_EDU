@@ -1,3 +1,7 @@
+/**
+ * Gem wallet client cache. When the user is authenticated, **`syncGemWallet` → GET /gems/wallet**
+ * is the source of truth; localStorage is a guest/offline cache only.
+ */
 import { getUserFromStoredToken } from '@/features/auth/public'
 import { fetchGemWalletFromServer, type GemTransaction, type GemWalletState } from '@/features/rewards/api/gemsWalletApi'
 

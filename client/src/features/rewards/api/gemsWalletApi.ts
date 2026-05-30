@@ -1,3 +1,4 @@
+import { parseGemWalletResponse, type GemTransaction as ContractGemTransaction } from '@galaxies/contracts'
 import { getApiPathBase } from '@/lib/apiConfig'
 import type { LearnerTierProgress } from './learnerTiersApi'
 
@@ -11,13 +12,8 @@ export interface GemWalletState {
   transactions: GemTransaction[]
 }
 
-export interface GemTransaction {
-  id: string
-  amount: number
-  reason: string
-  type: string
-  createdAt: string
-  meta?: { lessonId?: string; [key: string]: unknown }
+export type GemTransaction = ContractGemTransaction & {
+  meta?: ContractGemTransaction['meta'] & Record<string, unknown>
 }
 
 /** GET /gems/wallet — server source of truth when authenticated. */
@@ -29,13 +25,13 @@ export async function fetchGemWalletFromServer(token: string): Promise<GemWallet
     })
     const data = await res.json()
     if (!data?.success || !data?.data) return null
+    const parsed = parseGemWalletResponse(data)
     return {
-      balance: Number(data.data.balance) || 0,
-      level: typeof data.data.level === 'number' ? data.data.level : undefined,
-      totalGemsEarned:
-        typeof data.data.totalGemsEarned === 'number' ? data.data.totalGemsEarned : undefined,
-      learnerTier: data.data.learnerTier ?? undefined,
-      transactions: Array.isArray(data.data.transactions) ? data.data.transactions : [],
+      balance: parsed.balance,
+      level: parsed.level,
+      totalGemsEarned: parsed.totalGemsEarned,
+      learnerTier: parsed.learnerTier as LearnerTierProgress | undefined,
+      transactions: parsed.transactions,
     }
   } catch {
     return null

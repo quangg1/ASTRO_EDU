@@ -8,7 +8,15 @@ import { shouldRunVisibleRefresh } from '@/lib/visibleRefresh'
 
 function sameAuthUser(a: AuthUser | null, b: AuthUser | null): boolean {
   if (!a || !b) return a === b
-  return a.id === b.id && a.role === b.role && a.displayName === b.displayName && a.email === b.email
+  const scopesA = (a.adminScopes || []).join(',')
+  const scopesB = (b.adminScopes || []).join(',')
+  return (
+    a.id === b.id &&
+    a.role === b.role &&
+    a.displayName === b.displayName &&
+    a.email === b.email &&
+    scopesA === scopesB
+  )
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {

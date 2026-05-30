@@ -8,7 +8,7 @@ import {
   type LearningModule,
 } from '@/data/learningPathCurriculum'
 import { fetchPublicConcepts } from '@/features/concepts/public'
-import { fetchPublicLearningPathData } from '@/features/learning-path/api/learningPathApi'
+import { fetchPublicLearningPathData } from '@/features/learning-path/public'
 
 export function useLearningPath() {
   const [modules, setModules] = useState<LearningModule[]>(LEARNING_MODULES)

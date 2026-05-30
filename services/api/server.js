@@ -7,6 +7,7 @@ const { validateApiEnv } = require('./config/env');
 const { bootstrapCoreData } = require('./bootstrap/seedCoreData');
 const { errorMiddleware } = require('./shared/errors');
 const { requestContextMiddleware } = require('./shared/requestContext');
+const { applyPlatformSecurity, securityAuditMiddleware } = require('./shared/security');
 const authRouter = require('./features/auth');
 const { coursesRouter, tutorialsRouter } = require('./features/courses');
 const { learningPathRouter } = require('./features/learning-path');
@@ -28,6 +29,7 @@ const usersRouter = require('./features/users');
 const { forumsRouter, postsRouter, commentsRouter, newsRouter, communityRouter } = require('./features/community');
 const { bootstrapCommunityForums } = require('./features/community/services/forumBootstrapService');
 const { startNewsCrawlScheduler } = require('./features/community/jobs/newsCrawlScheduler');
+const { startOrderMaintenanceScheduler } = require('./features/payment/jobs/orderMaintenanceScheduler');
 const mediaRouter = require('./features/media');
 const adminRouter = require('./features/admin');
 const { agentRouter } = require('./features/agent');
@@ -39,8 +41,10 @@ const app = express();
 const PORT = env.port;
 const corsOrigin = env.clientUrl;
 app.use(cors({ origin: corsOrigin, credentials: true }));
+applyPlatformSecurity(app);
 app.use(express.json({ limit: '10mb' }));
 app.use(requestContextMiddleware);
+app.use(securityAuditMiddleware);
 
 // Feature routes (one API, feature-based structure for clear Git/module boundaries)
 app.use('/auth', authRouter);
@@ -93,6 +97,7 @@ async function start() {
   const server = http.createServer(app);
   attachNotificationWebSocket(server);
   startNewsCrawlScheduler({ info: (msg, meta) => console.log(msg, meta || ''), error: (msg, meta) => console.error(msg, meta || '') });
+  startOrderMaintenanceScheduler({ info: (msg, meta) => console.log(msg, meta || ''), error: (msg, meta) => console.error(msg, meta || '') });
 
   server.listen(PORT, '0.0.0.0', () => {
     if (!isMailConfigured()) {

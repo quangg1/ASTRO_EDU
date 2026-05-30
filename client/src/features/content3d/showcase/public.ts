@@ -27,3 +27,22 @@ export {
   fetchEditorShowcaseCatalogBundle,
   saveShowcaseCatalogBundleEditor,
 } from './api/showcaseCatalogApi'
+export {
+  NASA_SHOWCASE_ITEMS,
+  SHOWCASE_ORBIT_ENTITIES,
+  hydrateShowcaseCatalogBundle,
+  getNasaCatalogItemById,
+  resolveShowcaseOrbitParentPlanetName,
+} from './lib/showcaseCatalogRuntime'
+export type { NasaCatalogItem, NasaStory, ShowcaseOrbitEntity } from './lib/showcaseCatalogRuntime'
+export {
+  mergeNasaCatalog,
+  mergeOrbitEntities,
+  buildPlanetShowcaseEntity,
+  buildStudioGlobeEntity,
+  hasUsableOrbitalElements,
+} from './lib/mergeShowcaseCatalog'
+export type { ResolvedNasaCatalogItem } from './lib/mergeShowcaseCatalog'
+export { planetsData, sunData } from './lib/solarSystemData'
+export type { PlanetData } from './lib/solarSystemData'
+export { computeOrbitalPosition } from './lib/solarOrbitMath'

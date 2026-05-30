@@ -46,6 +46,8 @@ export const viText = {
     roleUpdated: 'Đã cập nhật vai trò. Người dùng cần đăng nhập lại để áp dụng.',
   },
   payment: {
+    orderHistory: 'Lịch sử thanh toán',
+    orderHistoryShort: 'Đơn hàng',
     successTitle: 'Thanh toán thành công',
     successSubtitle: 'Khóa học đã được mở. Bắt đầu học ngay.',
     goToCourse: 'Đi đến khóa học',

@@ -23,6 +23,8 @@ const assignmentSubmissionSchema = new mongoose.Schema({
   isLate: { type: Boolean, default: false },
   grade: { type: Number, default: null },
   feedback: { type: String, default: '' },
+  gradedBy: { type: String, default: null },
+  gradedAt: { type: Date, default: null },
   stagingExpired: { type: Boolean, default: false },
 }, { timestamps: true });
 

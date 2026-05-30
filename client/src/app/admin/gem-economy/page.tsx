@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useAuthStore } from '@/features/auth/public'
-import { canManagePlatform } from '@/lib/roles'
+import { canAccessAdmin, canAccessAdminPath } from '@/lib/roles'
 import {
   fetchAdminShopItems,
   fetchGemEarnConstants,
@@ -24,6 +24,11 @@ import { Badge, Button, Card, Input, Tabs, Tab, TabList, TabPanel, Textarea } fr
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Spinner } from '@/components/ui/Spinner'
 import { labelShopCategoryVi } from '@/features/rewards/lib/shopCategoryVi'
+import {
+  labelGemEconomyActionVi,
+  labelGemReasonCode,
+  labelGemTxnSignVi,
+} from '@/features/admin/lib/adminLabelsVi'
 import { AdminAvatarDecorationsPanel } from '@/app/admin/gem-economy/AdminAvatarDecorationsPanel'
 
 function toLocalInputValue(iso: string | null | undefined): string {
@@ -37,22 +42,6 @@ function toLocalInputValue(iso: string | null | undefined): string {
 const RANGE_DISPLAY: Record<'7d' | '30d', string> = {
   '7d': '7 ngày',
   '30d': '30 ngày',
-}
-
-function nhanDangGiaoDich(sign: string): string {
-  if (sign === 'earn') return 'Thu'
-  if (sign === 'spend') return 'Chi'
-  return sign
-}
-
-function chuanHoaHanhDong(action: string): string {
-  const m: Record<string, string> = {
-    manual_gem_adjust: 'Điều chỉnh gem thủ công',
-    runtime_config_patch: 'Sửa cấu hình vận hành',
-    shop_item_create: 'Tạo mã hàng',
-    shop_item_update: 'Cập nhật mã hàng',
-  }
-  return m[action] ?? action
 }
 
 export default function AdminGemEconomyPage() {
@@ -115,11 +104,11 @@ export default function AdminGemEconomyPage() {
 
   useEffect(() => {
     if (checked && !user) router.replace('/login?redirect=/admin/gem-economy')
-    if (checked && user && !canManagePlatform(user)) router.replace('/')
+    if (checked && user && !canAccessAdmin(user)) router.replace('/')
   }, [checked, user, router])
 
   useEffect(() => {
-    if (!user || !canManagePlatform(user)) return
+    if (!user || !canAccessAdminPath(user, '/admin/gem-economy')) return
     setLoading(true)
     refreshAll().catch((err) => setError(err instanceof Error ? err.message : String(err))).finally(() => setLoading(false))
   }, [user, refreshAll])
@@ -219,7 +208,7 @@ export default function AdminGemEconomyPage() {
     )
   }
 
-  if (!canManagePlatform(user)) return null
+  if (!canAccessAdminPath(user, '/admin/gem-economy')) return null
 
   return (
     <div className="min-h-screen bg-black pt-16 px-4 pb-16">
@@ -324,7 +313,7 @@ export default function AdminGemEconomyPage() {
                   <table className="w-full text-xs text-left border-collapse">
                     <thead>
                       <tr className="text-ds-muted border-b border-white/10">
-                        <th className="py-2 pr-4">Lý do (mã)</th>
+                        <th className="py-2 pr-4">Lý do</th>
                         <th className="py-2 pr-4">Thu / chi</th>
                         <th className="py-2">Tổng Δ gem</th>
                         <th className="py-2">Số giao dịch</th>
@@ -333,9 +322,9 @@ export default function AdminGemEconomyPage() {
                     <tbody>
                       {metrics.topReasons.map((r) => (
                         <tr key={`${r._id.reason}-${r._id.sign}`} className="border-b border-white/5 text-ds-muted">
-                          <td className="py-2 pr-4 text-white">{r._id.reason}</td>
+                          <td className="py-2 pr-4 text-white">{labelGemReasonCode(r._id.reason)}</td>
                           <td className="py-2 pr-4">
-                            <Badge>{nhanDangGiaoDich(r._id.sign)}</Badge>
+                            <Badge>{labelGemTxnSignVi(r._id.sign)}</Badge>
                           </td>
                           <td className="py-2">{r.total}</td>
                           <td className="py-2">{r.n}</td>
@@ -506,7 +495,7 @@ export default function AdminGemEconomyPage() {
                         {new Date(a.createdAt).toLocaleString()}
                       </td>
                       <td className="py-2 pr-2">
-                        <Badge>{chuanHoaHanhDong(a.action)}</Badge>
+                        <Badge>{labelGemEconomyActionVi(a.action)}</Badge>
                       </td>
                       <td className="py-2 pr-2 font-mono text-[10px]">{a.actorUserId}</td>
                       <td className="py-2 pr-2 font-mono text-[10px]">{a.targetUserId || '—'}</td>

@@ -20,6 +20,7 @@ import { FeaturedOrganisms } from '@/features/content3d/earth/ui/FeaturedOrganis
 import { Loading } from '@/components/ui/Loading'
 import { LessonContentBody } from '@/components/courses/LessonContentBody'
 import { trackEvent } from '@/lib/analytics'
+import { trackCourseBehavior } from '@/features/courses/lib/courseBehavior'
 
 const EarthScene = dynamic(() => import('@/components/3d/EarthScene'), { ssr: false, loading: () => <Loading /> })
 
@@ -202,6 +203,12 @@ export function CoursePageClient({
     [course?.lessons],
   )
 
+  const activeCohortId = useMemo(() => {
+    const ctx = course?.deliveryContext
+    if (ctx?.mode === 'cohort' && ctx.cohortId) return ctx.cohortId
+    return null
+  }, [course?.deliveryContext])
+
   const earthLessonStage = useMemo(() => {
     if (selectedLesson?.visualizationId !== 'earth-history') return null
     const t = selectedLesson.stageTime
@@ -278,6 +285,30 @@ export function CoursePageClient({
   }, [selectedLesson?.slug])
 
   useEffect(() => {
+    if (!selectedLesson || !user || !course) return
+    if (!['text', 'visualization', 'live_session'].includes(selectedLesson.type)) return
+    trackCourseBehavior({
+      eventName: 'course_lesson_opened',
+      courseSlug: course.slug,
+      lessonSlug: selectedLesson.slug,
+      cohortId: activeCohortId,
+    })
+    const start = Date.now()
+    return () => {
+      const sec = Math.round((Date.now() - start) / 1000)
+      if (sec >= 5) {
+        trackCourseBehavior({
+          eventName: 'course_lesson_dwell',
+          courseSlug: course.slug,
+          lessonSlug: selectedLesson.slug,
+          cohortId: activeCohortId,
+          durationSec: sec,
+        })
+      }
+    }
+  }, [selectedLesson?.slug, selectedLesson?.type, user?.id, course?.slug, activeCohortId])
+
+  useEffect(() => {
     if (!checked || user || !course) return
     const fallbackSlug =
       (initialLessonSlug && lessons.some((l) => l.slug === initialLessonSlug) && initialLessonSlug) ||
@@ -291,12 +322,41 @@ export function CoursePageClient({
 
   const handleSelectLesson = (lesson: Lesson) => {
     setShowMobileLessons(false)
+    if (course && user) {
+      if (lesson.type === 'quiz') {
+        trackCourseBehavior({
+          eventName: 'course_quiz_entered',
+          courseSlug: course.slug,
+          lessonSlug: lesson.slug,
+          cohortId: activeCohortId,
+        })
+      } else if (lesson.type === 'assignment') {
+        trackCourseBehavior({
+          eventName: 'course_assignment_viewed',
+          courseSlug: course.slug,
+          lessonSlug: lesson.slug,
+          cohortId: activeCohortId,
+        })
+      }
+    }
     if (lesson.type === 'quiz') {
-      router.push(`/courses/${slug}/exam/${encodeURIComponent(lesson.slug)}`)
+      if (activeCohortId) {
+        router.push(
+          `/courses/${slug}/cohort/${activeCohortId}/exam/${encodeURIComponent(lesson.slug)}`,
+        )
+      } else {
+        router.push(`/courses/${slug}/exam/${encodeURIComponent(lesson.slug)}`)
+      }
       return
     }
     if (lesson.type === 'assignment') {
-      router.push(`/courses/${slug}/assignment/${encodeURIComponent(lesson.slug)}`)
+      if (activeCohortId) {
+        router.push(
+          `/courses/${slug}/cohort/${activeCohortId}/assignment/${encodeURIComponent(lesson.slug)}`,
+        )
+      } else {
+        router.push(`/courses/${slug}/assignment/${encodeURIComponent(lesson.slug)}`)
+      }
       return
     }
     setSelectedLesson(lesson)
@@ -334,6 +394,14 @@ export function CoursePageClient({
   const markComplete = async (lessonSlug: string, completed: boolean) => {
     if (!course || !user) return
     await updateLessonProgress(course.slug, lessonSlug, completed)
+    if (completed) {
+      trackCourseBehavior({
+        eventName: 'course_lesson_completed',
+        courseSlug: course.slug,
+        lessonSlug,
+        cohortId: activeCohortId,
+      })
+    }
     const updated = await fetchCourse(course.slug)
     if (updated) setCourse(updated)
   }
@@ -639,7 +707,11 @@ export function CoursePageClient({
                   <div className="p-8 max-w-lg space-y-4">
                     <p className="text-ds-muted text-sm">Bài kiểm tra mở trên trang riêng với bảng câu hỏi và đồng hồ.</p>
                     <Link
-                      href={`/courses/${slug}/exam/${encodeURIComponent(selectedLesson.slug)}`}
+                      href={
+                        activeCohortId
+                          ? `/courses/${slug}/cohort/${activeCohortId}/exam/${encodeURIComponent(selectedLesson.slug)}`
+                          : `/courses/${slug}/exam/${encodeURIComponent(selectedLesson.slug)}`
+                      }
                       className="inline-flex px-4 py-2 rounded-xl bg-cyan-600 text-white text-sm font-medium hover:bg-cyan-500"
                     >
                       Vào bài kiểm tra →
@@ -649,7 +721,11 @@ export function CoursePageClient({
                   <div className="p-8 max-w-lg space-y-4">
                     <p className="text-ds-muted text-sm">Nộp bài tập trên trang riêng (nhiều file).</p>
                     <Link
-                      href={`/courses/${slug}/assignment/${encodeURIComponent(selectedLesson.slug)}`}
+                      href={
+                        activeCohortId
+                          ? `/courses/${slug}/cohort/${activeCohortId}/assignment/${encodeURIComponent(selectedLesson.slug)}`
+                          : `/courses/${slug}/assignment/${encodeURIComponent(selectedLesson.slug)}`
+                      }
                       className="inline-flex px-4 py-2 rounded-xl bg-cyan-600 text-white text-sm font-medium hover:bg-cyan-500"
                     >
                       Mở bài tập →

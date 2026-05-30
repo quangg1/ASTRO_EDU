@@ -216,9 +216,35 @@ async function sendPaymentReceiptEmail({
 }
 
 /**
+ * Xác nhận đã nhận đơn ứng tuyển giảng viên.
+ */
+async function sendTeacherApplicationReceivedEmail({ to, displayName }) {
+  if (!to || typeof to !== 'string' || !to.includes('@')) {
+    return { sent: false, skipped: true };
+  }
+  const name = displayName?.trim() || 'Bạn';
+  const subject = '[Cosmo Learn] Đã nhận đơn ứng tuyển giảng viên';
+  const text = `Xin chào ${name},
+
+Chúng tôi đã nhận đơn ứng tuyển giảng viên của bạn. Ban quản trị sẽ xem CV và hồ sơ, sau đó gửi email thông báo kết quả.
+
+Bạn không cần gửi lại đơn trong lúc chờ duyệt.
+
+Trân trọng,
+Cosmo Learn`;
+  return sendMail({ to, subject, text });
+}
+
+/**
  * Thông báo kết quả đơn xin quyền giảng viên (không throw — lỗi chỉ log).
  */
-async function sendTeacherApplicationDecisionEmail({ to, displayName, action, reviewNote }) {
+async function sendTeacherApplicationDecisionEmail({
+  to,
+  displayName,
+  action,
+  reviewNote,
+  loginEmail,
+}) {
   if (!to || typeof to !== 'string' || !to.includes('@')) {
     return { sent: false, skipped: true };
   }
@@ -227,13 +253,21 @@ async function sendTeacherApplicationDecisionEmail({ to, displayName, action, re
 
   if (action === 'approve') {
     const studioUrl = clientUrl ? `${clientUrl}/studio` : '/studio';
-    const subject = '[Cosmo Learn] Đơn xin quyền giảng viên đã được duyệt';
+    const profileUrl = clientUrl ? `${clientUrl}/profile` : '/profile';
+    const subject = '[Cosmo Learn] Đơn ứng tuyển giảng viên đã được duyệt';
+    const loginBlock = loginEmail
+      ? `\n\nBạn đã có tài khoản — đăng nhập bằng email ${loginEmail} và mật khẩu hiện tại (hoặc Google/Facebook nếu bạn đã dùng). Không cần mật khẩu mới.`
+      : '';
     const text = `Xin chào ${name},
 
-Đơn xin quyền giảng viên của bạn đã được phê duyệt. Bạn có thể vào Studio để tạo và quản lý nội dung:
-${studioUrl}
+Đơn ứng tuyển giảng viên của bạn đã được phê duyệt.${loginBlock}
 
-Nếu trang vẫn hiển thị vai trò cũ, hãy tải lại trang hoặc chuyển tab — phiên đăng nhập sẽ được cập nhật.
+Studio (soạn khóa học): ${studioUrl}
+Hoàn thiện hồ sơ giáo viên (ảnh đại diện, tiểu sử): ${profileUrl}
+
+Học viên sẽ thấy hồ sơ của bạn trên trang khóa học để xác minh giảng viên.
+
+Nếu trang vẫn hiển thị vai trò cũ, hãy đăng xuất và đăng nhập lại.
 
 Trân trọng,
 Cosmo Learn`;
@@ -241,7 +275,9 @@ Cosmo Learn`;
   }
 
   const subject = '[Cosmo Learn] Đơn xin quyền giảng viên chưa được chấp nhận';
-  const noteBlock = reviewNote ? `\n\nGhi chú từ ban quản trị:\n${reviewNote}` : '';
+  const noteBlock = reviewNote
+    ? `\n\nLý do từ chối:\n${reviewNote}`
+    : '\n\n(Vui lòng liên hệ ban quản trị nếu cần làm rõ.)';
   const text = `Xin chào ${name},
 
 Đơn xin quyền giảng viên của bạn hiện chưa được chấp nhận.${noteBlock}
@@ -327,6 +363,7 @@ module.exports = {
   sendWelcomeEmail,
   sendPasswordResetEmail,
   sendPaymentReceiptEmail,
+  sendTeacherApplicationReceivedEmail,
   sendTeacherApplicationDecisionEmail,
   sendCohortInviteEmail,
   sendAccountDeletedEmail,

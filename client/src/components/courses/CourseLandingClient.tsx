@@ -22,6 +22,7 @@ import { CoursePromoBanner } from '@/components/courses/CoursePromoBanner'
 import { CommunityAskButton } from '@/components/community/learning/CommunityAskButton'
 import { CourseCohortsJoin } from '@/features/courses/cohort/CourseCohortsJoin'
 import { ModuleMaterialsList } from '@/features/courses/cohort/ModuleMaterialsList'
+import { CourseInstructorCard } from '@/components/courses/CourseInstructorCard'
 
 function isOutlineEntry(l: Lesson | CourseLessonOutline): l is CourseLessonOutline {
   return !('content' in l)
@@ -88,6 +89,7 @@ export function CourseLandingClient({
   initialCourse,
   previewBootstrap,
   enrolledFlash,
+  ownedFlash,
   cohortPlacedFlash,
 }: {
   slug: string
@@ -95,6 +97,8 @@ export function CourseLandingClient({
   /** Studio / GV: tải khóa nháp phía client (SSR không gửi token). */
   previewBootstrap?: boolean
   enrolledFlash?: boolean
+  /** Đã sở hữu — chặn mua lại catalog. */
+  ownedFlash?: boolean
   cohortPlacedFlash?: boolean
 }) {
   const router = useRouter()
@@ -162,6 +166,17 @@ export function CourseLandingClient({
       cancelled = true
     }
   }, [slug, previewBootstrap])
+
+  useEffect(() => {
+    if (!enrolledFlash || previewBootstrap || !slug || !user?.id) return
+    let cancelled = false
+    void fetchCourseOutline(slug).then(({ course: c }) => {
+      if (!cancelled && c) setCourse(c)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [enrolledFlash, previewBootstrap, slug, user?.id])
 
   useEffect(() => {
     if (!course?.id || course.enrollment) return
@@ -245,6 +260,14 @@ export function CourseLandingClient({
           </div>
         </div>
       )}
+      {ownedFlash && !enrolledFlash && (
+        <div className="pt-14 px-4">
+          <div className="max-w-3xl mx-auto rounded-xl border border-cyan-500/30 bg-cyan-500/10 px-4 py-3 text-sm text-cyan-100">
+            Bạn đã có quyền truy cập khóa học này — không cần mua lại gói tự học. Muốn học theo lớp có GV,
+            chọn lớp ở mục bên dưới.
+          </div>
+        </div>
+      )}
       {(course.editorPreview || course.published === false) && (
         <div className={`px-4 ${enrolledFlash ? 'pt-2' : 'pt-16'}`}>
           <div className="max-w-3xl mx-auto rounded-xl border border-amber-500/35 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
@@ -290,6 +313,12 @@ export function CourseLandingClient({
             </div>
             <h1 className="text-2xl md:text-3xl font-bold text-white mb-3">{course.title}</h1>
             <p className="text-gray-300 text-sm leading-relaxed whitespace-pre-wrap">{course.description}</p>
+
+            {course.teacher ? (
+              <div className="mt-6">
+                <CourseInstructorCard teacher={course.teacher} />
+              </div>
+            ) : null}
 
             <div className="mt-6 flex flex-wrap gap-3">
               {isEnrolled && learnHref && (
@@ -369,9 +398,8 @@ export function CourseLandingClient({
         <CourseCohortsJoin
           courseSlug={slug}
           courseId={course.id}
-          isPaid={course.isPaid}
-          price={course.price}
-          currency={course.currency}
+          catalogPrice={course.price}
+          catalogCurrency={course.currency}
           catalogEnrolled={isEnrolled}
           catalogOpen={catalogOpen}
           cohortPlacedFlash={cohortPlacedFlash}

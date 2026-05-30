@@ -12,6 +12,7 @@ import {
   type GemShopBootstrapDTO,
 } from '@/features/rewards/public'
 import { useAuthStore } from '@/features/auth/public'
+import { useLiveClock } from '@/hooks/useLiveClock'
 
 const chamfer = (cut = 14) => ({
   clipPath: `polygon(${cut}px 0,100% 0,100% calc(100% - ${cut}px),calc(100% - ${cut}px) 100%,0 100%,0 ${cut}px)`,
@@ -86,7 +87,7 @@ export default function GemShopPage() {
   const { user } = useAuthStore()
   const userId = user?.id ?? null
   const [balance, setBalance] = useState(0)
-  const [utcTime, setUtcTime] = useState('')
+  const { time: localTime, zoneLabel } = useLiveClock()
   const [bootstrap, setBootstrap] = useState<GemShopBootstrapDTO | null>(null)
   const [categories, setCategories] = useState<AvatarDecorationCategorySection[]>([])
   const [loadingCatalog, setLoadingCatalog] = useState(true)
@@ -125,17 +126,6 @@ export default function GemShopPage() {
     }
   }, [])
 
-  useEffect(() => {
-    const tick = () => {
-      const now = new Date()
-      const pad = (n: number) => String(n).padStart(2, '0')
-      setUtcTime(`${pad(now.getUTCHours())}:${pad(now.getUTCMinutes())}:${pad(now.getUTCSeconds())}`)
-    }
-    tick()
-    const id = setInterval(tick, 1000)
-    return () => clearInterval(id)
-  }, [])
-
   const mono: React.CSSProperties = { fontFamily: "'JetBrains Mono', monospace" }
 
   return (
@@ -159,7 +149,9 @@ export default function GemShopPage() {
           <span style={{ color: categories.length > 0 ? '#6dffb0' : '#ff5cd4' }}>
             {categories.length > 0 ? '● LIVE' : '● LAUNCHING SOON'}
           </span>
-          <span className="hidden sm:inline">UTC · <span style={{ color: '#9aa8c4' }}>{utcTime}</span></span>
+          <span className="hidden sm:inline">
+            {zoneLabel} · <span style={{ color: '#9aa8c4' }}>{localTime}</span>
+          </span>
         </div>
       </div>
 

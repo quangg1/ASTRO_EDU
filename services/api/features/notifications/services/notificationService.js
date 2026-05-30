@@ -175,6 +175,37 @@ async function notifyCommunityCommentUpvote({ userId, voterName, postId, postTit
   );
 }
 
+async function notifyEnrollmentRevoked(
+  { userId, kind, courseTitle, courseSlug, cohortTitle, reason },
+  opts = {},
+) {
+  const reasonText = String(reason || '').trim();
+  const isCohort = kind === 'cohort';
+  const titleVi = isCohort ? 'Quyền tham gia lớp đã bị thu hồi' : 'Quyền tự học khóa đã bị thu hồi';
+  const targetLabel = isCohort
+    ? `lớp «${String(cohortTitle || 'Lớp học').trim()}»`
+    : `khóa «${String(courseTitle || courseSlug || 'Khóa học').trim()}»`;
+  const bodyVi = `Quản trị viên đã thu hồi quyền ${targetLabel}. Lý do: ${reasonText}`;
+  const href = courseSlug ? `/courses/${courseSlug}` : '/courses';
+
+  return createNotification(
+    {
+      userId,
+      type: 'enrollment_revoked',
+      titleVi,
+      bodyVi,
+      href,
+      metadata: {
+        kind: isCohort ? 'cohort' : 'catalog',
+        courseSlug: courseSlug || null,
+        cohortTitle: cohortTitle || null,
+        reason: reasonText,
+      },
+    },
+    opts,
+  );
+}
+
 module.exports = {
   createNotification,
   pushNotificationRealtime,
@@ -187,4 +218,5 @@ module.exports = {
   notifyModerationWarning,
   notifyCommunityPostUpvote,
   notifyCommunityCommentUpvote,
+  notifyEnrollmentRevoked,
 };

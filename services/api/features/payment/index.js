@@ -16,13 +16,17 @@ const Course = require('../courses/models/Course')
 const { authMiddleware } = require('../../shared/jwtAuth')
 const { completeOrderAndEnroll } = require('./services/paymentFulfillmentService')
 const { getCheckoutQuote } = require('./services/courseCheckoutService')
+const { enrichOrdersForUser } = require('./lib/serializeUserOrder')
+const { runOrderMaintenance, PENDING_TTL_MS, pendingExpiresAt } = require('./lib/orderMaintenance')
+const {
+  findReusablePendingOrder,
+  cancelOtherPendingOrders,
+} = require('./lib/orderPurchaseGuard')
 const { requireString } = require('../../shared/validation')
 const { AppError } = require('../../shared/errors')
 const { toClientMessage } = require('../../shared/publicError')
 
 const router = express.Router()
-
-const PENDING_TTL_MS = 30 * 60 * 1000
 
 function mintTxnRef() {
   return `GAL${Date.now()}${crypto.randomBytes(3).toString('hex').toUpperCase()}`
@@ -41,6 +45,7 @@ async function mintPendingOrder({ userId, courseId, voucherTierId, promoCode, co
     courseId,
     voucherTierId: voucherTierId || null,
     promoCode: promoCode || null,
+    cohortId: cohortId ? String(cohortId).trim() : null,
   })
   const course = await Course.findOne({ _id: courseId, published: true }).lean()
   if (!course) throw new AppError(404, 'COURSE_NOT_FOUND', 'Không tìm thấy khóa học')
@@ -53,6 +58,22 @@ async function mintPendingOrder({ userId, courseId, voucherTierId, promoCode, co
   }
 
   const selected = quote.selected
+
+  const reusable = await findReusablePendingOrder({
+    userId,
+    courseId: course._id,
+    cohortId: resolvedCohortId,
+  })
+  if (reusable) {
+    return { course, order: reusable, quote, reusedPending: true }
+  }
+
+  await cancelOtherPendingOrders({
+    userId,
+    courseId: course._id,
+    cohortId: resolvedCohortId,
+  })
+
   const txnRef = mintTxnRef()
   const order = await Order.create({
     userId,
@@ -79,11 +100,21 @@ async function mintPendingOrder({ userId, courseId, voucherTierId, promoCode, co
     gemsCommitted: selected.gemCost,
     currency: quote.currency || 'VND',
     status: 'pending',
+    expiresAt: pendingExpiresAt(new Date()),
     gateway: 'demo',
     txnRef,
-    metadata: { demoMode: true },
+    metadata: {
+      demoMode: true,
+      ...(quote.isCatalogUpgrade
+        ? {
+            upgradeFromCatalog: true,
+            catalogCredit: quote.catalogCredit,
+            cohortFullPrice: quote.cohortFullPrice,
+          }
+        : {}),
+    },
   })
-  return { course, order, quote }
+  return { course, order, quote, reusedPending: false }
 }
 
 router.get('/checkout-quote', authMiddleware, async (req, res) => {
@@ -91,11 +122,13 @@ router.get('/checkout-quote', authMiddleware, async (req, res) => {
     const courseId = requireString(req.query?.courseId, 'courseId')
     const voucherTierId = String(req.query?.voucherTierId || '').trim() || null
     const promoCode = String(req.query?.promoCode || '').trim() || null
+    const cohortId = String(req.query?.cohortId || '').trim() || null
     const quote = await getCheckoutQuote({
       userId: req.userId,
       courseId,
       voucherTierId,
       promoCode,
+      cohortId,
     })
     return res.json({ success: true, data: quote })
   } catch (err) {
@@ -116,20 +149,26 @@ router.post('/checkout', authMiddleware, async (req, res) => {
     const voucherTierId = String(req.body?.voucherTierId || '').trim() || null
     const promoCode = String(req.body?.promoCode || '').trim() || null
     const cohortId = String(req.body?.cohortId || '').trim() || null
-    const { course, order, quote } = await mintPendingOrder({
+    const resolvedCohortId = cohortId || null
+    const { course, order, quote, reusedPending } = await mintPendingOrder({
       userId: req.userId,
       courseId,
       voucherTierId,
       promoCode,
-      cohortId,
+      cohortId: resolvedCohortId,
     })
 
-    const expiresAt = new Date(Date.now() + PENDING_TTL_MS).toISOString()
+    const expiresAt = (
+      order.expiresAt
+        ? new Date(order.expiresAt)
+        : pendingExpiresAt(order.createdAt || new Date())
+    ).toISOString()
 
     return res.json({
       success: true,
       data: {
         txnRef: order.txnRef,
+        reusedPending: Boolean(reusedPending),
         amount: order.amount,
         listPrice: order.listPrice,
         discountAmount: order.discountAmount,
@@ -184,8 +223,10 @@ router.post('/checkout/:txnRef/confirm', authMiddleware, async (req, res) => {
       throw new AppError(400, 'ORDER_NOT_PAYABLE', 'Đơn hàng không thể thanh toán')
     }
 
-    const ageMs = Date.now() - new Date(order.createdAt).getTime()
-    if (ageMs > PENDING_TTL_MS) {
+    const expiresMs = order.expiresAt
+      ? new Date(order.expiresAt).getTime()
+      : new Date(order.createdAt).getTime() + PENDING_TTL_MS
+    if (Date.now() > expiresMs) {
       order.status = 'cancelled'
       await order.save()
       throw new AppError(400, 'ORDER_EXPIRED', 'Đơn hàng đã hết hạn. Vui lòng tạo đơn mới.')
@@ -247,11 +288,13 @@ router.get('/status/:txnRef', authMiddleware, async (req, res) => {
 
 router.get('/orders', authMiddleware, async (req, res) => {
   try {
-    const orders = await Order.find({ userId: req.userId })
+    await runOrderMaintenance()
+    const orders = await Order.find({ userId: req.userId, status: { $ne: 'cancelled' } })
       .sort({ createdAt: -1 })
-      .limit(50)
+      .limit(100)
       .lean()
-    res.json({ success: true, data: orders })
+    const data = await enrichOrdersForUser(orders)
+    res.json({ success: true, data })
   } catch (err) {
     req.logger?.error('list_orders_failed', { error: err.message })
     res.status(500).json({ success: false, error: 'Lỗi server' })

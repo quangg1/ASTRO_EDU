@@ -1,5 +1,6 @@
 const express = require('express');
 const { authMiddleware, optionalAuth } = require('../../../shared/jwtAuth');
+const { agentLimiter } = require('../../../shared/security/rateLimiters');
 const { runMessagePipeline } = require('../services/messagePipeline');
 const { buildLearnerSnapshot } = require('../services/contextBuilder');
 const { setCachedContext } = require('../services/contextCache');
@@ -13,10 +14,12 @@ const {
 const { saveSessionSummary } = require('../services/sessionSummaryService');
 const { getSpacedReviewDue, recordSpacedReview } = require('../services/spacedReviewService');
 const { recordDepthPreference } = require('../services/depthAdaptationService');
+const { assertAgentNotQuizLocked } = require('../lib/agentQuizLock');
+const { AppError } = require('../../../shared/errors');
 
 const router = express.Router();
 
-router.post('/message', optionalAuth, async (req, res, next) => {
+router.post('/message', agentLimiter, optionalAuth, async (req, res, next) => {
   try {
     await runMessagePipeline(req, res);
   } catch (err) {
@@ -36,11 +39,20 @@ router.get('/snapshot', authMiddleware, async (req, res, next) => {
 router.post('/context/prefetch', authMiddleware, async (req, res, next) => {
   try {
     const sessionContext = req.body?.session_context || req.body?.sessionContext || {};
+    try {
+      assertAgentNotQuizLocked(sessionContext);
+    } catch (e) {
+      if (e instanceof AppError) {
+        return res.status(e.status).json({ success: false, code: e.code, error: e.message });
+      }
+      throw e;
+    }
     const { buildAgentContext } = require('../services/contextBuilder');
     const built = await buildAgentContext(
       req.userId,
       sessionContext,
       req.body?.learner_snapshot || req.body?.learnerSnapshot,
+      req.userRole,
     );
     setCachedContext(req.userId, sessionContext, built);
     res.json({ success: true, warmed: true });
@@ -51,6 +63,9 @@ router.post('/context/prefetch', authMiddleware, async (req, res, next) => {
 
 router.get('/coach-nudge', authMiddleware, async (req, res, next) => {
   try {
+    if (req.query.quizLock === 'recall' || req.query.recallQuizActive === '1') {
+      return res.json({ success: true, allowed: false, reason: 'quiz_locked' });
+    }
     const lessonId =
       typeof req.query.lessonId === 'string' ? req.query.lessonId.trim() : undefined;
     const sessionId =
@@ -148,6 +163,14 @@ router.post('/tools/execute', authMiddleware, async (req, res, next) => {
     const { toolName, arguments: args, session_context: sessionContext } = req.body || {};
     if (!toolName || typeof toolName !== 'string') {
       return res.status(400).json({ success: false, error: 'toolName required' });
+    }
+    try {
+      assertAgentNotQuizLocked(sessionContext || null);
+    } catch (e) {
+      if (e instanceof AppError) {
+        return res.status(e.status).json({ success: false, code: e.code, error: e.message });
+      }
+      throw e;
     }
     const { tier, courseSlug, courseId } = await resolveAgentTier({
       userId: req.userId,

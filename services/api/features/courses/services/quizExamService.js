@@ -4,7 +4,10 @@ const Cohort = require('../models/Cohort');
 const Course = require('../models/Course');
 const CohortEnrollment = require('../models/CohortEnrollment');
 const { canEditCourse } = require('../../../shared/jwtAuth');
-const { computeAccess, effectiveSchedule, loadScheduleMap } = require('./scheduleResolver');
+const {
+  assertCatalogAccess,
+  assertQuizDeliveryAccess,
+} = require('./courseContentSecurity');
 
 function mcqAnswerIndex(q) {
   const a = q?.answer;
@@ -62,23 +65,6 @@ function findLesson(course, lessonSlug) {
   return (course.lessons || []).find((l) => l.slug === lessonSlug);
 }
 
-async function assertCatalogAccess({ course, userId }) {
-  if (course.catalogEnabled === false) {
-    const err = new Error('Khóa học chỉ mở qua lớp theo kỳ, không tự học catalog');
-    err.status = 403;
-    err.code = 'catalog_disabled';
-    throw err;
-  }
-  const enrollment = await Enrollment.findOne({ userId, courseId: course._id }).lean();
-  if (!enrollment) {
-    const err = new Error('Chưa đăng ký khóa học này');
-    err.status = 403;
-    err.code = 'not_enrolled';
-    throw err;
-  }
-  return enrollment;
-}
-
 function assertAttemptMatchesRoute(attempt, { courseId, cohortIdFromRoute }) {
   if (!attempt) {
     const err = new Error('Không tìm thấy lượt làm bài');
@@ -124,23 +110,23 @@ async function assertCohortAccess({ cohortId, userId, roles }) {
   return en;
 }
 
-async function assertQuizWindow({ course, lesson, cohortId, CohortActivitySchedule }) {
-  if (!cohortId) return;
-  const map = await loadScheduleMap(CohortActivitySchedule, cohortId);
-  const schedule = effectiveSchedule(lesson, map);
-  const access = computeAccess(schedule);
-  if (access === 'locked') {
-    const err = new Error('Bài kiểm tra chưa mở');
-    err.status = 403;
-    err.code = 'quiz_locked';
-    throw err;
-  }
-  if (access === 'closed') {
-    const err = new Error('Bài kiểm tra đã đóng');
-    err.status = 403;
-    err.code = 'quiz_closed';
-    throw err;
-  }
+/** @deprecated Prefer assertQuizDeliveryAccess — kept for callers passing cohortId only */
+async function assertQuizWindow({
+  course,
+  lesson,
+  cohortId,
+  CohortActivitySchedule,
+  userId,
+  userRole,
+}) {
+  return assertQuizDeliveryAccess({
+    course,
+    lesson,
+    cohortId,
+    userId,
+    userRole,
+    CohortActivitySchedule,
+  });
 }
 
 function countFinishedAttempts(attempts) {
@@ -204,6 +190,7 @@ module.exports = {
   assertCohortAccess,
   assertAttemptMatchesRoute,
   assertQuizWindow,
+  assertQuizDeliveryAccess,
   countFinishedAttempts,
   gradeAnswers,
   getActiveAttempt,

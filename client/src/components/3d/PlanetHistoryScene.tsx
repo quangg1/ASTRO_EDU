@@ -198,6 +198,7 @@ const onCanvasPointerMissed = () => {
 export default function PlanetHistoryScene({ globeEntity }: { globeEntity: ShowcaseOrbitEntity }) {
   return (
     <Canvas
+      className="h-full w-full"
       camera={{ position: [0, 4, 22], fov: 58, near: 0.02 }}
       gl={{ antialias: true, alpha: false }}
       style={{ background: '#100818' }}

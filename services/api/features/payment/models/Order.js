@@ -25,12 +25,19 @@ const orderSchema = new mongoose.Schema({
   gemsCommitted: { type: Number, default: 0, min: 0 },
   gemsBurnedAt: { type: Date, default: null },
   currency: { type: String, default: 'VND' },
-  status: { type: String, enum: ['pending', 'completed', 'failed', 'cancelled'], default: 'pending', index: true },
+  status: { type: String, enum: ['pending', 'completed', 'failed', 'cancelled', 'refunded'], default: 'pending', index: true },
   gateway: { type: String, enum: ['demo', 'card', 'vnpay', 'momo'], default: 'demo' },
   transactionId: { type: String, default: null },
   txnRef: { type: String, required: true, unique: true },
+  /** Pending: hết hạn sau PENDING_TTL — không thanh toán được. */
+  expiresAt: { type: Date, default: null, index: true },
   returnUrl: { type: String, default: null },
   paidAt: { type: Date, default: null },
+  /** Ghi chú nội bộ admin (support). */
+  adminNote: { type: String, default: '', maxlength: 2000 },
+  refundedAt: { type: Date, default: null },
+  refundedByUserId: { type: String, default: null },
+  refundReason: { type: String, default: '', maxlength: 2000 },
   metadata: { type: mongoose.Schema.Types.Mixed, default: {} },
 }, { timestamps: true });
 

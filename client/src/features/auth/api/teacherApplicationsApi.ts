@@ -1,15 +1,5 @@
 /**
  * Teacher-application API surface.
- *
- * Endpoints live under the auth gateway because the back-end keeps the
- * "promote user to teacher role" flow inside the auth bounded context. Two
- * audiences share the same DTOs but distinct endpoints:
- *   - User: submit own application, read own status (under `/auth/...`).
- *   - Admin: list/review applications (under `/api/admin/...`).
- *
- * Cross-domain consumers should reach these via `features/auth/public` (user
- * actions) or `features/admin/public` (admin actions) rather than importing
- * this module directly.
  */
 import { getAuthBase } from '@/lib/apiConfig'
 import { getToken } from './authApi'
@@ -29,8 +19,27 @@ export interface TeacherApplication {
   id: string
   userId: string
   status: 'pending' | 'approved' | 'rejected'
+  applicationEmail: string
+  fullName: string
+  phone: string
+  headline: string
+  city: string
+  organizationRole: string
+  teachingLevels: string[]
   bio: string
   organization: string
+  expertise: string[]
+  education: string
+  yearsExperience: number | null
+  website: string
+  linkedin: string
+  avatarUrl: string | null
+  cvUrl: string | null
+  cvFileName: string
+  certificateUrl: string | null
+  certificateFileName: string
+  cvReviewedAt: string | null
+  cvReviewedByUserId: string | null
   reviewedAt: string | null
   reviewedByUserId: string | null
   reviewNote: string
@@ -47,10 +56,30 @@ export interface TeacherApplicationWithUser extends TeacherApplication {
   } | null
 }
 
-export async function submitTeacherApplication(body: {
+export type TeacherApplicationSubmitBody = {
+  fullName: string
+  phone: string
+  headline: string
+  city?: string
+  organization: string
+  organizationRole?: string
+  teachingLevels?: string[]
+  expertise: string | string[]
+  education: string
+  yearsExperience?: number | string
+  website?: string
+  linkedin?: string
+  avatarUrl?: string
   bio: string
-  organization?: string
-}): Promise<{ success: boolean; application?: TeacherApplication; error?: string; code?: string }> {
+  cvUrl: string
+  cvFileName?: string
+  certificateUrl?: string
+  certificateFileName?: string
+}
+
+export async function submitTeacherApplication(
+  body: TeacherApplicationSubmitBody,
+): Promise<{ success: boolean; application?: TeacherApplication; error?: string; code?: string }> {
   const token = getToken()
   if (!token) return { success: false, error: 'Chưa đăng nhập' }
   const res = await authFetch(`${AUTH_BASE}/auth/teacher-application`, {
@@ -82,7 +111,7 @@ export async function fetchMyTeacherApplicationStatus(): Promise<{
 }
 
 export async function fetchAdminTeacherApplications(
-  status: 'pending' | 'approved' | 'rejected' | 'all' = 'pending'
+  status: 'pending' | 'approved' | 'rejected' | 'all' = 'pending',
 ): Promise<{ success: boolean; data?: TeacherApplicationWithUser[]; error?: string }> {
   const token = getToken()
   if (!token) return { success: false, error: 'Not signed in' }
@@ -95,10 +124,27 @@ export async function fetchAdminTeacherApplications(
   return { success: false, error: data.error || 'Lỗi tải đơn' }
 }
 
+export async function markTeacherApplicationCvReviewed(
+  applicationId: string,
+): Promise<{ success: boolean; application?: TeacherApplication; error?: string }> {
+  const token = getToken()
+  if (!token) return { success: false, error: 'Not signed in' }
+  const res = await authFetch(
+    `${AUTH_BASE}/api/admin/teacher-applications/${encodeURIComponent(applicationId)}/cv-reviewed`,
+    {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    },
+  )
+  const data = await res.json()
+  if (data.success && data.application) return { success: true, application: data.application }
+  return { success: false, error: data.error || 'Xác nhận CV thất bại' }
+}
+
 export async function reviewTeacherApplication(
   applicationId: string,
   action: 'approve' | 'reject',
-  note?: string
+  note?: string,
 ): Promise<{ success: boolean; application?: TeacherApplication; error?: string }> {
   const token = getToken()
   if (!token) return { success: false, error: 'Not signed in' }

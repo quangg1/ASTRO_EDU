@@ -1,9 +1,7 @@
 import { create } from 'zustand'
 import type { EarthStage } from '@/features/content3d/earth/lib/earthHistoryTypes'
 import { earthHistoryData } from '@/features/content3d/earth/lib/earthHistoryData'
-import { fetchEarthHistoryStages } from '@/features/content3d/earth/api/earthHistoryApi'
-import { narrativeToEarthStages } from '@/features/content3d/narrative/adapters'
-import { fetchPlanetNarrative } from '@/features/content3d/planet-narrative/api/planetNarrativeApi'
+import { loadEarthStages } from '@/features/content3d/earth/lib/loadEarthStages'
 
 /**
  * Earth History scene state.
@@ -40,14 +38,7 @@ export const useEarthHistoryStore = create<EarthHistoryState>((set, get) => ({
     if (get().loading) return
     set({ loading: true })
     try {
-      const narrative = await fetchPlanetNarrative('planet-earth')
-      let next: typeof earthHistoryData = earthHistoryData
-      if (narrative.data?.beats?.length) {
-        next = narrativeToEarthStages(narrative.data)
-      } else {
-        const remote = await fetchEarthHistoryStages()
-        if (remote.length > 0) next = remote
-      }
+      const next = await loadEarthStages(earthHistoryData)
       const prevIndex = get().currentStageIndex
       const idx = next.length ? Math.min(prevIndex, next.length - 1) : 0
       set({

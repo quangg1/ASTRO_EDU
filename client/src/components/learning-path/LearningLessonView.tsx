@@ -14,12 +14,19 @@ import type {
 } from '@/data/learningPathCurriculum'
 import { DEPTH_META, getLessonNeighbors, getLessonById } from '@/data/learningPathCurriculum'
 import {
+  buildLessonSectionTocNavItems,
+  groupLessonSectionTocItems,
+  type LessonSection,
+} from '@/features/courses/public'
+import {
   flushLearningPathBehavior,
   isLessonComplete,
   isLessonMastered,
   loadLessonCompletion,
   loadLessonMastery,
-  normalizeStudioRecallQuiz,
+  fetchRecallQuizDelivery,
+  submitRecallQuizAnswers,
+  type RecallQuizDeliveryQuestion,
   pushLearningPathCompletionWithLast,
   pushLessonMasteryMap,
   saveLastLearningPathLessonId,
@@ -34,7 +41,7 @@ import {
   type LessonMasteryMap,
 } from '@/features/learning-path/public'
 import { LessonRecallQuizOverlay } from '@/components/learning-path/LessonRecallQuizOverlay'
-import { useAuthStore } from '@/features/auth/public'
+import { getToken, useAuthStore } from '@/features/auth/public'
 import { SectionPreview } from '@/components/studio/LessonPreview'
 import { applyConceptAnchorsToHtml } from '@/features/concepts/public'
 import { trackEvent } from '@/lib/analytics'
@@ -108,27 +115,64 @@ export default function LearningLessonView({
   const done = isLessonComplete(completion, lesson.id)
   const mastered = isLessonMastered(mastery, lesson.id)
 
-  const recallQuestions = useMemo(() => normalizeStudioRecallQuiz(lesson), [lesson])
+  const recallGateHint = (lesson.recallQuiz?.length ?? 0) >= 3
+  const [deliveryQuestions, setDeliveryQuestions] = useState<RecallQuizDeliveryQuestion[]>([])
+  const [recallLoadError, setRecallLoadError] = useState<string | null>(null)
 
   const coach = useAgentCoach({
     lessonId: lesson.id,
     lessonTitle: lesson.titleVi,
-    enabled: Boolean(userId),
+    enabled: Boolean(userId) && !quizOverlayOpen,
   })
 
-  const recallGateActive = recallQuestions.length >= 3
+  const recallGateActive = recallGateHint && deliveryQuestions.length >= 3
   const [agentCoachTrigger, setAgentCoachTrigger] = useState<'quiz_failed' | null>(null)
+  const [pendingCoachAfterQuiz, setPendingCoachAfterQuiz] = useState(false)
 
-  const openRecallQuiz = useCallback(() => {
-    if (recallQuestions.length === 0 || mastered) return
-    setQuizOverlayOpen(true)
-  }, [recallQuestions.length, mastered])
+  const loadRecallDelivery = useCallback(async () => {
+    const token = getToken()
+    if (!token) {
+      setRecallLoadError('Đăng nhập để làm kiểm tra nhanh.')
+      return false
+    }
+    setRecallLoadError(null)
+    const res = await fetchRecallQuizDelivery(token, lesson.id)
+    if (!res.ok || !res.data?.questions?.length) {
+      setRecallLoadError(res.error || 'Không tải được bài kiểm tra.')
+      setDeliveryQuestions([])
+      return false
+    }
+    setDeliveryQuestions(res.data.questions)
+    return res.data.questions.length >= 3
+  }, [lesson.id])
+
+  const openRecallQuiz = useCallback(async () => {
+    if (mastered) return
+    if (!recallGateHint) return
+    const ok = await loadRecallDelivery()
+    if (ok) setQuizOverlayOpen(true)
+  }, [mastered, recallGateHint, loadRecallDelivery])
 
   useEffect(() => {
-    const onOpenRecall = () => openRecallQuiz()
+    if (!recallGateHint || mastered || !userId) return
+    void loadRecallDelivery()
+  }, [recallGateHint, mastered, userId, lesson.id, loadRecallDelivery])
+
+  useEffect(() => {
+    const onOpenRecall = () => {
+      void openRecallQuiz()
+    }
     window.addEventListener('galaxies:open-recall-quiz', onOpenRecall)
     return () => window.removeEventListener('galaxies:open-recall-quiz', onOpenRecall)
   }, [openRecallQuiz])
+
+  const closeRecallOverlay = useCallback(() => {
+    setQuizOverlayOpen(false)
+    if (pendingCoachAfterQuiz && !mastered) {
+      setAgentCoachTrigger('quiz_failed')
+      setPendingCoachAfterQuiz(false)
+    }
+  }, [pendingCoachAfterQuiz, mastered])
 
   const handleRecallPassed = () => {
     setAgentCoachTrigger(null)
@@ -225,35 +269,19 @@ export default function LearningLessonView({
   const isConceptPanelOpen = !!activeConcept
   const sectionNavItems = useMemo(
     () =>
-      highlightedSections.map((sec, i) => ({
-        id: `lesson-section-${i}`,
-        title: sec.title?.trim() || `Phần ${i + 1}`,
-        type: (sec as { type?: string }).type || 'text',
-        sectionLevel: (sec as { sectionLevel?: 'main' | 'sub' }).sectionLevel ?? 'main',
-      })),
+      buildLessonSectionTocNavItems(highlightedSections as LessonSection[], {
+        idPrefix: 'lesson-section',
+        fallbackStyle: 'phan',
+      }),
     [highlightedSections],
   )
-  const tocGroups = useMemo(() => {
-    type TocItem = (typeof sectionNavItems)[number]
-    const groups: Array<{ parent: TocItem; children: TocItem[] }> = []
-    let lastParentIndex = -1
-    for (const item of sectionNavItems) {
-      if (item.sectionLevel === 'sub' && lastParentIndex >= 0) {
-        groups[lastParentIndex].children.push(item)
-        continue
-      }
-      groups.push({ parent: item, children: [] })
-      lastParentIndex = groups.length - 1
-    }
-    return groups
-  }, [sectionNavItems])
+  const tocGroups = useMemo(() => groupLessonSectionTocItems(sectionNavItems), [sectionNavItems])
 
   const activeSectionContext = useMemo(() => {
     if (!activeSectionId) return null
-    const idx = sectionNavItems.findIndex((s) => s.id === activeSectionId)
-    if (idx < 0) return null
-    const nav = sectionNavItems[idx]
-    const sec = highlightedSections[idx] as { html?: string; content?: string; body?: string }
+    const nav = sectionNavItems.find((s) => s.id === activeSectionId)
+    if (!nav) return null
+    const sec = highlightedSections[nav.idx] as { html?: string; content?: string; body?: string }
     const raw = sec?.html || sec?.content || sec?.body || ''
     const excerpt = raw
       .replace(/<[^>]+>/g, ' ')
@@ -277,8 +305,10 @@ export default function LearningLessonView({
         moduleId: displayModule.id,
         nodeId: displayNode.id,
         depth,
-        coachTrigger: agentCoachTrigger,
+        coachTrigger: quizOverlayOpen ? null : agentCoachTrigger,
         recallQuizAvailable: recallGateActive && !mastered,
+        quizLock: quizOverlayOpen && !mastered ? 'recall' : null,
+        recallQuizActive: quizOverlayOpen && !mastered,
         ...activeSectionContext,
       }),
     [
@@ -291,8 +321,37 @@ export default function LearningLessonView({
       agentCoachTrigger,
       recallGateActive,
       mastered,
+      quizOverlayOpen,
       activeSectionContext,
     ],
+  )
+
+  const agentLearnerSnapshot = useMemo(
+    () => ({
+      recentLessonIds: [lesson.id],
+      weakLessons: coach.snapshot?.weakLessons,
+      misconceptions: coach.snapshot?.misconceptions,
+      spacedReviewDue: coach.snapshot?.spacedReviewDue,
+      depthSuggestion: coach.snapshot?.depthSuggestion ?? null,
+    }),
+    [
+      lesson.id,
+      coach.snapshot?.weakLessons,
+      coach.snapshot?.misconceptions,
+      coach.snapshot?.spacedReviewDue,
+      coach.snapshot?.depthSuggestion,
+    ],
+  )
+
+  const submitRecallToServer = useCallback(
+    async (answers: Record<string, number>) => {
+      const token = getToken()
+      if (!token) throw new Error('Đăng nhập để nộp bài kiểm tra.')
+      const res = await submitRecallQuizAnswers(token, lesson.id, answers)
+      if (!res.ok || !res.data) throw new Error(res.error || 'Nộp bài thất bại')
+      return res.data
+    },
+    [lesson.id],
   )
 
   const handleSuggestDepth = useCallback(
@@ -310,6 +369,15 @@ export default function LearningLessonView({
       )
     },
     [displayModule.id, displayNode, lesson.title, lesson.titleVi, router],
+  )
+
+  const agentPageValue = useMemo(
+    () => ({
+      sessionContext: agentSessionContext,
+      learnerSnapshot: agentLearnerSnapshot,
+      onSuggestDepth: handleSuggestDepth,
+    }),
+    [agentSessionContext, agentLearnerSnapshot, handleSuggestDepth],
   )
 
   const relatedLessonsForActiveConcept = useMemo(() => {
@@ -548,19 +616,7 @@ export default function LearningLessonView({
   }, [activeSectionId])
 
   return (
-    <AgentPageProvider
-      value={{
-        sessionContext: agentSessionContext,
-        learnerSnapshot: {
-          recentLessonIds: [lesson.id],
-          weakLessons: coach.snapshot?.weakLessons,
-          misconceptions: coach.snapshot?.misconceptions,
-          spacedReviewDue: coach.snapshot?.spacedReviewDue,
-          depthSuggestion: coach.snapshot?.depthSuggestion ?? null,
-        },
-        onSuggestDepth: handleSuggestDepth,
-      }}
-    >
+    <AgentPageProvider value={agentPageValue}>
     <div className="min-h-screen bg-ds-base relative overflow-x-hidden">
       <div
         className="pointer-events-none fixed inset-0 opacity-25"
@@ -1072,19 +1128,21 @@ export default function LearningLessonView({
         }
       `}</style>
 
-      {recallQuestions.length > 0 ? (
+      {recallGateHint ? (
         <LessonRecallQuizOverlay
           open={quizOverlayOpen}
-          onClose={() => setQuizOverlayOpen(false)}
+          onClose={closeRecallOverlay}
           lessonTitle={lesson.titleVi}
-          questions={recallQuestions}
+          questions={deliveryQuestions}
           passed={mastered}
           onPassed={handleRecallPassed}
+          onSubmit={submitRecallToServer}
           onQuizFailed={() => {
-            setAgentCoachTrigger('quiz_failed')
+            setPendingCoachAfterQuiz(true)
             void coach.reportQuizFailed()
           }}
           gateActive={recallGateActive}
+          loadError={recallLoadError}
         />
       ) : null}
     </div>

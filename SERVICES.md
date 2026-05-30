@@ -101,7 +101,7 @@ Xem chi tiết trong [docs/ARCHITECTURE_MERGED.md](docs/ARCHITECTURE_MERGED.md#d
   - Chạy: `uvicorn server:app --host 0.0.0.0 --port 5004`  
   - Model: BGE-M3 (BAAI/bge-m3), đa ngôn ngữ (tiếng Việt). Client gọi qua `POST /api/embed`.
 
-- **services/ai** (Python): xem `services/ai/README.md`. RAG cần embedding (5004). LLM: set `OPENROUTER_API_KEY` (OpenRouter; free tier có thể dùng `OPENROUTER_MODEL=openrouter/free`) hoặc để trống key và chạy LM Studio + `LM_STUDIO_URL` / `LM_STUDIO_MODEL`.
+- **services/ai** (Python): xem `services/ai/README.md`. RAG cần embedding (5004). LLM chain: `LLM_PROVIDER_ORDER=openrouter,lmstudio,groq` — OpenRouter trước, tự fallback sang LM Studio local khi hết credit/lỗi; copy `services/ai/example.env` → `.env`.
 
 ### 4. Chạy từng terminal
 

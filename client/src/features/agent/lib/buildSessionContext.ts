@@ -16,6 +16,8 @@ type BuildParams = {
   narrativeKey?: string | null
   coachTrigger?: 'quiz_failed' | null
   recallQuizAvailable?: boolean
+  quizLock?: 'recall' | 'course_exam' | null
+  recallQuizActive?: boolean
   activeSectionId?: string | null
   activeSectionTitle?: string | null
   activeSectionExcerpt?: string | null
@@ -38,6 +40,8 @@ export function buildSessionContext(params: BuildParams): SessionContext {
     entityId: params.entityId ?? null,
     coachTrigger: params.coachTrigger ?? null,
     recallQuizAvailable: params.recallQuizAvailable ?? false,
+    quizLock: params.quizLock ?? null,
+    recallQuizActive: params.recallQuizActive ?? false,
     activeSectionId: params.activeSectionId ?? null,
     activeSectionTitle: params.activeSectionTitle ?? null,
     activeSectionExcerpt: params.activeSectionExcerpt ?? null,

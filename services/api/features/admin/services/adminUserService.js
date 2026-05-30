@@ -21,30 +21,55 @@ const UserProgress = require('../../learning-path/models/UserProgress');
 const LearningPathEvent = require('../../learning-path/models/LearningPathEvent');
 const { AppError } = require('../../../shared/errors');
 const { sendAccountDeletedEmail } = require('../../../shared/mailer');
+const { recordAdminAction } = require('../lib/recordAdminAction');
+const { normalizeAdminScopes, isFullAdmin } = require('../../../shared/adminScopes');
 
 const ROLES = ['student', 'teacher', 'moderator', 'admin'];
 
-async function listAdminUsers() {
-  const users = await User.find()
-    .select('email displayName avatar provider role accountStatus deactivatedAt deactivatedByUserId deactivationReason restoredAt createdAt')
-    .sort({ createdAt: -1 })
-    .limit(500)
-    .lean();
+async function listAdminUsers({ q = '', role, accountStatus, page = 1, limit = 50 } = {}) {
+  const filter = {};
+  if (role && ROLES.includes(role)) filter.role = role;
+  if (accountStatus === 'active' || accountStatus === 'deactivated') {
+    filter.accountStatus = accountStatus;
+  }
+  if (q.trim()) {
+    const rx = new RegExp(q.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+    filter.$or = [{ email: rx }, { displayName: rx }];
+  }
 
-  return users.map((u) => ({
-    id: u._id,
-    email: u.email,
-    displayName: u.displayName,
-    avatar: u.avatar,
-    provider: u.provider,
-    role: u.role || 'student',
-    accountStatus: u.accountStatus || 'active',
-    deactivatedAt: u.deactivatedAt || null,
-    deactivatedByUserId: u.deactivatedByUserId || null,
-    deactivationReason: u.deactivationReason || '',
-    restoredAt: u.restoredAt || null,
-    createdAt: u.createdAt,
-  }));
+  const take = Math.min(100, Math.max(1, limit));
+  const skip = Math.max(0, (Math.max(1, page) - 1) * take);
+
+  const [users, total] = await Promise.all([
+    User.find(filter)
+      .select('email displayName avatar provider role adminScopes accountStatus deactivatedAt deactivatedByUserId deactivationReason restoredAt createdAt')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(take)
+      .lean(),
+    User.countDocuments(filter),
+  ]);
+
+  return {
+    items: users.map((u) => ({
+      id: u._id,
+      email: u.email,
+      displayName: u.displayName,
+      avatar: u.avatar,
+      provider: u.provider,
+      role: u.role || 'student',
+      adminScopes: u.role === 'admin' ? normalizeAdminScopes(u.adminScopes) : [],
+      accountStatus: u.accountStatus || 'active',
+      deactivatedAt: u.deactivatedAt || null,
+      deactivatedByUserId: u.deactivatedByUserId || null,
+      deactivationReason: u.deactivationReason || '',
+      restoredAt: u.restoredAt || null,
+      createdAt: u.createdAt,
+    })),
+    total,
+    page: Math.max(1, page),
+    limit: take,
+  };
 }
 
 async function updateAdminUserRole({ actorUserId, targetUserId, role }) {
@@ -55,16 +80,34 @@ async function updateAdminUserRole({ actorUserId, targetUserId, role }) {
     throw new AppError(400, 'SELF_DEMOTION_FORBIDDEN', 'Admin không được tự hạ quyền của chính mình');
   }
 
+  const update =
+    role === 'admin'
+      ? { $set: { role } }
+      : { $set: { role }, $unset: { adminScopes: 1 } };
+
   const user = await User.findByIdAndUpdate(
     targetUserId,
-    { $set: { role } },
+    update,
     { new: true, runValidators: true }
-  ).select('email displayName avatar provider role accountStatus deactivatedAt deactivatedByUserId deactivationReason restoredAt createdAt');
+  ).select('email displayName avatar provider role adminScopes accountStatus deactivatedAt deactivatedByUserId deactivationReason restoredAt createdAt');
 
   if (!user) {
     throw new AppError(404, 'USER_NOT_FOUND', 'Không tìm thấy người dùng');
   }
 
+  await recordAdminAction({
+    actorUserId,
+    action: 'user_role_update',
+    targetType: 'user',
+    targetId: String(targetUserId),
+    reason: `Đổi vai trò thành ${role}`,
+    payload: { role },
+  });
+
+  return serializeAdminUser(user);
+}
+
+function serializeAdminUser(user) {
   return {
     id: user._id,
     email: user.email,
@@ -72,6 +115,7 @@ async function updateAdminUserRole({ actorUserId, targetUserId, role }) {
     avatar: user.avatar,
     provider: user.provider,
     role: user.role || 'student',
+    adminScopes: user.role === 'admin' ? normalizeAdminScopes(user.adminScopes) : [],
     accountStatus: user.accountStatus || 'active',
     deactivatedAt: user.deactivatedAt || null,
     deactivatedByUserId: user.deactivatedByUserId || null,
@@ -79,6 +123,42 @@ async function updateAdminUserRole({ actorUserId, targetUserId, role }) {
     restoredAt: user.restoredAt || null,
     createdAt: user.createdAt,
   };
+}
+
+async function updateAdminUserScopes({ actorUserId, targetUserId, adminScopes }) {
+  const actor = await User.findById(actorUserId).select('role adminScopes').lean();
+  if (!actor || actor.role !== 'admin' || !isFullAdmin(actor)) {
+    throw new AppError(403, 'FULL_ADMIN_REQUIRED', 'Chỉ admin toàn quyền mới được gán phạm vi quản trị con');
+  }
+
+  const target = await User.findById(targetUserId).select('role').lean();
+  if (!target) {
+    throw new AppError(404, 'USER_NOT_FOUND', 'Không tìm thấy người dùng');
+  }
+  if (target.role !== 'admin') {
+    throw new AppError(400, 'NOT_ADMIN', 'Chỉ gán phạm vi cho tài khoản có vai trò quản trị viên');
+  }
+  if (targetUserId === actorUserId) {
+    throw new AppError(400, 'SELF_SCOPE_FORBIDDEN', 'Không thể tự thu hẹp phạm vi của chính mình');
+  }
+
+  const cleaned = normalizeAdminScopes(adminScopes);
+  const user = await User.findByIdAndUpdate(
+    targetUserId,
+    { $set: { adminScopes: cleaned } },
+    { new: true, runValidators: true },
+  ).select('email displayName avatar provider role adminScopes accountStatus deactivatedAt deactivatedByUserId deactivationReason restoredAt createdAt');
+
+  await recordAdminAction({
+    actorUserId,
+    action: 'user_scopes_update',
+    targetType: 'user',
+    targetId: String(targetUserId),
+    reason: cleaned.length ? `Phạm vi: ${cleaned.join(', ')}` : 'Toàn quyền (không giới hạn phạm vi)',
+    payload: { adminScopes: cleaned },
+  });
+
+  return serializeAdminUser(user);
 }
 
 async function updateAdminUserStatus({ actorUserId, targetUserId, accountStatus, reason }) {
@@ -113,30 +193,26 @@ async function updateAdminUserStatus({ actorUserId, targetUserId, accountStatus,
         };
 
   const user = await User.findByIdAndUpdate(targetUserId, update, { new: true, runValidators: true })
-    .select('email displayName avatar provider role accountStatus deactivatedAt deactivatedByUserId deactivationReason restoredAt createdAt');
+    .select('email displayName avatar provider role adminScopes accountStatus deactivatedAt deactivatedByUserId deactivationReason restoredAt createdAt');
 
   if (!user) {
     throw new AppError(404, 'USER_NOT_FOUND', 'Không tìm thấy người dùng');
   }
 
-  return {
-    id: user._id,
-    email: user.email,
-    displayName: user.displayName,
-    avatar: user.avatar,
-    provider: user.provider,
-    role: user.role || 'student',
-    accountStatus: user.accountStatus || 'active',
-    deactivatedAt: user.deactivatedAt || null,
-    deactivatedByUserId: user.deactivatedByUserId || null,
-    deactivationReason: user.deactivationReason || '',
-    restoredAt: user.restoredAt || null,
-    createdAt: user.createdAt,
-  };
+  await recordAdminAction({
+    actorUserId,
+    action: 'user_status_update',
+    targetType: 'user',
+    targetId: String(targetUserId),
+    reason: reason || `Trạng thái: ${accountStatus}`,
+    payload: { accountStatus },
+  });
+
+  return serializeAdminUser(user);
 }
 
 /**
- * Xóa vĩnh viễn user + dữ liệu liên quan (không thể hoàn tác).
+ * Xóa vĩnh viễn user
  * Yêu cầu confirmEmail trùng email tài khoản + lý do (gửi email trước khi xóa).
  */
 async function deleteAdminUserPermanently({ actorUserId, targetUserId, confirmEmail, reason }) {
@@ -226,12 +302,22 @@ async function deleteAdminUserPermanently({ actorUserId, targetUserId, confirmEm
 
   await User.findByIdAndDelete(targetUserId);
 
+  await recordAdminAction({
+    actorUserId,
+    action: 'user_delete',
+    targetType: 'user',
+    targetId: uid,
+    reason: reasonText,
+    payload: { email: user.email },
+  });
+
   return { deletedUserId: uid, email: user.email, emailSent, reason: reasonText };
 }
 
 module.exports = {
   listAdminUsers,
   updateAdminUserRole,
+  updateAdminUserScopes,
   updateAdminUserStatus,
   deleteAdminUserPermanently,
   ROLES,

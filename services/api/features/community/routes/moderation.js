@@ -6,14 +6,14 @@ const moderationService = require('../services/moderationService');
 const router = express.Router();
 
 function requireMod(req, res, next) {
-  if (!canAccessModTools(req.userRole)) {
+  if (!canAccessModTools(req.userRole, req.userDoc)) {
     return res.status(403).json({ success: false, error: 'Chỉ điều hành viên (moderator) mới truy cập được' });
   }
   next();
 }
 
 function requireModOrAdminOverride(req, res, next) {
-  if (!canAccessModToolsOrAdminOverride(req.userRole)) {
+  if (!canAccessModToolsOrAdminOverride(req.userRole, req.userDoc)) {
     return res.status(403).json({ success: false, error: 'Không có quyền kiểm duyệt' });
   }
   next();

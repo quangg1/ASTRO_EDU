@@ -6,7 +6,7 @@ import type {
 } from '@/data/learningPathCurriculum'
 import type { RecallQuestion } from '@/features/learning-path/lib/lessonRecallQuiz'
 import { normalizeStudioRecallQuiz } from '@/features/learning-path/lib/lessonRecallQuiz'
-import { NASA_SHOWCASE_ITEMS } from '@/lib/showcaseEntities'
+import { NASA_SHOWCASE_ITEMS } from './showcaseCatalogRuntime'
 
 export type ShowcaseBridgeMap = {
   entityId: string

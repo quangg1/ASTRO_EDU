@@ -31,6 +31,17 @@
       }
     },
     {
+      "name": "focus_showcase_entity",
+      "aliases": [],
+      "tierAllow": ["lp_free", "course_trial", "course_enrolled", "teacher"],
+      "parameters": {
+        "entity_id": { "type": "string", "required": false },
+        "planet_name": { "type": "string", "required": false },
+        "entity_name": { "type": "string", "required": false },
+        "open_history": { "type": "boolean", "required": false }
+      }
+    },
+    {
       "name": "suggest_depth_switch",
       "aliases": [],
       "tierAllow": ["lp_free", "course_trial", "course_enrolled", "teacher"],
@@ -77,6 +88,16 @@
       "aliases": [],
       "tierAllow": ["lp_free", "course_trial", "course_enrolled", "teacher"],
       "parameters": { "lesson_id": { "type": "string", "required": true } }
+    },
+    {
+      "name": "suggest_community_thread",
+      "aliases": [],
+      "tierAllow": ["lp_free", "course_trial", "course_enrolled", "teacher"],
+      "parameters": {
+        "lesson_id": { "type": "string", "required": false },
+        "lesson_slug": { "type": "string", "required": false },
+        "course_slug": { "type": "string", "required": false }
+      }
     }
   ]
 }

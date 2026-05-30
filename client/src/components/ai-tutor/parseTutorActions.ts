@@ -7,6 +7,12 @@ const ACTION_REG = /\[ACTION:(\w+):([^\]\s]+)\]/g
 export type TutorAction =
   | { type: 'open_lesson'; lessonSlug: string }
   | { type: 'go_to_explore'; stageTime: number }
+  | {
+      type: 'focus_showcase_entity'
+      entityId: string
+      entityName?: string
+      openHistory?: boolean
+    }
   | { type: 'open_courses' }
   | { type: 'open_dashboard' }
   | { type: 'open_my_courses' }
@@ -28,6 +34,7 @@ export type ApiToolCall = {
 function actionKey(a: TutorAction): string {
   if (a.type === 'open_lesson') return `lesson:${a.lessonSlug}`
   if (a.type === 'go_to_explore') return `explore:${a.stageTime}`
+  if (a.type === 'focus_showcase_entity') return `focus:${a.entityId}`
   return a.type
 }
 
@@ -43,6 +50,21 @@ export function toolCallsToTutorActions(calls: unknown): TutorAction[] {
     if (name === 'open_lesson') {
       const slug = args.lesson_slug
       if (typeof slug === 'string' && slug.trim()) out.push({ type: 'open_lesson', lessonSlug: slug.trim() })
+    } else if (name === 'focus_showcase_entity') {
+      const entityId = args.entity_id ?? args.entityId
+      if (typeof entityId === 'string' && entityId.trim()) {
+        out.push({
+          type: 'focus_showcase_entity',
+          entityId: entityId.trim(),
+          entityName:
+            typeof args.entity_name === 'string'
+              ? args.entity_name
+              : typeof args.entityName === 'string'
+                ? args.entityName
+                : undefined,
+          openHistory: args.open_history === true || args.openHistory === true,
+        })
+      }
     } else if (name === 'go_to_explore') {
       const ma = args.stage_time_ma
       const n = typeof ma === 'number' ? ma : Number(ma)

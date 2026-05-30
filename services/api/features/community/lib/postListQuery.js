@@ -11,10 +11,10 @@ function normalizeQueryString(q) {
 /**
  * Filter danh sách bài theo loại forum — tin vs thảo luận tách logic chuyên biệt.
  */
-function buildForumPostFilter(forum, query = {}, viewerRole = null) {
+function buildForumPostFilter(forum, query = {}, viewerRole = null, viewerDoc = null) {
   const base = { forumId: forum._id };
   const { publicVisibilityFilter } = require('./moderationAccess');
-  const vis = publicVisibilityFilter(viewerRole);
+  const vis = publicVisibilityFilter(viewerRole, viewerDoc);
   if (vis.isHidden) {
     base.isHidden = vis.isHidden;
   }
@@ -66,13 +66,13 @@ function buildForumPostFilter(forum, query = {}, viewerRole = null) {
 /**
  * Tìm toàn cộng đồng — scope: news | discussion | all
  */
-function buildGlobalSearchFilter({ forumIds, scope, q, tag, category, viewerRole = null }) {
+function buildGlobalSearchFilter({ forumIds, scope, q, tag, category, viewerRole = null, viewerDoc = null }) {
   const qStr = normalizeQueryString(q);
   const cat = typeof category === 'string' ? category.trim() : '';
   const tagNorm = typeof tag === 'string' ? tag.trim().toLowerCase() : '';
   const { publicVisibilityFilter } = require('./moderationAccess');
 
-  const filter = { forumId: { $in: forumIds }, ...publicVisibilityFilter(viewerRole) };
+  const filter = { forumId: { $in: forumIds }, ...publicVisibilityFilter(viewerRole, viewerDoc) };
   const extra = [];
 
   if (scope === 'news') {

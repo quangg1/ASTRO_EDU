@@ -20,6 +20,14 @@ export type {
   ConfirmCheckoutResponse,
   FetchCheckoutQuoteResult,
   Order,
+  AdminOrder,
   AdminOrderStats,
 } from './api/paymentApi'
 export { CourseCheckoutClient } from './ui/CourseCheckoutClient'
+export { OrderHistoryClient } from './ui/OrderHistoryClient'
+export {
+  orderStatusLabelVi,
+  orderKindLabelVi,
+  discountSourceLabelVi,
+  formatOrderDateVi,
+} from './lib/orderLabels'

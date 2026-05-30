@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import clsx from 'clsx'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { useTutorContextStore } from '@/features/courses/public'
 import { useAuthStore } from '@/features/auth/public'
 import { getAiChatUrl } from '@/lib/aiChatUrl'
@@ -18,6 +18,7 @@ import { useAgentPageContextStore } from '@/features/agent/stores/useAgentPageCo
 import { useCosmoAssistantChat } from '@/features/agent/hooks/useCosmoAssistantChat'
 import type { OpenCosmoAssistantDetail } from '@/features/agent/lib/openCosmoAssistant'
 import type { SessionContext } from '@/features/agent/types'
+import { isAgentQuizLocked } from '@/features/agent/lib/agentQuizLock'
 import { SearchParamsSuspense } from '@/components/layout/SearchParamsSuspense'
 import { AssistantMarkdown } from './AssistantMarkdown'
 
@@ -51,6 +52,7 @@ function contextTag(sessionContext: SessionContext): string | null {
 
 function CosmoAssistantInner() {
   const pathname = usePathname()
+  const router = useRouter()
   const { user } = useAuthStore()
   const pageAgentReact = useAgentPageContext()
   const pageAgentStore = useAgentPageContextStore((s) => s.pageContext)
@@ -77,11 +79,16 @@ function CosmoAssistantInner() {
     if (pageAgent?.sessionContext) return pageAgent.sessionContext
     const inferred = inferSessionContextFromPath(pathname || '')
     if (inferred) return inferred
+    const path = pathname || '/'
+    if (path.startsWith('/studio')) {
+      const inferredStudio = inferSessionContextFromPath(path)
+      if (inferredStudio) return inferredStudio
+    }
     return buildSessionContext({
-      pathname: pathname || '/',
+      pathname: path,
       surface: isCourseMode ? 'course' : 'general',
       courseSlug: course?.courseSlug,
-      routeLabel: routeLabel(pathname || '/'),
+      routeLabel: routeLabel(path),
     })
   }, [pageAgent?.sessionContext, pathname, isCourseMode, course?.courseSlug])
 
@@ -92,8 +99,9 @@ function CosmoAssistantInner() {
   })
 
   const tag = contextTag(sessionContext)
+  const quizLocked = isAgentQuizLocked(sessionContext)
   const isContextual = chat.isContextual
-  const canUseAI = !!user
+  const canUseAI = !!user && !quizLocked
   const messages = canUseAI ? chat.messages : guestMessages
   const input = canUseAI ? chat.input : guestInput
   const setInput = canUseAI ? chat.setInput : setGuestInput
@@ -112,7 +120,12 @@ function CosmoAssistantInner() {
   }, [requestAgentOpen, setRequestAgentOpen])
 
   useEffect(() => {
+    if (quizLocked && open) setOpen(false)
+  }, [quizLocked, open])
+
+  useEffect(() => {
     const onOpen = (e: Event) => {
+      if (isAgentQuizLocked(sessionContext)) return
       const detail = (e as CustomEvent<OpenCosmoAssistantDetail>).detail
       setOpen(true)
       if (detail?.prompt) {
@@ -122,7 +135,7 @@ function CosmoAssistantInner() {
     }
     window.addEventListener('galaxies:agent-open', onOpen)
     return () => window.removeEventListener('galaxies:agent-open', onOpen)
-  }, [user, chat.setInput])
+  }, [user, chat.setInput, sessionContext])
 
   useEffect(() => {
     if (open) inputRef.current?.focus()
@@ -250,7 +263,7 @@ function CosmoAssistantInner() {
     ? 'h-[min(480px,52vh)]'
     : 'h-[min(560px,calc(100vh-8rem))]'
 
-  const fab = (
+  const fab = quizLocked ? null : (
     <div className="cosmo-assistant-portal pointer-events-none fixed inset-0 z-[1001]">
       <button
         type="button"
@@ -273,7 +286,7 @@ function CosmoAssistantInner() {
         </span>
       </button>
 
-      {open && (
+      {open && !quizLocked && (
         <div
           data-ai-tutor-panel
           data-cosmo-assistant-panel
@@ -435,6 +448,8 @@ function CosmoAssistantInner() {
                         >
                           {a.type === 'go_to_explore'
                             ? `Khám phá ${a.stageTime} Ma`
+                            : a.type === 'focus_showcase_entity'
+                              ? `Xem ${a.entityName || a.entityId.replace(/^planet-|^moon-|^sc-/, '').replace(/-/g, ' ')}`
                             : a.type === 'open_lesson'
                               ? `Mở bài: ${a.lessonSlug}`
                               : a.type}
@@ -462,6 +477,23 @@ function CosmoAssistantInner() {
               }))}
               onChip={(c) => {
                 chat.navigateLpLesson(c, closePanel)
+              }}
+              className="px-4 pb-2"
+            />
+          )}
+
+          {canUseAI && chat.communityThreads.length > 0 && (
+            <AgentChips
+              chips={chat.communityThreads.map((t) => ({
+                label: t.title.length > 42 ? `${t.title.slice(0, 42)}…` : t.title,
+                action: 'community_thread',
+                href: t.href,
+              }))}
+              onChip={(c) => {
+                if (c.href) {
+                  router.push(c.href)
+                  closePanel()
+                }
               }}
               className="px-4 pb-2"
             />
@@ -567,6 +599,7 @@ function CosmoAssistantInner() {
   )
 
   if (!mounted || typeof document === 'undefined') return null
+  if (!fab) return null
   return createPortal(fab, document.body)
 }
 

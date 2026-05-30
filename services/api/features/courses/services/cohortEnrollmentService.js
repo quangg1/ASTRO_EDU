@@ -4,6 +4,7 @@ const CohortEnrollment = require('../models/CohortEnrollment');
 const { sendCohortInviteEmail } = require('../../../shared/mailer');
 const { notifyCohortInviteSent, notifyCohortJoined } = require('./deliveryNotifications');
 const { AppError } = require('../../../shared/errors');
+const { resolveCohortPrice } = require('../lib/cohortPricing');
 
 function isCohortEnrollmentOpen(cohort, now = new Date()) {
   if (!cohort || cohort.status !== 'open') return false;
@@ -11,8 +12,9 @@ function isCohortEnrollmentOpen(cohort, now = new Date()) {
   return true;
 }
 
-function publicCohortCard(cohort, now = new Date()) {
+function publicCohortCard(cohort, course, now = new Date()) {
   const enrollmentOpen = isCohortEnrollmentOpen(cohort, now);
+  const pricing = resolveCohortPrice(cohort, course || {});
   return {
     id: cohort._id,
     title: cohort.title,
@@ -22,6 +24,11 @@ function publicCohortCard(cohort, now = new Date()) {
     timezone: cohort.timezone || 'Asia/Ho_Chi_Minh',
     status: cohort.status,
     enrollmentOpen,
+    price: pricing.price,
+    currency: pricing.currency,
+    requiresPayment: pricing.requiresPayment,
+    catalogPrice: pricing.catalogPrice,
+    catalogCurrency: pricing.catalogCurrency,
   };
 }
 
@@ -79,23 +86,26 @@ async function placeStudentInCohort({ userId, course, cohort, session }) {
   }
 
   const maskedEmail = email ? maskEmail(email) : null;
-  await notifyCohortInviteSent({
-    userId,
-    courseTitle: course.title,
-    courseSlug: course.slug,
-    cohortTitle: cohort.title,
-    cohortId: String(cohortId),
-    email: maskedEmail,
-    emailSent: emailResult.sent,
-  });
-
-  await notifyCohortJoined({
-    userId,
-    courseTitle: course.title,
-    courseSlug: course.slug,
-    cohortTitle: cohort.title,
-    cohortId: String(cohortId),
-  });
+  try {
+    await notifyCohortInviteSent({
+      userId,
+      courseTitle: course.title,
+      courseSlug: course.slug,
+      cohortTitle: cohort.title,
+      cohortId: String(cohortId),
+      email: maskedEmail,
+      emailSent: emailResult.sent,
+    });
+    await notifyCohortJoined({
+      userId,
+      courseTitle: course.title,
+      courseSlug: course.slug,
+      cohortTitle: cohort.title,
+      cohortId: String(cohortId),
+    });
+  } catch (notifyErr) {
+    console.error('[cohort] in-app notification failed (enrollment kept):', notifyErr?.message || notifyErr);
+  }
 
   return {
     cohortId: String(cohortId),

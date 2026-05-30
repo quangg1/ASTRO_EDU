@@ -3,7 +3,8 @@
  * Base earn (GEM_EARN) chỉ đổi qua code, không PATCH từ đây.
  */
 const express = require('express');
-const { authMiddleware, requireRole } = require('../../shared/jwtAuth');
+const { authMiddleware } = require('../../shared/jwtAuth');
+const { requireAdminScope } = require('../../shared/adminScopes');
 const GemEconomyAuditLog = require('../rewards/models/GemEconomyAuditLog');
 const { GEM_EARN, RUNTIME_CONFIG_BOUNDS } = require('../rewards/constants/gemEarn');
 const { getOrCreateConfigDoc, patchRuntimeConfig } = require('../rewards/services/gemRuntimeConfigService');
@@ -26,7 +27,7 @@ const {
 
 const router = express.Router();
 
-router.get('/earn-constants', authMiddleware, requireRole('admin'), (req, res) => {
+router.get('/earn-constants', authMiddleware, requireAdminScope('gem'), (req, res) => {
   res.json({
     success: true,
     data: {
@@ -37,7 +38,7 @@ router.get('/earn-constants', authMiddleware, requireRole('admin'), (req, res) =
   });
 });
 
-router.get('/config', authMiddleware, requireRole('admin'), async (req, res) => {
+router.get('/config', authMiddleware, requireAdminScope('gem'), async (req, res) => {
   try {
     const doc = await getOrCreateConfigDoc();
     res.json({ success: true, data: doc });
@@ -47,7 +48,7 @@ router.get('/config', authMiddleware, requireRole('admin'), async (req, res) => 
   }
 });
 
-router.patch('/config', authMiddleware, requireRole('admin'), async (req, res) => {
+router.patch('/config', authMiddleware, requireAdminScope('gem'), async (req, res) => {
   try {
     const doc = await patchRuntimeConfig(req.body || {}, req.userId);
     res.json({ success: true, data: doc });
@@ -57,7 +58,7 @@ router.patch('/config', authMiddleware, requireRole('admin'), async (req, res) =
   }
 });
 
-router.get('/metrics', authMiddleware, requireRole('admin'), async (req, res) => {
+router.get('/metrics', authMiddleware, requireAdminScope('gem'), async (req, res) => {
   try {
     const range = String(req.query.range || '7d');
     const [supply, velocity, reasons] = await Promise.all([
@@ -94,7 +95,7 @@ router.get('/metrics', authMiddleware, requireRole('admin'), async (req, res) =>
   }
 });
 
-router.get('/shop-items', authMiddleware, requireRole('admin'), async (req, res) => {
+router.get('/shop-items', authMiddleware, requireAdminScope('gem'), async (req, res) => {
   try {
     const items = await listAllAdmin();
     res.json({ success: true, data: { items } });
@@ -104,7 +105,7 @@ router.get('/shop-items', authMiddleware, requireRole('admin'), async (req, res)
   }
 });
 
-router.post('/shop-items', authMiddleware, requireRole('admin'), async (req, res) => {
+router.post('/shop-items', authMiddleware, requireAdminScope('gem'), async (req, res) => {
   try {
     const row = await createShopItem(req.body || {}, req.userId);
     res.status(201).json({ success: true, data: row });
@@ -114,7 +115,7 @@ router.post('/shop-items', authMiddleware, requireRole('admin'), async (req, res
   }
 });
 
-router.patch('/shop-items/:skuId', authMiddleware, requireRole('admin'), async (req, res) => {
+router.patch('/shop-items/:skuId', authMiddleware, requireAdminScope('gem'), async (req, res) => {
   try {
     const row = await updateShopItem(req.params.skuId, req.body || {}, req.userId);
     res.json({ success: true, data: row });
@@ -124,7 +125,7 @@ router.patch('/shop-items/:skuId', authMiddleware, requireRole('admin'), async (
   }
 });
 
-router.post('/manual-adjust', authMiddleware, requireRole('admin'), async (req, res) => {
+router.post('/manual-adjust', authMiddleware, requireAdminScope('gem'), async (req, res) => {
   try {
     const updated = await applyManualGemAdjustment({
       actorUserId: req.userId,
@@ -144,7 +145,7 @@ router.post('/manual-adjust', authMiddleware, requireRole('admin'), async (req, 
 });
 
 /** Nhóm trang trí avatar (Lunar New Year, Steampunk…) */
-router.get('/decoration-categories', authMiddleware, requireRole('admin'), async (req, res) => {
+router.get('/decoration-categories', authMiddleware, requireAdminScope('gem'), async (req, res) => {
   try {
     const categories = await listCategoriesAdmin();
     res.json({ success: true, data: { categories } });
@@ -154,7 +155,7 @@ router.get('/decoration-categories', authMiddleware, requireRole('admin'), async
   }
 });
 
-router.post('/decoration-categories', authMiddleware, requireRole('admin'), async (req, res) => {
+router.post('/decoration-categories', authMiddleware, requireAdminScope('gem'), async (req, res) => {
   try {
     const row = await createCategory(req.body || {}, req.userId);
     res.status(201).json({ success: true, data: row });
@@ -164,7 +165,7 @@ router.post('/decoration-categories', authMiddleware, requireRole('admin'), asyn
   }
 });
 
-router.patch('/decoration-categories/:slug', authMiddleware, requireRole('admin'), async (req, res) => {
+router.patch('/decoration-categories/:slug', authMiddleware, requireAdminScope('gem'), async (req, res) => {
   try {
     const row = await updateCategory(req.params.slug, req.body || {}, req.userId);
     res.json({ success: true, data: row });
@@ -174,7 +175,7 @@ router.patch('/decoration-categories/:slug', authMiddleware, requireRole('admin'
   }
 });
 
-router.get('/audit-log', authMiddleware, requireRole('admin'), async (req, res) => {
+router.get('/audit-log', authMiddleware, requireAdminScope('gem'), async (req, res) => {
   try {
     const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 50));
     const rows = await GemEconomyAuditLog.find({})

@@ -1,4 +1,5 @@
 import { LayoutChromeBoundary } from '@/components/layout/LayoutChromeBoundary'
+import { AdminShell } from '@/components/admin/AdminShell'
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -9,7 +10,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         showStarfield: false,
       }}
     >
-      {children}
+      <AdminShell>{children}</AdminShell>
     </LayoutChromeBoundary>
   )
 }

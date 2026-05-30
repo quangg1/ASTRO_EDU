@@ -10,6 +10,7 @@ const {
   submitTeacherApplication,
   getMyApplicationStatus,
 } = require('./services/teacherApplicationService');
+const { getMyTeacherProfile, updateMyTeacherProfile } = require('./services/teacherProfileService');
 const { requireString } = require('../../shared/validation');
 const { AppError } = require('../../shared/errors');
 const { getRuntimeEnv } = require('../../config/runtimeEnv');
@@ -36,6 +37,7 @@ function normalizeAuthUser(user) {
     avatar: user.avatar,
     provider: user.provider,
     role: user.role || 'student',
+    adminScopes: user.role === 'admin' ? (user.adminScopes || []) : [],
     accountStatus: user.accountStatus || 'active',
     emailVerified: user.provider !== 'local' ? true : isLocalEmailVerified(user),
   };
@@ -432,11 +434,27 @@ router.post('/reset-password', async (req, res) => {
 
 router.post('/teacher-application', authMiddleware, async (req, res) => {
   try {
-    const { bio, organization } = req.body || {};
+    const body = req.body || {};
     const application = await submitTeacherApplication({
       userId: req.userId,
-      bio,
-      organization,
+      bio: body.bio,
+      organization: body.organization,
+      fullName: body.fullName,
+      phone: body.phone,
+      headline: body.headline,
+      city: body.city,
+      organizationRole: body.organizationRole,
+      teachingLevels: body.teachingLevels,
+      expertise: body.expertise,
+      education: body.education,
+      yearsExperience: body.yearsExperience,
+      website: body.website,
+      linkedin: body.linkedin,
+      avatarUrl: body.avatarUrl,
+      cvUrl: body.cvUrl,
+      cvFileName: body.cvFileName,
+      certificateUrl: body.certificateUrl,
+      certificateFileName: body.certificateFileName,
     });
     res.status(201).json({ success: true, application });
   } catch (err) {
@@ -458,10 +476,42 @@ router.get('/teacher-application/me', authMiddleware, async (req, res) => {
   }
 });
 
+router.get('/teacher-profile/me', authMiddleware, requireRole('teacher', 'admin'), async (req, res) => {
+  try {
+    const profile = await getMyTeacherProfile(req.userId);
+    res.json({ success: true, profile });
+  } catch (err) {
+    console.error('Teacher profile me error:', err);
+    if (err instanceof AppError) {
+      return res.status(err.status).json({ success: false, code: err.code, error: err.message });
+    }
+    res.status(500).json({ success: false, error: 'Lỗi tải hồ sơ giáo viên' });
+  }
+});
+
+router.patch('/teacher-profile/me', authMiddleware, requireRole('teacher', 'admin'), async (req, res) => {
+  try {
+    const profile = await updateMyTeacherProfile(req.userId, req.body || {});
+    res.json({ success: true, profile });
+  } catch (err) {
+    console.error('Teacher profile patch error:', err);
+    if (err instanceof AppError) {
+      return res.status(err.status).json({ success: false, code: err.code, error: err.message });
+    }
+    res.status(500).json({ success: false, error: 'Lỗi cập nhật hồ sơ' });
+  }
+});
+
 router.get('/admin/users', authMiddleware, requireRole('admin'), async (req, res) => {
   try {
-    const list = await listAdminUsers();
-    res.json({ success: true, data: list });
+    const result = await listAdminUsers({
+      q: String(req.query.q || ''),
+      role: String(req.query.role || '').trim() || undefined,
+      accountStatus: String(req.query.accountStatus || '').trim() || undefined,
+      page: parseInt(req.query.page, 10) || 1,
+      limit: parseInt(req.query.limit, 10) || 50,
+    });
+    res.json({ success: true, data: result.items, total: result.total, page: result.page, limit: result.limit });
   } catch (err) {
     console.error('Admin users error:', err);
     res.status(500).json({ success: false, error: 'Lỗi server' });

@@ -16,7 +16,9 @@ function isTypingTarget(el: EventTarget | null) {
   return el.isContentEditable
 }
 
-export function NarrativeControls() {
+type NarrativeControlsPlacement = 'floating' | 'rail'
+
+export function NarrativeControls({ placement = 'floating' }: { placement?: NarrativeControlsPlacement }) {
   const beats = usePlanetNarrativeStore((s) => s.beats)
   const currentBeatIndex = usePlanetNarrativeStore((s) => s.currentBeatIndex)
   const setBeatIndex = usePlanetNarrativeStore((s) => s.setBeatIndex)
@@ -64,12 +66,11 @@ export function NarrativeControls() {
     return () => window.removeEventListener('keydown', onKey)
   }, [toggleGlobeRotationPaused])
 
-  return (
-    <div className="fixed bottom-4 left-1/2 z-40 -translate-x-1/2 animate-fade-in">
-      <div
-        className="flex items-center gap-4 rounded-full border bg-ds-overlay px-6 py-3 backdrop-blur-md"
-        style={{ borderColor: `${accent}55` }}
-      >
+  const bar = (
+    <div
+      className="flex max-w-full flex-wrap items-center justify-center gap-3 rounded-full border bg-ds-overlay px-4 py-2.5 backdrop-blur-md sm:gap-4 sm:px-6 sm:py-3"
+      style={{ borderColor: `${accent}55` }}
+    >
         <button
           type="button"
           onClick={prevStage}
@@ -180,7 +181,20 @@ export function NarrativeControls() {
             🌊
           </button>
         </div>
+    </div>
+  )
+
+  if (placement === 'rail') {
+    return (
+      <div className="flex w-full justify-center overflow-x-auto pb-1">
+        <div className="pointer-events-auto shrink-0 animate-fade-in">{bar}</div>
       </div>
+    )
+  }
+
+  return (
+    <div className="pointer-events-auto fixed bottom-4 left-1/2 z-40 -translate-x-1/2 animate-fade-in">
+      {bar}
     </div>
   )
 }

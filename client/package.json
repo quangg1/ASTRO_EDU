@@ -12,7 +12,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "check:guards": "npm run check:boundaries && npm run check:earth-ssot && npm run check:app-public",
+    "check:guards": "npm run check:boundaries && npm run check:earth-ssot && npm run check:app-public && npm run check:store-imports && npm run check:components-public",
+    "check:store-imports": "node scripts/check-store-imports.mjs",
+    "check:components-public": "node scripts/check-components-public.mjs",
     "check:app-public": "node scripts/check-app-public-imports.mjs",
     "check:boundaries": "node scripts/check-import-boundaries.mjs",
     "check:boundaries:report": "node scripts/check-import-boundaries.mjs --report",
@@ -26,6 +28,7 @@
     "hybrid:run:ios": "npx cap run ios -l --external"
   },
   "dependencies": {
+    "@galaxies/contracts": "file:../packages/contracts",
     "@capacitor/android": "^8.2.0",
     "@capacitor/app": "^8.0.1",
     "@capacitor/cli": "^8.2.0",

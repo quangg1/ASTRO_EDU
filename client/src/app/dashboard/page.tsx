@@ -18,6 +18,7 @@ import { loadCompletedMilestoneIds, syncSolarJourneyProgress } from '@/features/
 import { getLessonById } from '@/data/learningPathCurriculum'
 import { loadGemWallet, syncGemWallet } from '@/features/rewards/public'
 import { fetchLearnerTiersWithProgress, type LearnerTierProgress } from '@/features/rewards/public'
+import { useLiveClock } from '@/hooks/useLiveClock'
 
 const chamfer = (cut = 18) => ({
   clipPath: `polygon(${cut}px 0,100% 0,100% calc(100% - ${cut}px),calc(100% - ${cut}px) 100%,0 100%,0 ${cut}px)`,
@@ -80,25 +81,12 @@ export default function DashboardOverviewPage() {
   const [lastLessonId, setLastLessonId] = useState<string | null>(null)
   const [gemBalance, setGemBalance] = useState(0)
   const [tierProgress, setTierProgress] = useState<LearnerTierProgress | null>(null)
-  const [utcTime, setUtcTime] = useState('')
+  const { time: localTime, zoneLabel } = useLiveClock()
 
   const gemProgressPct = tierProgress?.progressPct ?? 0
   const gemToNext = tierProgress?.gemsToNext ?? 0
   const tierCurrent = tierProgress?.current ?? null
   const tierNext = tierProgress?.next ?? null
-
-  useEffect(() => {
-    const tick = () => {
-      const now = new Date()
-      const h = String(now.getUTCHours()).padStart(2, '0')
-      const m = String(now.getUTCMinutes()).padStart(2, '0')
-      const s = String(now.getUTCSeconds()).padStart(2, '0')
-      setUtcTime(`${h}:${m}:${s}`)
-    }
-    tick()
-    const id = setInterval(tick, 1000)
-    return () => clearInterval(id)
-  }, [])
 
   useEffect(() => {
     const refreshGems = () => setGemBalance(loadGemWallet(userId).balance)
@@ -194,7 +182,7 @@ export default function DashboardOverviewPage() {
         <div className="text-right" style={{ alignSelf: 'flex-start', paddingTop: 4 }}>
           <p className="dash-mono text-sm flex items-center justify-end gap-2" style={{ color: '#7ee7ff' }}>
             <span className="inline-block w-1.5 h-1.5 rounded-full" style={{ background: '#6dffb0', boxShadow: '0 0 5px #6dffb0' }} />
-            UTC {utcTime}
+            {zoneLabel} {localTime}
           </p>
           <p className="dash-mono text-[11px] mt-0.5" style={{ color: '#5c6886' }}>
             PHIÊN <span style={{ color: '#7ee7ff' }}>#A-7321</span>

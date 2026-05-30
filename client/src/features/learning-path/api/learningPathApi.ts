@@ -110,6 +110,87 @@ export async function saveEditorLearningPath(
   }
 }
 
+export type RecallQuizDeliveryQuestion = {
+  id: string
+  type: string
+  question: string
+  options: { text: string }[]
+}
+
+export type RecallQuizSubmitResult = {
+  passed: boolean
+  score: number
+  correctCount: number
+  total: number
+  perQuestion: Array<{
+    questionId: string
+    correct: boolean
+    correctIndex: number
+    explanation: string | null
+  }>
+  lessonId: string
+}
+
+export async function fetchRecallQuizDelivery(
+  token: string,
+  lessonId: string,
+): Promise<{
+  ok: boolean
+  data?: {
+    lessonId: string
+    lessonTitle: string
+    questions: RecallQuizDeliveryQuestion[]
+  }
+  error?: string
+  code?: string
+}> {
+  try {
+    const res = await fetch(`${API}/lessons/${encodeURIComponent(lessonId)}/recall-quiz`, {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: 'no-store',
+    })
+    const data = await res.json()
+    if (data.success && data.data?.questions) {
+      return { ok: true, data: data.data }
+    }
+    return {
+      ok: false,
+      error: data.error || 'Không tải được bài kiểm tra',
+      code: data.code,
+    }
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : 'Network error' }
+  }
+}
+
+export async function submitRecallQuizAnswers(
+  token: string,
+  lessonId: string,
+  answers: Record<string, number>,
+): Promise<{ ok: boolean; data?: RecallQuizSubmitResult; error?: string; code?: string }> {
+  try {
+    const res = await fetch(`${API}/lessons/${encodeURIComponent(lessonId)}/recall-quiz/submit`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ answers }),
+    })
+    const data = await res.json()
+    if (data.success && data.data) {
+      return { ok: true, data: data.data as RecallQuizSubmitResult }
+    }
+    return {
+      ok: false,
+      error: data.error || 'Nộp bài thất bại',
+      code: data.code,
+    }
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : 'Network error' }
+  }
+}
+
 export async function generateRecallQuizForLesson(
   token: string,
   lesson: LessonItem,

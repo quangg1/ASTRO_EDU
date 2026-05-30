@@ -26,6 +26,7 @@ export function MobileBottomNav() {
     (pathname.startsWith('/dashboard') ||
       pathname.startsWith('/profile') ||
       pathname.startsWith('/my-courses') ||
+      pathname.startsWith('/my-orders') ||
       pathname.startsWith('/gem'))
 
   const itemsFromConfig = navItemsForSurface('mobileBottom')

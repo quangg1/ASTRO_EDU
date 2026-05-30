@@ -5,20 +5,22 @@ import Link from 'next/link'
 import { Button } from '@/design-system'
 import {
   createCohort,
-  fetchCohortSchedules,
   fetchCohortSubmissions,
   fetchCohortQuizAttempts,
   fetchCohortsManage,
   gradeSubmission,
   isoToDatetimeLocalInTz,
   patchCohort,
-  saveCohortSchedules,
   type AssignmentSubmissionRow,
   type CohortSummary,
-  type ScheduleLessonRow,
 } from '@/features/courses/api/cohortApi'
+import { CohortStudioAnnouncements } from '@/features/courses/cohort/CohortStudioAnnouncements'
+import { CohortStudioGradebook } from '@/features/courses/cohort/CohortStudioGradebook'
+import { CohortSchedulePanel } from '@/features/courses/cohort/CohortSchedulePanel'
+import { CohortSelectedBar } from '@/features/courses/cohort/CohortSelectedBar'
+import { formatOrderAmount } from '@/lib/money'
 
-type Tab = 'cohorts' | 'schedule' | 'inbox'
+type Tab = 'cohorts' | 'schedule' | 'announcements' | 'inbox' | 'gradebook'
 
 export function CohortStudioManager({
   courseSlug,
@@ -37,9 +39,9 @@ export function CohortStudioManager({
   const [cohortEndLocal, setCohortEndLocal] = useState('')
   const [cohortTimezone, setCohortTimezone] = useState('Asia/Ho_Chi_Minh')
   const [newTitle, setNewTitle] = useState('')
+  const [cohortPriceLocal, setCohortPriceLocal] = useState('')
+  const [cohortCurrencyLocal, setCohortCurrencyLocal] = useState('VND')
   const [msg, setMsg] = useState<string | null>(null)
-  const [scheduleRows, setScheduleRows] = useState<ScheduleLessonRow[]>([])
-  const [cohortMeta, setCohortMeta] = useState<{ title: string; inviteCode?: string; timezone?: string } | null>(null)
   const [submissions, setSubmissions] = useState<AssignmentSubmissionRow[]>([])
   const [quizAttempts, setQuizAttempts] = useState<
     { id: string; userId: string; lessonTitle: string; score?: number; submittedAt?: string }[]
@@ -68,43 +70,18 @@ export function CohortStudioManager({
 
   useEffect(() => {
     if (!selected) return
+    setCohortPriceLocal(selected.price != null ? String(selected.price) : '')
+    setCohortCurrencyLocal(selected.currency || 'VND')
+  }, [selectedId, selected?.price, selected?.currency])
+
+  useEffect(() => {
+    if (!selected) return
     const tz = selected.timezone || 'Asia/Ho_Chi_Minh'
     setCohortTimezone(tz)
     setCohortStatus(selected.status || 'draft')
     setCohortStartLocal(isoToDatetimeLocalInTz(selected.startAt, tz))
     setCohortEndLocal(isoToDatetimeLocalInTz(selected.endAt, tz))
   }, [selected])
-
-  useEffect(() => {
-    if (tab === 'schedule' && selectedId) void loadSchedule(selectedId)
-  }, [tab, selectedId, courseSlug])
-
-  const loadSchedule = async (cohortId: string) => {
-    const res = await fetchCohortSchedules(courseSlug, cohortId)
-    if (res.success && res.data) {
-      setScheduleRows(res.data.lessons || [])
-      setCohortMeta(res.data.cohort)
-      setMsg(null)
-    } else {
-      setMsg(res.error || 'Không tải được lịch lớp')
-    }
-  }
-
-  const handleSaveCohortMeta = async () => {
-    if (!selectedId) return
-    const res = await patchCohort(courseSlug, selectedId, {
-      status: cohortStatus,
-      timezone: cohortTimezone,
-      startAt: cohortStartLocal || null,
-      endAt: cohortEndLocal || null,
-    })
-    if (res.success) {
-      setMsg('Đã lưu thông tin lớp')
-      await loadCohorts()
-    } else {
-      setMsg(res.error || 'Lỗi lưu lớp')
-    }
-  }
 
   const loadInbox = async (cohortId: string) => {
     const [sub, quiz] = await Promise.all([
@@ -126,55 +103,15 @@ export function CohortStudioManager({
       if (id) {
         setSelectedId(String(id))
         setTab('schedule')
-        void loadSchedule(String(id))
       }
     } else {
       setMsg(res.error || 'Lỗi tạo lớp')
     }
   }
 
-  const cohortTz = cohortMeta?.timezone || 'Asia/Ho_Chi_Minh'
-
-  const scheduleLocalValue = (v: string | Date | null | undefined) => {
-    if (!v) return ''
-    if (typeof v === 'string' && v.length === 16 && !v.endsWith('Z')) return v
-    return isoToDatetimeLocalInTz(v, cohortTz)
-  }
-
-  const handleSaveSchedules = async () => {
-    if (!selectedId) return
-    const toLocal = (v: string | Date | null | undefined) => {
-      if (!v) return null
-      if (typeof v === 'string' && v.length === 16 && !v.endsWith('Z')) return v
-      return isoToDatetimeLocalInTz(v, cohortTz) || null
-    }
-    const schedules = scheduleRows.map((r) => ({
-      lessonSlug: r.slug,
-      openAtLocal: toLocal(r.schedule.openAt),
-      dueAtLocal: toLocal(r.schedule.dueAt),
-      closeAtLocal: toLocal(r.schedule.closeAt),
-    }))
-    const res = await saveCohortSchedules(courseSlug, selectedId, schedules)
-    setMsg(res.success ? `Đã lưu lịch (${cohortTz} → UTC)` : res.error || 'Lỗi lưu')
-  }
-
-  const patchScheduleLocal = (idx: number, field: 'openAt' | 'dueAt' | 'closeAt', local: string) => {
-    setScheduleRows((rows) => {
-      const next = [...rows]
-      next[idx] = {
-        ...next[idx],
-        schedule: {
-          ...next[idx].schedule,
-          [field]: local || null,
-        },
-      }
-      return next
-    })
-  }
-
   return (
     <div className="min-h-screen bg-ds-base pt-16 pb-10">
-      <div className="max-w-4xl mx-auto px-4 space-y-4">
+      <div className={`mx-auto px-4 space-y-4 ${tab === 'schedule' ? 'max-w-5xl' : 'max-w-4xl'}`}>
         <div className="flex items-center gap-3 flex-wrap">
           <Link href={`/studio/${courseSlug}`} className="text-xs text-ds-accent">
             ← Soạn khóa học
@@ -182,26 +119,45 @@ export function CohortStudioManager({
           <h1 className="text-lg font-semibold text-white">Lớp học theo kỳ · {courseTitle}</h1>
         </div>
 
-        <div className="flex gap-1 border-b border-ds-border pb-1">
-          {(['cohorts', 'schedule', 'inbox'] as const).map((t) => (
+        <div className="flex gap-1 border-b border-ds-border pb-1 flex-wrap">
+          {(
+            [
+              ['cohorts', 'Danh sách lớp'],
+              ['schedule', 'Lịch mở bài'],
+              ['announcements', 'Thông báo'],
+              ['inbox', 'Chấm bài'],
+              ['gradebook', 'Bảng điểm'],
+            ] as const
+          ).map(([t, label]) => (
             <button
               key={t}
               type="button"
               onClick={() => {
                 setTab(t)
-                if (t === 'schedule' && selectedId) void loadSchedule(selectedId)
                 if (t === 'inbox' && selectedId) void loadInbox(selectedId)
               }}
               className={`px-3 py-1.5 text-xs rounded-lg ${
                 tab === t ? 'bg-cyan-600 text-white' : 'text-ds-subtle hover:bg-white/5'
               }`}
             >
-              {t === 'cohorts' ? 'Danh sách lớp' : t === 'schedule' ? 'Lịch mở bài' : 'Chấm bài'}
+              {label}
             </button>
           ))}
         </div>
 
         {msg && <p className="text-sm text-amber-200">{msg}</p>}
+
+        {tab !== 'cohorts' && cohorts.length > 0 && (
+          <CohortSelectedBar
+            cohorts={cohorts}
+            selectedId={selectedId}
+            onSelect={(id) => {
+              setSelectedId(id)
+              setMsg(null)
+              if (tab === 'inbox') void loadInbox(id)
+            }}
+          />
+        )}
 
         {tab === 'cohorts' && (
           <div className="space-y-4">
@@ -261,7 +217,6 @@ export function CohortStudioManager({
                             e.stopPropagation()
                             setSelectedId(id)
                             setTab('schedule')
-                            void loadSchedule(id)
                           }}
                         >
                           Chỉnh lịch →
@@ -306,143 +261,101 @@ export function CohortStudioManager({
                 )
               })}
             </ul>
+            {selected && (
+              <div className="mt-4 rounded-xl border border-purple-500/25 bg-purple-950/15 p-4 space-y-3">
+                <p className="text-xs font-medium text-white">Giá lớp: {selected.title}</p>
+                <p className="text-[10px] text-ds-subtle">
+                  Để trống học phí = dùng giá lớp mặc định của khóa (Storefront). Có thể đặt riêng cho từng kỳ.
+                </p>
+                <div className="flex flex-wrap gap-2 items-end">
+                  <label className="text-[11px] text-ds-muted">
+                    Học phí
+                    <input
+                      type="number"
+                      min={0}
+                      value={cohortPriceLocal}
+                      onChange={(e) => setCohortPriceLocal(e.target.value)}
+                      placeholder="Mặc định khóa"
+                      className="studio-field mt-1 w-28 text-xs block"
+                    />
+                  </label>
+                  <label className="text-[11px] text-ds-muted">
+                    Tiền tệ
+                    <select
+                      value={cohortCurrencyLocal}
+                      onChange={(e) => setCohortCurrencyLocal(e.target.value)}
+                      className="studio-field mt-1 text-xs block"
+                    >
+                      <option value="VND">VND</option>
+                      <option value="USD">USD</option>
+                    </select>
+                  </label>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => {
+                      const id = String(selected.id || selected._id)
+                      void patchCohort(courseSlug, id, {
+                        price: cohortPriceLocal === '' ? null : Math.max(0, Number(cohortPriceLocal) || 0),
+                        currency: cohortCurrencyLocal,
+                      }).then((res) => {
+                        if (res.success) {
+                          setMsg('Đã lưu giá lớp')
+                          void loadCohorts()
+                        } else setMsg(res.error || 'Lỗi lưu giá')
+                      })
+                    }}
+                  >
+                    Lưu giá lớp
+                  </Button>
+                </div>
+                {selected.price != null && selected.price > 0 && (
+                  <p className="text-[10px] text-purple-200/90 tabular-nums">
+                    Hiện tại: {formatOrderAmount(selected.price, selected.currency || 'VND')}
+                  </p>
+                )}
+              </div>
+            )}
           </div>
         )}
 
         {tab === 'schedule' && (
-          <div className="space-y-4">
-            {!selectedId && (
-              <p className="text-ds-muted text-sm rounded-xl border border-ds-border p-4">
-                Chưa chọn lớp — quay lại tab <strong>Danh sách lớp</strong> và bấm vào một lớp (hoặc{' '}
-                <strong>Chỉnh lịch →</strong>).
-              </p>
-            )}
-            {selectedId && (
-              <>
-            <section className="rounded-xl border border-ds-border bg-ds-overlay p-4 space-y-3">
-              <h2 className="text-sm font-semibold text-white">Thông tin lớp</h2>
-              <p className="text-[11px] text-ds-subtle">
-                <strong className="text-ds-muted">Trạng thái open</strong> = học viên được nhập mã tham gia.{' '}
-                <strong className="text-ds-muted">Lịch từng bài</strong> (bảng bên dưới) = thời điểm mở quiz / hạn nộp bài.
-              </p>
-              {cohortMeta && (
-                <p className="text-xs text-ds-muted">
-                  {cohortMeta.title} · Mã <span className="font-mono text-ds-accent">{cohortMeta.inviteCode}</span>
-                </p>
-              )}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <label className="text-[11px] text-ds-muted">
-                  Trạng thái lớp
-                  <select
-                    value={cohortStatus}
-                    onChange={(e) => setCohortStatus(e.target.value)}
-                    className="studio-field text-xs mt-1 w-full"
-                  >
-                    <option value="draft">Nháp (chưa cho vào)</option>
-                    <option value="open">Mở — HV được tham gia</option>
-                    <option value="closed">Đóng</option>
-                  </select>
-                </label>
-                <label className="text-[11px] text-ds-muted">
-                  Múi giờ
-                  <input
-                    value={cohortTimezone}
-                    onChange={(e) => setCohortTimezone(e.target.value)}
-                    className="studio-field text-xs mt-1 w-full"
-                    placeholder="Asia/Ho_Chi_Minh"
-                  />
-                </label>
-                <label className="text-[11px] text-ds-muted">
-                  Bắt đầu lớp (tuỳ chọn)
-                  <input
-                    type="datetime-local"
-                    value={cohortStartLocal}
-                    onChange={(e) => setCohortStartLocal(e.target.value)}
-                    className="studio-field text-xs mt-1 w-full"
-                  />
-                </label>
-                <label className="text-[11px] text-ds-muted">
-                  Kết thúc lớp (tuỳ chọn)
-                  <input
-                    type="datetime-local"
-                    value={cohortEndLocal}
-                    onChange={(e) => setCohortEndLocal(e.target.value)}
-                    className="studio-field text-xs mt-1 w-full"
-                  />
-                </label>
-              </div>
-              <Button type="button" onClick={() => void handleSaveCohortMeta()} variant="secondary" size="sm">
-                Lưu thông tin lớp
-              </Button>
-            </section>
+          <CohortSchedulePanel
+            courseSlug={courseSlug}
+            lessonCount={lessonCount}
+            selectedId={selectedId}
+            cohorts={cohorts}
+            cohortStatus={cohortStatus}
+            cohortStartLocal={cohortStartLocal}
+            cohortEndLocal={cohortEndLocal}
+            cohortTimezone={cohortTimezone}
+            onCohortMetaChange={(patch) => {
+              if (patch.status != null) setCohortStatus(patch.status)
+              if (patch.startLocal != null) setCohortStartLocal(patch.startLocal)
+              if (patch.endLocal != null) setCohortEndLocal(patch.endLocal)
+              if (patch.timezone != null) setCohortTimezone(patch.timezone)
+            }}
+            onMsg={setMsg}
+          />
+        )}
 
-            <section className="space-y-2">
-              <h2 className="text-sm font-semibold text-white">Lịch mở từng bài ({lessonCount} bài trong khóa)</h2>
-              {lessonCount === 0 ? (
-                <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-100">
-                  Chưa có bài học trong khóa — không thể chỉnh lịch mở bài.{' '}
-                  <Link href={`/studio/${courseSlug}`} className="text-ds-accent underline">
-                    Thêm bài ở Studio
-                  </Link>
-                  , lưu khóa, rồi quay lại đây.
-                </div>
-              ) : scheduleRows.length === 0 ? (
-                <p className="text-ds-subtle text-sm">Đang tải danh sách bài…</p>
-              ) : null}
-            {lessonCount > 0 && scheduleRows.length > 0 && (
-            <div className="rounded-xl border border-ds-border overflow-hidden">
-              <table className="w-full text-xs">
-                <thead className="bg-white/5 text-ds-subtle">
-                  <tr>
-                    <th className="text-left p-2">Bài</th>
-                    <th className="text-left p-2">Loại</th>
-                    <th className="text-left p-2">Mở</th>
-                    <th className="text-left p-2">Hạn (assignment)</th>
-                    <th className="text-left p-2">Đóng (quiz)</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {scheduleRows.map((row, idx) => (
-                    <tr key={row.slug} className="border-t border-ds-border">
-                      <td className="p-2 text-gray-200">{row.title}</td>
-                      <td className="p-2 text-ds-subtle">{row.type}</td>
-                      <td className="p-2">
-                        <input
-                          type="datetime-local"
-                          className="studio-field text-[10px] w-full min-w-[140px]"
-                          value={scheduleLocalValue(row.schedule.openAt)}
-                          onChange={(e) => patchScheduleLocal(idx, 'openAt', e.target.value)}
-                        />
-                      </td>
-                      <td className="p-2">
-                        <input
-                          type="datetime-local"
-                          className="studio-field text-[10px] w-full min-w-[140px]"
-                          value={scheduleLocalValue(row.schedule.dueAt)}
-                          onChange={(e) => patchScheduleLocal(idx, 'dueAt', e.target.value)}
-                        />
-                      </td>
-                      <td className="p-2">
-                        <input
-                          type="datetime-local"
-                          className="studio-field text-[10px] w-full min-w-[140px]"
-                          value={scheduleLocalValue(row.schedule.closeAt)}
-                          onChange={(e) => patchScheduleLocal(idx, 'closeAt', e.target.value)}
-                        />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+        {tab === 'announcements' && (
+          <div>
+            {!selectedId ? (
+              <p className="text-ds-muted text-sm">Chọn một lớp ở tab Danh sách lớp trước.</p>
+            ) : (
+              <CohortStudioAnnouncements courseSlug={courseSlug} cohortId={selectedId} />
             )}
-            {lessonCount > 0 && scheduleRows.length > 0 && (
-              <Button type="button" onClick={() => void handleSaveSchedules()} className="bg-cyan-600 text-white">
-                Lưu lịch từng bài
-              </Button>
-            )}
-            </section>
-              </>
+          </div>
+        )}
+
+        {tab === 'gradebook' && (
+          <div>
+            {!selectedId ? (
+              <p className="text-ds-muted text-sm">Chọn một lớp ở tab Danh sách lớp trước.</p>
+            ) : (
+              <CohortStudioGradebook courseSlug={courseSlug} cohortId={selectedId} />
             )}
           </div>
         )}
@@ -455,7 +368,7 @@ export function CohortStudioManager({
             {selectedId && (
               <>
             <section>
-              <h2 className="text-sm font-semibold text-white mb-2">Bài tập đã nộp</h2>
+              <h2 className="text-sm font-semibold text-white mb-2">Bài tập chờ chấm</h2>
               {submissions.length === 0 ? (
                 <p className="text-ds-subtle text-sm">Chưa có bài nộp.</p>
               ) : (
@@ -517,7 +430,8 @@ function SubmissionGradeCard({
         <div>
           <p className="text-white font-medium">{row.lessonTitle}</p>
           <p className="text-[11px] text-ds-subtle">
-            HS {row.userId.slice(0, 12)}… · {row.submittedAt ? new Date(row.submittedAt).toLocaleString('vi-VN') : ''}
+            {row.studentName || row.userId.slice(0, 12)} ·{' '}
+            {row.submittedAt ? new Date(row.submittedAt).toLocaleString('vi-VN') : ''}
             {row.isLate ? ' · Muộn' : ''}
           </p>
         </div>
@@ -547,12 +461,13 @@ function SubmissionGradeCard({
             className="studio-field mt-1 w-20"
           />
         </label>
-        <label className="text-xs text-ds-muted flex-1">
+        <label className="text-xs text-ds-muted flex-1 block">
           Nhận xét
-          <input
+          <textarea
             value={feedback}
             onChange={(e) => setFeedback(e.target.value)}
-            className="studio-field mt-1 w-full"
+            rows={2}
+            className="studio-field mt-1 w-full resize-y min-h-[52px]"
           />
         </label>
         <Button

@@ -18,11 +18,11 @@ _EXPLORE_NAV = {
     "type": "function",
     "function": {
         "name": "navigate_to_narrative",
-        "description": "Mở Khám phá / narrative 3D tại thời điểm Ma (Trái Đất hoặc hành tinh).",
+        "description": "Mở Khám phá timeline Trái Đất hoặc Deep History hành tinh tại thời điểm Ma.",
         "parameters": {
             "type": "object",
             "properties": {
-                "planet": {"type": "string", "description": "earth | mars | showcase"},
+                "planet": {"type": "string", "description": "earth | mars | entity id"},
                 "stage_time_ma": {"type": "number", "description": "Thời gian Ma"},
                 "pin_id": {"type": "string"},
                 "entity_id": {"type": "string"},
@@ -36,13 +36,46 @@ _GO_EXPLORE_ALIAS = {
     "type": "function",
     "function": {
         "name": "go_to_explore",
-        "description": "Alias: mở Khám phá tại thời điểm Ma.",
+        "description": "Mở timeline Trái Đất tại thời điểm Ma.",
         "parameters": {
             "type": "object",
             "properties": {
                 "stage_time_ma": {"type": "number", "description": "Thời gian Ma"},
             },
             "required": ["stage_time_ma"],
+        },
+    },
+}
+
+_FOCUS_SHOWCASE = {
+    "type": "function",
+    "function": {
+        "name": "focus_showcase_entity",
+        "description": (
+            "Focus camera/scene Khám phá tới hành tinh hoặc entity showcase "
+            "(vd. Venus, Europa, Voyager). Dùng khi user muốn 'di chuyển tới', 'xem', 'mở' một hành tinh/vệ tinh trên quỹ đạo."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "planet_name": {
+                    "type": "string",
+                    "description": "Tên hành tinh: Venus, Sao Kim, Mars, Jupiter, …",
+                },
+                "entity_name": {
+                    "type": "string",
+                    "description": "Tên entity catalog: Europa, Moon, Voyager 1, …",
+                },
+                "entity_id": {
+                    "type": "string",
+                    "description": "ID catalog: planet-venus, moon-europa, sc-voyager1, …",
+                },
+                "open_history": {
+                    "type": "boolean",
+                    "description": "True nếu mở Deep History narrative (cần unlock).",
+                },
+            },
+            "required": [],
         },
     },
 }
@@ -103,6 +136,22 @@ _START_RECALL = {
     },
 }
 
+_SUGGEST_COMMUNITY = {
+    "type": "function",
+    "function": {
+        "name": "suggest_community_thread",
+        "description": "Tìm thảo luận diễn đàn liên quan bài/khóa (tối đa 3).",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "lesson_id": {"type": "string"},
+                "lesson_slug": {"type": "string"},
+                "course_slug": {"type": "string"},
+            },
+        },
+    },
+}
+
 _SUGGEST_DEPTH = {
     "type": "function",
     "function": {
@@ -139,6 +188,7 @@ COURSE_TOOLS: list[dict[str, Any]] = [
     },
     _GO_EXPLORE_ALIAS,
     _EXPLORE_NAV,
+    _SUGGEST_COMMUNITY,
 ]
 
 LEARNING_PATH_TOOLS: list[dict[str, Any]] = [
@@ -149,9 +199,11 @@ LEARNING_PATH_TOOLS: list[dict[str, Any]] = [
     _HIGHLIGHT_CONCEPT,
     _RELATED_LESSONS,
     _START_RECALL,
+    _SUGGEST_COMMUNITY,
 ]
 
 EXPLORE_TOOLS: list[dict[str, Any]] = [
+    _FOCUS_SHOWCASE,
     _EXPLORE_NAV,
     _GO_EXPLORE_ALIAS,
     _OPEN_LP_LESSON,
@@ -210,7 +262,7 @@ def tools_for_context(
     if not allowed_tools:
         return base
     allow = set(allowed_tools)
-    allow.update({"go_to_explore", "navigate_to_narrative"})
+    allow.update({"go_to_explore", "navigate_to_narrative", "focus_showcase_entity"})
     out: list[dict[str, Any]] = []
     seen: set[str] = set()
     for t in base:
@@ -233,6 +285,25 @@ def _allowed_lesson_slugs(course: dict | None) -> set[str]:
 
 def _clamp_stage_ma(v: float) -> float:
     return max(STAGE_TIME_MIN_MA, min(STAGE_TIME_MAX_MA, float(v)))
+
+
+def _normalize_focus_showcase_args(args: dict[str, Any]) -> dict[str, Any] | None:
+    entity_id = args.get("entity_id") or args.get("entityId")
+    planet_name = args.get("planet_name") or args.get("planetName") or args.get("planet")
+    entity_name = args.get("entity_name") or args.get("entityName") or args.get("name")
+    open_history = args.get("open_history") if "open_history" in args else args.get("openHistory")
+    out: dict[str, Any] = {}
+    if isinstance(entity_id, str) and entity_id.strip():
+        out["entity_id"] = entity_id.strip()
+    if isinstance(planet_name, str) and planet_name.strip():
+        out["planet_name"] = planet_name.strip()
+    if isinstance(entity_name, str) and entity_name.strip():
+        out["entity_name"] = entity_name.strip()
+    if open_history is True:
+        out["open_history"] = True
+    if not out:
+        return None
+    return {"name": "focus_showcase_entity", "arguments": out}
 
 
 def _normalize_explore_args(args: dict[str, Any], name: str) -> dict[str, Any] | None:
@@ -298,6 +369,14 @@ def validate_and_normalize_tool_calls(
             if allowed_slugs and slug not in allowed_slugs:
                 continue
             out.append({"id": tid, "name": name, "arguments": {"lesson_slug": slug}})
+
+        elif name == "focus_showcase_entity":
+            if context not in ("explore", "general", "learning_path", "course"):
+                continue
+            norm = _normalize_focus_showcase_args(args)
+            if not norm:
+                continue
+            out.append({"id": tid, "name": norm["name"], "arguments": norm["arguments"]})
 
         elif name in ("go_to_explore", "navigate_to_narrative"):
             if context not in ("course", "general", "learning_path", "explore"):
@@ -369,6 +448,23 @@ def validate_and_normalize_tool_calls(
             if not isinstance(lid, str) or not lid.strip():
                 continue
             out.append({"id": tid, "name": name, "arguments": {"lesson_id": lid.strip()}})
+
+        elif name == "suggest_community_thread":
+            if context not in ("learning_path", "course", "explore", "general"):
+                continue
+            norm_c: dict[str, Any] = {}
+            lid = args.get("lesson_id") or args.get("lessonId")
+            lslug = args.get("lesson_slug") or args.get("lessonSlug")
+            cslug = args.get("course_slug") or args.get("courseSlug")
+            if isinstance(lid, str) and lid.strip():
+                norm_c["lesson_id"] = lid.strip()
+            if isinstance(lslug, str) and lslug.strip():
+                norm_c["lesson_slug"] = lslug.strip()
+            if isinstance(cslug, str) and cslug.strip():
+                norm_c["course_slug"] = cslug.strip()
+            if not norm_c:
+                continue
+            out.append({"id": tid, "name": name, "arguments": norm_c})
 
     return out
 

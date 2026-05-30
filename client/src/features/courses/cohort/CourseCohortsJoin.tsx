@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useAuthStore } from '@/features/auth/public'
@@ -12,7 +12,8 @@ import {
   type MyCohortRow,
 } from '@/features/courses/api/cohortApi'
 import { Button } from '@/design-system'
-import { courseRequiresPayment } from '@/components/courses/courseCatalogMeta'
+import { formatOrderAmount } from '@/lib/money'
+import { fetchCheckoutQuote } from '@/features/payment/api/paymentApi'
 
 function formatCohortStart(iso?: string, tz = 'Asia/Ho_Chi_Minh') {
   if (!iso) return 'Chưa có lịch khai giảng'
@@ -34,20 +35,18 @@ function cohortIdOf(c: CohortSummary) {
 export function CourseCohortsJoin({
   courseSlug,
   courseId,
-  isPaid,
-  price,
-  currency,
-  catalogEnrolled,
+  catalogPrice,
+  catalogCurrency,
+  catalogEnrolled = false,
   catalogOpen = true,
   cohortPlacedFlash,
 }: {
   courseSlug: string
   courseId?: string
-  isPaid?: boolean
-  price?: number
-  currency?: string
+  /** Giá tự học (catalog) — để so sánh với giá lớp */
+  catalogPrice?: number
+  catalogCurrency?: string
   catalogEnrolled?: boolean
-  /** false = khóa theo kỳ, chỉ đăng ký qua lớp */
   catalogOpen?: boolean
   cohortPlacedFlash?: boolean
 }) {
@@ -58,11 +57,33 @@ export function CourseCohortsJoin({
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState<string | null>(null)
+  const [upgradeDue, setUpgradeDue] = useState<{
+    listPrice: number
+    catalogCredit: number
+    cohortFullPrice: number
+    currency: string
+  } | null>(null)
   const cohortsListedRef = useRef('')
   const myCohortsKeyRef = useRef('')
 
   const termOnly = catalogOpen === false
-  const paid = courseRequiresPayment({ isPaid, price, requiresPayment: undefined })
+  const catalogListPrice = Math.max(0, Math.round(Number(catalogPrice) || 0))
+
+  const selectedCohort = useMemo(
+    () => openCohorts.find((c) => cohortIdOf(c) === selectedId) ?? null,
+    [openCohorts, selectedId],
+  )
+
+  const cohortRequiresPay = Boolean(
+    selectedCohort?.requiresPayment ?? (selectedCohort?.price != null && selectedCohort.price > 0),
+  )
+  const cohortListPrice = selectedCohort?.price ?? catalogListPrice
+  const cohortCurrency = selectedCohort?.currency || catalogCurrency || 'VND'
+  const showCatalogCompare =
+    catalogOpen &&
+    catalogListPrice > 0 &&
+    cohortListPrice > catalogListPrice &&
+    cohortCurrency === (catalogCurrency || 'VND')
 
   useEffect(() => {
     if (cohortsListedRef.current === courseSlug) return
@@ -82,6 +103,33 @@ export function CourseCohortsJoin({
     })
   }, [courseSlug, user?.id])
 
+  useEffect(() => {
+    if (!catalogEnrolled || !user?.id || !courseId || !selectedId) {
+      setUpgradeDue(null)
+      return
+    }
+    let cancelled = false
+    void fetchCheckoutQuote({ courseId, cohortId: selectedId }).then((res) => {
+      if (cancelled || !res.success) return
+      setUpgradeDue({
+        listPrice: res.data.listPrice,
+        catalogCredit: res.data.catalogCredit ?? 0,
+        cohortFullPrice: res.data.cohortFullPrice ?? res.data.listPrice,
+        currency: res.data.currency,
+      })
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [catalogEnrolled, user?.id, courseId, selectedId])
+
+  const payAmount =
+    catalogEnrolled && upgradeDue != null ? upgradeDue.listPrice : cohortListPrice
+  const needsCheckout =
+    catalogEnrolled && upgradeDue != null
+      ? upgradeDue.listPrice > 0
+      : cohortRequiresPay
+
   const handleEnroll = async () => {
     if (!user) {
       router.push(`/login?redirect=/courses/${courseSlug}`)
@@ -95,7 +143,7 @@ export function CourseCohortsJoin({
     setBusy(true)
     setMsg(null)
 
-    if (paid && !catalogEnrolled) {
+    if (needsCheckout) {
       const q = new URLSearchParams()
       if (courseId) q.set('courseId', courseId)
       q.set('cohortId', cohortId)
@@ -120,20 +168,21 @@ export function CourseCohortsJoin({
     setMsg(res.error || 'Không đăng ký được lớp')
   }
 
-  const showCohortPicker = termOnly || paid || openCohorts.length > 0
+  const showCohortPicker = termOnly || needsCheckout || catalogEnrolled || openCohorts.length > 0
 
   return (
     <section className="rounded-2xl border border-purple-500/25 bg-purple-950/15 p-6 mb-8">
       <h2 className="text-lg font-semibold text-white mb-1">Học theo lớp (theo kỳ)</h2>
       <p className="text-xs text-ds-subtle mb-4">
-        Chọn lớp đang mở — chỉ đăng ký <strong className="text-ds-muted">trước ngày khai giảng</strong>.
-        Mã lớp <strong className="text-ds-muted">không hiển thị trên web</strong>; sau khi đăng ký (và thanh toán nếu có phí),
-        hệ thống gửi mã qua <strong className="text-ds-muted">email</strong> và thông báo trên tài khoản.
+        Có giáo viên, lịch mở bài theo tuần — học phí lớp{' '}
+        <strong className="text-purple-200/90">thường cao hơn</strong> gói tự học một lần.
+        Chọn lớp trước ngày khai giảng; mã lớp gửi qua email sau khi hoàn tất.
       </p>
 
       {cohortPlacedFlash && (
         <p className="text-xs text-emerald-200/95 mb-4 rounded-lg border border-emerald-500/35 bg-emerald-500/10 px-3 py-2">
-          Đăng ký thành công. Mã lớp đã được gửi tới email của bạn (kiểm tra cả hộp thư spam). Trên web chỉ có thông báo xác nhận — không hiển thị mã.
+          Đăng ký thành công. Mã lớp đã được gửi tới email của bạn (kiểm tra cả hộp thư spam). Trên web chỉ có
+          thông báo xác nhận — không hiển thị mã.
         </p>
       )}
 
@@ -166,6 +215,9 @@ export function CourseCohortsJoin({
               {openCohorts.map((c) => {
                 const id = cohortIdOf(c)
                 const selected = selectedId === id
+                const rowPrice = c.price ?? catalogListPrice
+                const rowCurrency = c.currency || catalogCurrency || 'VND'
+                const rowPaid = c.requiresPayment ?? rowPrice > 0
                 return (
                   <li key={id}>
                     <button
@@ -177,7 +229,14 @@ export function CourseCohortsJoin({
                           : 'border-ds-border bg-white/5 hover:border-purple-500/40'
                       }`}
                     >
-                      <span className="text-sm font-medium text-white">{c.title}</span>
+                      <div className="flex flex-wrap items-start justify-between gap-2">
+                        <span className="text-sm font-medium text-white">{c.title}</span>
+                        {rowPaid && rowPrice > 0 && (
+                          <span className="text-sm font-semibold text-purple-200 tabular-nums shrink-0">
+                            {formatOrderAmount(rowPrice, rowCurrency)}
+                          </span>
+                        )}
+                      </div>
                       <span className="block text-[11px] text-ds-subtle mt-1">
                         Khai giảng: {formatCohortStart(c.startAt, c.timezone)}
                       </span>
@@ -197,14 +256,30 @@ export function CourseCohortsJoin({
             >
               {busy
                 ? 'Đang xử lý…'
-                : paid && !catalogEnrolled
-                  ? 'Thanh toán & đăng ký lớp'
+                : needsCheckout
+                  ? catalogEnrolled && upgradeDue
+                    ? 'Thanh toán phần chênh & vào lớp'
+                    : 'Thanh toán & đăng ký lớp'
                   : 'Đăng ký lớp'}
             </Button>
-            {paid && !catalogEnrolled && price != null && price > 0 && (
-              <span className="text-xs text-ds-subtle tabular-nums">
-                {Math.round(price).toLocaleString('vi-VN')} {currency || 'VND'}
-              </span>
+            {selectedCohort && needsCheckout && payAmount > 0 && (
+              <div className="text-xs text-ds-subtle">
+                <span className="text-lg font-semibold text-white tabular-nums">
+                  {formatOrderAmount(payAmount, upgradeDue?.currency || cohortCurrency)}
+                </span>
+                {catalogEnrolled && upgradeDue && upgradeDue.catalogCredit > 0 && (
+                  <span className="block mt-1 text-emerald-300/90">
+                    Đã trừ {formatOrderAmount(upgradeDue.catalogCredit, upgradeDue.currency)} (gói tự học).
+                    Học phí lớp đủ:{' '}
+                    {formatOrderAmount(upgradeDue.cohortFullPrice, upgradeDue.currency)}
+                  </span>
+                )}
+                {!catalogEnrolled && showCatalogCompare && (
+                  <span className="ml-2 text-ds-muted line-through tabular-nums">
+                    Tự học: {formatOrderAmount(catalogListPrice, catalogCurrency || 'VND')}
+                  </span>
+                )}
+              </div>
             )}
           </div>
         </>

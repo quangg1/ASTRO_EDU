@@ -1,4 +1,10 @@
-export type AgentSurface = 'learning_path' | 'explore' | 'course' | 'dashboard' | 'general'
+export type AgentSurface =
+  | 'learning_path'
+  | 'explore'
+  | 'course'
+  | 'dashboard'
+  | 'studio'
+  | 'general'
 
 export type SessionContext = {
   surface: AgentSurface
@@ -18,6 +24,9 @@ export type SessionContext = {
   coachTrigger?: 'quiz_failed' | null
   /** Có quiz ôn cho bài hiện tại (client biết từ LP). */
   recallQuizAvailable?: boolean
+  /** Khóa cứng agent trong lúc làm kiểm tra. */
+  quizLock?: 'recall' | 'course_exam' | null
+  recallQuizActive?: boolean
   activeSectionId?: string | null
   activeSectionTitle?: string | null
   activeSectionExcerpt?: string | null
@@ -47,6 +56,40 @@ export type WeakLessonSignal = {
   revisitCount?: number
 }
 
+export type LearnerTierSummary = {
+  id?: string
+  nameVi?: string
+  emoji?: string
+  progressPct?: number
+  gemsToNextTier?: number
+  nextTierNameVi?: string | null
+}
+
+export type NearbyUnlockHint = {
+  kind: string
+  labelVi: string
+  costGem?: number
+  gemsNeeded?: number
+  entityId?: string
+  skuId?: string
+}
+
+export type ActiveCohortSummary = {
+  cohortTitle?: string
+  pendingAssignments?: number
+  upcomingDeadlineCount?: number
+}
+
+export type CommunityThreadSuggestion = {
+  postId: string
+  title: string
+  forumSlug: string
+  href: string
+  voteCount?: number
+  commentCount?: number
+  contextTitle?: string | null
+}
+
 export type LearnerSnapshot = {
   completedLessonCount?: number
   masteredLessonCount?: number
@@ -57,6 +100,10 @@ export type LearnerSnapshot = {
   spacedReviewDue?: { dueLessons: SpacedReviewLesson[]; totalDue: number }
   preferredDepth?: string | null
   depthSuggestion?: DepthSuggestion | null
+  gemBalance?: number
+  learnerTier?: LearnerTierSummary | null
+  nearbyUnlocks?: NearbyUnlockHint[]
+  activeCohort?: ActiveCohortSummary | null
 }
 
 export type AgentClientAction =
@@ -69,6 +116,14 @@ export type AgentClientAction =
     }
   | { type: 'navigate_to_narrative'; planet: string; stageTimeMa: number; pinId?: string | null; entityId?: string | null }
   | { type: 'go_to_explore'; stageTimeMa: number }
+  | {
+      type: 'focus_showcase_entity'
+      entityId: string
+      entityName?: string | null
+      planet?: string | null
+      syncPlanet?: boolean
+      openHistory?: boolean
+    }
   | { type: 'suggest_depth_switch'; suggestedDepth: string; reason: string }
   | { type: 'open_courses' }
   | { type: 'open_dashboard' }
@@ -79,6 +134,7 @@ export type AgentClientAction =
       lessons: Array<{ lessonId: string; title: string; moduleId: string; nodeId: string }>
     }
   | { type: 'start_recall_quiz'; lessonId: string; moduleId: string; nodeId: string }
+  | { type: 'suggest_community_thread'; threads: CommunityThreadSuggestion[] }
 
 export type AgentMessageResponse = {
   success: boolean

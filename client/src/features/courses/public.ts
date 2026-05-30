@@ -37,6 +37,13 @@ export type {
   ModuleMaterial,
 } from './api/coursesApi'
 
+export {
+  buildLessonSectionTocNavItems,
+  groupLessonSectionTocItems,
+  resolveLessonSectionTocTitle,
+} from './lib/lessonSectionToc'
+export type { LessonSectionTocGroup, LessonSectionTocNavItem } from './lib/lessonSectionToc'
+
 export { ExamRunner } from './exam/ExamRunner'
 export { CohortHub } from './cohort/CohortHub'
 export { CohortStudioManager } from './cohort/CohortStudioManager'

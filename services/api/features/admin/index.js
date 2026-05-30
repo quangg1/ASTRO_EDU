@@ -1,12 +1,18 @@
 const express = require('express');
-const { authMiddleware, requireRole } = require('../../shared/jwtAuth');
+const { authMiddleware } = require('../../shared/jwtAuth');
+const { requireAdminScope, requireFullAdmin } = require('../../shared/adminScopes');
 const {
   listAdminUsers,
   updateAdminUserRole,
+  updateAdminUserScopes,
   updateAdminUserStatus,
   deleteAdminUserPermanently,
 } = require('./services/adminUserService');
-const { listApplicationsForAdmin, reviewApplication } = require('../auth/services/teacherApplicationService');
+const {
+  listApplicationsForAdmin,
+  reviewApplication,
+  markCvReviewed,
+} = require('../auth/services/teacherApplicationService');
 const { getAdminOrderOverview } = require('./services/adminOrderService');
 const User = require('../auth/models/User');
 const Enrollment = require('../courses/models/Enrollment');
@@ -18,15 +24,18 @@ const LearningPathEvent = require('../learning-path/models/LearningPathEvent');
 const LearningPath = require('../learning-path/models/LearningPath');
 const gemEconomyRouter = require('./gemEconomy');
 const adminPromoRoutes = require('../promotions/adminPromoRoutes');
+const adminOpsRoutes = require('./routes/adminOpsRoutes');
 const { broadcastAdminNotification, VALID_ROLES } = require('./adminBroadcastService');
 const { requireString } = require('../../shared/validation');
+const { amountToVndAggExpr, getUsdToVndRate } = require('../../shared/money/revenueVnd');
 
 const router = express.Router();
 
 router.use('/gem-economy', gemEconomyRouter);
 router.use('/promo-codes', adminPromoRoutes);
+router.use(adminOpsRoutes);
 
-router.post('/notifications/broadcast', authMiddleware, requireRole('admin'), async (req, res) => {
+router.post('/notifications/broadcast', authMiddleware, requireAdminScope('broadcast'), async (req, res) => {
   try {
     const titleVi = requireString(req.body?.titleVi, 'titleVi', 'Tiêu đề').slice(0, 200);
     const bodyVi = typeof req.body?.bodyVi === 'string' ? req.body.bodyVi.trim().slice(0, 2000) : '';
@@ -125,17 +134,23 @@ function ensureArray(value) {
   return Array.isArray(value) ? value : [];
 }
 
-router.get('/users', authMiddleware, requireRole('admin'), async (req, res) => {
+router.get('/users', authMiddleware, requireAdminScope('users'), async (req, res) => {
   try {
-    const data = await listAdminUsers();
-    res.json({ success: true, data });
+    const data = await listAdminUsers({
+      q: String(req.query.q || ''),
+      role: String(req.query.role || '').trim() || undefined,
+      accountStatus: String(req.query.accountStatus || '').trim() || undefined,
+      page: parseInt(req.query.page, 10) || 1,
+      limit: parseInt(req.query.limit, 10) || 50,
+    });
+    res.json({ success: true, data: data.items, total: data.total, page: data.page, limit: data.limit });
   } catch (err) {
     req.logger?.error('admin_list_users_failed', { error: err.message });
     res.status(err.status || 500).json({ success: false, code: err.code || 'ADMIN_USERS_LIST_FAILED', error: err.message || 'Lỗi tải danh sách người dùng' });
   }
 });
 
-router.patch('/users/:id/role', authMiddleware, requireRole('admin'), async (req, res) => {
+router.patch('/users/:id/role', authMiddleware, requireAdminScope('users'), async (req, res) => {
   try {
     const user = await updateAdminUserRole({
       actorUserId: req.userId,
@@ -149,7 +164,21 @@ router.patch('/users/:id/role', authMiddleware, requireRole('admin'), async (req
   }
 });
 
-router.get('/teacher-applications', authMiddleware, requireRole('admin'), async (req, res) => {
+router.patch('/users/:id/scopes', authMiddleware, requireFullAdmin(), async (req, res) => {
+  try {
+    const user = await updateAdminUserScopes({
+      actorUserId: req.userId,
+      targetUserId: req.params.id,
+      adminScopes: req.body?.adminScopes,
+    });
+    res.json({ success: true, user });
+  } catch (err) {
+    req.logger?.error('admin_update_scopes_failed', { error: err.message, targetUserId: req.params.id });
+    res.status(err.status || 500).json({ success: false, code: err.code || 'ADMIN_USER_SCOPES_UPDATE_FAILED', error: err.message || 'Lỗi cập nhật phạm vi admin' });
+  }
+});
+
+router.get('/teacher-applications', authMiddleware, requireAdminScope('teachers'), async (req, res) => {
   try {
     const status = String(req.query.status || 'pending');
     const data = await listApplicationsForAdmin({ status });
@@ -160,7 +189,20 @@ router.get('/teacher-applications', authMiddleware, requireRole('admin'), async 
   }
 });
 
-router.patch('/teacher-applications/:id', authMiddleware, requireRole('admin'), async (req, res) => {
+router.post('/teacher-applications/:id/cv-reviewed', authMiddleware, requireAdminScope('teachers'), async (req, res) => {
+  try {
+    const application = await markCvReviewed({
+      actorUserId: req.userId,
+      applicationId: req.params.id,
+    });
+    res.json({ success: true, application });
+  } catch (err) {
+    req.logger?.error('admin_teacher_cv_review_failed', { error: err.message, id: req.params.id });
+    res.status(err.status || 500).json({ success: false, code: err.code, error: err.message || 'Lỗi xác nhận CV' });
+  }
+});
+
+router.patch('/teacher-applications/:id', authMiddleware, requireAdminScope('teachers'), async (req, res) => {
   try {
     const application = await reviewApplication({
       actorUserId: req.userId,
@@ -175,7 +217,7 @@ router.patch('/teacher-applications/:id', authMiddleware, requireRole('admin'), 
   }
 });
 
-router.patch('/users/:id/status', authMiddleware, requireRole('admin'), async (req, res) => {
+router.patch('/users/:id/status', authMiddleware, requireAdminScope('users'), async (req, res) => {
   try {
     const user = await updateAdminUserStatus({
       actorUserId: req.userId,
@@ -190,7 +232,7 @@ router.patch('/users/:id/status', authMiddleware, requireRole('admin'), async (r
   }
 });
 
-router.delete('/users/:id', authMiddleware, requireRole('admin'), async (req, res) => {
+router.delete('/users/:id', authMiddleware, requireAdminScope('users'), async (req, res) => {
   try {
     const result = await deleteAdminUserPermanently({
       actorUserId: req.userId,
@@ -215,7 +257,7 @@ router.delete('/users/:id', authMiddleware, requireRole('admin'), async (req, re
   }
 });
 
-router.get('/orders/overview', authMiddleware, requireRole('admin'), async (req, res) => {
+router.get('/orders/overview', authMiddleware, requireAdminScope('orders'), async (req, res) => {
   try {
     const { stats, orders } = await getAdminOrderOverview();
     res.json({ success: true, stats, orders });
@@ -225,7 +267,7 @@ router.get('/orders/overview', authMiddleware, requireRole('admin'), async (req,
   }
 });
 
-router.get('/analytics/overview', authMiddleware, requireRole('admin'), async (req, res) => {
+router.get('/analytics/overview', authMiddleware, requireAdminScope('analytics'), async (req, res) => {
   try {
     const range = String(req.query.range || '30d');
     const days = parseRangeDays(range);
@@ -258,7 +300,7 @@ router.get('/analytics/overview', authMiddleware, requireRole('admin'), async (r
       Post.countDocuments({ createdAt: { $gte: startDate } }),
       Order.aggregate([
         { $match: { status: 'completed', createdAt: { $gte: startDate } } },
-        { $group: { _id: null, total: { $sum: '$amount' } } },
+        { $group: { _id: null, total: { $sum: amountToVndAggExpr() } } },
       ]),
       User.countDocuments({}),
       User.aggregate([
@@ -288,7 +330,7 @@ router.get('/analytics/overview', authMiddleware, requireRole('admin'), async (r
         {
           $group: {
             _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
-            total: { $sum: '$amount' },
+            total: { $sum: amountToVndAggExpr() },
           },
         },
         { $sort: { _id: 1 } },
@@ -301,7 +343,7 @@ router.get('/analytics/overview', authMiddleware, requireRole('admin'), async (r
       ]),
     ]);
 
-    const revenue = revenueAgg[0]?.total || 0;
+    const revenue = Math.round(revenueAgg[0]?.total || 0);
     const totalLessonRecords = await Enrollment.aggregate([
       { $unwind: '$progress' },
       { $group: { _id: null, total: { $sum: 1 } } },
@@ -333,6 +375,8 @@ router.get('/analytics/overview', authMiddleware, requireRole('admin'), async (r
     res.json({
       success: true,
       range,
+      revenueCurrency: 'VND',
+      usdToVndRate: getUsdToVndRate(),
       kpis: {
         totalUsers,
         newUsers,
@@ -356,7 +400,7 @@ router.get('/analytics/overview', authMiddleware, requireRole('admin'), async (r
   }
 });
 
-router.get('/analytics/funnel', authMiddleware, requireRole('admin'), async (req, res) => {
+router.get('/analytics/funnel', authMiddleware, requireAdminScope('analytics'), async (req, res) => {
   try {
     const range = String(req.query.range || '30d');
     const days = parseRangeDays(range);
@@ -400,7 +444,7 @@ router.get('/analytics/funnel', authMiddleware, requireRole('admin'), async (req
   }
 });
 
-router.get('/analytics/retention', authMiddleware, requireRole('admin'), async (req, res) => {
+router.get('/analytics/retention', authMiddleware, requireAdminScope('analytics'), async (req, res) => {
   try {
     const range = String(req.query.range || '30d');
     const days = parseRangeDays(range);
@@ -476,7 +520,7 @@ router.get('/analytics/retention', authMiddleware, requireRole('admin'), async (
   }
 });
 
-router.get('/analytics/cohort', authMiddleware, requireRole('admin'), async (req, res) => {
+router.get('/analytics/cohort', authMiddleware, requireAdminScope('analytics'), async (req, res) => {
   try {
     const range = String(req.query.range || '90d');
     const days = parseRangeDays(range);
@@ -523,7 +567,7 @@ router.get('/analytics/cohort', authMiddleware, requireRole('admin'), async (req
   }
 });
 
-router.get('/analytics/agent', authMiddleware, requireRole('admin'), async (req, res) => {
+router.get('/analytics/agent', authMiddleware, requireAdminScope('analytics'), async (req, res) => {
   try {
     const range = String(req.query.range || '30d');
     const { getAgentAdminAnalytics } = require('../agent/services/adminAgentAnalyticsService');
@@ -535,7 +579,7 @@ router.get('/analytics/agent', authMiddleware, requireRole('admin'), async (req,
   }
 });
 
-router.get('/analytics/learning-path', authMiddleware, requireRole('admin'), async (req, res) => {
+router.get('/analytics/learning-path', authMiddleware, requireAdminScope('analytics'), async (req, res) => {
   try {
     const range = String(req.query.range || '30d');
     const days = parseRangeDays(range);

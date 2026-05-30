@@ -5,10 +5,13 @@ import { fetchCourseOutlineServer } from '@/features/courses/server'
 
 export default async function CourseCheckoutPage({
   params,
+  searchParams,
 }: {
   params: { slug: string }
+  searchParams?: { cohortId?: string }
 }) {
   const { slug } = params
+  const cohortId = searchParams?.cohortId?.trim() || null
   const outline = await fetchCourseOutlineServer(slug)
   if (!outline) {
     notFound()
@@ -20,8 +23,8 @@ export default async function CourseCheckoutPage({
     redirect(`/courses/${slug}`)
   }
 
-  if (outline.enrollment) {
-    redirect(`/courses/${slug}/learn`)
+  if (outline.enrollment && !cohortId) {
+    redirect(`/courses/${slug}?owned=1`)
   }
 
   if (!outline.id) {
@@ -36,7 +39,12 @@ export default async function CourseCheckoutPage({
         </main>
       }
     >
-      <CourseCheckoutClient slug={slug} courseId={outline.id} courseTitle={outline.title} />
+      <CourseCheckoutClient
+        slug={slug}
+        courseId={outline.id}
+        courseTitle={outline.title}
+        initialCohortId={cohortId}
+      />
     </Suspense>
   )
 }

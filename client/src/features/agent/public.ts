@@ -1,4 +1,10 @@
-export type { SessionContext, LearnerSnapshot, AgentMessageResponse } from './types'
+export type {
+  SessionContext,
+  LearnerSnapshot,
+  AgentMessageResponse,
+  CommunityThreadSuggestion,
+  LearnerTierSummary,
+} from './types'
 export { AgentPageProvider, useAgentPageContext } from './context/AgentPageContext'
 export type { AgentPageContextValue } from './context/AgentPageContext'
 export { CosmoAssistantWidget } from '@/components/ai-tutor/CosmoAssistantWidget'

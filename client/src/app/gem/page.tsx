@@ -16,6 +16,7 @@ import {
 } from '@/features/rewards/public'
 import { fetchPublicLearningPath } from '@/features/learning-path/public'
 import { fetchPublicShowcaseCatalogBundle } from '@/features/content3d/showcase/public'
+import { useLiveClock } from '@/hooks/useLiveClock'
 import { getLessonById, type LearningModule } from '@/data/learningPathCurriculum'
 
 function formatTransactionDate(input: string) {
@@ -62,7 +63,7 @@ export default function GemPage() {
   const { user } = useAuthStore()
   const userId = user?.id ?? null
   const [wallet, setWallet] = useState<GemWalletState>({ balance: 0, transactions: [] })
-  const [utcTime, setUtcTime] = useState('')
+  const { time: localTime, zoneLabel } = useLiveClock()
   const [tierProgress, setTierProgress] = useState<LearnerTierProgress | null>(null)
   const [tierPolicy, setTierPolicy] = useState('')
   const [lessonTitleById, setLessonTitleById] = useState<Record<string, string>>({})
@@ -123,17 +124,6 @@ export default function GemPage() {
       cancelled = true
     }
   }, [wallet.transactions])
-
-  useEffect(() => {
-    const tick = () => {
-      const now = new Date()
-      const pad = (n: number) => String(n).padStart(2, '0')
-      setUtcTime(`${pad(now.getUTCHours())}:${pad(now.getUTCMinutes())}:${pad(now.getUTCSeconds())}`)
-    }
-    tick()
-    const id = setInterval(tick, 1000)
-    return () => clearInterval(id)
-  }, [])
 
   const earnWays = useMemo(
     () => [
@@ -202,7 +192,9 @@ export default function GemPage() {
         <div className="flex items-center gap-5" style={{ ...mono, fontSize: 10, letterSpacing: '0.12em', color: '#5c6886' }}>
           <span>Wallet · <span style={{ color: '#f5a524' }}>{wallet.balance} GEM</span></span>
           <span>Sync · <span style={{ color: '#6dffb0' }}>●</span></span>
-          <span className="hidden sm:inline">UTC · <span style={{ color: '#9aa8c4' }}>{utcTime}</span></span>
+            <span className="hidden sm:inline">
+              {zoneLabel} · <span style={{ color: '#9aa8c4' }}>{localTime}</span>
+            </span>
         </div>
       </div>
 

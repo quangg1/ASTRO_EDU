@@ -21,6 +21,7 @@ const SRC = join(REPO_ROOT, 'src')
 const CANONICAL = 'features/content3d/earth/lib/earthHistoryData'
 const ALLOW_DEEP_IMPORT = new Set([
   'src/features/content3d/earth/stores/earthHistoryStore.ts',
+  'src/features/content3d/earth/lib/loadEarthStages.ts',
 ])
 
 function* walk(dir) {

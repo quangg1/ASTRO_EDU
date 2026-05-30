@@ -4,19 +4,21 @@ import { useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { X } from 'lucide-react'
-import type { RecallQuestion } from '@/features/learning-path/public'
+import type { RecallQuizDeliveryQuestion, RecallQuizSubmitResult } from '@/features/learning-path/api/learningPathApi'
 import { LessonRecallQuiz } from '@/components/learning-path/LessonRecallQuiz'
 
 type Props = {
   open: boolean
   onClose: () => void
   lessonTitle: string
-  questions: RecallQuestion[]
+  questions: RecallQuizDeliveryQuestion[]
   passed: boolean
   onPassed: () => void
+  onSubmit: (answers: Record<string, number>) => Promise<RecallQuizSubmitResult>
   onQuizFailed?: () => void
   /** Khi true, không cho đóng overlay (chưa làm quiz) */
   gateActive?: boolean
+  loadError?: string | null
 }
 
 export function LessonRecallQuizOverlay({
@@ -26,8 +28,10 @@ export function LessonRecallQuizOverlay({
   questions,
   passed,
   onPassed,
+  onSubmit,
   onQuizFailed,
   gateActive = false,
+  loadError = null,
 }: Props) {
   useEffect(() => {
     if (!open) return
@@ -117,20 +121,25 @@ export function LessonRecallQuizOverlay({
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.08 }}
               >
-                <LessonRecallQuiz
-                  variant="overlay"
-                  questions={questions}
-                  passed={passed}
-                  onPassed={onPassed}
-                  onQuizFailed={onQuizFailed}
-                  onContinue={onClose}
-                />
+                {loadError && questions.length < 3 ? (
+                  <p className="px-6 py-10 text-center text-sm text-rose-300">{loadError}</p>
+                ) : (
+                  <LessonRecallQuiz
+                    variant="overlay"
+                    questions={questions}
+                    passed={passed}
+                    onPassed={onPassed}
+                    onSubmit={onSubmit}
+                    onQuizFailed={onQuizFailed}
+                    onContinue={onClose}
+                  />
+                )}
               </motion.div>
             </motion.div>
 
             {gateActive && !passed ? (
               <p className="pointer-events-none mt-4 text-center text-[11px] text-slate-400/90 max-w-sm">
-                Hoàn thành kiểm tra để ghi nhận <span className="text-violet-300">Đã nắm</span> và mở bài tiếp theo.
+                Hoàn thành kiểm tra để ghi nhận <span className="text-violet-300">Đã nắm</span>. Trợ lý AI tắt trong lúc làm bài.
               </p>
             ) : null}
           </motion.div>

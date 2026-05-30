@@ -20,7 +20,7 @@ on:
 
 jobs:
   guards:
-    name: Boundary + Earth SSOT + app/public
+    name: Boundary + Earth SSOT + app/public + store/components
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -40,3 +40,5 @@ jobs:
           node scripts/check-earth-history-ssot.mjs
           node scripts/check-agent-tool-schema.mjs
           node scripts/check-app-public-imports.mjs
+          node scripts/check-store-imports.mjs
+          node scripts/check-components-public.mjs

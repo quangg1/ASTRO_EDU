@@ -107,8 +107,92 @@ body.explore-cockpit-fullscreen [data-mobile-bottom-nav] {
   pointer-events: none;
 }
 
-.ui-overlay > * {
+.ui-overlay > *:not(.explore-deep-history-shell) {
   pointer-events: auto;
+}
+
+/* Explore Deep History — panel ở rail trái/phải, cột giữa để trống cho WebGL globe */
+.explore-deep-history-shell {
+  pointer-events: none;
+  position: fixed;
+  inset: 3.5rem 0 0;
+  z-index: 10;
+  display: grid;
+  min-height: 0;
+  min-width: 0;
+  grid-template-columns: min(21rem, 32vw) minmax(0, 1fr) min(22rem, 30vw);
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-areas:
+    'header header header'
+    'timeline stage info'
+    'controls controls controls';
+  gap: 0.625rem;
+  padding: 0.625rem;
+}
+
+.explore-deep-history-header {
+  grid-area: header;
+  pointer-events: auto;
+}
+
+.explore-deep-history-timeline {
+  grid-area: timeline;
+  pointer-events: auto;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+  align-items: stretch;
+  justify-content: flex-start;
+}
+
+.explore-deep-history-stage {
+  grid-area: stage;
+  pointer-events: none;
+  min-height: 0;
+  min-width: 0;
+}
+
+.explore-deep-history-info {
+  grid-area: info;
+  pointer-events: auto;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+  align-items: stretch;
+  justify-content: flex-end;
+  overflow: hidden;
+}
+
+.explore-deep-history-controls {
+  grid-area: controls;
+  pointer-events: none;
+  min-height: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+@media (max-width: 900px) {
+  .explore-deep-history-shell {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(38vh, 1fr) auto auto auto;
+    grid-template-areas:
+      'header'
+      'stage'
+      'timeline'
+      'info'
+      'controls';
+  }
+
+  .explore-deep-history-timeline,
+  .explore-deep-history-info {
+    justify-content: stretch;
+  }
+
+  .explore-deep-history-timeline .max-w-\[21rem\],
+  .explore-deep-history-info aside {
+    max-width: none;
+  }
 }
 
 /* Glass effect */

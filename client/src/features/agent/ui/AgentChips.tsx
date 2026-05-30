@@ -8,6 +8,7 @@ export type AgentChip = {
   lessonId?: string
   moduleId?: string
   nodeId?: string
+  href?: string
 }
 
 type Props = {

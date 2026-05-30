@@ -8,15 +8,26 @@ const { generateRecallQuizFromLesson } = require('../../../lib/ai/tasks/generate
 const { emitAsync } = require('../../../services/eventBus');
 const { coerceLessonSections } = require('../../../shared/schemas/lessonSectionSchema');
 const { normalizeQuizList } = require('../../../shared/quizQuestion');
+const { applyLearningPathLearnerPolicy } = require('../../../shared/security/learnerContentPolicy');
+const {
+  getRecallQuizDelivery,
+  submitRecallQuiz,
+  filterRecallGatedMasteredIds,
+} = require('../services/recallQuizService');
 
 const router = express.Router();
 
-router.get('/', async (_req, res) => {
+router.get('/', optionalAuth, async (req, res) => {
   try {
     const doc = await LearningPath.findOne({ slug: 'main' }).lean();
     if (!doc) return res.status(404).json({ success: false, code: 'LEARNING_PATH_MISSING', error: 'Chưa có dữ liệu lộ trình' });
     if (!doc.published) return res.status(404).json({ success: false, code: 'LEARNING_PATH_UNAVAILABLE', error: 'Lộ trình chưa khả dụng' });
-    res.json({ success: true, data: { modules: doc.modules || [], concepts: doc.concepts || [] } });
+    const includeQuizSecrets = req.userRole === 'admin';
+    const data = applyLearningPathLearnerPolicy(
+      { modules: doc.modules || [], concepts: doc.concepts || [] },
+      { includeQuizSecrets },
+    );
+    res.json({ success: true, data });
   } catch (err) {
     console.error('GET learning-path error:', err);
     res.status(500).json({ success: false, code: 'LEARNING_PATH_GET_FAILED', error: 'Lỗi máy chủ' });
@@ -225,6 +236,42 @@ function mergeRewardSegments(segments) {
   return { gemsEarned, newBalance: lastBalance, levelUp, newAchievements, streakResult: segments[segments.length - 1]?.streakResult ?? null, labels, segments };
 }
 
+router.get('/lessons/:lessonId/recall-quiz', authMiddleware, async (req, res, next) => {
+  try {
+    const lessonId = String(req.params.lessonId || '').trim();
+    const data = await getRecallQuizDelivery(lessonId);
+    res.json({ success: true, data });
+  } catch (err) {
+    if (err.status) {
+      return res.status(err.status).json({
+        success: false,
+        code: err.code || 'RECALL_QUIZ_ERROR',
+        error: err.message,
+      });
+    }
+    next(err);
+  }
+});
+
+router.post('/lessons/:lessonId/recall-quiz/submit', authMiddleware, async (req, res, next) => {
+  try {
+    const lessonId = String(req.params.lessonId || '').trim();
+    const answers =
+      req.body?.answers && typeof req.body.answers === 'object' ? req.body.answers : {};
+    const data = await submitRecallQuiz(req.userId, lessonId, answers);
+    res.json({ success: true, data });
+  } catch (err) {
+    if (err.status) {
+      return res.status(err.status).json({
+        success: false,
+        code: err.code || 'RECALL_QUIZ_SUBMIT_FAILED',
+        error: err.message,
+      });
+    }
+    next(err);
+  }
+});
+
 router.get('/progress', authMiddleware, async (req, res) => {
   try {
     const doc = await UserProgress.findOne({ userId: req.userId }).lean();
@@ -247,7 +294,11 @@ router.put('/progress', authMiddleware, async (req, res) => {
   try {
     const docExisting = await UserProgress.findOne({ userId: req.userId }).lean();
     const completedLessonIds = req.body?.completedLessonIds !== undefined ? normalizeIdArray(req.body.completedLessonIds) : normalizeIdArray(docExisting?.learningPathCompletedLessonIds);
-    const masteredLessonIds = req.body?.masteredLessonIds !== undefined ? normalizeIdArray(req.body.masteredLessonIds) : normalizeIdArray(docExisting?.learningPathMasteredLessonIds);
+    let masteredLessonIds =
+      req.body?.masteredLessonIds !== undefined
+        ? normalizeIdArray(req.body.masteredLessonIds)
+        : normalizeIdArray(docExisting?.learningPathMasteredLessonIds);
+    masteredLessonIds = await filterRecallGatedMasteredIds(req.userId, masteredLessonIds);
     const rawLastExplicit = req.body?.lastLessonId !== undefined ? String(req.body.lastLessonId || '').trim() : '';
     let lastLessonId;
     if (req.body?.lastLessonId !== undefined) {

@@ -1,4 +1,8 @@
 const PlanetNarrative = require('../../content3d/planet-narrative/models/PlanetNarrative');
+const {
+  extractBeatConfidence,
+  confidenceDisclaimerVi,
+} = require('./agentContextEnrichment');
 
 function pickBeat(beats, stageTimeMa) {
   const list = Array.isArray(beats) ? beats : [];
@@ -44,6 +48,8 @@ async function buildNarrativeContext(sessionContext = {}) {
       entityId: null,
       beatTitle: null,
       beatSummary: null,
+      confidence: null,
+      confidenceDisclaimerVi: null,
       linkedLessonIds: [],
       linkedConceptIds: [],
     };
@@ -59,6 +65,8 @@ async function buildNarrativeContext(sessionContext = {}) {
       entityId,
       beatTitle: null,
       beatSummary: null,
+      confidence: null,
+      confidenceDisclaimerVi: null,
       linkedLessonIds: [],
       linkedConceptIds: [],
     };
@@ -70,6 +78,8 @@ async function buildNarrativeContext(sessionContext = {}) {
   const beatSummary = excerpt(
     beat?.summary || beat?.description || beat?.body || beat?.narrative || '',
   );
+  const confidence = extractBeatConfidence(beat);
+  const confidenceDisclaimer = confidenceDisclaimerVi(confidence);
 
   let panelHint = null;
   const schema = doc.panelSchema;
@@ -83,6 +93,8 @@ async function buildNarrativeContext(sessionContext = {}) {
     entityId: doc.entityId,
     beatTitle,
     beatSummary,
+    confidence,
+    confidenceDisclaimerVi: confidenceDisclaimer,
     panelHint,
     linkedLessonIds: Array.isArray(doc.linkedLessonIds) ? doc.linkedLessonIds.slice(0, 8) : [],
     linkedConceptIds: Array.isArray(doc.linkedConceptIds) ? doc.linkedConceptIds.slice(0, 8) : [],

@@ -1,4 +1,5 @@
 const express = require('express');
+const { parseGemShopCatalogItems, parseGemWalletResponse } = require('@galaxies/contracts');
 const Course = require('../../courses/models/Course');
 const UserReward = require('../models/UserReward');
 const GemTransaction = require('../models/GemTransaction');
@@ -58,7 +59,7 @@ router.get('/shop/bootstrap', async (req, res) => {
 /** Public — catalog shop items (visible + seasonal window) */
 router.get('/shop/catalog', async (req, res) => {
   try {
-    const items = await listVisiblePublic();
+    const items = parseGemShopCatalogItems(await listVisiblePublic());
     res.json({ success: true, data: { items } });
   } catch (err) {
     console.error('GET /gems/shop/catalog error:', err);
@@ -138,7 +139,7 @@ router.get('/wallet', authMiddleware, async (req, res) => {
     }));
     const totalGemsEarned = ur?.totalGemsEarned ?? 0;
     const learnerTier = getWalletLearnerMeta(totalGemsEarned);
-    res.json({
+    const payload = {
       success: true,
       data: {
         balance,
@@ -147,7 +148,9 @@ router.get('/wallet', authMiddleware, async (req, res) => {
         learnerTier,
         transactions,
       },
-    });
+    };
+    parseGemWalletResponse(payload);
+    res.json(payload);
   } catch (err) {
     console.error('GET /gems/wallet error:', err);
     res.status(500).json({ success: false, error: 'Lỗi máy chủ' });

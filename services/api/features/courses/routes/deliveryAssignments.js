@@ -1,11 +1,8 @@
 const express = require('express');
 const Course = require('../models/Course');
-const Cohort = require('../models/Cohort');
-const Enrollment = require('../models/Enrollment');
-const CohortEnrollment = require('../models/CohortEnrollment');
 const AssignmentSubmission = require('../models/AssignmentSubmission');
 const { authMiddleware } = require('../../../shared/jwtAuth');
-const { findLesson, assertCatalogAccess } = require('../services/quizExamService');
+const { findLesson } = require('../services/quizExamService');
 const { effectiveSchedule, loadScheduleMap } = require('../services/scheduleResolver');
 const { detectAssignmentMime } = require('../lib/assignmentMime');
 const { validateStagingFiles } = require('../services/assignmentStaging');
@@ -15,6 +12,7 @@ const {
 } = require('../services/deliveryNotifications');
 const CohortActivitySchedule = require('../models/CohortActivitySchedule');
 const { findCourseForLearnerOrEditor } = require('../services/courseAccess');
+const { assertAssignmentDeliveryAccess } = require('../services/courseContentSecurity');
 
 const router = express.Router({ mergeParams: true });
 const assignmentRouter = express.Router({ mergeParams: true });
@@ -69,14 +67,12 @@ assignmentRouter.get('/draft', authMiddleware, async (req, res) => {
   try {
     const cohortId = parseCohortId(req);
     const { course, lesson } = await loadAssignmentLesson(req.params.slug, req.params.lessonSlug, req);
-    if (cohortId) {
-      const cohort = await Cohort.findOne({ _id: cohortId, courseId: course._id });
-      if (!cohort) return res.status(404).json({ success: false, error: 'Không tìm thấy lớp' });
-      const en = await CohortEnrollment.findOne({ cohortId, userId: req.userId });
-      if (!en) return res.status(403).json({ success: false, error: 'Chưa tham gia lớp' });
-    } else {
-      await assertCatalogAccess({ course, userId: req.userId });
-    }
+    await assertAssignmentDeliveryAccess({
+      course,
+      cohortId,
+      userId: req.userId,
+      userRole: req.userRole,
+    });
     const draft = await getOrCreateDraft({
       userId: req.userId,
       courseId: course._id,
@@ -100,8 +96,12 @@ assignmentRouter.get('/draft', authMiddleware, async (req, res) => {
         stagingFiles: validated,
         stagingExpired: draft.stagingExpired,
         status: draft.status,
+        grade: draft.grade,
+        feedback: draft.feedback,
+        gradedAt: draft.gradedAt,
         lessonTitle: lesson.title,
         brief: lesson.content || lesson.description,
+        submittedFiles: draft.files || [],
       },
     });
   } catch (err) {
@@ -123,14 +123,12 @@ assignmentRouter.post('/staging-files', authMiddleware, async (req, res) => {
     }
     const cohortId = parseCohortId(req);
     const { course, lesson } = await loadAssignmentLesson(req.params.slug, req.params.lessonSlug, req);
-    if (cohortId) {
-      const cohort = await Cohort.findOne({ _id: cohortId, courseId: course._id });
-      if (!cohort) return res.status(404).json({ success: false, error: 'Không tìm thấy lớp' });
-      const en = await CohortEnrollment.findOne({ cohortId, userId: req.userId });
-      if (!en) return res.status(403).json({ success: false, error: 'Chưa tham gia lớp' });
-    } else {
-      await assertCatalogAccess({ course, userId: req.userId });
-    }
+    await assertAssignmentDeliveryAccess({
+      course,
+      cohortId,
+      userId: req.userId,
+      userRole: req.userRole,
+    });
     const draft = await getOrCreateDraft({
       userId: req.userId,
       courseId: course._id,
@@ -164,14 +162,12 @@ assignmentRouter.post('/validate-files', authMiddleware, async (req, res) => {
   try {
     const cohortId = parseCohortId(req);
     const { course, lesson } = await loadAssignmentLesson(req.params.slug, req.params.lessonSlug, req);
-    if (cohortId) {
-      const cohort = await Cohort.findOne({ _id: cohortId, courseId: course._id });
-      if (!cohort) return res.status(404).json({ success: false, error: 'Không tìm thấy lớp' });
-      const en = await CohortEnrollment.findOne({ cohortId, userId: req.userId });
-      if (!en) return res.status(403).json({ success: false, error: 'Chưa tham gia lớp' });
-    } else {
-      await assertCatalogAccess({ course, userId: req.userId });
-    }
+    await assertAssignmentDeliveryAccess({
+      course,
+      cohortId,
+      userId: req.userId,
+      userRole: req.userRole,
+    });
     const draft = await getOrCreateDraft({
       userId: req.userId,
       courseId: course._id,
@@ -204,14 +200,12 @@ assignmentRouter.post('/submit', authMiddleware, async (req, res) => {
   try {
     const cohortId = parseCohortId(req);
     const { course, lesson } = await loadAssignmentLesson(req.params.slug, req.params.lessonSlug, req);
-    if (cohortId) {
-      const cohort = await Cohort.findOne({ _id: cohortId, courseId: course._id });
-      if (!cohort) return res.status(404).json({ success: false, error: 'Không tìm thấy lớp' });
-      const en = await CohortEnrollment.findOne({ cohortId, userId: req.userId });
-      if (!en) return res.status(403).json({ success: false, error: 'Chưa tham gia lớp' });
-    } else {
-      await assertCatalogAccess({ course, userId: req.userId });
-    }
+    await assertAssignmentDeliveryAccess({
+      course,
+      cohortId,
+      userId: req.userId,
+      userRole: req.userRole,
+    });
     const draft = await getOrCreateDraft({
       userId: req.userId,
       courseId: course._id,

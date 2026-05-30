@@ -39,6 +39,7 @@ router.get('/search', optionalAuth, async (req, res) => {
       page,
       limit,
       viewerRole: req.userRole,
+      viewerDoc: req.userDoc,
     });
 
     res.json({ success: true, ...result });

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import { useAuthStore } from '@/features/auth/public'
-import { fetchCohortSyllabus } from '@/features/courses/public'
+import { fetchCohortHome } from '@/features/courses/api/cohortApi'
 import { Button } from '@/design-system'
 
 export default function CohortLayout({ children }: { children: React.ReactNode }) {
@@ -30,7 +30,7 @@ export default function CohortLayout({ children }: { children: React.ReactNode }
     accessKeyRef.current = key
     if (!hadAccessRef.current) setGate('loading')
 
-    void fetchCohortSyllabus(slug, cohortId).then((res) => {
+    void fetchCohortHome(slug, cohortId).then((res) => {
       if (res.success) {
         hadAccessRef.current = true
         setGate('ok')

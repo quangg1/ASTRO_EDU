@@ -5,6 +5,13 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { fetchCoursesForEditor, createCourse, type Course } from '@/features/courses/public'
 import { useAuthStore } from '@/features/auth/public'
+import { formatOrderAmount } from '@/lib/money'
+import { useLiveClock } from '@/hooks/useLiveClock'
+import {
+  cohortsNavEnabledForStrategy,
+  distributionStrategyBadge,
+  resolveDistributionStrategy,
+} from '@/features/courses/lib/distributionStrategy'
 
 const chamfer = (cut = 14) => ({
   clipPath: `polygon(${cut}px 0,100% 0,100% calc(100% - ${cut}px),calc(100% - ${cut}px) 100%,0 100%,0 ${cut}px)`,
@@ -33,7 +40,7 @@ export default function StudioHomePage() {
   const [newCourseTitle, setNewCourseTitle] = useState('')
   const [creating, setCreating] = useState(false)
   const [createError, setCreateError] = useState('')
-  const [utcTime, setUtcTime] = useState('')
+  const { time: localTime, zoneLabel } = useLiveClock()
 
   useEffect(() => {
     if (checked && !user) router.replace('/login?redirect=/studio')
@@ -44,17 +51,6 @@ export default function StudioHomePage() {
     if (!user) return
     fetchCoursesForEditor().then(setCourses).finally(() => setLoadingCourses(false))
   }, [user])
-
-  useEffect(() => {
-    const tick = () => {
-      const now = new Date()
-      const pad = (n: number) => String(n).padStart(2, '0')
-      setUtcTime(`${pad(now.getUTCHours())}:${pad(now.getUTCMinutes())}:${pad(now.getUTCSeconds())}`)
-    }
-    tick()
-    const id = setInterval(tick, 1000)
-    return () => clearInterval(id)
-  }, [])
 
   const mono: React.CSSProperties = { fontFamily: "'JetBrains Mono', monospace" }
 
@@ -108,7 +104,9 @@ export default function StudioHomePage() {
           </span>
           <div className="flex items-center gap-5" style={{ ...mono, fontSize: 11, letterSpacing: '0.12em', color: '#5c6886' }}>
             <span>Role · <span style={{ color: '#6dffb0' }}>{user.role}</span></span>
-            <span className="hidden sm:inline">UTC · <span style={{ color: '#9aa8c4' }}>{utcTime}</span></span>
+            <span className="hidden sm:inline">
+              {zoneLabel} · <span style={{ color: '#9aa8c4' }}>{localTime}</span>
+            </span>
           </div>
         </div>
 
@@ -352,7 +350,19 @@ export default function StudioHomePage() {
                       if (res.success && res.slug) {
                         setShowCreateCourse(false)
                         setNewCourseTitle('')
-                        setCourses((prev) => [...prev, { id: '', title: newCourseTitle.trim(), slug: res.slug!, description: '', thumbnail: null, level: 'beginner' }])
+                        const title = newCourseTitle.trim()
+                        setCourses((prev) => [
+                          ...prev,
+                          {
+                            id: '',
+                            title,
+                            slug: res.slug!,
+                            description: '',
+                            thumbnail: null,
+                            level: 'beginner',
+                            published: false,
+                          },
+                        ])
                         router.push(`/studio/${res.slug}`)
                       } else {
                         setCreateError(res.error || 'Error')
@@ -451,7 +461,16 @@ export default function StudioHomePage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {courses.map((c, i) => (
+              {courses.map((c, i) => {
+                const strategy = resolveDistributionStrategy(c)
+                const cohortsNav = cohortsNavEnabledForStrategy(strategy)
+                const strategyColors =
+                  strategy === 'self_paced'
+                    ? { border: 'rgba(126,231,255,0.35)', color: '#7ee7ff', bg: 'rgba(126,231,255,0.08)' }
+                    : strategy === 'instructor_led'
+                      ? { border: 'rgba(167,139,250,0.35)', color: '#c4b5fd', bg: 'rgba(139,92,246,0.1)' }
+                      : { border: 'rgba(245,165,36,0.35)', color: '#f5a524', bg: 'rgba(245,165,36,0.08)' }
+                return (
                 <div
                   key={c.id}
                   className="relative p-5"
@@ -483,6 +502,40 @@ export default function StudioHomePage() {
 
                   <div className="mb-2 flex items-start justify-between gap-3">
                     <div style={{ paddingLeft: 12 }}>
+                      <div className="flex flex-wrap items-center gap-2 mb-1.5">
+                        <span
+                          style={{
+                            ...mono,
+                            fontSize: 9,
+                            fontWeight: 600,
+                            letterSpacing: '0.1em',
+                            textTransform: 'uppercase',
+                            padding: '2px 8px',
+                            borderRadius: 999,
+                            border: `1px solid ${c.published ? 'rgba(109,255,176,0.35)' : 'rgba(245,165,36,0.35)'}`,
+                            color: c.published ? '#6dffb0' : '#f5a524',
+                            background: c.published ? 'rgba(109,255,176,0.08)' : 'rgba(245,165,36,0.08)',
+                          }}
+                        >
+                          {c.published ? 'Đã xuất bản' : 'Bản nháp'}
+                        </span>
+                        <span
+                          style={{
+                            ...mono,
+                            fontSize: 9,
+                            fontWeight: 600,
+                            letterSpacing: '0.1em',
+                            textTransform: 'uppercase',
+                            padding: '2px 8px',
+                            borderRadius: 999,
+                            border: `1px solid ${strategyColors.border}`,
+                            color: strategyColors.color,
+                            background: strategyColors.bg,
+                          }}
+                        >
+                          {distributionStrategyBadge(strategy)}
+                        </span>
+                      </div>
                       <h3 style={{ fontSize: 16, fontWeight: 700, color: '#eaf6ff', marginBottom: 4, paddingRight: 20 }}>
                         {c.title}
                       </h3>
@@ -494,7 +547,7 @@ export default function StudioHomePage() {
                           <span>
                             <span style={{ margin: '0 6px', opacity: 0.4 }}>·</span>
                             <span style={{ color: '#f5a524' }}>
-                              {c.currency === 'USD' ? `$${c.price}` : `${(c.price ?? 0).toLocaleString('en-US')} ₫`}
+                              {formatOrderAmount(c.price ?? 0, c.currency || 'VND')}
                             </span>
                           </span>
                         )}
@@ -525,29 +578,54 @@ export default function StudioHomePage() {
                       >
                         Open →
                       </Link>
-                      <Link
-                        href={`/studio/${c.slug}/cohorts`}
-                        style={{
-                          flexShrink: 0,
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: 5,
-                          background: 'rgba(245,165,36,0.08)',
-                          color: '#f5a524',
-                          padding: '6px 12px',
-                          ...mono,
-                          fontSize: 10,
-                          fontWeight: 600,
-                          letterSpacing: '0.13em',
-                          textTransform: 'uppercase',
-                          textDecoration: 'none',
-                          border: '1px solid rgba(245,165,36,0.22)',
-                          ...chamfer(6),
-                        }}
-                        title="Quản lý cohort/lớp học của khóa"
-                      >
-                        Cohorts
-                      </Link>
+                      {cohortsNav ? (
+                        <Link
+                          href={`/studio/${c.slug}/cohorts`}
+                          style={{
+                            flexShrink: 0,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 5,
+                            background: 'rgba(245,165,36,0.08)',
+                            color: '#f5a524',
+                            padding: '6px 12px',
+                            ...mono,
+                            fontSize: 10,
+                            fontWeight: 600,
+                            letterSpacing: '0.13em',
+                            textTransform: 'uppercase',
+                            textDecoration: 'none',
+                            border: '1px solid rgba(245,165,36,0.22)',
+                            ...chamfer(6),
+                          }}
+                          title="Quản lý cohort/lớp học của khóa"
+                        >
+                          Cohorts
+                        </Link>
+                      ) : (
+                        <span
+                          style={{
+                            flexShrink: 0,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 5,
+                            background: 'rgba(60,70,90,0.2)',
+                            color: '#4a5568',
+                            padding: '6px 12px',
+                            ...mono,
+                            fontSize: 10,
+                            fontWeight: 600,
+                            letterSpacing: '0.13em',
+                            textTransform: 'uppercase',
+                            border: '1px solid rgba(60,70,90,0.35)',
+                            ...chamfer(6),
+                            cursor: 'not-allowed',
+                          }}
+                          title="Chế độ Tự học — không dùng lớp theo kỳ"
+                        >
+                          Cohorts
+                        </span>
+                      )}
                       <Link
                         href={`/courses/${c.slug}?preview=1`}
                         className="px-3 py-1.5 rounded-md text-[11px] border border-ds-border text-ds-muted hover:text-ds-accent"
@@ -575,7 +653,7 @@ export default function StudioHomePage() {
                     </p>
                   )}
                 </div>
-              ))}
+              )})}
             </div>
           )}
 

@@ -2,47 +2,24 @@
 
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { fetchCohortSyllabus, type SyllabusLesson } from '@/features/courses/api/cohortApi'
-import { ModuleMaterialsList } from '@/features/courses/cohort/ModuleMaterialsList'
+import { Home, BookOpen, MessagesSquare } from 'lucide-react'
+import { fetchCohortHome, type CohortHomeData } from '@/features/courses/api/cohortApi'
+import { CohortHomePanel } from '@/features/courses/cohort/CohortHomePanel'
+import { CohortSyllabusPanel } from '@/features/courses/cohort/CohortSyllabusPanel'
+import { CohortDiscussionPanel } from '@/features/courses/cohort/CohortDiscussionPanel'
 import { Button } from '@/design-system'
 
-function formatSchedule(iso?: string | null) {
-  if (!iso) return null
-  try {
-    return new Date(iso).toLocaleString('vi-VN', { dateStyle: 'short', timeStyle: 'short' })
-  } catch {
-    return iso
-  }
-}
+type HubTab = 'home' | 'syllabus' | 'discussion'
 
-function lessonHref(courseSlug: string, cohortId: string, lesson: SyllabusLesson) {
-  if (lesson.type === 'quiz') {
-    return `/courses/${courseSlug}/cohort/${cohortId}/exam/${lesson.slug}`
-  }
-  if (lesson.type === 'assignment') {
-    return `/courses/${courseSlug}/cohort/${cohortId}/assignment/${lesson.slug}`
-  }
-  if (lesson.type === 'live_session') {
-    return null
-  }
-  return `/courses/${courseSlug}/learn/${lesson.slug}`
-}
-
-function typeLabel(type: string) {
-  switch (type) {
-    case 'quiz':
-      return 'Kiểm tra'
-    case 'assignment':
-      return 'Bài tập'
-    case 'live_session':
-      return 'Học online'
-    default:
-      return 'Bài học'
-  }
-}
+const TABS: { id: HubTab; label: string; icon: typeof Home }[] = [
+  { id: 'home', label: 'Trang lớp', icon: Home },
+  { id: 'syllabus', label: 'Chương trình', icon: BookOpen },
+  { id: 'discussion', label: 'Thảo luận', icon: MessagesSquare },
+]
 
 export function CohortHub({ courseSlug, cohortId }: { courseSlug: string; cohortId: string }) {
-  const [data, setData] = useState<Awaited<ReturnType<typeof fetchCohortSyllabus>>['data'] | null>(null)
+  const [tab, setTab] = useState<HubTab>('home')
+  const [data, setData] = useState<CohortHomeData | null>(null)
   const [error, setError] = useState<string | null>(null)
   const loadedKeyRef = useRef('')
 
@@ -51,8 +28,8 @@ export function CohortHub({ courseSlug, cohortId }: { courseSlug: string; cohort
     if (loadedKeyRef.current === key) return
     loadedKeyRef.current = key
     setError(null)
-    void fetchCohortSyllabus(courseSlug, cohortId).then((res) => {
-      if (res.success) {
+    void fetchCohortHome(courseSlug, cohortId).then((res) => {
+      if (res.success && res.data) {
         setData(res.data)
         setError(null)
       } else setError(res.error || 'Không tải được lớp học')
@@ -75,91 +52,59 @@ export function CohortHub({ courseSlug, cohortId }: { courseSlug: string; cohort
     )
   }
 
-  if (!data) return <p className="p-8 text-ds-muted">Đang tải…</p>
-
-  const { cohort, course, modules, lessons } = data
-  const byModule = new Map<string | null, SyllabusLesson[]>()
-  for (const l of lessons) {
-    const key = l.moduleId ?? null
-    if (!byModule.has(key)) byModule.set(key, [])
-    byModule.get(key)!.push(l)
+  if (!data) {
+    return (
+      <div className="min-h-[40vh] flex items-center justify-center">
+        <p className="text-ds-muted animate-pulse">Đang tải lớp học…</p>
+      </div>
+    )
   }
 
-  return (
-    <div className="max-w-3xl mx-auto p-6 space-y-6">
-      <div>
-        <Link href={`/courses/${course.slug}`} className="text-xs text-ds-accent">← {course.title}</Link>
-        <h1 className="text-2xl font-semibold text-white mt-2">{cohort.title}</h1>
-        <p className="text-sm text-ds-muted mt-1">Lớp học theo kỳ · {cohort.timezone}</p>
-      </div>
+  const { cohort, course } = data
 
-      {modules.map((mod: any) => {
-        const modLessons = byModule.get(mod._id ?? null) ?? []
-        if (modLessons.length === 0) return null
-        return (
-          <section key={mod._id} className="rounded-2xl border border-ds-border bg-ds-overlay overflow-hidden">
-            <div className="px-4 py-3 border-b border-ds-border bg-white/5">
-              <h2 className="text-sm font-semibold text-white">
-                {mod.icon ? `${mod.icon} ` : ''}{mod.title}
-              </h2>
-              <ModuleMaterialsList materials={mod.materials} timeZone={cohort.timezone} />
-            </div>
-            <ul className="divide-y divide-ds-border">
-              {modLessons.map((lesson) => {
-                const href = lessonHref(courseSlug, cohortId, lesson)
-                const open = lesson.access === 'open'
-                const meta = [
-                  lesson.schedule.openAt && `Mở: ${formatSchedule(lesson.schedule.openAt)}`,
-                  lesson.schedule.dueAt && `Hạn: ${formatSchedule(lesson.schedule.dueAt)}`,
-                  lesson.schedule.closeAt && `Đóng: ${formatSchedule(lesson.schedule.closeAt)}`,
-                ].filter(Boolean)
-                return (
-                  <li key={lesson.slug} className="px-4 py-3">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <span className="text-[10px] uppercase tracking-wide text-ds-accent font-medium">
-                          {typeLabel(lesson.type)}
-                        </span>
-                        {href && open ? (
-                          <Link href={href} className="block text-white font-medium hover:text-ds-accent mt-0.5">
-                            {lesson.title}
-                          </Link>
-                        ) : (
-                          <p className="text-white font-medium mt-0.5">{lesson.title}</p>
-                        )}
-                        {meta.length > 0 && (
-                          <p className="text-[11px] text-ds-subtle mt-1">{meta.join(' · ')}</p>
-                        )}
-                        {lesson.type === 'live_session' && lesson.meetingUrl && open && (
-                          <a
-                            href={lesson.meetingUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-[11px] text-ds-accent mt-1 inline-block"
-                          >
-                            Vào phòng học →
-                          </a>
-                        )}
-                      </div>
-                      <span
-                        className={`text-[10px] px-2 py-0.5 rounded-full border shrink-0 ${
-                          open
-                            ? 'border-emerald-500/40 text-emerald-300'
-                            : lesson.access === 'closed'
-                              ? 'border-red-500/30 text-red-300'
-                              : 'border-amber-500/30 text-amber-300'
-                        }`}
-                      >
-                        {open ? 'Mở' : lesson.access === 'closed' ? 'Đã đóng' : 'Chưa mở'}
-                      </span>
-                    </div>
-                  </li>
-                )
-              })}
-            </ul>
-          </section>
-        )
-      })}
+  return (
+    <div className="min-h-screen bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-violet-950/25 via-transparent to-transparent">
+      <div className="max-w-3xl mx-auto px-4 py-8 sm:px-6 space-y-6">
+        <header className="space-y-1">
+          <Link href={`/courses/${course.slug}`} className="text-xs text-cyan-400/90 hover:text-cyan-300">
+            ← {course.title}
+          </Link>
+          <h1 className="text-2xl sm:text-3xl font-semibold text-white tracking-tight">{cohort.title}</h1>
+          <p className="text-sm text-ds-muted">Lớp có giáo viên · {cohort.timezone || 'Asia/Ho_Chi_Minh'}</p>
+        </header>
+
+        <nav
+          className="flex gap-1 p-1 rounded-xl bg-black/40 border border-ds-border/80 backdrop-blur-sm"
+          aria-label="Các mục lớp học"
+        >
+          {TABS.map(({ id, label, icon: Icon }) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => setTab(id)}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-lg text-xs sm:text-sm font-medium transition-all ${
+                tab === id
+                  ? 'bg-white/10 text-white shadow-inner'
+                  : 'text-ds-muted hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <Icon className="w-4 h-4 shrink-0 opacity-80" aria-hidden />
+              <span className="hidden xs:inline sm:inline">{label}</span>
+            </button>
+          ))}
+        </nav>
+
+        {tab === 'home' && <CohortHomePanel courseSlug={courseSlug} cohortId={cohortId} data={data} />}
+        {tab === 'syllabus' && (
+          <CohortSyllabusPanel
+            courseSlug={courseSlug}
+            cohortId={cohortId}
+            data={data}
+            completedSlugs={data.completedLessonSlugs}
+          />
+        )}
+        {tab === 'discussion' && <CohortDiscussionPanel courseSlug={courseSlug} cohortId={cohortId} />}
+      </div>
     </div>
   )
 }

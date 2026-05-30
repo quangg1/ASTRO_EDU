@@ -1,0 +1,144 @@
+import { z } from 'zod';
+/** Row from GET /courses/editor/list — studio course picker. */
+export declare const CourseEditorListItemSchema: z.ZodObject<{
+    id: z.ZodEffects<z.ZodUnion<[z.ZodString, z.ZodNumber]>, string, string | number>;
+    title: z.ZodString;
+    slug: z.ZodString;
+    description: z.ZodDefault<z.ZodOptional<z.ZodString>>;
+    thumbnail: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    level: z.ZodString;
+    lessonCount: z.ZodOptional<z.ZodNumber>;
+    published: z.ZodDefault<z.ZodOptional<z.ZodBoolean>>;
+    price: z.ZodOptional<z.ZodNumber>;
+    currency: z.ZodOptional<z.ZodString>;
+    isPaid: z.ZodOptional<z.ZodBoolean>;
+    durationWeeks: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
+    requiresPayment: z.ZodOptional<z.ZodBoolean>;
+    catalogEnabled: z.ZodOptional<z.ZodBoolean>;
+    distributionStrategy: z.ZodOptional<z.ZodEnum<["self_paced", "instructor_led", "hybrid"]>>;
+}, "strip", z.ZodTypeAny, {
+    id: string;
+    title: string;
+    slug: string;
+    description: string;
+    level: string;
+    published: boolean;
+    thumbnail?: string | null | undefined;
+    lessonCount?: number | undefined;
+    price?: number | undefined;
+    currency?: string | undefined;
+    isPaid?: boolean | undefined;
+    durationWeeks?: number | null | undefined;
+    requiresPayment?: boolean | undefined;
+    catalogEnabled?: boolean | undefined;
+    distributionStrategy?: "self_paced" | "instructor_led" | "hybrid" | undefined;
+}, {
+    id: string | number;
+    title: string;
+    slug: string;
+    level: string;
+    description?: string | undefined;
+    thumbnail?: string | null | undefined;
+    lessonCount?: number | undefined;
+    published?: boolean | undefined;
+    price?: number | undefined;
+    currency?: string | undefined;
+    isPaid?: boolean | undefined;
+    durationWeeks?: number | null | undefined;
+    requiresPayment?: boolean | undefined;
+    catalogEnabled?: boolean | undefined;
+    distributionStrategy?: "self_paced" | "instructor_led" | "hybrid" | undefined;
+}>;
+export type CourseEditorListItem = z.infer<typeof CourseEditorListItemSchema>;
+export declare const CourseEditorListResponseSchema: z.ZodObject<{
+    success: z.ZodLiteral<true>;
+    data: z.ZodArray<z.ZodObject<{
+        id: z.ZodEffects<z.ZodUnion<[z.ZodString, z.ZodNumber]>, string, string | number>;
+        title: z.ZodString;
+        slug: z.ZodString;
+        description: z.ZodDefault<z.ZodOptional<z.ZodString>>;
+        thumbnail: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        level: z.ZodString;
+        lessonCount: z.ZodOptional<z.ZodNumber>;
+        published: z.ZodDefault<z.ZodOptional<z.ZodBoolean>>;
+        price: z.ZodOptional<z.ZodNumber>;
+        currency: z.ZodOptional<z.ZodString>;
+        isPaid: z.ZodOptional<z.ZodBoolean>;
+        durationWeeks: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
+        requiresPayment: z.ZodOptional<z.ZodBoolean>;
+        catalogEnabled: z.ZodOptional<z.ZodBoolean>;
+        distributionStrategy: z.ZodOptional<z.ZodEnum<["self_paced", "instructor_led", "hybrid"]>>;
+    }, "strip", z.ZodTypeAny, {
+        id: string;
+        title: string;
+        slug: string;
+        description: string;
+        level: string;
+        published: boolean;
+        thumbnail?: string | null | undefined;
+        lessonCount?: number | undefined;
+        price?: number | undefined;
+        currency?: string | undefined;
+        isPaid?: boolean | undefined;
+        durationWeeks?: number | null | undefined;
+        requiresPayment?: boolean | undefined;
+        catalogEnabled?: boolean | undefined;
+        distributionStrategy?: "self_paced" | "instructor_led" | "hybrid" | undefined;
+    }, {
+        id: string | number;
+        title: string;
+        slug: string;
+        level: string;
+        description?: string | undefined;
+        thumbnail?: string | null | undefined;
+        lessonCount?: number | undefined;
+        published?: boolean | undefined;
+        price?: number | undefined;
+        currency?: string | undefined;
+        isPaid?: boolean | undefined;
+        durationWeeks?: number | null | undefined;
+        requiresPayment?: boolean | undefined;
+        catalogEnabled?: boolean | undefined;
+        distributionStrategy?: "self_paced" | "instructor_led" | "hybrid" | undefined;
+    }>, "many">;
+}, "strip", z.ZodTypeAny, {
+    success: true;
+    data: {
+        id: string;
+        title: string;
+        slug: string;
+        description: string;
+        level: string;
+        published: boolean;
+        thumbnail?: string | null | undefined;
+        lessonCount?: number | undefined;
+        price?: number | undefined;
+        currency?: string | undefined;
+        isPaid?: boolean | undefined;
+        durationWeeks?: number | null | undefined;
+        requiresPayment?: boolean | undefined;
+        catalogEnabled?: boolean | undefined;
+        distributionStrategy?: "self_paced" | "instructor_led" | "hybrid" | undefined;
+    }[];
+}, {
+    success: true;
+    data: {
+        id: string | number;
+        title: string;
+        slug: string;
+        level: string;
+        description?: string | undefined;
+        thumbnail?: string | null | undefined;
+        lessonCount?: number | undefined;
+        published?: boolean | undefined;
+        price?: number | undefined;
+        currency?: string | undefined;
+        isPaid?: boolean | undefined;
+        durationWeeks?: number | null | undefined;
+        requiresPayment?: boolean | undefined;
+        catalogEnabled?: boolean | undefined;
+        distributionStrategy?: "self_paced" | "instructor_led" | "hybrid" | undefined;
+    }[];
+}>;
+export declare function parseCourseEditorListResponse(payload: unknown): CourseEditorListItem[];
+//# sourceMappingURL=courseEditorList.d.ts.map

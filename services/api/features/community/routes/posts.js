@@ -4,12 +4,8 @@ const Comment = require('../models/Comment');
 const Vote = require('../models/Vote');
 const { applyVote, mapMyVotes } = require('../services/voteService');
 const Forum = require('../models/Forum');
-const {
-  optionalAuth,
-  authMiddleware,
-  canModerateOrAdminOverride,
-} = require('../../../shared/jwtAuth');
-const { publicVisibilityFilter } = require('../lib/moderationAccess');
+const { optionalAuth, authMiddleware } = require('../../../shared/jwtAuth');
+const { publicVisibilityFilter, canAccessModToolsOrAdminOverride } = require('../lib/moderationAccess');
 const { requireString, requireEnum } = require('../../../shared/validation');
 const { AppError } = require('../../../shared/errors');
 const {
@@ -29,11 +25,11 @@ router.get('/:id', optionalAuth, async (req, res) => {
     const post = await Post.findById(req.params.id).lean();
     if (!post) return res.status(404).json({ success: false, error: 'Không tìm thấy bài viết' });
 
-    if (post.isHidden && !canModerateOrAdminOverride({ role: req.userRole })) {
+    if (post.isHidden && !canAccessModToolsOrAdminOverride(req.userRole, req.userDoc)) {
       return res.status(404).json({ success: false, error: 'Không tìm thấy bài viết' });
     }
 
-    const commentFilter = { postId: post._id, ...publicVisibilityFilter(req.userRole) };
+    const commentFilter = { postId: post._id, ...publicVisibilityFilter(req.userRole, req.userDoc) };
     const commentsRaw = await Comment.find(commentFilter).sort({ createdAt: 1 }).lean();
 
     const [enrichedPost] = await enrichPostsWithAuthors([post]);
@@ -187,7 +183,7 @@ router.post('/:id/vote', authMiddleware, async (req, res) => {
 
 router.patch('/:id', authMiddleware, async (req, res) => {
   try {
-    if (!canModerateOrAdminOverride({ role: req.userRole })) {
+    if (!canAccessModToolsOrAdminOverride(req.userRole, req.userDoc)) {
       return res.status(403).json({ success: false, error: 'Không có quyền kiểm duyệt' });
     }
     const post = await Post.findById(req.params.id);
@@ -207,7 +203,7 @@ router.patch('/:id', authMiddleware, async (req, res) => {
 
 router.delete('/:id', authMiddleware, async (req, res) => {
   try {
-    if (!canModerateOrAdminOverride({ role: req.userRole })) {
+    if (!canAccessModToolsOrAdminOverride(req.userRole, req.userDoc)) {
       return res.status(403).json({ success: false, error: 'Không có quyền kiểm duyệt' });
     }
     const post = await Post.findById(req.params.id);

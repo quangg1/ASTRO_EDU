@@ -1,6 +1,9 @@
 /**
  * Learning Path — mỗi Node có 3 tầng; mỗi tầng là danh sách bài học (LessonItem), mỗi bài có id ổn định.
  * Nội dung bài: **sections** (cùng block kit với Course — LessonSection).
+ *
+ * **Runtime SSOT:** `GET /api/learning-path` (see `useLearningPath` + `fetchPublicLearningPathData`).
+ * Static `LEARNING_MODULES` / `LEARNING_CONCEPTS` here are **offline / dev fallback** only until API loads.
  */
 
 import type { LessonSection } from '@/features/courses/api/coursesApi'

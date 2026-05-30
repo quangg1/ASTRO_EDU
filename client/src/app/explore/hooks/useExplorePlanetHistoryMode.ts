@@ -10,6 +10,7 @@ export function useExplorePlanetHistoryMode(
   planetHistoryOpen: boolean,
   planetHistoryEntityId: string | null,
   searchParams: ReadonlyURLSearchParams,
+  closePlanetHistory: () => void,
 ) {
   const loadPlanetNarrative = usePlanetNarrativeStore((s) => s.loadForEntity)
   const narrativeLoading = usePlanetNarrativeStore((s) => s.loading)
@@ -19,13 +20,31 @@ export function useExplorePlanetHistoryMode(
   const focusBeatAndSite = usePlanetNarrativeStore((s) => s.focusBeatAndSite)
   const planetBeatAccent = usePlanetNarrativeStore((s) => s.currentBeat.accentColor)
   const appliedHistoryFocusRef = useRef<string | null>(null)
+  const historyLoadStartedRef = useRef(false)
   const { modules, concepts } = useLearningPath()
 
   useEffect(() => {
-    if (!planetHistoryOpen || !planetHistoryEntityId) return
+    if (!planetHistoryOpen || !planetHistoryEntityId) {
+      historyLoadStartedRef.current = false
+      return
+    }
     appliedHistoryFocusRef.current = null
+    historyLoadStartedRef.current = true
     void loadPlanetNarrative(planetHistoryEntityId)
   }, [planetHistoryOpen, planetHistoryEntityId, loadPlanetNarrative])
+
+  useEffect(() => {
+    if (!planetHistoryOpen || !historyLoadStartedRef.current || narrativeLoading) return
+    if (usePlanetNarrativeStore.getState().entityId !== planetHistoryEntityId) return
+    if (narrativeBeats.length > 0) return
+    closePlanetHistory()
+  }, [
+    planetHistoryOpen,
+    planetHistoryEntityId,
+    narrativeLoading,
+    narrativeBeats.length,
+    closePlanetHistory,
+  ])
 
   useEffect(() => {
     if (!planetHistoryOpen || narrativeLoading || narrativeBeats.length === 0) return

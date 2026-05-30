@@ -41,6 +41,12 @@ export interface CourseCheckoutClientProps {
   slug: string
   courseId: string
   courseTitle: string
+  /** Từ server (cohort checkout) — fallback nếu query chưa sync. */
+  initialCohortId?: string | null
+}
+
+function isAlreadyOwnedCode(code?: string) {
+  return code === 'ALREADY_ENROLLED' || code === 'ALREADY_PURCHASED'
 }
 
 function OrderSummary({
@@ -55,6 +61,8 @@ function OrderSummary({
   const discountAmount = session?.discountAmount ?? quote?.selected.discountAmount ?? 0
   const finalAmount = session?.amount ?? quote?.selected.finalAmount ?? listPrice
   const title = session?.courseTitle || quote?.courseTitle || ''
+  const isUpgrade = Boolean(quote?.isCatalogUpgrade && quote.catalogCredit)
+  const cohortFull = quote?.cohortFullPrice ?? null
 
   return (
     <dl className="space-y-2 text-sm">
@@ -62,8 +70,20 @@ function OrderSummary({
         <dt className="text-ds-muted">Khóa học</dt>
         <dd className="text-ds-text font-medium text-right">{title}</dd>
       </div>
+      {isUpgrade && cohortFull != null && cohortFull > listPrice && (
+        <>
+          <div className="flex justify-between gap-2">
+            <dt className="text-ds-muted">Học phí lớp (đủ)</dt>
+            <dd className="text-ds-text tabular-nums">{formatCourseMoney(cohortFull, currency)}</dd>
+          </div>
+          <div className="flex justify-between gap-2 text-emerald-300/90">
+            <dt>Đã trả gói tự học</dt>
+            <dd className="tabular-nums">−{formatCourseMoney(quote!.catalogCredit!, currency)}</dd>
+          </div>
+        </>
+      )}
       <div className="flex justify-between gap-2">
-        <dt className="text-ds-muted">Giá gốc</dt>
+        <dt className="text-ds-muted">{isUpgrade ? 'Phần cần trả thêm' : 'Giá gốc'}</dt>
         <dd className="text-ds-text tabular-nums">{formatCourseMoney(listPrice, currency)}</dd>
       </div>
       {discountAmount > 0 && (
@@ -121,6 +141,8 @@ export function CourseCheckoutClient({ slug, courseId, courseTitle }: CourseChec
   const [errorMsg, setErrorMsg] = useState('')
 
   const promoLocked = Boolean(appliedPromoCode)
+  const cohortIdFromUrl =
+    searchParams.get('cohortId')?.trim() || initialCohortId?.trim() || null
 
   useEffect(() => {
     if (!checked) return
@@ -138,8 +160,13 @@ export function CourseCheckoutClient({ slug, courseId, courseTitle }: CourseChec
         courseId,
         voucherTierId: opts?.promoCode ? null : (opts?.tierId ?? null),
         promoCode: opts?.promoCode ?? null,
+        cohortId: cohortIdFromUrl,
       })
       if (!result.success) {
+        if (isAlreadyOwnedCode(result.code)) {
+          router.replace(`/courses/${slug}?owned=1`)
+          return
+        }
         setErrorMsg(forUserFacingError(result.error, userMessages.loadDataFailed))
         setPhase('error')
         return
@@ -152,7 +179,7 @@ export function CourseCheckoutClient({ slug, courseId, courseTitle }: CourseChec
       }
       setPhase('review')
     },
-    [courseId, user],
+    [courseId, user, cohortIdFromUrl, router, slug],
   )
 
   useEffect(() => {
@@ -173,10 +200,15 @@ export function CourseCheckoutClient({ slug, courseId, courseTitle }: CourseChec
       setSelectedTierId(tierId)
       setAppliedPromoCode(null)
       setPromoInput('')
-      const result = await fetchCheckoutQuote({ courseId, voucherTierId: tierId, promoCode: null })
+      const result = await fetchCheckoutQuote({
+        courseId,
+        voucherTierId: tierId,
+        promoCode: null,
+        cohortId: cohortIdFromUrl,
+      })
       if (result.success) setQuote(result.data)
     },
-    [courseId, promoLocked],
+    [courseId, promoLocked, cohortIdFromUrl],
   )
 
   const applyPromo = useCallback(async () => {
@@ -192,7 +224,12 @@ export function CourseCheckoutClient({ slug, courseId, courseTitle }: CourseChec
     }
     setSelectedTierId(null)
     setAppliedPromoCode(code)
-    const result = await fetchCheckoutQuote({ courseId, promoCode: code, voucherTierId: null })
+    const result = await fetchCheckoutQuote({
+      courseId,
+      promoCode: code,
+      voucherTierId: null,
+      cohortId: cohortIdFromUrl,
+    })
     setPromoBusy(false)
     if (result.success) {
       setQuote(result.data)
@@ -200,15 +237,13 @@ export function CourseCheckoutClient({ slug, courseId, courseTitle }: CourseChec
     } else {
       setErrorMsg(forUserFacingError(result.error, userMessages.loadDataFailed))
     }
-  }, [courseId, promoInput, toast])
+  }, [courseId, promoInput, toast, cohortIdFromUrl])
 
   const clearPromo = useCallback(async () => {
     setAppliedPromoCode(null)
     setPromoInput('')
     await loadQuote({ tierId: null, promoCode: null })
   }, [loadQuote])
-
-  const cohortIdFromUrl = searchParams.get('cohortId')?.trim() || null
 
   const continueToPayment = useCallback(async () => {
     setPhase('processing')
@@ -220,13 +255,20 @@ export function CourseCheckoutClient({ slug, courseId, courseTitle }: CourseChec
       cohortId: cohortIdFromUrl,
     })
     if (!result.success) {
+      if (isAlreadyOwnedCode(result.code)) {
+        router.replace(`/courses/${slug}?owned=1`)
+        return
+      }
       setErrorMsg(forUserFacingError(result.error, userMessages.checkoutSessionFailed))
       setPhase('error')
       return
     }
     setSession(result.data)
+    if (result.data.reusedPending) {
+      toast.show('Tiếp tục đơn thanh toán đang chờ', { tone: 'info' })
+    }
     setPhase('payment')
-  }, [courseId, selectedTierId, appliedPromoCode, promoLocked, cohortIdFromUrl])
+  }, [courseId, selectedTierId, appliedPromoCode, promoLocked, cohortIdFromUrl, router, slug, toast])
 
   const completePurchase = useCallback(async () => {
     if (!session) return
@@ -236,23 +278,31 @@ export function CourseCheckoutClient({ slug, courseId, courseTitle }: CourseChec
       return
     }
     setCardError('')
+    setErrorMsg('')
     setPhase('processing')
-    const result = await confirmCheckout({ txnRef: session.txnRef, paymentMethod: 'card' })
-    if (!result.success) {
-      setErrorMsg(forUserFacingError(result.error, userMessages.paymentConfirmFailed))
+    try {
+      const result = await confirmCheckout({ txnRef: session.txnRef, paymentMethod: 'card' })
+      if (!result.success) {
+        setErrorMsg(forUserFacingError(result.error, userMessages.paymentConfirmFailed))
+        setPhase('payment')
+        return
+      }
+      setPhase('completed')
+      toast.show('Thanh toán thành công — đã mở khóa học', { tone: 'success' })
+      trackEvent('payment_return_viewed', {
+        course_slug: result.data.courseSlug,
+        status: 'success',
+      })
+      const placed = cohortIdFromUrl ? '&cohortPlaced=1' : ''
+      const target = `/courses/${result.data.courseSlug}?enrolled=1${placed}`
+      router.refresh()
+      window.setTimeout(() => {
+        router.push(target)
+      }, 1200)
+    } catch {
+      setErrorMsg(userMessages.paymentConfirmFailed)
       setPhase('payment')
-      return
     }
-    setPhase('completed')
-    toast.show('Thanh toán thành công — đã mở khóa học', { tone: 'success' })
-    trackEvent('payment_return_viewed', {
-      course_slug: result.data.courseSlug,
-      status: 'success',
-    })
-    const placed = cohortIdFromUrl ? '&cohortPlaced=1' : ''
-    window.setTimeout(() => {
-      router.push(`/courses/${result.data.courseSlug}?enrolled=1${placed}`)
-    }, 1000)
   }, [session, card, toast, router, cohortIdFromUrl])
 
   if (!checked || !user) {
@@ -292,7 +342,20 @@ export function CourseCheckoutClient({ slug, courseId, courseTitle }: CourseChec
           </p>
           {cohortIdFromUrl && (
             <p className="mt-3 text-sm text-emerald-200/90 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 max-w-2xl">
-              Đăng ký kèm lớp đã chọn. Sau thanh toán, mã lớp gửi qua email — không hiển thị trên web.
+              {quote?.checkoutKind === 'cohort' && quote.cohortTitle ? (
+                <>
+                  <strong>Học phí lớp:</strong> {quote.cohortTitle} — giá có GV, lịch theo tuần.
+                  {quote.isCatalogUpgrade && quote.catalogCredit ? (
+                    <>
+                      {' '}
+                      Bạn đã có gói tự học — chỉ thanh toán phần chênh lệch.
+                    </>
+                  ) : null}
+                </>
+              ) : (
+                'Đăng ký kèm lớp đã chọn.'
+              )}{' '}
+              Sau thanh toán, mã lớp gửi qua email — không hiển thị trên web.
             </p>
           )}
         </header>
@@ -431,6 +494,11 @@ export function CourseCheckoutClient({ slug, courseId, courseTitle }: CourseChec
               <h2 className="text-sm font-semibold text-ds-text">2. Thanh toán bằng thẻ</h2>
               <CheckoutCardForm values={card} onChange={setCard} />
               {cardError && <p className="text-sm text-ds-warning">{cardError}</p>}
+              {errorMsg && (
+                <p className="text-sm text-ds-warning rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2">
+                  {errorMsg}
+                </p>
+              )}
               <div className="flex flex-wrap gap-3 pt-2">
                 <Button onClick={() => void completePurchase()}>Hoàn tất thanh toán</Button>
                 <Button variant="ghost" onClick={() => setPhase('review')}>
@@ -472,7 +540,7 @@ export function CourseCheckoutClient({ slug, courseId, courseTitle }: CourseChec
         )}
 
         {phase === 'completed' && (
-          <Card className="p-10 flex flex-col items-center text-center gap-2">
+          <Card className="p-10 flex flex-col items-center text-center gap-3">
             <div
               aria-hidden
               className="h-12 w-12 rounded-full bg-ds-accent-soft flex items-center justify-center text-ds-accent text-2xl"
@@ -480,7 +548,22 @@ export function CourseCheckoutClient({ slug, courseId, courseTitle }: CourseChec
               ✓
             </div>
             <p className="text-base font-medium text-ds-text">Giao dịch thành công</p>
-            <p className="text-sm text-ds-muted">Đang chuyển đến khóa học…</p>
+            <p className="text-sm text-ds-muted max-w-sm">
+              Đã ghi danh khóa học
+              {cohortIdFromUrl ? ' và đăng ký lớp' : ''}. Mã lớp (nếu có) gửi qua email.
+            </p>
+            {session?.txnRef && (
+              <p className="text-xs text-ds-muted font-mono">Mã đơn: {session.txnRef}</p>
+            )}
+            <p className="text-sm text-ds-accent">Đang chuyển đến khóa học…</p>
+            <div className="flex flex-wrap gap-3 justify-center pt-2">
+              <Link href={`/courses/${slug}?enrolled=1${cohortIdFromUrl ? '&cohortPlaced=1' : ''}`}>
+                <Button>Vào khóa học ngay</Button>
+              </Link>
+              <Link href="/my-orders">
+                <Button variant="ghost">Lịch sử thanh toán</Button>
+              </Link>
+            </div>
           </Card>
         )}
       </div>

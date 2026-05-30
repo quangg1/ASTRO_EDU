@@ -17,6 +17,7 @@
 export {
   fetchAdminUsers,
   updateUserRole,
+  updateUserAdminScopes,
   updateUserStatus,
   deleteUserPermanently,
 } from './api/adminUsersApi'
@@ -32,6 +33,7 @@ export type {
 export {
   fetchAdminTeacherApplications,
   reviewTeacherApplication,
+  markTeacherApplicationCvReviewed,
 } from '@/features/auth/api/teacherApplicationsApi'
 export type { TeacherApplication, TeacherApplicationWithUser } from '@/features/auth/api/teacherApplicationsApi'
 
@@ -86,9 +88,46 @@ export { sendAdminBroadcast } from './api/adminBroadcastApi'
 export type { BroadcastRole } from './api/adminBroadcastApi'
 
 export {
+  fetchAdminUserDetail,
+  fetchAdminOrdersList,
+  fetchAdminOrderDetail,
+  patchAdminOrderNote,
+  cancelAdminOrder,
+  refundAdminOrder,
+  grantCatalogEnrollment,
+  revokeCatalogEnrollment,
+  grantCohortEnrollment,
+  revokeCohortEnrollment,
+  fetchAdminCoursesList,
+  patchAdminCoursePublished,
+  fetchAdminSystemStatus,
+  triggerAdminNewsCrawl,
+  fetchAdminAuditLog,
+  fetchAdminModerationQueue,
+} from './api/adminOpsApi'
+export type {
+  AdminUserDetail,
+  AdminCourseRow,
+  AdminSystemStatus,
+  AdminAuditEntry,
+  Paginated,
+} from './api/adminOpsApi'
+
+export {
   fetchAdminPromoCodes,
   createAdminPromoCode,
   patchAdminPromoCode,
   deleteAdminPromoCode,
 } from './api/adminPromoCodesApi'
 export type { PromoCodeAdmin } from './api/adminPromoCodesApi'
+
+export {
+  labelUserRoleVi,
+  labelAccountStatusVi,
+  labelGemReasonCode,
+  labelGemEconomyActionVi,
+  labelAdminScopeVi,
+  formatAdminScopesSummary,
+  ADMIN_SCOPE_OPTIONS,
+} from './lib/adminLabelsVi'
+export type { AdminScope } from './lib/adminLabelsVi'

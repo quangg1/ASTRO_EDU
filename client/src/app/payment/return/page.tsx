@@ -59,6 +59,11 @@ function PaymentReturnInner() {
               <Button className="w-full">Vào khóa học</Button>
             </Link>
           )}
+          <Link href="/my-orders">
+            <Button variant="ghost" className="w-full">
+              Lịch sử thanh toán
+            </Button>
+          </Link>
           <Link href="/my-courses">
             <Button variant="ghost" className="w-full">
               Khóa học của tôi

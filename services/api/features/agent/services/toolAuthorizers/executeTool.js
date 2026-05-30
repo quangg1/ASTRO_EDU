@@ -3,6 +3,8 @@ const Course = require('../../../courses/models/Course');
 const { isToolAllowedForTier, resolveToolName } = require('../../lib/toolSchema');
 const { getLearningPathLessonIndex } = require('./lpCurriculum');
 const { hasShowcaseUnlock } = require('./showcaseAccess');
+const { resolveShowcaseTarget, loadShowcaseCatalog, inferPlanetFocusFromMessage } = require('../showcaseNavigationService');
+const { searchCommunityThreadsForAgent } = require('../agentContextEnrichment');
 
 const STAGE_MIN = -2000;
 const STAGE_MAX = 4600;
@@ -25,6 +27,7 @@ async function executeAuthorizedTool({
   courseId,
   courseSlug,
   courseLessons,
+  userMessage,
 }) {
   const name = resolveToolName(toolName);
 
@@ -78,19 +81,85 @@ async function executeAuthorizedTool({
     };
   }
 
+  if (name === 'focus_showcase_entity') {
+    const catalog = await loadShowcaseCatalog();
+    const resolved = resolveShowcaseTarget(args || {}, catalog);
+    if (!resolved?.entityId) {
+      return {
+        ok: false,
+        code: 'invalid_args',
+        suggestion:
+          'Cần planet_name (vd. Venus), entity_name (vd. Europa) hoặc entity_id (vd. planet-venus).',
+      };
+    }
+    const openHistory = args?.open_history === true || args?.openHistory === true;
+    if (openHistory && userId) {
+      const unlocked = await hasShowcaseUnlock(userId, resolved.entityId);
+      if (!unlocked) {
+        return {
+          ok: false,
+          code: 'no_access',
+          suggestion: 'Mở khóa showcase (gem) hoặc đăng ký khóa để xem Deep History entity này.',
+        };
+      }
+    }
+    return {
+      ok: true,
+      clientAction: {
+        type: 'focus_showcase_entity',
+        entityId: resolved.entityId,
+        entityName: resolved.name,
+        planet: resolved.planet || null,
+        syncPlanet: true,
+        openHistory,
+      },
+    };
+  }
+
   if (name === 'go_to_explore' || name === 'navigate_to_narrative') {
+    const catalog = await loadShowcaseCatalog();
+    const openHistory = args?.open_history === true || args?.openHistory === true;
+    const planetRaw = args?.planet_name ?? args?.planetName ?? args?.planet;
+    const entityIdRaw = args?.entity_id ?? args?.entityId;
+
+    let focusTarget = null;
+    if (planetRaw && String(planetRaw).toLowerCase() !== 'earth') {
+      focusTarget = resolveShowcaseTarget({ planet_name: planetRaw, entity_id: entityIdRaw }, catalog);
+    } else if (entityIdRaw && !openHistory) {
+      focusTarget = resolveShowcaseTarget({ entity_id: entityIdRaw }, catalog);
+    } else if (name === 'go_to_explore' && userMessage) {
+      const inferred = inferPlanetFocusFromMessage(userMessage);
+      if (inferred) {
+        focusTarget = resolveShowcaseTarget({ planet_name: inferred }, catalog);
+      }
+    }
+
+    if (focusTarget?.entityId && !openHistory) {
+      return {
+        ok: true,
+        clientAction: {
+          type: 'focus_showcase_entity',
+          entityId: focusTarget.entityId,
+          entityName: focusTarget.name,
+          planet: focusTarget.planet || null,
+          syncPlanet: true,
+          openHistory: false,
+        },
+      };
+    }
+
     const ma = clampMa(args?.stage_time_ma ?? args?.stageTime);
-    const planet = String(args?.planet || 'earth').toLowerCase();
-    const entityId = typeof args?.entity_id === 'string' ? args.entity_id.trim() : '';
+    const planet = String(planetRaw || 'earth').toLowerCase();
+    const entityId = typeof entityIdRaw === 'string' ? entityIdRaw.trim() : '';
     const pinId = typeof args?.pin_id === 'string' ? args.pin_id.trim() : '';
 
-    if (entityId && userId) {
+    if (entityId && openHistory && userId) {
       const unlocked = await hasShowcaseUnlock(userId, entityId);
       if (!unlocked) {
         return {
           ok: false,
           code: 'no_access',
-          suggestion: 'Đăng ký khóa hoặc mở khóa showcase trong cửa hàng gem.',
+          suggestion: 'Mở khóa showcase (gem) hoặc đăng ký khóa để xem Deep History entity này.',
         };
       }
     }
@@ -193,6 +262,39 @@ async function executeAuthorizedTool({
         moduleId: hit.moduleId,
         nodeId: hit.nodeId,
       },
+    };
+  }
+
+  if (name === 'suggest_community_thread') {
+    const lessonId = typeof args?.lesson_id === 'string' ? args.lesson_id.trim() : '';
+    const lessonSlug = typeof args?.lesson_slug === 'string' ? args.lesson_slug.trim() : '';
+    const slug =
+      typeof args?.course_slug === 'string'
+        ? args.course_slug.trim()
+        : courseSlug || '';
+    if (!lessonId && !lessonSlug && !slug) {
+      return {
+        ok: false,
+        code: 'invalid_args',
+        suggestion: 'Cần lesson_id, lesson_slug hoặc course_slug để tìm thảo luận.',
+      };
+    }
+    const threads = await searchCommunityThreadsForAgent({
+      lessonId: lessonId || undefined,
+      lessonSlug: lessonSlug || undefined,
+      courseSlug: slug || undefined,
+      limit: 3,
+    });
+    if (!threads.length) {
+      return {
+        ok: false,
+        code: 'no_threads',
+        suggestion: 'Chưa có thảo luận phù hợp — gợi ý học viên đặt câu hỏi trên diễn đàn.',
+      };
+    }
+    return {
+      ok: true,
+      clientAction: { type: 'suggest_community_thread', threads },
     };
   }
 

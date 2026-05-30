@@ -20,6 +20,8 @@ export interface AuthUser {
   avatar: string | null
   provider: string
   role?: 'student' | 'teacher' | 'moderator' | 'admin'
+  /** Phạm vi admin con — rỗng = toàn quyền (chỉ khi role === admin). */
+  adminScopes?: string[]
   accountStatus?: 'active' | 'deactivated'
 }
 

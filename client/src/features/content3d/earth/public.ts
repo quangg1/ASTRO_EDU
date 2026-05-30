@@ -15,4 +15,5 @@ export type {
   FossilStats,
 } from './lib/earthHistoryTypes'
 export { fetchFossilsForStage } from './api/earthApi'
+export { loadEarthStages } from './lib/loadEarthStages'
 export { useExploreStageFossils, useCourseStageFossils } from './hooks/useStageFossils'

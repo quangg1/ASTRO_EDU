@@ -8,6 +8,11 @@ const notificationSchema = new mongoose.Schema(
       enum: [
         'course_purchase',
         'enrollment',
+        'cohort_enrollment',
+        'cohort_invite_email',
+        'enrollment_revoked',
+        'assignment_submitted',
+        'assignment_graded',
         'promo',
         'system',
         'teacher_application',

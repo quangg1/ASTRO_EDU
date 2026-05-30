@@ -57,6 +57,28 @@ const assignmentStagingUpload = multer({
   fileFilter: assignmentStagingFilter,
 });
 
+const teacherCvFilter = (_req, file, cb) => {
+  const allowed = /\.pdf$/i;
+  cb(null, allowed.test(path.extname(file.originalname)));
+};
+
+const teacherCvUpload = multer({
+  storage: getMulterStorage(),
+  limits: { fileSize: 12 * 1024 * 1024 },
+  fileFilter: teacherCvFilter,
+});
+
+const teacherCertFilter = (_req, file, cb) => {
+  const allowed = /\.(pdf|jpe?g|png|webp)$/i;
+  cb(null, allowed.test(path.extname(file.originalname)));
+};
+
+const teacherCertUpload = multer({
+  storage: getMulterStorage(),
+  limits: { fileSize: 12 * 1024 * 1024 },
+  fileFilter: teacherCertFilter,
+});
+
 const router = express.Router();
 
 router.post('/upload', authMiddleware, requireRole('teacher', 'admin'), upload.single('file'), async (req, res) => {
@@ -120,6 +142,71 @@ router.post(
       res.status(err.status || 500).json({
         success: false,
         error: err.message || 'Tải tệp lên thất bại',
+      });
+    }
+  },
+);
+
+/** CV ứng tuyển giảng viên — học viên đã đăng nhập; chỉ PDF. */
+router.post('/upload/teacher-application-cv', authMiddleware, teacherCvUpload.single('file'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        error: 'Chọn file PDF (CV).',
+      });
+    }
+    const userId = String(req.userId || '').replace(/[^a-zA-Z0-9_-]/g, '');
+    if (!userId) {
+      return res.status(401).json({ success: false, error: 'Phiên đăng nhập không hợp lệ' });
+    }
+    const storageKey = `teacher-applications/${userId}/cv-${Date.now()}${extFromFile(req.file)}`;
+    const { url, filename: storedName, storageKey: key } = await persistUploadedFile(req.file, storageKey);
+    res.json({
+      success: true,
+      url,
+      filename: req.file.originalname || storedName,
+      storageKey: key,
+    });
+  } catch (err) {
+    console.error('[media] teacher-application-cv error:', err);
+    res.status(err.status || 500).json({
+      success: false,
+      error: err.message || 'Tải CV thất bại',
+    });
+  }
+});
+
+/** Giấy tờ xác nhận (quyết định, thẻ GV…) — PDF hoặc ảnh. */
+router.post(
+  '/upload/teacher-application-certificate',
+  authMiddleware,
+  teacherCertUpload.single('file'),
+  async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({
+          success: false,
+          error: 'Chọn file PDF hoặc ảnh (JPG/PNG/WebP).',
+        });
+      }
+      const userId = String(req.userId || '').replace(/[^a-zA-Z0-9_-]/g, '');
+      if (!userId) {
+        return res.status(401).json({ success: false, error: 'Phiên đăng nhập không hợp lệ' });
+      }
+      const storageKey = `teacher-applications/${userId}/cert-${Date.now()}${extFromFile(req.file)}`;
+      const { url, filename: storedName, storageKey: key } = await persistUploadedFile(req.file, storageKey);
+      res.json({
+        success: true,
+        url,
+        filename: req.file.originalname || storedName,
+        storageKey: key,
+      });
+    } catch (err) {
+      console.error('[media] teacher-application-certificate error:', err);
+      res.status(err.status || 500).json({
+        success: false,
+        error: err.message || 'Tải giấy tờ thất bại',
       });
     }
   },
