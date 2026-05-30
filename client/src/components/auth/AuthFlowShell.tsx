@@ -1,6 +1,7 @@
 'use client'
 
 import type { ReactNode } from 'react'
+import type { LucideIcon } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { getStaticAssetUrl } from '@/lib/apiConfig'
 import { SiteLogo } from '@/components/ui/SiteLogo'
@@ -286,7 +287,7 @@ export function AuthTextField({
   trailing,
 }: {
   label: string
-  icon: React.ComponentType<{ className?: string; strokeWidth?: number }>
+  icon: LucideIcon
   children: ReactNode
   trailing?: ReactNode
 }) {

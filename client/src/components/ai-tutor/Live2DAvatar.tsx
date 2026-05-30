@@ -120,8 +120,7 @@ export const Live2DAvatar = forwardRef<Live2DAvatarHandle, Props>(function Live2
 
   useEffect(() => {
     let cancelled = false
-    let app: { destroy: (removeView?: boolean, stageOptions?: boolean) => void; stage: { addChild: (c: unknown) => void } } | null =
-      null
+    let app: import('pixi.js').Application | null = null
 
     async function init() {
       const host = hostRef.current
@@ -173,7 +172,7 @@ export const Live2DAvatar = forwardRef<Live2DAvatarHandle, Props>(function Live2
           return
         }
 
-        app.stage.addChild(model)
+        app.stage.addChild(model as unknown as import('pixi.js').DisplayObject)
         fitModelInStage(model, width, height, align)
         modelRef.current = model
         void model.motion(NITO_IDLE_MOTION.group, NITO_IDLE_MOTION.index)
