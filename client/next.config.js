@@ -49,7 +49,7 @@ function resolveApiProxyOrigin() {
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  transpilePackages: ['three'],
+  transpilePackages: ['@galaxies/contracts', 'three'],
 
   async redirects() {
     return [

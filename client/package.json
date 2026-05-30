@@ -28,7 +28,6 @@
     "hybrid:run:ios": "npx cap run ios -l --external"
   },
   "dependencies": {
-    "@galaxies/contracts": "file:../packages/contracts",
     "@capacitor/android": "^8.2.0",
     "@capacitor/app": "^8.0.1",
     "@capacitor/cli": "^8.2.0",
@@ -38,6 +37,7 @@
     "@capacitor/preferences": "^8.0.1",
     "@capacitor/push-notifications": "^8.0.2",
     "@floating-ui/dom": "^1.7.6",
+    "@galaxies/contracts": "file:../packages/contracts",
     "@react-three/drei": "^9.96.0",
     "@react-three/fiber": "^8.15.0",
     "@tiptap/extension-code-block-lowlight": "^3.20.1",
@@ -69,6 +69,7 @@
     "remark-gfm": "^4.0.1",
     "tailwind-merge": "^2.2.0",
     "three": "^0.160.0",
+    "zod": "^3.25.76",
     "zustand": "^4.5.0"
   },
   "devDependencies": {
