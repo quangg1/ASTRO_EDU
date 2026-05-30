@@ -8,6 +8,18 @@ import { planetsData, sunData, type PlanetData } from '@/features/content3d/show
 
 const AU_IN_KM = 149_597_870.7
 export const SHOWCASE_SCENE_RADIUS = 320
+
+/** Semi-major axis thật (AU) — dùng cho scale, không tin JPL `a` trên planet-* (hay bị lẫn ngày/km/scene). */
+const CANONICAL_PLANET_AU: Record<string, number> = {
+  Mercury: 0.387,
+  Venus: 0.723,
+  Earth: 1.0,
+  Mars: 1.524,
+  Jupiter: 5.203,
+  Saturn: 9.537,
+  Uranus: 19.191,
+  Neptune: 30.07,
+}
 const SATELLITE_ORBIT_SCENE_PER_PARENT_RADIUS = 0.052
 const PLANET_RADIUS_KM: Record<string, number> = {
   Mercury: 2439.7,
@@ -27,31 +39,26 @@ function parentSceneRadius(planetName: string): number {
   return Math.max(0.2, p?.radius ?? 0.75)
 }
 
-/** Scale AU → scene chỉ theo 8 hành tinh — không bị comet/dwarf kéo co hệ trong. */
-export function resolveHeliocentricAuToSceneScale(entities: ShowcaseOrbitEntity[]): number {
-  let maxPlanetAu = 30
-  for (const e of entities) {
-    if (!String(e.id || '').startsWith('planet-')) continue
-    const a = Number(e.semiMajorAxisAu ?? e.orbitalElements?.a ?? 0)
-    if (Number.isFinite(a) && a > 0 && a < 55) maxPlanetAu = Math.max(maxPlanetAu, a)
-  }
+/** Scale AU → scene theo Neptune (~30 AU) — ổn định, không phụ thuộc JPL sync lỗi trên planet-*. */
+export function resolveHeliocentricAuToSceneScale(_entities: ShowcaseOrbitEntity[]): number {
+  const maxPlanetAu = Math.max(30, ...Object.values(CANONICAL_PLANET_AU))
   return THREE.MathUtils.clamp(SHOWCASE_SCENE_RADIUS / maxPlanetAu, 14, 34)
 }
 
+/**
+ * Bán kính quỹ đạo heliocentric cho 8 hành tinh chính.
+ * Luôn dùng `planetsData.distance` (đã chỉnh cho layout) — JPL chỉ cập nhật e/i/ω/M/period.
+ */
 export function resolvePlanetHeliocentricDistance(
   planet: PlanetData,
   orbitEntity: ShowcaseOrbitEntity | undefined,
   auScale: number,
 ): number {
+  void orbitEntity
+  void auScale
+  if (CANONICAL_PLANET_AU[planet.name]) return planet.distance
   const sunR = sunData.radius
-  const minDist = sunR * 4.75
-  const catalog = planet.distance
-  const aAu = Number(orbitEntity?.semiMajorAxisAu ?? orbitEntity?.orbitalElements?.a ?? 0)
-  let fromAu = Number.isFinite(aAu) && aAu > 0 && aAu < 55 ? aAu * auScale * 1.12 : 0
-  if (aAu > 0 && aAu < 2.4) {
-    fromAu = Math.max(fromAu, sunR * 3.5 + Math.log1p(aAu) * auScale * 7.2)
-  }
-  return Math.max(catalog, fromAu, minDist)
+  return Math.max(planet.distance, sunR * 4.75)
 }
 
 function satelliteRadiusFromCatalog(
