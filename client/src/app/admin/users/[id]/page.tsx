@@ -134,7 +134,7 @@ export default function AdminUserDetailPage() {
         <Card className="p-4">
           <p className="text-xs text-gray-500 uppercase">Gem</p>
           <p className="text-2xl text-emerald-300 tabular-nums">{detail.wallet.balance}</p>
-          <p className="text-sm text-gray-400">{detail.wallet.learnerTier?.current?.nameVi || '—'}</p>
+          <p className="text-sm text-gray-400">{detail.wallet.learnerTier?.labelVi || '—'}</p>
           <Button type="button" className="mt-3" onClick={() => void adjustGem()}>
             Điều chỉnh gem
           </Button>

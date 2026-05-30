@@ -274,7 +274,7 @@ export function NarrativeStudioEditor({ entityId, showcaseContent }: Props) {
       <div className="flex gap-1 rounded-lg border border-ds-border p-1">
         {(
           [
-            ['beat', 'Th?i k? & panel'],
+            ['beat', 'Thời kỳ & panel'],
             ['design', 'Thiết kế panel'],
             ['sites', 'Pin / địa điểm'],
             ...(showFossilsTab ? ([['fossils', 'Hóa thạch']] as const) : []),

@@ -123,7 +123,7 @@ function OrderSummary({
   )
 }
 
-export function CourseCheckoutClient({ slug, courseId, courseTitle }: CourseCheckoutClientProps) {
+export function CourseCheckoutClient({ slug, courseId, courseTitle, initialCohortId }: CourseCheckoutClientProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const toast = useToast()

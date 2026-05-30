@@ -239,14 +239,8 @@ export interface AdminOrder extends Order {
   userId?: string
   buyerEmail?: string | null
   buyerName?: string | null
-  cohortTitle?: string | null
   adminNote?: string
-  discountPct?: number
-  discountAmount?: number
-  discountSource?: string
-  promoCode?: string | null
   gemsCommitted?: number
-  gateway?: string
   refundedAt?: string | null
   refundReason?: string
 }

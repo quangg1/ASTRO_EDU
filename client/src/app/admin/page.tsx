@@ -126,7 +126,7 @@ export default function AdminPage() {
 
         const uRes = val(0, { success: false, error: 'Không tải danh sách người dùng' } as Awaited<ReturnType<typeof fetchAdminUsers>>)
         const courses = val(1, [] as Awaited<ReturnType<typeof fetchCourses>>)
-        const orderOverview = val(2, { stats: null, orders: [] as Order[] })
+        const orderOverview = val(2, { stats: null, orders: [] as AdminOrder[] })
         const analyticsOverview = val(3, { success: false, error: 'Không tải analytics' } as Awaited<ReturnType<typeof fetchAdminAnalyticsOverview>>)
         const funnelOverview = val(4, { success: false, error: 'Không tải funnel' } as Awaited<ReturnType<typeof fetchAdminAnalyticsFunnel>>)
         const retentionOverview = val(5, { success: false, error: 'Không tải retention' } as Awaited<ReturnType<typeof fetchAdminAnalyticsRetention>>)

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuthStore } from '@/features/auth/public'
@@ -25,6 +25,14 @@ import { PageHeader } from '@/components/ui/PageHeader'
 import { Button, Select } from '@/design-system'
 
 export default function AdminOrdersPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-black pt-24 text-center text-slate-500">Đang tải…</div>}>
+      <AdminOrdersPageInner />
+    </Suspense>
+  )
+}
+
+function AdminOrdersPageInner() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { user, checked } = useAuthStore()

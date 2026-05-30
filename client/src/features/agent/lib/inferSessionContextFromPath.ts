@@ -12,7 +12,7 @@ export function inferSessionContextFromPath(pathname: string): SessionContext | 
     return buildSessionContext({
       pathname,
       surface: 'studio',
-      courseSlug: slug,
+      courseSlug: slug ?? undefined,
       routeLabel: 'Studio',
     })
   }
