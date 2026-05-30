@@ -35,6 +35,31 @@ function hasShowcaseMapSlot(raw: string | undefined | null): boolean {
   return isResolvableShowcaseAssetUrl(u)
 }
 
+/** So sánh URL media sau khi resolve (bỏ query) — tránh load cloud trùng diffuse. */
+export function showcaseMediaUrlsEquivalent(a: string | undefined | null, b: string | undefined | null): boolean {
+  const ra = String(a || '').trim()
+  const rb = String(b || '').trim()
+  if (!ra || !rb) return false
+  const ka = (resolveMediaUrl(ra) || ra).split('?')[0].toLowerCase()
+  const kb = (resolveMediaUrl(rb) || rb).split('?')[0].toLowerCase()
+  return ka === kb
+}
+
+/**
+ * Cloud chỉ dùng khi là lớp alpha riêng (vd. mây Trái Đất).
+ * Trùng diffuse (hay gặp ở moon) → bỏ qua — tránh che nửa sphere trong preview/Explore.
+ */
+export function isUsableShowcaseCloudMapUrl(
+  cloudRaw: string | undefined | null,
+  diffuseRaw: string | undefined | null,
+): boolean {
+  const cloud = String(cloudRaw || '').trim()
+  if (!isResolvableShowcaseAssetUrl(cloud)) return false
+  const diffuse = String(diffuseRaw || '').trim()
+  if (diffuse && showcaseMediaUrlsEquivalent(cloud, diffuse)) return false
+  return true
+}
+
 /**
  * `Planet` trong Explore dùng ShowcaseDiffuseGlobe khi có diffuse từ Studio/catalog
  * (không chỉ `remoteTextureUrl` — `texturePath` catalog cũng tính).

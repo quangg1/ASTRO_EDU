@@ -1,8 +1,175 @@
 const express = require('express');
 const ShowcaseCatalogBundle = require('../models/ShowcaseCatalogBundle');
+const PlanetNarrative = require('../planet-narrative/models/PlanetNarrative');
 const { authMiddleware, requireRole } = require('../../../shared/jwtAuth');
 
 const router = express.Router();
+
+const ENTITY_GROUPS = new Set(['planets_moons', 'dwarf_asteroids', 'comets', 'spacecraft']);
+const GROUP_ORDER = ['planets_moons', 'dwarf_asteroids', 'comets', 'spacecraft'];
+const PLANET_ORDER = ['Mercury', 'Venus', 'Earth', 'Mars', 'Jupiter', 'Saturn', 'Uranus', 'Neptune'];
+const DWARF_ORDER = ['Pluto', 'Ceres', 'Eris', 'Haumea', 'Makemake'];
+const CORE_PLANET_IDS = new Set([
+  'planet-mercury',
+  'planet-venus',
+  'planet-earth',
+  'planet-mars',
+  'planet-jupiter',
+  'planet-saturn',
+  'planet-uranus',
+  'planet-neptune',
+]);
+
+function inferGroupFromEntityId(entityId) {
+  const id = String(entityId || '').trim();
+  if (id.startsWith('planet-') || id.startsWith('moon-')) return 'planets_moons';
+  if (id.startsWith('dwarf-') || id.startsWith('asteroid-')) return 'dwarf_asteroids';
+  if (id.startsWith('comet-')) return 'comets';
+  if (id.startsWith('sc-')) return 'spacecraft';
+  return 'planets_moons';
+}
+
+function resolveParentEntityId(catalogEntry, orbit, itemRow) {
+  const fromOrbit = String(orbit?.parentId || itemRow?.parentId || '').trim();
+  if (fromOrbit) return fromOrbit;
+  const lp = String(
+    catalogEntry?.linkedPlanetName || orbit?.parentPlanetName || itemRow?.parentPlanetName || '',
+  ).trim();
+  if (lp) return `planet-${lp.toLowerCase()}`;
+  return '';
+}
+
+function compareNames(a, b) {
+  return String(a || '').localeCompare(String(b || ''), 'en', { sensitivity: 'base' });
+}
+
+function sortEditorItemsHierarchical(items, catalog) {
+  const catMap = new Map((catalog || []).map((c) => [String(c?.id || '').trim(), c]));
+  const nodes = items.map((item) => {
+    const cat = catMap.get(item.entityId);
+    const group = String(cat?.group || inferGroupFromEntityId(item.entityId));
+    return {
+      item,
+      entityId: item.entityId,
+      name: String(item.nameVi || cat?.name || item.entityId).trim(),
+      group,
+      parentId: resolveParentEntityId(cat, null, item),
+    };
+  });
+
+  const byGroup = new Map();
+  for (const g of GROUP_ORDER) byGroup.set(g, []);
+  for (const n of nodes) {
+    const list = byGroup.get(n.group) || [];
+    list.push(n);
+    byGroup.set(n.group, list);
+  }
+
+  const ordered = [];
+
+  const pushPlanetTree = (list) => {
+    const planets = list.filter((n) => n.entityId.startsWith('planet-'));
+    const others = list.filter((n) => !n.entityId.startsWith('planet-'));
+    planets.sort((a, b) => {
+      const ka = PLANET_ORDER.indexOf(a.name);
+      const kb = PLANET_ORDER.indexOf(b.name);
+      const ai = ka >= 0 ? ka : 99;
+      const bi = kb >= 0 ? kb : 99;
+      if (ai !== bi) return ai - bi;
+      return compareNames(a.name, b.name);
+    });
+    const kidsByParent = new Map();
+    for (const n of others) {
+      const pid = n.parentId || '';
+      const bucket = kidsByParent.get(pid) || [];
+      bucket.push(n);
+      kidsByParent.set(pid, bucket);
+    }
+    for (const [, kids] of kidsByParent) kids.sort((a, b) => compareNames(a.name, b.name));
+    for (const p of planets) {
+      ordered.push(p);
+      for (const c of kidsByParent.get(p.entityId) || []) ordered.push(c);
+    }
+    for (const o of others) {
+      if (ordered.some((x) => x.entityId === o.entityId)) continue;
+      ordered.push(o);
+    }
+  };
+
+  const pushDwarfTree = (list) => {
+    const dwarfs = list.filter((n) => n.entityId.startsWith('dwarf-'));
+    const rest = list.filter((n) => !n.entityId.startsWith('dwarf-'));
+    dwarfs.sort((a, b) => {
+      const ka = DWARF_ORDER.indexOf(a.name);
+      const kb = DWARF_ORDER.indexOf(b.name);
+      const ai = ka >= 0 ? ka : 50;
+      const bi = kb >= 0 ? kb : 50;
+      if (ai !== bi) return ai - bi;
+      return compareNames(a.name, b.name);
+    });
+    const kidsByParent = new Map();
+    for (const n of rest) {
+      const pid = n.parentId || '';
+      const bucket = kidsByParent.get(pid) || [];
+      bucket.push(n);
+      kidsByParent.set(pid, bucket);
+    }
+    for (const [, kids] of kidsByParent) kids.sort((a, b) => compareNames(a.name, b.name));
+    for (const d of dwarfs) {
+      ordered.push(d);
+      for (const c of kidsByParent.get(d.entityId) || []) ordered.push(c);
+    }
+    for (const o of rest) {
+      if (ordered.some((x) => x.entityId === o.entityId)) continue;
+      ordered.push(o);
+    }
+  };
+
+  for (const group of GROUP_ORDER) {
+    const list = byGroup.get(group) || [];
+    if (!list.length) continue;
+    if (group === 'planets_moons') pushPlanetTree(list);
+    else if (group === 'dwarf_asteroids') pushDwarfTree(list);
+    else {
+      list.sort((a, b) => compareNames(a.name, b.name));
+      for (const n of list) ordered.push(n);
+    }
+  }
+
+  return ordered.map((n) => n.item);
+}
+
+function buildEditorItemsFromBundle(doc) {
+  const catalog = Array.isArray(doc?.catalog) ? doc.catalog : [];
+  const orbitMap = new Map(
+    (Array.isArray(doc?.orbits) ? doc.orbits : []).map((o) => [String(o?.id || '').trim(), o]),
+  );
+  return catalog
+    .map((c) => {
+      const row = normalizeCatalogContent(c);
+      if (!row) return null;
+      const orbit = orbitMap.get(row.entityId);
+      return {
+        ...row,
+        horizonsCommand: String(orbit?.horizonsCommand || '').trim(),
+        horizonsCenter: String(orbit?.horizonsCenter || '').trim(),
+        horizonsId: String(orbit?.horizonsId || row.horizonsId || '').trim(),
+        orbitAround: String(orbit?.orbitAround || row.orbitAround || '').trim(),
+        parentId: String(orbit?.parentId || row.parentId || '').trim(),
+        parentPlanetName: String(orbit?.parentPlanetName || row.parentPlanetName || '').trim(),
+        radiusKm:
+          Number.isFinite(Number(orbit?.radiusKm)) && Number(orbit?.radiusKm) > 0
+            ? Number(orbit?.radiusKm)
+            : Number(row.radiusKm || 0),
+        orbitColor: normalizeColorHex(orbit?.orbitColor, normalizeColorHex(row.orbitColor)),
+        orbitalElements:
+          orbit?.orbitalElements && typeof orbit.orbitalElements === 'object'
+            ? orbit.orbitalElements
+            : row.orbitalElements || null,
+      };
+    })
+    .filter(Boolean);
+}
 
 function isSafeHttpUrl(s) {
   const t = String(s || '').trim();
@@ -283,36 +450,8 @@ router.get('/editor', authMiddleware, requireRole('teacher', 'admin'), async (re
   try {
     const doc = await ShowcaseCatalogBundle.findOne({ slug: 'main' }).lean();
     const catalog = Array.isArray(doc?.catalog) ? doc.catalog : [];
-    const orbitMap = new Map(
-      (Array.isArray(doc?.orbits) ? doc.orbits : []).map((o) => [String(o?.id || '').trim(), o]),
-    );
-    const items = catalog
-      .map((c) => {
-        const row = normalizeCatalogContent(c);
-        if (!row) return null;
-        const orbit = orbitMap.get(row.entityId);
-        return {
-          ...row,
-          horizonsCommand: String(orbit?.horizonsCommand || '').trim(),
-          horizonsCenter: String(orbit?.horizonsCenter || '').trim(),
-          horizonsId: String(orbit?.horizonsId || row.horizonsId || '').trim(),
-          orbitAround: String(orbit?.orbitAround || row.orbitAround || '').trim(),
-          parentId: String(orbit?.parentId || row.parentId || '').trim(),
-          parentPlanetName: String(orbit?.parentPlanetName || row.parentPlanetName || '').trim(),
-          radiusKm:
-            Number.isFinite(Number(orbit?.radiusKm)) && Number(orbit?.radiusKm) > 0
-              ? Number(orbit?.radiusKm)
-              : Number(row.radiusKm || 0),
-          orbitColor: normalizeColorHex(orbit?.orbitColor, normalizeColorHex(row.orbitColor)),
-          orbitalElements:
-            orbit?.orbitalElements && typeof orbit.orbitalElements === 'object'
-              ? orbit.orbitalElements
-              : row.orbitalElements || null,
-        };
-      })
-      .filter(Boolean)
-      .sort((a, b) => a.entityId.localeCompare(b.entityId));
-    res.json({ success: true, data: { items } });
+    const items = sortEditorItemsHierarchical(buildEditorItemsFromBundle(doc), catalog);
+    res.json({ success: true, data: { items, catalog } });
   } catch (err) {
     console.error('GET showcase-entities/editor error:', err);
     res.status(500).json({ success: false, error: 'Lỗi máy chủ' });
@@ -394,38 +533,150 @@ router.put('/editor', authMiddleware, requireRole('teacher', 'admin'), async (re
       { upsert: true },
     );
     const freshDoc = await ShowcaseCatalogBundle.findOne({ slug: 'main' }).lean();
-    const freshOrbitMap = new Map(
-      (Array.isArray(freshDoc?.orbits) ? freshDoc.orbits : []).map((o) => [String(o?.id || '').trim(), o]),
-    );
-    const items = (Array.isArray(freshDoc?.catalog) ? freshDoc.catalog : [])
-      .map((c) => {
-        const row = normalizeCatalogContent(c);
-        if (!row) return null;
-        const orbit = freshOrbitMap.get(row.entityId);
-        return {
-          ...row,
-          horizonsCommand: String(orbit?.horizonsCommand || '').trim(),
-          horizonsCenter: String(orbit?.horizonsCenter || '').trim(),
-          horizonsId: String(orbit?.horizonsId || row.horizonsId || '').trim(),
-          orbitAround: String(orbit?.orbitAround || row.orbitAround || '').trim(),
-          parentId: String(orbit?.parentId || row.parentId || '').trim(),
-          parentPlanetName: String(orbit?.parentPlanetName || row.parentPlanetName || '').trim(),
-          radiusKm:
-            Number.isFinite(Number(orbit?.radiusKm)) && Number(orbit?.radiusKm) > 0
-              ? Number(orbit?.radiusKm)
-              : Number(row.radiusKm || 0),
-          orbitColor: normalizeColorHex(orbit?.orbitColor, normalizeColorHex(row.orbitColor)),
-          orbitalElements:
-            orbit?.orbitalElements && typeof orbit.orbitalElements === 'object'
-              ? orbit.orbitalElements
-              : row.orbitalElements || null,
-        };
-      })
-      .filter(Boolean)
-      .sort((a, b) => a.entityId.localeCompare(b.entityId));
+    const freshCatalog = Array.isArray(freshDoc?.catalog) ? freshDoc.catalog : [];
+    const items = sortEditorItemsHierarchical(buildEditorItemsFromBundle(freshDoc), freshCatalog);
     res.json({ success: true, data: { items, invalidEntityIds: invalid.filter(Boolean) } });
   } catch (err) {
     console.error('PUT showcase-entities/editor error:', err);
+    res.status(500).json({ success: false, error: 'Lỗi máy chủ' });
+  }
+});
+
+router.post('/editor', authMiddleware, requireRole('teacher', 'admin'), async (req, res) => {
+  try {
+    const entityId = normalizeEntityId(req.body?.entityId);
+    const name = String(req.body?.name || '').trim().slice(0, 200);
+    const group = String(req.body?.group || '').trim();
+    const parentId = String(req.body?.parentId || '').trim().slice(0, 120);
+    let linkedPlanetName = String(req.body?.linkedPlanetName || '').trim().slice(0, 80);
+
+    if (!entityId || !/^[a-z0-9][a-z0-9-]*$/.test(entityId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'entityId phải là slug chữ thường (vd: moon-triton, sc-new-mission)',
+      });
+    }
+    if (!name) return res.status(400).json({ success: false, error: 'name bắt buộc' });
+    if (!ENTITY_GROUPS.has(group)) {
+      return res.status(400).json({ success: false, error: 'group không hợp lệ' });
+    }
+
+    const doc = await ShowcaseCatalogBundle.findOne({ slug: 'main' }).lean();
+    const catalog = Array.isArray(doc?.catalog) ? [...doc.catalog] : [];
+    const orbits = Array.isArray(doc?.orbits) ? [...doc.orbits] : [];
+    if (catalog.length === 0) {
+      return res.status(400).json({ success: false, error: 'Catalog bundle chưa có dữ liệu' });
+    }
+    if (catalog.some((c) => String(c?.id || '').trim() === entityId)) {
+      return res.status(409).json({ success: false, error: 'entityId đã tồn tại' });
+    }
+
+    if (parentId && parentId.startsWith('planet-')) {
+      const planetName = parentId.replace(/^planet-/, '');
+      linkedPlanetName =
+        linkedPlanetName ||
+        planetName.charAt(0).toUpperCase() + planetName.slice(1).toLowerCase();
+    }
+
+    const catalogEntry = { id: entityId, name, group, published: true };
+    if (linkedPlanetName) catalogEntry.linkedPlanetName = linkedPlanetName;
+    catalog.push(catalogEntry);
+
+    const needsOrbit =
+      entityId.startsWith('moon-') ||
+      entityId.startsWith('sc-') ||
+      Boolean(parentId || linkedPlanetName);
+    if (needsOrbit && !orbits.some((o) => String(o?.id || '').trim() === entityId)) {
+      orbits.push({
+        id: entityId,
+        name,
+        parentId: parentId || (linkedPlanetName ? `planet-${linkedPlanetName.toLowerCase()}` : ''),
+        parentPlanetName: linkedPlanetName || '',
+        distance: 1.6,
+        period: 6,
+        size: 0.06,
+        color: '#94a3b8',
+        orbitColor: '#64748b',
+      });
+    }
+
+    await ShowcaseCatalogBundle.updateOne(
+      { slug: 'main' },
+      { $set: { catalog, orbits } },
+      { upsert: true },
+    );
+
+    const freshDoc = await ShowcaseCatalogBundle.findOne({ slug: 'main' }).lean();
+    const freshCatalog = Array.isArray(freshDoc?.catalog) ? freshDoc.catalog : [];
+    const items = sortEditorItemsHierarchical(buildEditorItemsFromBundle(freshDoc), freshCatalog);
+    res.status(201).json({ success: true, data: { items, entityId } });
+  } catch (err) {
+    console.error('POST showcase-entities/editor error:', err);
+    res.status(500).json({ success: false, error: 'Lỗi máy chủ' });
+  }
+});
+
+router.delete('/editor/:entityId', authMiddleware, requireRole('teacher', 'admin'), async (req, res) => {
+  try {
+    const entityId = normalizeEntityId(req.params.entityId);
+    if (!entityId) {
+      return res.status(400).json({ success: false, error: 'entityId không hợp lệ' });
+    }
+    if (CORE_PLANET_IDS.has(entityId)) {
+      return res.status(403).json({
+        success: false,
+        error: 'Không xóa 8 hành tinh lõi của hệ Mặt Trời',
+      });
+    }
+
+    const cascade = String(req.query.cascade || '').trim() === '1';
+    const doc = await ShowcaseCatalogBundle.findOne({ slug: 'main' }).lean();
+    const catalog = Array.isArray(doc?.catalog) ? [...doc.catalog] : [];
+    const orbits = Array.isArray(doc?.orbits) ? [...doc.orbits] : [];
+    const orbitMap = new Map(orbits.map((o) => [String(o?.id || '').trim(), o]));
+
+    const childIds = catalog
+      .map((c) => {
+        const id = String(c?.id || '').trim();
+        const orbit = orbitMap.get(id);
+        const row = normalizeCatalogContent(c);
+        const parent = resolveParentEntityId(c, orbit, row);
+        return parent === entityId ? id : '';
+      })
+      .filter(Boolean);
+
+    if (childIds.length > 0 && !cascade) {
+      return res.status(409).json({
+        success: false,
+        error: `Entity có ${childIds.length} mục con. Thêm ?cascade=1 để xóa cả con.`,
+        childIds,
+      });
+    }
+
+    const removeIds = new Set([entityId, ...childIds]);
+    const nextCatalog = catalog.filter((c) => !removeIds.has(String(c?.id || '').trim()));
+    const nextOrbits = orbits.filter((o) => !removeIds.has(String(o?.id || '').trim()));
+
+    if (nextCatalog.length === catalog.length) {
+      return res.status(404).json({ success: false, error: 'Không tìm thấy entity' });
+    }
+
+    await ShowcaseCatalogBundle.updateOne(
+      { slug: 'main' },
+      { $set: { catalog: nextCatalog, orbits: nextOrbits } },
+      { upsert: true },
+    );
+    await PlanetNarrative.deleteMany({ entityId: { $in: Array.from(removeIds) } }).catch(() => {});
+
+    const freshDoc = await ShowcaseCatalogBundle.findOne({ slug: 'main' }).lean();
+    const freshCatalog = Array.isArray(freshDoc?.catalog) ? freshDoc.catalog : [];
+    const items = sortEditorItemsHierarchical(buildEditorItemsFromBundle(freshDoc), freshCatalog);
+    res.json({
+      success: true,
+      data: { items, removedIds: Array.from(removeIds) },
+    });
+  } catch (err) {
+    console.error('DELETE showcase-entities/editor/:entityId error:', err);
     res.status(500).json({ success: false, error: 'Lỗi máy chủ' });
   }
 });

@@ -305,12 +305,15 @@ function FlyToController({
   return null
 }
 
-interface SceneProps {
+function Scene({
+  overrideStage,
+  overrideFossils,
+  interactiveGlobe = false,
+}: {
   overrideStage?: EarthStage | null
   overrideFossils?: Fossil[] | null
-}
-
-function Scene({ overrideStage, overrideFossils }: SceneProps = {}) {
+  interactiveGlobe?: boolean
+} = {}) {
   const earthGroupRef = useRef<THREE.Group>(null)
   const controlsRef = useRef<OrbitControlsImpl | null>(null)
   const currentStage = useEarthHistoryStore((s) => s.currentStage)
@@ -327,7 +330,8 @@ function Scene({ overrideStage, overrideFossils }: SceneProps = {}) {
 
   const stage = overrideStage ?? currentStage
   const fossils = overrideStage != null ? (overrideFossils ?? []) : null
-  const renderFlyToTarget = overrideStage != null ? null : flyToTarget
+  const storeDrivenGlobe = overrideStage == null || interactiveGlobe
+  const renderFlyToTarget = storeDrivenGlobe ? flyToTarget : null
   /** Nền không theo màu khí quyển từng kỷ — tránh cả scene “cam lè”; trời sao đọc rõ. */
   const spaceBackground = useMemo(() => new THREE.Color(0x03050c), [])
   /** Đèn fill trung tính, không nhuộm cam theo atmosphereColor. */
@@ -337,16 +341,18 @@ function Scene({ overrideStage, overrideFossils }: SceneProps = {}) {
     loadPhylumMetadata()
   }, [loadPhylumMetadata])
 
-  // Đổi beat / thời kỳ → bỏ fly-to + nhãn hóa thạch để preview không “kẹt”.
+  const stageKey = overrideStage ?? currentStage
+
   useEffect(() => {
-    if (overrideStage != null) return
+    if (overrideStage != null && !interactiveGlobe) return
     clearAllGlobeFossilUi()
   }, [
     overrideStage,
-    currentStage.id,
-    currentStage.time,
-    currentStage.maxMa,
-    currentStage.minMa,
+    interactiveGlobe,
+    stageKey.id,
+    stageKey.time,
+    stageKey.maxMa,
+    stageKey.minMa,
     clearAllGlobeFossilUi,
   ])
 
@@ -373,7 +379,7 @@ function Scene({ overrideStage, overrideFossils }: SceneProps = {}) {
 
       {stage.moonDistance != null && <Moon distance={stage.moonDistance} />}
 
-      {overrideStage == null && (
+      {storeDrivenGlobe && (
         <FlyToController
           earthGroupRef={earthGroupRef}
           controlsRef={controlsRef}
@@ -421,9 +427,15 @@ export interface EarthSceneProps {
   overrideStage?: EarthStage | null
   /** Fossils cho overrideStage — parent gọi `useCourseStageFossils` (explore dùng `useExploreStageFossils` + store). */
   overrideFossils?: Fossil[] | null
+  /** Deep History: fly-to hóa thạch + store UI khi có overrideStage. */
+  interactiveGlobe?: boolean
 }
 
-export default function EarthScene({ overrideStage, overrideFossils }: EarthSceneProps = {}) {
+export default function EarthScene({
+  overrideStage,
+  overrideFossils,
+  interactiveGlobe = false,
+}: EarthSceneProps = {}) {
   const onPointerMissed = useCallback(() => {
     useSceneCommandStore.getState().clearAllGlobeFossilUi()
   }, [])
@@ -445,7 +457,11 @@ export default function EarthScene({ overrideStage, overrideFossils }: EarthScen
       }}
     >
       <Suspense fallback={null}>
-        <Scene overrideStage={overrideStage} overrideFossils={overrideFossils} />
+        <Scene
+          overrideStage={overrideStage}
+          overrideFossils={overrideFossils}
+          interactiveGlobe={interactiveGlobe}
+        />
         <Preload all />
       </Suspense>
     </Canvas>

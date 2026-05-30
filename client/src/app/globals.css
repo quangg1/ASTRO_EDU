@@ -111,7 +111,7 @@ body.explore-cockpit-fullscreen [data-mobile-bottom-nav] {
   pointer-events: auto;
 }
 
-/* Explore Deep History — panel ở rail trái/phải, cột giữa để trống cho WebGL globe */
+/* Explore Deep History — panel trái/phải (chi tiết beat) · giữa = globe · dock timeline dưới cùng */
 .explore-deep-history-shell {
   pointer-events: none;
   position: fixed;
@@ -120,14 +120,15 @@ body.explore-cockpit-fullscreen [data-mobile-bottom-nav] {
   display: grid;
   min-height: 0;
   min-width: 0;
-  grid-template-columns: min(21rem, 32vw) minmax(0, 1fr) min(22rem, 30vw);
+  grid-template-columns: min(20rem, 30vw) minmax(0, 1fr) min(20rem, 30vw);
   grid-template-rows: auto minmax(0, 1fr) auto;
   grid-template-areas:
     'header header header'
-    'timeline stage info'
-    'controls controls controls';
+    'detail-left stage detail-right'
+    'dock dock dock';
   gap: 0.625rem;
   padding: 0.625rem;
+  padding-bottom: 0.75rem;
 }
 
 .explore-deep-history-header {
@@ -135,14 +136,13 @@ body.explore-cockpit-fullscreen [data-mobile-bottom-nav] {
   pointer-events: auto;
 }
 
-.explore-deep-history-timeline {
-  grid-area: timeline;
+.explore-deep-history-detail-left {
+  grid-area: detail-left;
   pointer-events: auto;
   min-height: 0;
   min-width: 0;
   display: flex;
   align-items: stretch;
-  justify-content: flex-start;
 }
 
 .explore-deep-history-stage {
@@ -152,47 +152,40 @@ body.explore-cockpit-fullscreen [data-mobile-bottom-nav] {
   min-width: 0;
 }
 
-.explore-deep-history-info {
-  grid-area: info;
+.explore-deep-history-detail-right {
+  grid-area: detail-right;
   pointer-events: auto;
   min-height: 0;
   min-width: 0;
   display: flex;
   align-items: stretch;
   justify-content: flex-end;
-  overflow: hidden;
 }
 
-.explore-deep-history-controls {
-  grid-area: controls;
-  pointer-events: none;
+.explore-deep-history-dock {
+  grid-area: dock;
+  pointer-events: auto;
   min-height: 0;
+  min-width: 0;
   display: flex;
   align-items: flex-end;
-  justify-content: center;
 }
 
 @media (max-width: 900px) {
   .explore-deep-history-shell {
     grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: auto minmax(38vh, 1fr) auto auto auto;
+    grid-template-rows: auto minmax(32vh, 1fr) auto auto auto;
     grid-template-areas:
       'header'
       'stage'
-      'timeline'
-      'info'
-      'controls';
+      'detail-left'
+      'detail-right'
+      'dock';
   }
+}
 
-  .explore-deep-history-timeline,
-  .explore-deep-history-info {
-    justify-content: stretch;
-  }
-
-  .explore-deep-history-timeline .max-w-\[21rem\],
-  .explore-deep-history-info aside {
-    max-width: none;
-  }
+.explore-deep-history-shell--earth {
+  grid-template-columns: min(18rem, 28vw) minmax(0, 1fr) min(24rem, 34vw);
 }
 
 /* Glass effect */

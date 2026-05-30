@@ -37,11 +37,6 @@ export function useExploreEarthMode(
   }, [planetHistoryOpen])
 
   useEffect(() => {
-    if (!planetHistoryOpen) return
-    useSceneCommandStore.getState().clearAllGlobeFossilUi()
-  }, [planetHistoryOpen])
-
-  useEffect(() => {
     if (stageTime == null) {
       appliedStageRef.current = null
       return

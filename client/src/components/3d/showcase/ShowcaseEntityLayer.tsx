@@ -11,6 +11,7 @@ import {
   getNasaCatalogItemById,
   NASA_SHOWCASE_ITEMS,
   resolveShowcaseOrbitParentPlanetName,
+  resolveShowcaseOrbitPeriodSeconds,
   SHOWCASE_ORBIT_ENTITIES,
   type ShowcaseOrbitEntity,
 } from '@/lib/showcaseEntities'
@@ -20,6 +21,14 @@ import { useShowcaseStore } from '@/features/content3d/showcase/public'
 import type { OrbitProximityFade } from '@/components/3d/orbitProximityFade'
 import { hasUsableOrbitalElements } from '@/lib/mergeShowcaseCatalog'
 import { isResolvableShowcaseAssetUrl } from '@/lib/showcaseMediaUrl'
+import {
+  buildSatelliteOrbitLayout,
+  heliocentricOrbitDisplayRadius,
+  initialOrbitAngleForEntity,
+  resolveHeliocentricAuToSceneScale,
+  satelliteOrbitDisplayRadius,
+  type SatelliteOrbitLayout,
+} from '@/features/content3d/showcase/lib/showcaseOrbitLayout'
 
 const EARTH_RADIUS_KM = 6371
 /** Đơn vị scene cho bán kính vật thể showcase (đủ lớn so với `planetsData.radius`). */
@@ -36,23 +45,6 @@ const ORBIT_DISTANCE_SCALE_AU = BASE_AU
  */
 const SIZE_DISTANCE_RATIO_KM = 180
 const ENTITY_SIZE_SCALE_KM = (BASE_AU * SIZE_DISTANCE_RATIO_KM) / AU_IN_KM
-/**
- * Vệ tinh: a (AU) từ Horizons là quỹ đạo quanh hành tinh — không nhân scale heliocentric 1:1.
- * `aAu * parentRadius * k` đưa bán kính quỹ đạo vào cùng thang với mesh hành tinh trong scene.
- */
-/** Nén local systems (moon quanh planet) để vừa khung zoom mà vẫn tách rõ khỏi parent. */
-const SATELLITE_DISTANCE_COMPRESS = 0.3
-const PLANET_RADIUS_KM: Record<string, number> = {
-  Mercury: 2439.7,
-  Venus: 6051.8,
-  Earth: 6371,
-  Mars: 3389.5,
-  Jupiter: 69911,
-  Saturn: 58232,
-  Uranus: 25362,
-  Neptune: 24622,
-}
-
 /** Map tên hành tinh trong `planetsData` → catalog id (planet-*) để khớp `parentId` từ API. */
 function showcaseIdForSolarPlanetName(name: string | null | undefined): string | null {
   if (!name) return null
@@ -95,53 +87,6 @@ function radiusToSize(radiusKm: number | undefined, fallback: number, orbitDista
   return Math.max(0.09, Math.max(base, ratio * EARTH_BASE_SIZE) * boost)
 }
 
-function parentDisplayRadiusForEntity(entity: ShowcaseOrbitEntity): number {
-  const name = resolveShowcaseOrbitParentPlanetName(entity)
-  if (!name) return 0.75
-  const p = planetsData.find((x) => x.name === name)
-  return Math.max(0.2, p?.radius ?? 0.75)
-}
-
-function satelliteOrbitDisplayRadius(entity: ShowcaseOrbitEntity): number {
-  const pr = parentDisplayRadiusForEntity(entity)
-  const bodyR = Math.max(0.12, radiusToSize(entity.radiusKm, entity.size, ORBIT_DISTANCE_SCALE_AU) * 2.55)
-  const parentName = resolveShowcaseOrbitParentPlanetName(entity)
-  const parentRadiusKm = parentName ? PLANET_RADIUS_KM[parentName] : undefined
-  const oe = entity.orbitalElements
-  const aAu = Number(entity.semiMajorAxisAu ?? oe?.a ?? 0)
-  if (
-    entity.orbitSource === 'jpl-horizons' &&
-    Number.isFinite(aAu) &&
-    aAu > 0 &&
-    aAu < 0.55 &&
-    parentRadiusKm &&
-    parentRadiusKm > 0
-  ) {
-    // Convert AU -> "planet radii", then project into scene units of the current parent mesh.
-    const inParentRadii = (aAu * AU_IN_KM) / parentRadiusKm
-    // Keep local systems readable and avoid extreme blow-up in showcase mode.
-    const minOrbit = Math.max(pr + bodyR * 1.8, pr * 1.9)
-    return THREE.MathUtils.clamp(inParentRadii * pr * SATELLITE_DISTANCE_COMPRESS, minOrbit, pr * 26)
-  }
-  const fallback =
-    Number.isFinite(Number(entity.distance)) && Number(entity.distance) > 0
-      ? Number(entity.distance)
-      : Number(oe?.a || 1)
-  const minOrbit = Math.max(pr + bodyR * 1.8, pr * 1.9)
-  return THREE.MathUtils.clamp(fallback, minOrbit, pr * 24)
-}
-
-function heliocentricOrbitDisplayRadius(entity: ShowcaseOrbitEntity, orbitDistanceScaleAu: number): number {
-  const oe = entity.orbitalElements
-  if (entity.orbitSource === 'jpl-horizons' && hasUsableOrbitalElements(oe)) {
-    const aAu = Number(entity.semiMajorAxisAu ?? oe?.a ?? 0)
-    if (Number.isFinite(aAu) && aAu > 0 && aAu < 500) {
-      return Math.max(0.35, aAu * orbitDistanceScaleAu)
-    }
-  }
-  return entity.distance
-}
-
 function satelliteRevealAlpha(cameraDistanceToSun: number): number {
   if (!Number.isFinite(cameraDistanceToSun)) return 0
   const near = 52
@@ -171,6 +116,7 @@ function solveKeplerLocalOrbitPosition(
   out: THREE.Vector3,
   axisY: THREE.Vector3,
   axisX: THREE.Vector3,
+  satelliteLayout?: Map<string, SatelliteOrbitLayout>,
 ): THREE.Vector3 {
   const oe = entity.orbitalElements
   if (!oe) {
@@ -189,11 +135,13 @@ function solveKeplerLocalOrbitPosition(
     entity.orbitSource === 'jpl-horizons' && Number.isFinite(aAu) && aAu > 0 && aAu < 500
   const parentPlanetName = resolveShowcaseOrbitParentPlanetName(entity)
   const isSatelliteAroundPlanet = Boolean(parentPlanetName)
-  let a = useJplAu
-    ? Math.max(0.0001, aAu * orbitDistanceScaleAu)
-    : Math.max(0.0001, Number(oe.a || entity.distance || 1))
+  let a: number
   if (isSatelliteAroundPlanet) {
-    a = satelliteOrbitDisplayRadius(entity)
+    a = satelliteOrbitDisplayRadius(entity, satelliteLayout)
+  } else if (useJplAu) {
+    a = Math.max(0.0001, aAu * orbitDistanceScaleAu)
+  } else {
+    a = Math.max(0.0001, Number(oe.a || entity.distance || 1))
   }
   const M = THREE.MathUtils.degToRad(Number(oe.m || entity.phaseDeg || 0)) + angle
   let E = M
@@ -214,7 +162,6 @@ export function ShowcaseEntityLayer({
   planetPositionsRef,
   activeItemId,
   visible,
-  frozen = false,
   activeGroup,
   onPositionUpdate,
   onSelectEntity,
@@ -224,7 +171,6 @@ export function ShowcaseEntityLayer({
   planetPositionsRef: React.MutableRefObject<THREE.Vector3[]>
   activeItemId?: string | null
   visible: boolean
-  frozen?: boolean
   activeGroup: string
   onPositionUpdate?: (id: string, position: THREE.Vector3) => void
   onSelectEntity?: (id: string) => void
@@ -253,26 +199,28 @@ export function ShowcaseEntityLayer({
   const groupsRef = useRef(new Map<string, THREE.Group>())
   const anglesRef = useRef(new Map<string, number>())
 
+  const satelliteLayout = useMemo(() => buildSatelliteOrbitLayout(orbitEntities), [orbitEntities])
+
   useEffect(() => {
     const next = new Map<string, number>()
     for (const e of orbitEntities) {
-      next.set(e.id, anglesRef.current.get(e.id) ?? THREE.MathUtils.degToRad(e.phaseDeg ?? Math.random() * 360))
+      const preserved = anglesRef.current.get(e.id)
+      next.set(
+        e.id,
+        preserved ?? initialOrbitAngleForEntity(e, satelliteLayout),
+      )
     }
     anglesRef.current = next
-  }, [orbitEntities])
+  }, [orbitEntities, satelliteLayout])
 
   const orbitById = useMemo(
     () => new Map(orbitEntities.map((e) => [String(e.id || '').trim(), e] as const)),
     [orbitEntities],
   )
-  const orbitDistanceScaleAu = useMemo(() => {
-    const maxSemiMajorAu = orbitEntities.reduce((mx, e) => {
-      const a = Number(e.semiMajorAxisAu ?? e.orbitalElements?.a ?? 0)
-      return Number.isFinite(a) && a > 0 ? Math.max(mx, a) : mx
-    }, 0)
-    if (maxSemiMajorAu <= 0) return ORBIT_DISTANCE_SCALE_AU
-    return THREE.MathUtils.clamp(TARGET_SCENE_RADIUS / maxSemiMajorAu, 8.5, 26)
-  }, [orbitEntities])
+  const orbitDistanceScaleAu = useMemo(
+    () => resolveHeliocentricAuToSceneScale(orbitEntities),
+    [orbitEntities],
+  )
 
   useEffect(() => {
     const depth = new Map<string, number>()
@@ -311,14 +259,29 @@ export function ShowcaseEntityLayer({
       const g = groupsRef.current.get(entity.id)
       if (!g) continue
       const prevA = anglesRef.current.get(entity.id) ?? 0
-      const pd = entity.orbitalElements?.periodDays || entity.periodDays || entity.period
-      const period = Math.max(0.5, Number(pd || 1))
-      const nextA = frozen ? prevA : prevA + dt * ((Math.PI * 2) / period)
+      const period = resolveShowcaseOrbitPeriodSeconds(entity)
+      const pauseOrbit = activeItemId === entity.id
+      const nextA = pauseOrbit ? prevA : prevA + dt * ((Math.PI * 2) / period)
       anglesRef.current.set(entity.id, nextA)
 
       const parentId = normalizedParentId(entity)
+      const parentPlanetResolved = resolveShowcaseOrbitParentPlanetName(entity)
+      const isSatellite = isSatelliteEntity(entity)
       const hasVector = Boolean(entity.vectorSim && Number.isFinite(entity.vectorSim.x))
       const jplKepler = entity.orbitSource === 'jpl-horizons' && hasUsableOrbitalElements(entity.orbitalElements)
+
+      const placeOnParentPlanet = (parentPos: THREE.Vector3) => {
+        const local = solveKeplerLocalOrbitPosition(
+          entity,
+          orbitDistanceScaleAu,
+          nextA,
+          localOrbitScratch.current,
+          axisYScratch.current,
+          axisXScratch.current,
+          satelliteLayout,
+        )
+        g.position.copy(parentAddScratch.current.addVectors(parentPos, local))
+      }
 
       if (jplKepler) {
         const local = solveKeplerLocalOrbitPosition(
@@ -328,8 +291,8 @@ export function ShowcaseEntityLayer({
           localOrbitScratch.current,
           axisYScratch.current,
           axisXScratch.current,
+          satelliteLayout,
         )
-        const parentPlanetResolved = resolveShowcaseOrbitParentPlanetName(entity)
         if (parentId) {
           const parentG = groupsRef.current.get(parentId)
           if (parentG) {
@@ -350,12 +313,18 @@ export function ShowcaseEntityLayer({
         } else {
           g.position.copy(local)
         }
-      } else if (parentId && hasVector) {
+      } else if (parentPlanetResolved) {
+        const pIdx = parentIndexByName.get(parentPlanetResolved)
+        if (pIdx == null) continue
+        const p = planetPositionsRef.current[pIdx]
+        if (!p || p.lengthSq() < 1e-6) continue
+        placeOnParentPlanet(p)
+      } else if (parentId && hasVector && !isSatellite) {
         const parentG = groupsRef.current.get(parentId)
         if (!parentG) continue
         const v = entity.vectorSim!
         g.position.set(parentG.position.x + v.x, parentG.position.y + v.y, parentG.position.z + v.z)
-      } else if (hasVector) {
+      } else if (hasVector && !isSatellite) {
         const v = entity.vectorSim!
         g.position.set(v.x, v.y, v.z)
       } else if (parentId) {
@@ -367,6 +336,7 @@ export function ShowcaseEntityLayer({
           localOrbitScratch.current,
           axisYScratch.current,
           axisXScratch.current,
+          satelliteLayout,
         )
         if (parentG) {
           g.position.copy(parentAddScratch.current.addVectors(parentG.position, local))
@@ -378,24 +348,11 @@ export function ShowcaseEntityLayer({
           if (!p || p.lengthSq() < 1e-6) continue
           g.position.copy(parentAddScratch.current.addVectors(p, local))
         }
-      } else if (resolveShowcaseOrbitParentPlanetName(entity)) {
-        const pp = resolveShowcaseOrbitParentPlanetName(entity)!
-        const pIdx = parentIndexByName.get(pp)
-        if (pIdx == null) continue
-        const p = planetPositionsRef.current[pIdx]
-        if (!p || p.lengthSq() < 1e-6) continue
-        const parentRadius = planetsData[pIdx]?.radius ?? 0.6
-        // Keep moon/entity orbit outside parent sphere for readable, NASA-Eyes-like composition.
-        const orbitRadius = Math.max(entity.distance, parentRadius * 1.55 + entity.distance * 0.65)
-        const x = Math.cos(nextA) * orbitRadius
-        const z = Math.sin(nextA) * orbitRadius
-        const y = Math.sin(nextA * 0.5) * orbitRadius * 0.06
-        g.position.set(p.x + x, p.y + y, p.z + z)
       } else if (entity.parentShowcaseEntityId) {
         const parentG = groupsRef.current.get(entity.parentShowcaseEntityId)
         if (!parentG) continue
         const p = parentG.position
-        const orbitRadius = Math.max(entity.distance, entity.distance * 1.45)
+        const orbitRadius = satelliteOrbitDisplayRadius(entity, satelliteLayout)
         const x = Math.cos(nextA) * orbitRadius
         const z = Math.sin(nextA) * orbitRadius
         const y = Math.sin(nextA * 0.5) * orbitRadius * 0.06
@@ -408,6 +365,7 @@ export function ShowcaseEntityLayer({
           localOrbitScratch.current,
           axisYScratch.current,
           axisXScratch.current,
+          satelliteLayout,
         )
         g.position.copy(pos)
       }
@@ -466,6 +424,7 @@ export function ShowcaseEntityLayer({
             collisionStateRef={labelCollisionRef}
             frameRef={collisionFrameRef}
             revealAlpha={revealAlpha}
+            satelliteLayout={satelliteLayout}
           />
         </Suspense>
       ))}
@@ -617,12 +576,14 @@ function FadedLocalEllipticOrbit({
   parentSceneRadius,
   orbitDistanceScaleAu,
   baseOpacity,
+  satelliteLayout,
 }: {
   entity: ShowcaseOrbitEntity
   getAnchor: () => THREE.Vector3 | null
   parentSceneRadius: number
   orbitDistanceScaleAu: number
   baseOpacity: number
+  satelliteLayout?: Map<string, SatelliteOrbitLayout>
 }) {
   const { camera } = useThree()
   const matRef = useRef<THREE.LineBasicMaterial>(null)
@@ -632,7 +593,7 @@ function FadedLocalEllipticOrbit({
   const localScratch = useRef(new THREE.Vector3())
   const axisYScratch = useRef(new THREE.Vector3(0, 1, 0))
   const axisXScratch = useRef(new THREE.Vector3(1, 0, 0))
-  const approxRadius = satelliteOrbitDisplayRadius(entity)
+  const approxRadius = satelliteOrbitDisplayRadius(entity, satelliteLayout)
   const segs = Math.max(96, Math.min(260, Math.round(approxRadius * 60)))
   const pointsBuffer = useMemo(
     () => Array.from({ length: segs + 1 }, () => new THREE.Vector3()),
@@ -672,6 +633,7 @@ function FadedLocalEllipticOrbit({
         localScratch.current,
         axisYScratch.current,
         axisXScratch.current,
+        satelliteLayout,
       )
       pointsBuffer[i].set(c.x + lp.x, c.y + lp.y, c.z + lp.z)
     }
@@ -698,9 +660,11 @@ function ShowcaseEntityRow({
   collisionStateRef,
   frameRef,
   revealAlpha,
+  satelliteLayout,
 }: {
   entity: ShowcaseOrbitEntity
   orbitDistanceScaleAu: number
+  satelliteLayout?: Map<string, SatelliteOrbitLayout>
   activeItemId?: string | null
   selectedPlanetName: string | null
   parentIndexByName: Map<string, number>
@@ -785,6 +749,7 @@ function ShowcaseEntityRow({
           parentSceneRadius={parentSceneRadius}
           orbitDistanceScaleAu={orbitDistanceScaleAu}
           baseOpacity={(active ? 0.95 : 0.35) * rowRevealAlpha}
+          satelliteLayout={satelliteLayout}
         />
       ) : showcaseParentPos && showCharonOrbit ? (
         <FadedLocalEllipticOrbit
@@ -793,6 +758,7 @@ function ShowcaseEntityRow({
           parentSceneRadius={0.9}
           orbitDistanceScaleAu={orbitDistanceScaleAu}
           baseOpacity={active ? 0.95 : 0.35}
+          satelliteLayout={satelliteLayout}
         />
       ) : null}
       <group

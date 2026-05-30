@@ -2,6 +2,13 @@
 export { useShowcaseStore } from './stores/showcaseStore'
 export type { ShowcaseCameraState, ShowcaseEntityRef } from './types'
 export * from './lib/showcaseLearningBridge'
+export { resolveExplorePanelConfig, deriveExploreStateBadge } from './lib/resolveExplorePanelConfig'
+export {
+  listShowcaseSatellitesForPlanet,
+  resolveShowcaseHostPlanetName,
+  resolveShowcaseOrbitPeriodSeconds,
+  isShowcaseSatelliteEntity,
+} from './lib/showcaseCatalogRuntime'
 export {
   PLANET_ACCENT,
   SHOWCASE_DEFAULT_ACCENT,
@@ -11,11 +18,16 @@ export {
   fetchPublicShowcaseEntityContents,
   fetchEditorShowcaseEntityContents,
   saveShowcaseEntityContents,
+  createShowcaseEntity,
+  deleteShowcaseEntity,
 } from './api/showcaseEntitiesApi'
 export type {
   ShowcaseEntityContentDTO,
   ShowcasePanelBlockDTO,
   ShowcasePanelConfigDTO,
+  ShowcaseEditorCatalogItem,
+  ShowcaseEditorFetchResult,
+  CreateShowcaseEntityInput,
 } from './api/showcaseEntitiesApi'
 export {
   fetchJplShowcaseOrbits,

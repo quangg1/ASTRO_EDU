@@ -75,16 +75,111 @@ export async function fetchPublicShowcaseEntityContents(): Promise<ShowcaseEntit
   }
 }
 
-export async function fetchEditorShowcaseEntityContents(token: string): Promise<ShowcaseEntityContentDTO[] | null> {
+export type ShowcaseEditorCatalogItem = {
+  id: string
+  name: string
+  group: 'planets_moons' | 'dwarf_asteroids' | 'comets' | 'spacecraft'
+  linkedPlanetName?: string
+  texturePath?: string
+}
+
+export type ShowcaseEditorFetchResult = {
+  items: ShowcaseEntityContentDTO[]
+  catalog: ShowcaseEditorCatalogItem[]
+}
+
+export async function fetchEditorShowcaseEntityContents(
+  token: string,
+): Promise<ShowcaseEditorFetchResult | null> {
   try {
     const res = await fetch(`${API}/editor`, {
       headers: { Authorization: `Bearer ${token}` },
     })
     const data = await res.json()
     if (!data.success || !Array.isArray(data.data?.items)) return null
-    return data.data.items as ShowcaseEntityContentDTO[]
+    return {
+      items: data.data.items as ShowcaseEntityContentDTO[],
+      catalog: Array.isArray(data.data?.catalog)
+        ? (data.data.catalog as ShowcaseEditorCatalogItem[])
+        : [],
+    }
   } catch {
     return null
+  }
+}
+
+export type CreateShowcaseEntityInput = {
+  entityId: string
+  name: string
+  group: ShowcaseEditorCatalogItem['group']
+  parentId?: string
+  linkedPlanetName?: string
+}
+
+export async function createShowcaseEntity(
+  token: string,
+  input: CreateShowcaseEntityInput,
+): Promise<{
+  ok: boolean
+  items?: ShowcaseEntityContentDTO[]
+  entityId?: string
+  error?: string
+}> {
+  try {
+    const res = await fetch(`${API}/editor`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(input),
+    })
+    const data = await res.json()
+    if (data.success && Array.isArray(data.data?.items)) {
+      return {
+        ok: true,
+        items: data.data.items as ShowcaseEntityContentDTO[],
+        entityId: String(data.data?.entityId || input.entityId),
+      }
+    }
+    return { ok: false, error: data.error || 'Create failed' }
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : 'Network error' }
+  }
+}
+
+export async function deleteShowcaseEntity(
+  token: string,
+  entityId: string,
+  opts?: { cascade?: boolean },
+): Promise<{
+  ok: boolean
+  items?: ShowcaseEntityContentDTO[]
+  removedIds?: string[]
+  childIds?: string[]
+  error?: string
+}> {
+  try {
+    const q = opts?.cascade ? '?cascade=1' : ''
+    const res = await fetch(`${API}/editor/${encodeURIComponent(entityId)}${q}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    const data = await res.json()
+    if (data.success && Array.isArray(data.data?.items)) {
+      return {
+        ok: true,
+        items: data.data.items as ShowcaseEntityContentDTO[],
+        removedIds: Array.isArray(data.data?.removedIds) ? data.data.removedIds : undefined,
+      }
+    }
+    return {
+      ok: false,
+      error: data.error || 'Delete failed',
+      childIds: Array.isArray(data.childIds) ? data.childIds : undefined,
+    }
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : 'Network error' }
   }
 }
 

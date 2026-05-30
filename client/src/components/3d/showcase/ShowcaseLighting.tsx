@@ -5,7 +5,9 @@ import { useEffect, useRef } from 'react'
 import { useShowcaseStore } from '@/features/content3d/showcase/public'
 
 /**
- * NASA Eyes–style catalog lighting: strong readable base + subtle fill + optional studio key on focus.
+ * Ánh sáng catalog Explore — Mặt Trời tại gốc (0,0,0) là nguồn chính.
+ * Ambient thấp để thấy sáng/tối trên meshPhong / meshStandard.
+ * `studioLightRef`: fill nhẹ khi camera zoom entity (ShowcaseCameraManager).
  */
 export function ShowcaseLighting() {
   const lightRef = useRef<THREE.PointLight>(null)
@@ -16,10 +18,12 @@ export function ShowcaseLighting() {
 
   return (
     <>
-      <ambientLight intensity={0.88} color="#e8f0ff" />
-      <hemisphereLight color="#c8d8ff" groundColor="#1a1a2e" intensity={0.32} />
-      <directionalLight position={[-5, 8, 5]} intensity={0.38} color="#fff5e0" />
-      <pointLight ref={lightRef} intensity={0} color="#ffffff" distance={28} decay={2} />
+      <ambientLight intensity={0.18} color="#1a2440" />
+      <hemisphereLight color="#9ec0f0" groundColor="#080a14" intensity={0.32} />
+      {/* Mặt Trời tại gốc — decay=0: không suy hao theo khoảng cách quỹ đạo, vẫn có terminator sáng/tối */}
+      <pointLight position={[0, 0, 0]} intensity={5.5} color="#fff4e0" decay={0} distance={0} />
+      <directionalLight position={[55, 22, 38]} intensity={0.35} color="#ffe9c8" />
+      <pointLight ref={lightRef} intensity={0} color="#ffffff" distance={32} decay={2} />
     </>
   )
 }

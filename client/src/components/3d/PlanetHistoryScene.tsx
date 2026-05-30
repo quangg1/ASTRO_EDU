@@ -9,8 +9,8 @@ import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib'
 import type { NarrativeSite } from '@/features/content3d/narrative/types'
 import { narrativeSitesForBeat } from '@/features/content3d/narrative/lib/siteVisibility'
 import { usePlanetNarrativeStore } from '@/features/content3d/narrative/stores/planetNarrativeStore'
+import { NarrativeBeatAlbedoGlobe } from '@/components/3d/NarrativeBeatAlbedoGlobe'
 import { EraVisualLayers } from '@/components/3d/EraVisualLayers'
-import { ShowcaseDiffuseGlobe } from '@/components/3d/showcase/ShowcaseDiffuseGlobe'
 import { ShowcaseModelEntityMesh } from '@/components/3d/showcase/ShowcaseModelEntityMesh'
 import { getStaticAssetUrl, resolveMediaUrl } from '@/lib/apiConfig'
 import { isResolvableShowcaseAssetUrl } from '@/lib/showcaseMediaUrl'
@@ -18,8 +18,9 @@ import type { ShowcaseOrbitEntity } from '@/lib/showcaseEntities'
 import { PLANET_GLOBE_RADIUS } from '@/features/content3d/narrative/lib/globeCamera'
 import { NarrativeSitePin } from '@/features/content3d/narrative/ui/NarrativeSitePin'
 import { NarrativeSiteFlyTo } from '@/features/content3d/narrative/ui/NarrativeSiteFlyTo'
+import { ShowcaseLighting } from '@/components/3d/showcase/ShowcaseLighting'
 
-function ShowcaseGlobeOrModel({
+function NarrativeGlobeOrModel({
   entity,
   sphereRadius,
   meshProps,
@@ -41,15 +42,7 @@ function ShowcaseGlobeOrModel({
     )
   }
 
-  return (
-    <ShowcaseDiffuseGlobe
-      entity={entity}
-      sphereRadius={sphereRadius}
-      skipDistanceBasedScale
-      visualOpacity={1}
-      meshProps={meshProps}
-    />
-  )
+  return <NarrativeBeatAlbedoGlobe entity={entity} sphereRadius={sphereRadius} meshProps={meshProps} />
 }
 
 function assignForwardedRef<T>(forwardedRef: React.Ref<T> | undefined, node: T | null) {
@@ -131,7 +124,7 @@ const PlanetGroup = React.forwardRef<
 
   return (
     <group ref={setPlanetRef}>
-      <ShowcaseGlobeOrModel entity={globeEntity} sphereRadius={PLANET_GLOBE_RADIUS} meshProps={globeMeshProps} />
+      <NarrativeGlobeOrModel entity={globeEntity} sphereRadius={PLANET_GLOBE_RADIUS} meshProps={globeMeshProps} />
 
       <EraVisualLayers globeRadius={PLANET_GLOBE_RADIUS} />
 
@@ -172,7 +165,7 @@ function Scene({ globeEntity }: { globeEntity: ShowcaseOrbitEntity }) {
 
   return (
     <>
-      <ambientLight intensity={2.45} />
+      <ShowcaseLighting />
       <Stars radius={380} depth={110} count={10000} factor={0.82} saturation={0} fade speed={0.32} />
       <PlanetGroup ref={planetRef} globeRotationPaused={globeRotationPaused} globeEntity={globeEntity} />
       <NarrativeSiteFlyTo planetGroupRef={planetRef} controlsRef={controlsRef} globeRadius={PLANET_GLOBE_RADIUS} />

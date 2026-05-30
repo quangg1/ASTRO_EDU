@@ -14,7 +14,8 @@ export function earthStageToBeat(stage: EarthStage, order: number): NarrativeBea
     globeTint: stage.earthColor,
     atmosphereColor: stage.atmosphereColor ?? '#22d3ee',
     atmosphereThickness: 0.15,
-    waterCoverage: (stage.continental?.oceanCoverage ?? 71) / 100,
+    waterCoverage:
+      stage.continental?.oceanCoverage != null ? stage.continental.oceanCoverage / 100 : 0,
     dustOpacity: 0,
     volcanicGlow: 0,
     textureUrl: stage.textureUrl,

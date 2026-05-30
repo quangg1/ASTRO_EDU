@@ -1,9 +1,12 @@
 'use client'
 
+import { useMemo } from 'react'
 import { ShowcaseEntityPanel } from '@/components/3d/showcase/ShowcaseEntityPanel'
 import {
-  entityHasFossilsTab,
-} from '@/app/studio/showcase-entities/entityHistoryCapability'
+  listShowcaseSatellitesForPlanet,
+  resolveExplorePanelConfig,
+  resolveShowcaseHostPlanetName,
+} from '@/features/content3d/showcase/public'
 import type { ExplorePageModel } from '../hooks/useExplorePage'
 import { ExploreShowcaseMenu } from './ExploreShowcaseMenu'
 import { ExploreBridgeQuiz } from './ExploreBridgeQuiz'
@@ -20,8 +23,6 @@ type Props = Pick<
   | 'activeResolved'
   | 'activeEntityHasDeepHistory'
   | 'openPlanetHistory'
-  | 'closePlanetHistory'
-  | 'setEarthHistoryOpen'
   | 'showcaseMenuOpen'
   | 'setShowcaseMenuOpen'
   | 'catalogByGroup'
@@ -38,6 +39,7 @@ type Props = Pick<
   | 'bridgeQuizAnswers'
   | 'setBridgeQuizAnswers'
   | 'bridgeQuizScore'
+  | 'mergedOrbitEntities'
 >
 
 export function ExploreShowcaseOverlay(props: Props) {
@@ -52,8 +54,6 @@ export function ExploreShowcaseOverlay(props: Props) {
     activeResolved,
     activeEntityHasDeepHistory,
     openPlanetHistory,
-    closePlanetHistory,
-    setEarthHistoryOpen,
     showcaseMenuOpen,
     setShowcaseMenuOpen,
     catalogByGroup,
@@ -70,12 +70,38 @@ export function ExploreShowcaseOverlay(props: Props) {
     bridgeQuizAnswers,
     setBridgeQuizAnswers,
     bridgeQuizScore,
+    mergedOrbitEntities,
   } = props
 
   const onMenuSelect = (entityId: string, source: string, syncPlanet?: boolean) => {
     handleShowcaseEntityClicked(entityId, source)
     if (syncPlanet) syncSelectedPlanetFromItem(entityId)
   }
+
+  const hostPlanetName = useMemo(
+    () => resolveShowcaseHostPlanetName(activeResolved, activeOrbitEntity),
+    [activeResolved, activeOrbitEntity],
+  )
+
+  const satelliteChildren = useMemo(() => {
+    if (!hostPlanetName) return []
+    return listShowcaseSatellitesForPlanet(mergedOrbitEntities, hostPlanetName).map((e) => ({
+      id: e.id,
+      name: e.name,
+      active: showcaseActiveItemId === e.id,
+    }))
+  }, [hostPlanetName, mergedOrbitEntities, showcaseActiveItemId])
+
+  const effectivePanelConfig = useMemo(
+    () =>
+      resolveExplorePanelConfig(
+        activeResolved,
+        activeOrbitEntity,
+        activeContentRow?.panelConfig ?? null,
+        museumLabelVi,
+      ),
+    [activeResolved, activeOrbitEntity, activeContentRow?.panelConfig, museumLabelVi],
+  )
 
   return (
     <>
@@ -91,27 +117,6 @@ export function ExploreShowcaseOverlay(props: Props) {
               <span className="rounded border border-emerald-300/35 px-2 py-1 text-[10px] uppercase tracking-wider text-emerald-100 bg-emerald-500/10">
                 Progress {bridgeVisitedLessonsForEntity}/{effectiveLessonLinks.length}
               </span>
-            ) : null}
-            {activeResolved && activeEntityHasDeepHistory ? (
-              <button
-                type="button"
-                onClick={() => openPlanetHistory(activeResolved.id)}
-                className="rounded border border-violet-400/45 px-2 py-1 text-[10px] uppercase tracking-wider text-violet-50 hover:bg-violet-600/25"
-              >
-                Deep History
-              </button>
-            ) : null}
-            {activeResolved && entityHasFossilsTab(activeResolved.id) ? (
-              <button
-                type="button"
-                onClick={() => {
-                  closePlanetHistory()
-                  setEarthHistoryOpen(true)
-                }}
-                className="rounded border border-emerald-300/40 px-2 py-1 text-[10px] uppercase tracking-wider text-emerald-100 hover:bg-emerald-500/15"
-              >
-                Hóa thạch
-              </button>
             ) : null}
             <button
               type="button"
@@ -165,8 +170,18 @@ export function ExploreShowcaseOverlay(props: Props) {
           museumLabelVi={museumLabelVi}
           conceptChips={effectiveConceptCards}
           learningLinks={effectiveLessonLinks}
-          panelConfig={activeContentRow?.panelConfig ?? null}
+          panelConfig={effectivePanelConfig ?? undefined}
           gamification={gamificationStrip}
+          hasDeepHistory={Boolean(activeResolved && activeEntityHasDeepHistory)}
+          onOpenDeepHistory={
+            activeResolved && activeEntityHasDeepHistory
+              ? () => openPlanetHistory(activeResolved.id)
+              : undefined
+          }
+          hostPlanetName={hostPlanetName}
+          satelliteChildren={satelliteChildren}
+          activeEntityId={showcaseActiveItemId}
+          onSelectSatellite={(entityId) => onMenuSelect(entityId, 'panel-satellite', false)}
         />
       ) : null}
 

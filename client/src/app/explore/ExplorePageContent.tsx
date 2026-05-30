@@ -3,6 +3,7 @@
 import { useMemo } from 'react'
 import { AgentPageProvider, buildSessionContext } from '@/features/agent/public'
 import { useExplorePage } from './hooks/useExplorePage'
+import { usePlanetHistoryEarthScene } from './hooks/usePlanetHistoryEarthScene'
 import { ExploreSceneCanvas } from './components/ExploreSceneCanvas'
 import { ExploreEarthOverlay } from './components/ExploreEarthOverlay'
 import { ExplorePlanetHistoryOverlay } from './components/ExplorePlanetHistoryOverlay'
@@ -10,6 +11,10 @@ import { ExploreShowcaseOverlay } from './components/ExploreShowcaseOverlay'
 
 export function ExplorePageContent() {
   const explore = useExplorePage()
+  const earthHistoryScene = usePlanetHistoryEarthScene(
+    explore.planetHistoryOpen,
+    explore.planetHistoryEntityId,
+  )
   const agentSessionContext = useMemo(
     () =>
       buildSessionContext({
@@ -44,6 +49,9 @@ export function ExplorePageContent() {
     >
       <ExploreSceneCanvas
         sceneMode={explore.sceneMode}
+        planetHistoryEntityId={explore.planetHistoryEntityId}
+        earthHistoryStage={earthHistoryScene.earthHistoryStage}
+        earthHistoryFossils={earthHistoryScene.earthHistoryFossils}
         planetGlobeEntity={explore.planetGlobeEntity}
         mergedOrbitEntities={explore.mergedOrbitEntities}
         showcaseContent={explore.showcaseContent}
@@ -63,6 +71,7 @@ export function ExplorePageContent() {
           <ExplorePlanetHistoryOverlay
             planetHistoryLabel={explore.planetHistoryLabel}
             planetHistoryLessonLinks={explore.planetHistoryLessonLinks}
+            planetHistoryEntityId={explore.planetHistoryEntityId}
             onClose={explore.closePlanetHistory}
           />
         ) : (

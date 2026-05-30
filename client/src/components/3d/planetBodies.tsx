@@ -604,16 +604,18 @@ export function Planet({
 
   useFrame((_, delta) => {
     if (!groupRef.current) return
-    const orbitSpeed = (orbitTimeScale * (2 * Math.PI)) / data.period
-    angleRef.current += delta * orbitSpeed
+    if (!isSelected) {
+      const orbitSpeed = (orbitTimeScale * (2 * Math.PI)) / data.period
+      angleRef.current += delta * orbitSpeed
+      if (spinRef.current) {
+        const spinSpeed = (spinTimeScale * (2 * Math.PI)) / data.spinPeriod
+        spinRef.current.rotation.y += delta * spinSpeed
+      }
+    }
     const a = angleRef.current
     const pos = computeOrbitalPosition(data, a, orbitScale)
     groupRef.current.position.copy(pos)
     if (positionRef.current[index]) positionRef.current[index].copy(groupRef.current.position)
-    if (spinRef.current) {
-      const spinSpeed = (spinTimeScale * (2 * Math.PI)) / data.spinPeriod
-      spinRef.current.rotation.y += delta * spinSpeed
-    }
     if (!exploreStyleLod) return
 
     lastWorldPos.current.setFromMatrixPosition(groupRef.current.matrixWorld)

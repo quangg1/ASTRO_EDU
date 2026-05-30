@@ -159,3 +159,83 @@ export function resolveShowcaseOrbitParentPlanetName(entity: ShowcaseOrbitEntity
   }
   return n || null
 }
+
+/** Vệ tinh / entity con: quỹ đạo quanh hành tinh cha hoặc entity showcase khác. */
+export function isShowcaseSatelliteEntity(entity: ShowcaseOrbitEntity): boolean {
+  return Boolean(
+    resolveShowcaseOrbitParentPlanetName(entity) ||
+      String(entity.parentShowcaseEntityId || '').trim() ||
+      (String(entity.parentId || '').trim() &&
+        !String(entity.parentId || '').trim().startsWith('planet-')),
+  )
+}
+
+/** ~1 ngày quỹ đạo thật → vài giây trong scene (vệ tinh). */
+const SCENE_SECONDS_PER_ORBIT_DAY = 6
+
+function isCatalogScenePeriod(value: number): boolean {
+  return Number.isFinite(value) && value >= 2 && value <= 120
+}
+
+/** Chu kỳ quỹ đạo trong scene (giây cho một vòng) — khớp `ShowcaseEntityLayer`. */
+export function resolveShowcaseOrbitPeriodSeconds(entity: ShowcaseOrbitEntity): number {
+  const catalogPeriod = Number(entity.period ?? 0)
+  const periodDays = Number(entity.orbitalElements?.periodDays ?? entity.periodDays ?? 0)
+  const isSat = isShowcaseSatelliteEntity(entity)
+
+  if (isSat) {
+    if (isCatalogScenePeriod(catalogPeriod)) return catalogPeriod
+    if (periodDays > 0 && periodDays < 400) {
+      return Math.min(90, Math.max(3, periodDays * SCENE_SECONDS_PER_ORBIT_DAY))
+    }
+    return Math.min(90, Math.max(3, catalogPeriod > 0 ? catalogPeriod : 6))
+  }
+
+  if (periodDays > 365) {
+    return Math.min(180, Math.max(24, periodDays * 0.012))
+  }
+  if (periodDays > 0) {
+    return Math.min(120, Math.max(8, periodDays))
+  }
+  return Math.max(0.5, catalogPeriod > 0 ? catalogPeriod : 1)
+}
+
+/** Liệt kê vệ tinh / entity con quanh một hành tinh (theo `parentPlanetName`). */
+export function listShowcaseSatellitesForPlanet(
+  entities: ShowcaseOrbitEntity[],
+  planetName: string,
+): ShowcaseOrbitEntity[] {
+  const key = String(planetName || '').trim().toLowerCase()
+  if (!key) return []
+  return entities
+    .filter((e) => {
+      if (String(e.id || '').startsWith('planet-')) return false
+      const host = resolveShowcaseOrbitParentPlanetName(e)
+      return host && host.toLowerCase() === key
+    })
+    .sort((a, b) => (a.distance || 0) - (b.distance || 0) || a.name.localeCompare(b.name))
+}
+
+/** Hành tinh “cha” để hiện danh sách vệ tinh trên panel Explore. */
+export function resolveShowcaseHostPlanetName(
+  item: { id?: string; name?: string; linkedPlanetName?: string } | null,
+  orbit: ShowcaseOrbitEntity | null,
+): string | null {
+  if (orbit) {
+    const parent = resolveShowcaseOrbitParentPlanetName(orbit)
+    if (parent) return parent
+  }
+  const linked = String(item?.linkedPlanetName || '').trim()
+  if (linked) return linked
+  const id = String(item?.id || '').trim()
+  if (id.startsWith('planet-')) return String(item?.name || '').trim() || null
+  return null
+}
+
+/** Chu kỳ tự quay quanh trục (giây / vòng) — tách khỏi chu kỳ quỹ đạo. */
+export function resolveShowcaseEntitySpinPeriod(entity: ShowcaseOrbitEntity): number {
+  const rot = Number(entity.rotRateRadS ?? 0)
+  if (Number.isFinite(rot) && rot > 0) return (2 * Math.PI) / rot
+  const orbitSec = resolveShowcaseOrbitPeriodSeconds(entity)
+  return Math.min(48, Math.max(4, orbitSec * 0.28))
+}

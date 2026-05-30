@@ -5,6 +5,7 @@ import { useFrame } from '@react-three/fiber'
 import { useGLTF } from '@react-three/drei'
 import * as THREE from 'three'
 import type { ShowcaseOrbitEntity } from '@/lib/showcaseEntities'
+import { resolveShowcaseEntitySpinPeriod } from '@/lib/showcaseEntities'
 
 export function ShowcaseModelEntityMesh({
   entity,
@@ -43,7 +44,11 @@ export function ShowcaseModelEntityMesh({
   useFrame((_, dt) => {
     const g = groupRef.current
     if (!g) return
-    g.rotation.y += dt * (active ? 0.24 : 0.14)
+    if (!active) {
+      const spinPeriod = resolveShowcaseEntitySpinPeriod(entity)
+      const spinRate = (2 * Math.PI) / Math.max(0.5, spinPeriod)
+      g.rotation.y += dt * spinRate * 0.9
+    }
     const target = normalizedScale * userScale * (active ? 1.35 : 1)
     g.scale.setScalar(target)
   })

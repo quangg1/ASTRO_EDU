@@ -23,6 +23,7 @@ const ShowcaseScene = dynamic(() => import('@/components/3d/showcase/ShowcaseSce
 type Props = Pick<
   ExplorePageModel,
   | 'sceneMode'
+  | 'planetHistoryEntityId'
   | 'planetGlobeEntity'
   | 'mergedOrbitEntities'
   | 'showcaseContent'
@@ -33,10 +34,16 @@ type Props = Pick<
   | 'handleShowcaseEntityClicked'
   | 'syncSelectedPlanetFromItem'
   | 'handleShowcaseCameraSettled'
->
+> & {
+  earthHistoryStage: import('@/features/content3d/earth/lib/earthHistoryTypes').EarthStage | null
+  earthHistoryFossils: import('@/features/content3d/earth/lib/earthHistoryTypes').Fossil[]
+}
 
 export function ExploreSceneCanvas({
   sceneMode,
+  planetHistoryEntityId,
+  earthHistoryStage,
+  earthHistoryFossils,
   planetGlobeEntity,
   mergedOrbitEntities,
   showcaseContent,
@@ -53,6 +60,14 @@ export function ExploreSceneCanvas({
       <Suspense fallback={<Loading />}>
         {sceneMode === 'earth' ? (
           <EarthScene />
+        ) : sceneMode === 'planet-history' &&
+          planetHistoryEntityId === 'planet-earth' &&
+          earthHistoryStage ? (
+          <EarthScene
+            overrideStage={earthHistoryStage}
+            overrideFossils={earthHistoryFossils}
+            interactiveGlobe
+          />
         ) : sceneMode === 'planet-history' && planetGlobeEntity ? (
           <PlanetHistoryScene globeEntity={planetGlobeEntity} />
         ) : (

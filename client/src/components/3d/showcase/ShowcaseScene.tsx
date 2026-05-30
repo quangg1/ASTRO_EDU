@@ -22,6 +22,10 @@ import {
   type ShowcaseCameraSpherical,
 } from '@/components/3d/showcase/ShowcaseCameraManager'
 import {
+  resolveHeliocentricAuToSceneScale,
+  resolvePlanetHeliocentricDistance,
+} from '@/features/content3d/showcase/lib/showcaseOrbitLayout'
+import {
   useShowcaseStore,
   type ShowcaseEntityContentDTO,
 } from '@/features/content3d/showcase/public'
@@ -93,20 +97,14 @@ function ShowcaseSceneContent({
   const [dynamicContextLevel, setDynamicContextLevel] = useState<ShowcaseContextLevel>('solar')
   const selectedIndex = flightTargetIndex !== undefined ? flightTargetIndex : internalIndex
   const runtimePlanetsData = useMemo(() => {
-    const maxSemiMajorAu = (orbitEntities || []).reduce((mx, e) => {
-      const a = Number(e.semiMajorAxisAu ?? e.orbitalElements?.a ?? 0)
-      return Number.isFinite(a) && a > 0 ? Math.max(mx, a) : mx
-    }, 0)
-    const auToSceneUnits =
-      maxSemiMajorAu > 0 ? THREE.MathUtils.clamp(TARGET_SCENE_RADIUS / maxSemiMajorAu, 8.5, 26) : 26
-    const byId = new Map((orbitEntities || []).map((e) => [String(e.id || '').trim(), e] as const))
+    const entities = orbitEntities || []
+    const auToSceneUnits = resolveHeliocentricAuToSceneScale(entities)
+    const byId = new Map(entities.map((e) => [String(e.id || '').trim(), e] as const))
     return planetsData.map((p) => {
       const o = byId.get(planetEntityId(p.name))
       if (!o) return p
       const periodDays = Number(o.orbitalElements?.periodDays ?? o.periodDays ?? 0)
-      const semiMajorAu = Number(o.semiMajorAxisAu ?? o.orbitalElements?.a ?? 0)
-      const nextDistance =
-        Number.isFinite(semiMajorAu) && semiMajorAu > 0 ? semiMajorAu * auToSceneUnits * 1.1 : p.distance
+      const nextDistance = resolvePlanetHeliocentricDistance(p, o, auToSceneUnits)
       return {
         ...p,
         distance: nextDistance,
@@ -316,7 +314,6 @@ function ShowcaseSceneContent({
           index={i}
           positionRef={planetPositionsRef}
           visible
-          unlitTexture
           orbitTimeScale={motionScale}
           spinTimeScale={motionScale}
           showLabel
@@ -348,7 +345,6 @@ function ShowcaseSceneContent({
         planetPositionsRef={planetPositionsRef}
         activeItemId={showcaseActiveItemId}
         visible
-        frozen={selectedIndex !== null}
         activeGroup={activeGroup}
         selectedPlanetName={dynamicContextLevel === 'solar' ? null : contextPlanetName}
         onPositionUpdate={(id, p) => {
@@ -452,7 +448,7 @@ export default function ShowcaseScene({
       onCreated={({ gl }) => {
         gl.outputColorSpace = THREE.SRGBColorSpace
         gl.toneMapping = THREE.ACESFilmicToneMapping
-        gl.toneMappingExposure = 1.08
+        gl.toneMappingExposure = 1.24
       }}
     >
       <Suspense fallback={null}>

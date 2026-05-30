@@ -1,13 +1,22 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { clsx } from 'clsx'
+import { BookOpen, History, Orbit, Sparkles, Stars, Weight } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
 import type { ResolvedNasaCatalogItem } from '@/lib/mergeShowcaseCatalog'
 import type { ShowcaseOrbitEntity } from '@/lib/showcaseEntities'
 import type { ShowcasePanelBlockDTO, ShowcasePanelConfigDTO } from '@/features/content3d/showcase/public'
+import { entityHasFossilsTab } from '@/app/studio/showcase-entities/entityHistoryCapability'
 
 type LessonLink = { lessonId: string; title: string; href: string }
 type ConceptChip = { id: string; title?: string | null }
 type TabId = 'overview' | 'physical' | 'sky'
+
+export type ShowcaseSatellitePickerItem = {
+  id: string
+  name: string
+  active: boolean
+}
 
 export type ShowcaseGamificationStrip = {
   gemBalance: number
@@ -18,33 +27,54 @@ export type ShowcaseGamificationStrip = {
   onUnlock: (contentType: 'story' | 'orbit') => void | Promise<void>
 }
 
-function formatNumber(v: number, digits = 1): string {
-  if (!Number.isFinite(v)) return 'N/A'
-  return v.toLocaleString('en-US', { maximumFractionDigits: digits })
+const TAB_META: Record<
+  TabId,
+  { icon: typeof BookOpen; hint: (ctx: { blocks: number; concepts: number; lessons: number }) => string }
+> = {
+  overview: {
+    icon: BookOpen,
+    hint: ({ blocks, concepts }) =>
+      concepts > 0 ? `${concepts} khái niệm` : blocks > 0 ? `${blocks} mục` : 'Tổng quan',
+  },
+  physical: {
+    icon: Weight,
+    hint: ({ blocks }) => (blocks > 0 ? `${blocks} chỉ số` : 'Vật lý'),
+  },
+  sky: {
+    icon: Stars,
+    hint: ({ blocks, lessons }) =>
+      lessons > 0 ? `${lessons} bài học` : blocks > 0 ? `${blocks} mục` : 'Bầu trời',
+  },
 }
 
-function deriveStateBadge(item: ResolvedNasaCatalogItem | null, orbit: ShowcaseOrbitEntity | null): string {
-  if (!item) return 'No active entity selected'
-  if (item.group === 'spacecraft') return 'Mission data active · Follow timeline in learning path'
-  const periodDays = Number(orbit?.orbitalElements?.periodDays ?? orbit?.periodDays ?? 0)
-  if (Number.isFinite(periodDays) && periodDays > 0) {
-    return `Orbital period ${formatNumber(periodDays, 1)} days · JPL-synced trajectory`
+function formatGroupLabel(group: string | undefined): string {
+  if (!group) return 'SHOWCASE ENTITY'
+  return group.replace(/_/g, ' · ').toUpperCase()
+}
+
+function firstTextBlock(blocks: ShowcasePanelBlockDTO[] | undefined): { title?: string; body?: string } | null {
+  if (!Array.isArray(blocks)) return null
+  for (const block of blocks) {
+    if (block?.body?.trim()) return { title: block.title, body: block.body.trim() }
+    if (block?.title?.trim() && block.type === 'text') return { title: block.title, body: block.title.trim() }
   }
-  const e = Number(orbit?.orbitalElements?.e ?? orbit?.orbitEccentricity ?? 0)
-  if (Number.isFinite(e) && e > 0) {
-    return `Eccentricity ${formatNumber(e, 3)} · Stable orbital solution`
-  }
-  return `Catalog entity active · ${item.group.replace('_', ' ')}`
+  return null
 }
 
 export function ShowcaseEntityPanel({
   item,
-  orbit,
+  orbit: _orbit,
   museumLabelVi,
   conceptChips,
   learningLinks,
   panelConfig,
   gamification,
+  hasDeepHistory,
+  onOpenDeepHistory,
+  satelliteChildren = [],
+  hostPlanetName,
+  activeEntityId,
+  onSelectSatellite,
 }: {
   item: ResolvedNasaCatalogItem | null
   orbit: ShowcaseOrbitEntity | null
@@ -53,6 +83,13 @@ export function ShowcaseEntityPanel({
   learningLinks: LessonLink[]
   panelConfig?: ShowcasePanelConfigDTO
   gamification?: ShowcaseGamificationStrip | null
+  hasDeepHistory?: boolean
+  onOpenDeepHistory?: () => void
+  /** Vệ tinh quanh `hostPlanetName` — chọn từ panel thay vì bắt trong 3D. */
+  satelliteChildren?: ShowcaseSatellitePickerItem[]
+  hostPlanetName?: string | null
+  activeEntityId?: string | null
+  onSelectSatellite?: (entityId: string) => void
 }) {
   const tabs = useMemo(() => {
     const next: Array<{ id: TabId; label: string }> = []
@@ -67,54 +104,150 @@ export function ShowcaseEntityPanel({
 
   const [activeTab, setActiveTab] = useState<TabId>('overview')
   const safeTab = tabs.some((t) => t.id === activeTab) ? activeTab : tabs[0]?.id ?? 'overview'
+
+  useEffect(() => {
+    setActiveTab('overview')
+  }, [item?.id])
+
   const badge = String(panelConfig?.stateBadge || '').trim()
+  const overviewLead = firstTextBlock(panelConfig?.overviewBlocks)
+  const subtitle = badge || museumLabelVi || overviewLead?.title || ''
+  const description =
+    item?.museumBlurbVi?.trim() ||
+    overviewLead?.body ||
+    (safeTab === 'overview' ? '' : '')
+
+  const isEarth = item ? entityHasFossilsTab(item.id) : false
+  const showDeepHistory = Boolean(hasDeepHistory && onOpenDeepHistory && item)
+
+  const tabCounts = useMemo(
+    () => ({
+      overview: (panelConfig?.overviewBlocks || []).length,
+      physical: (panelConfig?.physicalBlocks || []).length,
+      sky: (panelConfig?.skyBlocks || []).length,
+    }),
+    [panelConfig?.overviewBlocks, panelConfig?.physicalBlocks, panelConfig?.skyBlocks],
+  )
 
   return (
-    <aside className="fixed left-4 top-24 z-[24] w-[min(340px,calc(100vw-1.5rem))] max-h-[calc(100vh-7rem)] rounded-ds-card border border-ds-border-strong bg-ds-overlay shadow-[0_12px_42px_rgba(0,0,0,0.55)] backdrop-blur-sm flex flex-col min-h-0">
-      <header className="shrink-0 border-b border-ds-border px-4 py-3">
-        <p className="text-[10px] uppercase tracking-[0.2em] text-ds-muted">{item?.group.replace('_', ' · ') || 'showcase entity'}</p>
-        <h2 className="mt-1 text-2xl font-semibold text-ds-text leading-none">{item?.displayName || 'No selection'}</h2>
-        {badge ? (
-          <div className="mt-2 inline-flex max-w-full items-center rounded-md border border-ds-accent-strong bg-ds-accent-soft px-2 py-1">
-            <span className="truncate text-[10px] text-ds-accent">{badge}</span>
-          </div>
+    <aside className="fixed left-4 top-24 z-[24] flex max-h-[calc(100vh-7rem)] w-[min(392px,calc(100vw-1.5rem))] min-h-0 flex-col overflow-hidden rounded-[1.35rem] border border-white/[0.08] bg-[rgba(8,10,16,0.82)] shadow-[0_24px_64px_rgba(0,0,0,0.55)] backdrop-blur-xl">
+      <header className="shrink-0 px-5 pb-4 pt-5">
+        <div className="flex items-center gap-2">
+          <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-ds-accent shadow-[0_0_10px_var(--color-accent)]" />
+          <p className="truncate text-[10px] font-medium uppercase tracking-[0.22em] text-ds-accent">
+            {formatGroupLabel(item?.group)}
+          </p>
+        </div>
+        <h2 className="mt-2 font-[family-name:var(--font-heading)] text-[2rem] font-bold uppercase leading-[0.95] tracking-tight text-white">
+          {item?.displayName || 'No selection'}
+        </h2>
+        {subtitle ? <p className="mt-1.5 text-sm text-white/50">{subtitle}</p> : null}
+        {description && safeTab === 'overview' ? (
+          <p className="mt-3 text-[13px] leading-relaxed text-white/72">{description}</p>
         ) : null}
       </header>
 
+      {satelliteChildren.length > 0 && hostPlanetName ? (
+        <div className="shrink-0 border-b border-white/[0.06] px-5 pb-3">
+          <div className="mb-2 flex items-center gap-2">
+            <Orbit className="h-3.5 w-3.5 text-ds-accent" strokeWidth={1.75} />
+            <p className="text-[9px] font-medium uppercase tracking-[0.18em] text-white/45">
+              {hostPlanetName} · moons & satellites
+            </p>
+          </div>
+          <div className="flex max-h-[7.5rem] flex-wrap gap-1.5 overflow-y-auto pr-0.5">
+            {satelliteChildren.map((child) => {
+              const selected = child.active || activeEntityId === child.id
+              return (
+                <button
+                  key={child.id}
+                  type="button"
+                  onClick={() => onSelectSatellite?.(child.id)}
+                  className={clsx(
+                    'rounded-lg border px-2.5 py-1.5 text-left transition',
+                    selected
+                      ? 'border-ds-accent-strong bg-ds-accent-soft text-white shadow-[inset_0_0_0_1px_var(--color-accent-strong)]'
+                      : 'border-white/[0.1] bg-white/[0.04] text-white/75 hover:border-white/25 hover:bg-white/[0.08]',
+                  )}
+                >
+                  <span className="block text-[10px] font-semibold uppercase tracking-[0.08em]">{child.name}</span>
+                </button>
+              )
+            })}
+          </div>
+          <p className="mt-2 text-[10px] leading-snug text-white/38">
+            Chọn mục tiêu ở đây nếu quỹ đạo 3D quá nhanh để click trực tiếp.
+          </p>
+        </div>
+      ) : null}
+
       {tabs.length > 0 ? (
-        <nav className="shrink-0 border-b border-ds-border px-3">
-          <div className="flex gap-1">
+        <div className="shrink-0 px-5 pb-3">
+          <div
+            className={clsx(
+              'grid gap-2',
+              tabs.length >= 3 ? 'grid-cols-3' : tabs.length === 2 ? 'grid-cols-2' : 'grid-cols-1',
+            )}
+          >
             {tabs.map((tab) => {
               const active = tab.id === safeTab
+              const meta = TAB_META[tab.id]
+              const Icon = meta.icon
+              const hint = meta.hint({
+                blocks: tabCounts[tab.id],
+                concepts: conceptChips.length,
+                lessons: learningLinks.length,
+              })
               return (
                 <button
                   key={tab.id}
                   type="button"
                   onClick={() => setActiveTab(tab.id)}
-                  className={`px-3 py-2 text-[11px] uppercase tracking-[0.12em] border-b transition ${
+                  className={clsx(
+                    'group rounded-xl border px-2.5 py-2.5 text-left transition',
                     active
-                      ? 'text-ds-text border-ds-accent'
-                      : 'text-ds-muted border-transparent hover:text-ds-text'
-                  }`}
+                      ? 'border-ds-accent-strong bg-ds-accent-soft shadow-[inset_0_0_0_1px_var(--color-accent-strong)]'
+                      : 'border-white/[0.08] bg-white/[0.03] hover:border-white/20 hover:bg-white/[0.06]',
+                  )}
                 >
-                  {tab.label}
+                  <Icon
+                    className={clsx(
+                      'mb-2 h-3.5 w-3.5',
+                      active ? 'text-ds-accent' : 'text-white/35 group-hover:text-white/55',
+                    )}
+                    strokeWidth={1.75}
+                  />
+                  <p
+                    className={clsx(
+                      'text-[9px] font-medium uppercase tracking-[0.14em]',
+                      active ? 'text-ds-accent' : 'text-white/40',
+                    )}
+                  >
+                    {tab.label}
+                  </p>
+                  <p className={clsx('mt-0.5 truncate text-[11px] font-semibold', active ? 'text-white' : 'text-white/70')}>
+                    {hint}
+                  </p>
                 </button>
               )
             })}
           </div>
-        </nav>
+        </div>
       ) : null}
 
-      <section className="flex-1 min-h-0 overflow-y-auto px-4 py-3 space-y-3">
+      <section className="min-h-0 flex-1 space-y-2.5 overflow-y-auto px-5 py-1">
         {safeTab === 'overview' ? (
           <>
             {(panelConfig?.overviewBlocks || []).map((b, idx) => (
               <PanelBlock key={b.id || `${b.type}-${idx}`} block={b} />
             ))}
             {conceptChips.length > 0 ? (
-              <div className="flex flex-wrap gap-2 pt-1">
+              <div className="flex flex-wrap gap-1.5 pt-1">
                 {conceptChips.slice(0, 8).map((c) => (
-                  <span key={c.id} className="rounded border border-ds-border bg-ds-surface px-2 py-1 text-[11px] text-ds-muted">
+                  <span
+                    key={c.id}
+                    className="rounded-lg border border-white/[0.08] bg-white/[0.04] px-2 py-1 text-[10px] text-white/55"
+                  >
                     {c.title || c.id}
                   </span>
                 ))}
@@ -124,7 +257,7 @@ export function ShowcaseEntityPanel({
         ) : null}
 
         {safeTab === 'physical' ? (
-          <div className="space-y-3">
+          <div className="space-y-2.5">
             {(panelConfig?.physicalBlocks || []).map((b, idx) => (
               <PanelBlock key={b.id || `${b.type}-${idx}`} block={b} />
             ))}
@@ -140,57 +273,86 @@ export function ShowcaseEntityPanel({
               <a
                 key={row.lessonId}
                 href={row.href}
-                className="block rounded-ds-control border border-ds-border bg-ds-surface px-3 py-2 text-sm text-ds-accent hover:bg-ds-elevated"
+                className="block rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 py-2.5 text-sm text-ds-accent transition hover:border-ds-accent-strong hover:bg-ds-accent-soft"
               >
                 {row.title}
               </a>
             ))}
           </div>
         ) : null}
-        {tabs.length === 0 ? (
-          <p className="text-[12px] text-ds-subtle">Panel content is empty. Configure this entity in Studio → Panel content.</p>
+
+        {tabs.length === 0 &&
+        !(panelConfig?.overviewBlocks || []).length &&
+        !(panelConfig?.physicalBlocks || []).length &&
+        !(panelConfig?.skyBlocks || []).length &&
+        !description ? (
+          <p className="text-[12px] text-white/45">
+            Chưa có nội dung panel. Thêm trong Studio → Panel content.
+          </p>
         ) : null}
       </section>
 
       {gamification && item ? (
-        <div className="shrink-0 border-t border-ds-border px-4 py-2.5 space-y-2">
-          <div className="flex items-center justify-between text-[11px] text-ds-muted">
-            <span>Gem của bạn</span>
-            <span className="tabular-nums font-medium text-ds-accent">{gamification.gemBalance}</span>
+        <div className="shrink-0 space-y-2 border-t border-white/[0.06] px-5 py-3">
+          <div className="flex items-center justify-between text-[11px] text-white/45">
+            <span className="inline-flex items-center gap-1.5">
+              <Sparkles className="h-3 w-3 text-ds-accent" strokeWidth={1.75} />
+              Gem của bạn
+            </span>
+            <span className="tabular-nums font-semibold text-ds-accent">{gamification.gemBalance}</span>
           </div>
-          <div className="flex flex-wrap gap-2">
-            {!gamification.storyUnlocked && gamification.storyCost > 0 ? (
-              <button
-                type="button"
-                onClick={() => void gamification.onUnlock('story')}
-                className="rounded-ds-control border border-ds-warning-strong bg-ds-warning-soft px-2.5 py-1.5 text-[11px] text-ds-warning hover:bg-ds-warning-strong"
-              >
-                Mở story · {gamification.storyCost} gem
-              </button>
-            ) : null}
-            {!gamification.orbitUnlocked && gamification.orbitCost > 0 ? (
-              <button
-                type="button"
-                onClick={() => void gamification.onUnlock('orbit')}
-                className="rounded-ds-control border border-ds-info-strong bg-ds-info-soft px-2.5 py-1.5 text-[11px] text-ds-info hover:bg-ds-info-strong"
-              >
-                Mở orbit · {gamification.orbitCost} gem
-              </button>
-            ) : null}
-          </div>
+          {(!gamification.storyUnlocked && gamification.storyCost > 0) ||
+          (!gamification.orbitUnlocked && gamification.orbitCost > 0) ? (
+            <div className="flex flex-wrap gap-1.5">
+              {!gamification.storyUnlocked && gamification.storyCost > 0 ? (
+                <button
+                  type="button"
+                  onClick={() => void gamification.onUnlock('story')}
+                  className="rounded-lg border border-amber-400/30 bg-amber-500/10 px-2.5 py-1.5 text-[10px] font-medium text-amber-100 transition hover:bg-amber-500/20"
+                >
+                  Mở story · {gamification.storyCost} gem
+                </button>
+              ) : null}
+              {!gamification.orbitUnlocked && gamification.orbitCost > 0 ? (
+                <button
+                  type="button"
+                  onClick={() => void gamification.onUnlock('orbit')}
+                  className="rounded-lg border border-sky-400/30 bg-sky-500/10 px-2.5 py-1.5 text-[10px] font-medium text-sky-100 transition hover:bg-sky-500/20"
+                >
+                  Mở orbit · {gamification.orbitCost} gem
+                </button>
+              ) : null}
+            </div>
+          ) : null}
         </div>
       ) : null}
 
-      <footer className="shrink-0 border-t border-ds-border px-4 py-2.5 flex items-center justify-between gap-2">
-        <p className="text-[10px] text-ds-subtle">
-          {learningLinks.length} lessons in your path
-        </p>
+      {showDeepHistory ? (
+        <div className="shrink-0 px-5 pb-4 pt-1">
+          <button
+            type="button"
+            onClick={onOpenDeepHistory}
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-ds-accent px-4 py-3 text-[11px] font-bold uppercase tracking-[0.16em] text-ds-accent-fg shadow-[0_8px_28px_color-mix(in_srgb,var(--color-accent)_35%,transparent)] transition hover:brightness-110 active:scale-[0.99]"
+          >
+            <History className="h-4 w-4" strokeWidth={2} />
+            Deep History
+          </button>
+          {isEarth ? (
+            <p className="mt-2 text-center text-[10px] leading-snug text-white/40">
+              Hóa thạch theo từng thời kỳ — mở cùng timeline, không tách riêng.
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+
+      <footer className="flex shrink-0 items-center justify-between gap-2 border-t border-white/[0.06] px-5 py-2.5">
+        <p className="text-[10px] text-white/35">{learningLinks.length} lessons in your path</p>
         {learningLinks[0] ? (
           <a
             href={learningLinks[0].href}
-            className="rounded-ds-control border border-ds-accent px-3 py-1.5 text-[12px] text-ds-accent hover:bg-ds-accent-soft"
+            className="rounded-lg border border-ds-accent-strong px-2.5 py-1 text-[11px] font-medium text-ds-accent transition hover:bg-ds-accent-soft"
           >
-            open in learning path →
+            Learning path →
           </a>
         ) : null}
       </footer>
@@ -204,57 +366,71 @@ function PanelBlock({ block }: { block: ShowcasePanelBlockDTO }) {
   const align = block.style?.align || 'left'
   const baseClass =
     variant === 'minimal'
-      ? 'rounded-ds-control border border-transparent bg-transparent p-1.5'
+      ? 'rounded-xl border border-transparent bg-transparent p-1'
       : variant === 'solid'
-        ? 'rounded-ds-control border p-2'
-        : 'rounded-ds-control border border-ds-border bg-ds-surface p-2'
+        ? 'rounded-xl border p-3'
+        : 'rounded-xl border border-white/[0.08] bg-white/[0.04] p-3'
   const textAlignClass = align === 'center' ? 'text-center' : align === 'right' ? 'text-right' : 'text-left'
   const style: React.CSSProperties = {
     backgroundColor: block.style?.bgColor || undefined,
     borderColor: block.style?.borderColor || undefined,
     color: block.style?.textColor || undefined,
   }
-  // Default to live `--color-accent` so chart bars retint per planet via the
-  // surface-scene wrapper. Override only when Studio explicitly sets a color.
   const accent = block.style?.accentColor || 'var(--color-accent)'
+
   if (block.type === 'image' && block.imageUrl) {
     return (
       <div className={`${baseClass} ${textAlignClass}`} style={style}>
-        {block.title ? <p className="mb-2 text-[11px] text-ds-muted">{block.title}</p> : null}
-        <img src={block.imageUrl} alt={block.title || 'panel image'} className="w-full h-32 object-cover rounded border border-ds-border" />
-        {block.body ? <p className="mt-2 text-[11px] text-ds-subtle">{block.body}</p> : null}
+        {block.title ? <p className="mb-2 text-[10px] uppercase tracking-wider text-white/45">{block.title}</p> : null}
+        <img
+          src={block.imageUrl}
+          alt={block.title || 'panel image'}
+          className="h-32 w-full rounded-lg border border-white/[0.08] object-cover"
+        />
+        {block.body ? <p className="mt-2 text-[12px] leading-relaxed text-white/60">{block.body}</p> : null}
       </div>
     )
   }
+
   if (block.type === 'chart' && Array.isArray(block.points) && block.points.length > 0) {
     const max = Math.max(...block.points.map((p: { label: string; value: number }) => Number(p.value || 0)), 1)
     return (
       <div className={`${baseClass} ${textAlignClass}`} style={style}>
-        {block.title ? <p className="mb-2 text-[11px] text-ds-muted">{block.title}</p> : null}
-        <div className="space-y-1.5">
+        {block.title ? <p className="mb-2 text-[10px] uppercase tracking-wider text-white/45">{block.title}</p> : null}
+        <div className="space-y-2">
           {block.points.map((p: { label: string; value: number }) => (
-            <div key={`${p.label}-${p.value}`} className="text-[10px]">
-              <div className="flex justify-between text-ds-subtle">
+            <div key={`${p.label}-${p.value}`}>
+              <div className="flex justify-between text-[11px] text-white/55">
                 <span>{p.label}</span>
-                <span>{p.value}</span>
+                <span className="font-semibold text-white">{p.value}</span>
               </div>
-              <div className="h-1.5 rounded bg-ds-border-strong overflow-hidden">
-                <div className="h-full" style={{ backgroundColor: accent, width: `${Math.max(4, Math.min(100, (Number(p.value) / max) * 100))}%` }} />
+              <div className="mt-1 h-1 overflow-hidden rounded-full bg-white/10">
+                <div
+                  className="h-full rounded-full"
+                  style={{
+                    backgroundColor: accent,
+                    width: `${Math.max(4, Math.min(100, (Number(p.value) / max) * 100))}%`,
+                  }}
+                />
               </div>
             </div>
           ))}
         </div>
-        {block.body ? <p className="mt-2 text-[11px] text-ds-subtle">{block.body}</p> : null}
+        {block.body ? <p className="mt-2 text-[12px] leading-relaxed text-white/60">{block.body}</p> : null}
       </div>
     )
   }
+
   if (block.type === 'text' || block.body || block.title) {
     return (
       <div className={`${baseClass} ${textAlignClass}`} style={style}>
-        {block.title ? <p className="text-[11px] text-ds-muted">{block.title}</p> : null}
-        {block.body ? <p className="mt-1 text-[12px] text-ds-text leading-relaxed">{block.body}</p> : null}
+        {block.title ? (
+          <p className="text-[10px] uppercase tracking-wider text-white/45">{block.title}</p>
+        ) : null}
+        {block.body ? <p className="mt-1 text-[13px] leading-relaxed text-white/80">{block.body}</p> : null}
       </div>
     )
   }
+
   return null
 }

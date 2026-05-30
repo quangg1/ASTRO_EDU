@@ -6,11 +6,19 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { getNasaCatalogItemById, NASA_SHOWCASE_ITEMS } from '@/lib/showcaseEntities'
 import { planetsData } from '@/lib/solarSystemData'
 import {
+  createShowcaseEntity,
+  deleteShowcaseEntity,
   fetchEditorShowcaseEntityContents,
   saveShowcaseEntityContents,
+  type ShowcaseEditorCatalogItem,
   type ShowcasePanelBlockDTO,
   type ShowcaseEntityContentDTO,
 } from '@/features/content3d/showcase/public'
+import { ShowcaseEntityPicker } from '@/app/studio/showcase-entities/ShowcaseEntityPicker'
+import {
+  sortShowcaseEntityRowsHierarchical,
+  type ShowcaseEntityGroup,
+} from '@/app/studio/showcase-entities/showcaseEntityHierarchy'
 import { useAuthStore } from '@/features/auth/public'
 import { canEnterStudio } from '@/lib/roles'
 import { useShowcaseCatalogGen } from '@/components/showcase/ShowcaseCatalogProvider'
@@ -18,6 +26,7 @@ import { ShowcaseMediaUrlField } from '@/app/studio/showcase-entities/ShowcaseMe
 import type { UploadMediaContext } from '@/features/courses/public'
 import { ShowcaseEntityPreviewCard } from '@/app/studio/showcase-entities/ShowcaseEntityPreviewCard'
 import { resolveMediaUrl } from '@/lib/apiConfig'
+import { showcaseMediaUrlsEquivalent } from '@/lib/showcaseMediaUrl'
 import { notifyShowcaseCatalogChanged } from '@/lib/showcaseCatalogRefresh'
 import { syncShowcaseOrbitEntityFromJpl } from '@/features/content3d/showcase/public'
 import type { ShowcaseOrbitEntity } from '@/lib/showcaseEntities'
@@ -82,9 +91,22 @@ function hslToHex(h: number, s: number, l: number): string {
   return `#${toHex(r)}${toHex(g)}${toHex(b)}`
 }
 
-function buildInitialRows(db: ShowcaseEntityContentDTO[] | null): ShowcaseEntityContentDTO[] {
+function buildInitialRows(
+  db: ShowcaseEntityContentDTO[] | null,
+  catalog: ShowcaseEditorCatalogItem[],
+): ShowcaseEntityContentDTO[] {
   const m = new Map((db || []).map((r) => [String(r.entityId || '').trim(), r]))
-  return NASA_SHOWCASE_ITEMS.map((b) => {
+  const baseCatalog =
+    catalog.length > 0
+      ? catalog
+      : NASA_SHOWCASE_ITEMS.map((b) => ({
+          id: b.id,
+          name: b.name,
+          group: b.group,
+          linkedPlanetName: b.linkedPlanetName,
+        }))
+
+  const rows = baseCatalog.map((b) => {
     const ex = m.get(b.id)
     const legacyTex = ex?.textureUrl?.trim() || ''
     const diffuse = ex?.diffuseMapUrl?.trim() || legacyTex
@@ -119,6 +141,18 @@ function buildInitialRows(db: ShowcaseEntityContentDTO[] | null): ShowcaseEntity
       panelConfig: ex?.panelConfig || null,
     }
   })
+
+  const catalogForSort =
+    catalog.length > 0
+      ? catalog.map((c) => ({
+          id: c.id,
+          name: c.name,
+          group: c.group,
+          linkedPlanetName: c.linkedPlanetName,
+        }))
+      : [...NASA_SHOWCASE_ITEMS]
+
+  return sortShowcaseEntityRowsHierarchical(rows, catalogForSort)
 }
 
 function ensurePanelConfig(row: ShowcaseEntityContentDTO): NonNullable<ShowcaseEntityContentDTO['panelConfig']> {
@@ -160,7 +194,9 @@ function StudioShowcaseEntitiesPage() {
   const showcaseCatalogGen = useShowcaseCatalogGen()
   const { user, checked } = useAuthStore()
   const [rows, setRows] = useState<ShowcaseEntityContentDTO[]>([])
+  const [editorCatalog, setEditorCatalog] = useState<ShowcaseEditorCatalogItem[]>([])
   const [selectedId, setSelectedId] = useState<string>(NASA_SHOWCASE_ITEMS[0]?.id ?? '')
+  const [entityCrudBusy, setEntityCrudBusy] = useState(false)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [syncingJpl, setSyncingJpl] = useState(false)
@@ -181,8 +217,14 @@ function StudioShowcaseEntitiesPage() {
       return
     }
     if (!opts?.silent) setLoading(true)
-    const db = await fetchEditorShowcaseEntityContents(token)
-    setRows(buildInitialRows(db))
+    const editor = await fetchEditorShowcaseEntityContents(token)
+    if (editor) {
+      setEditorCatalog(editor.catalog)
+      setRows(buildInitialRows(editor.items, editor.catalog))
+    } else {
+      setEditorCatalog([])
+      setRows(buildInitialRows(null, []))
+    }
     setLoading(false)
   }, [])
 
@@ -204,13 +246,17 @@ function StudioShowcaseEntitiesPage() {
   useEffect(() => {
     const entity = searchParams.get('entity')?.trim()
     const tab = searchParams.get('tab')?.trim()
-    if (entity && NASA_SHOWCASE_ITEMS.some((it) => it.id === entity)) {
-      setSelectedId(entity)
+    if (entity) {
+      const inCatalog =
+        editorCatalog.some((it) => it.id === entity) ||
+        NASA_SHOWCASE_ITEMS.some((it) => it.id === entity) ||
+        rows.some((r) => r.entityId === entity)
+      if (inCatalog) setSelectedId(entity)
     }
     if (tab === 'media' || tab === 'panel' || tab === 'history') {
       setStudioTab(tab)
     }
-  }, [searchParams])
+  }, [searchParams, editorCatalog, rows])
 
   useEffect(() => {
     if (studioTab === 'history' && !entitySupportsHistory(selectedId)) {
@@ -263,6 +309,12 @@ function StudioShowcaseEntitiesPage() {
     if (selectedBase?.texturePath) return resolveMediaUrl(selectedBase.texturePath)
     return ''
   }, [selected?.diffuseMapUrl, selectedBase?.texturePath])
+  const cloudDuplicatesDiffuse = useMemo(() => {
+    if (!selected) return false
+    const diffuse = selected.diffuseMapUrl?.trim() || selected.textureUrl?.trim() || ''
+    const cloud = selected.cloudMapUrl?.trim() || ''
+    return Boolean(cloud && diffuse && showcaseMediaUrlsEquivalent(cloud, diffuse))
+  }, [selected])
   const previewEntity = useMemo<ShowcaseOrbitEntity | null>(() => {
     if (!selected || !selectedBase) return null
     const fallbackColor =
@@ -350,7 +402,7 @@ function StudioShowcaseEntitiesPage() {
     const r = await saveShowcaseEntityContents(token, payload)
     setSaving(false)
     if (r.ok && r.items) {
-      setRows(buildInitialRows(r.items))
+      setRows(buildInitialRows(r.items, editorCatalog))
       setMessage('Đã lưu.')
       notifyShowcaseCatalogChanged()
     } else {
@@ -388,6 +440,55 @@ function StudioShowcaseEntitiesPage() {
     })
     setMessage('Đã sync dữ liệu JPL cho entity hiện tại. Bấm Lưu để ghi DB.')
   }
+
+  const refreshAfterEntityCrud = async (nextSelectedId?: string) => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('galaxies_token') : null
+    if (!token) return
+    const editor = await fetchEditorShowcaseEntityContents(token)
+    if (editor) {
+      setEditorCatalog(editor.catalog)
+      setRows(buildInitialRows(editor.items, editor.catalog))
+      const pick =
+        nextSelectedId && editor.items.some((r) => r.entityId === nextSelectedId)
+          ? nextSelectedId
+          : editor.items[0]?.entityId
+      if (pick) setSelectedIdWithUrl(pick)
+    }
+    notifyShowcaseCatalogChanged()
+  }
+
+  const handleCreateEntity = async (input: {
+    entityId: string
+    name: string
+    group: ShowcaseEntityGroup
+    parentId: string
+    linkedPlanetName: string
+  }) => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('galaxies_token') : null
+    if (!token) return { ok: false, error: 'Chưa đăng nhập' }
+    setEntityCrudBusy(true)
+    setMessage('')
+    const r = await createShowcaseEntity(token, input)
+    setEntityCrudBusy(false)
+    if (!r.ok) return { ok: false, error: r.error }
+    setMessage(`Đã tạo ${r.entityId || input.entityId}.`)
+    await refreshAfterEntityCrud(r.entityId || input.entityId)
+    return { ok: true }
+  }
+
+  const handleDeleteEntity = async (entityId: string, cascade: boolean) => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('galaxies_token') : null
+    if (!token) return { ok: false, error: 'Chưa đăng nhập' }
+    setEntityCrudBusy(true)
+    setMessage('')
+    const r = await deleteShowcaseEntity(token, entityId, { cascade })
+    setEntityCrudBusy(false)
+    if (!r.ok) return { ok: false, error: r.error }
+    setMessage(`Đã xóa ${entityId}.`)
+    await refreshAfterEntityCrud()
+    return { ok: true }
+  }
+
   if (!checked || !user) {
     return <div className="min-h-screen bg-black pt-20 px-4 text-ds-muted">Đang kiểm tra đăng nhập...</div>
   }
@@ -413,20 +514,15 @@ function StudioShowcaseEntitiesPage() {
           <p className="text-ds-subtle text-sm">Đang tải…</p>
         ) : (
           <div className="rounded-2xl border border-ds-border bg-ds-surface p-5 space-y-4">
-            <label className="block text-xs text-ds-muted">
-              Entity
-              <select
-                value={selectedId}
-                onChange={(e) => setSelectedIdWithUrl(e.target.value)}
-                className="studio-field mt-1"
-              >
-                {NASA_SHOWCASE_ITEMS.map((it) => (
-                  <option key={it.id} value={it.id}>
-                    {it.name} ({it.id})
-                  </option>
-                ))}
-              </select>
-            </label>
+            <ShowcaseEntityPicker
+              selectedId={selectedId}
+              rows={rows}
+              catalog={editorCatalog}
+              busy={entityCrudBusy || saving}
+              onSelect={setSelectedIdWithUrl}
+              onCreate={handleCreateEntity}
+              onDelete={handleDeleteEntity}
+            />
             <div className="flex items-center gap-2">
               <button
                 type="button"
@@ -490,39 +586,6 @@ function StudioShowcaseEntitiesPage() {
                   />
                 </label>
 
-                <label className="block text-xs text-ds-muted">
-                  Panel config (JSON) — chỉnh badge/tabs/blocks text-image-chart
-                  <textarea
-                    value={JSON.stringify(selected.panelConfig || null, null, 2)}
-                    onChange={(e) => {
-                      const raw = e.target.value
-                      try {
-                        const parsed = raw.trim() ? JSON.parse(raw) : null
-                        patchSelected({ panelConfig: parsed })
-                        setMessage('')
-                      } catch {
-                        setMessage('Panel config JSON chưa hợp lệ')
-                      }
-                    }}
-                    rows={10}
-                    placeholder={`{
-  "stateBadge": "Ring tilt 9.2° · Decreasing toward edge-on",
-  "tabs": ["overview","physical","sky"],
-  "overviewBlocks": [
-    { "id": "o1", "type": "text", "title": "Now", "body": "Best evening visibility this week." },
-    { "id": "o2", "type": "image", "title": "Reference", "imageUrl": "https://..." }
-  ],
-  "physicalBlocks": [
-    { "id": "p1", "type": "chart", "title": "Atmosphere mix", "points": [ { "label": "CO2", "value": 96.5 } ] }
-  ],
-  "skyBlocks": [
-    { "id": "s1", "type": "text", "title": "Tonight", "body": "Opposition in 12 days." }
-  ]
-}`}
-                    className="studio-field mt-1"
-                  />
-                </label>
-
                 <div className="border-t border-ds-border pt-4 space-y-4">
                   <p className="text-xs font-medium text-slate-300 uppercase tracking-wide">Maps (sphere)</p>
                   <div className="rounded-md border border-ds-border bg-black/25 p-2">
@@ -533,7 +596,7 @@ function StudioShowcaseEntitiesPage() {
                   </div>
                   <ShowcaseMediaUrlField
                     label="Diffuse / albedo"
-                    description="Bắt buộc để thay texture tĩnh trong bundle. JPG/PNG/WebP."
+                    description="Equirectangular 2:1 (vd. 2048×1024) bọc full sphere. Moon NASA hiện tại ~1:1 — vẫn dùng được nhưng dễ lệch cực; nên upload bản 2:1 nếu có."
                     value={selected.diffuseMapUrl}
                     onChange={(url) => patchSelected({ diffuseMapUrl: url, textureUrl: url })}
                     accept="image/jpeg,image/png,image/webp,image/gif"
@@ -554,9 +617,15 @@ function StudioShowcaseEntitiesPage() {
                     accept="image/jpeg,image/png,image/webp"
                     uploadContext={showcaseUploadContext(selected.entityId, 'specular')}
                   />
+                  {cloudDuplicatesDiffuse ? (
+                    <p className="text-[11px] text-amber-200/90 rounded-lg border border-amber-500/30 bg-amber-950/30 px-3 py-2">
+                      Cloud đang trùng URL với Diffuse — renderer sẽ bỏ qua lớp cloud (tránh mất nửa sphere).
+                      Xóa URL Cloud hoặc dùng ảnh alpha riêng (chỉ Trái Đất / khí quyển).
+                    </p>
+                  ) : null}
                   <ShowcaseMediaUrlField
                     label="Cloud / alpha layer (tuỳ chọn)"
-                    description="Lớp ngoài trong suốt; nên có kênh alpha."
+                    description="Chỉ cho lớp mây/khí quyển có kênh alpha — không dán lại diffuse (moon/planet thường để trống)."
                     value={selected.cloudMapUrl}
                     onChange={(url) => patchSelected({ cloudMapUrl: url })}
                     accept="image/png,image/webp"

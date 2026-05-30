@@ -7,7 +7,8 @@ import * as THREE from 'three'
 import { applyGlobeTextureQuality } from '@/lib/planetTextureQuality'
 import { resolveMediaUrl } from '@/lib/apiConfig'
 import type { ShowcaseOrbitEntity } from '@/lib/showcaseEntities'
-import { resolveShowcaseDiffuseTextureUrl } from '@/lib/showcaseMediaUrl'
+import { resolveShowcaseEntitySpinPeriod } from '@/lib/showcaseEntities'
+import { isUsableShowcaseCloudMapUrl, resolveShowcaseDiffuseTextureUrl } from '@/lib/showcaseMediaUrl'
 
 type TextureBundle = {
   map: THREE.Texture | null
@@ -75,6 +76,9 @@ export type ShowcaseDiffuseGlobeProps = {
   skipDistanceBasedScale?: boolean
   /** Chỉ dùng khi không skip — boost nhẹ khi entity đang active */
   active?: boolean
+  /** Tự quay quanh trục (giây/vòng); mặc định suy từ entity. */
+  spinPeriod?: number
+  spinTimeScale?: number
   meshProps?: Omit<MeshProps, 'children'>
 }
 
@@ -88,23 +92,30 @@ export function ShowcaseDiffuseGlobe({
   visualOpacity = 1,
   skipDistanceBasedScale = false,
   active = false,
+  spinPeriod: spinPeriodProp,
+  spinTimeScale = 1,
   meshProps,
 }: ShowcaseDiffuseGlobeProps) {
   const { gl } = useThree()
   const rootRef = useRef<THREE.Group>(null)
+  const spinRef = useRef<THREE.Group>(null)
   const worldPosRef = useRef(new THREE.Vector3())
+  const spinPeriod = spinPeriodProp ?? resolveShowcaseEntitySpinPeriod(entity)
   const [bundle, setBundle] = useState<TextureBundle>(emptyBundle)
 
   const diffuseKey = entity.remoteTextureUrl?.trim() || entity.texturePath || ''
   const normalKey = entity.remoteNormalMapUrl?.trim() || ''
   const specKey = entity.remoteSpecularMapUrl?.trim() || ''
-  const cloudKey = entity.remoteCloudMapUrl?.trim() || ''
+  const cloudKeyRaw = entity.remoteCloudMapUrl?.trim() || ''
 
   useEffect(() => {
     let cancelled = false
     setBundle(emptyBundle)
 
     const diffuseResolved = resolveShowcaseDiffuseTextureUrl(entity) || ''
+    const cloudKey = isUsableShowcaseCloudMapUrl(cloudKeyRaw, diffuseResolved || diffuseKey)
+      ? cloudKeyRaw
+      : ''
 
     void (async () => {
       const [map, normalMap, specularMap, cloud] = await Promise.all([
@@ -130,7 +141,7 @@ export function ShowcaseDiffuseGlobe({
         return emptyBundle
       })
     }
-  }, [gl, diffuseKey, normalKey, specKey, cloudKey, entity.texturePath])
+  }, [gl, diffuseKey, normalKey, specKey, cloudKeyRaw, entity.texturePath])
 
   const radius = sphereRadius
   const entityId = String(entity.id || '').trim()
@@ -147,7 +158,11 @@ export function ShowcaseDiffuseGlobe({
               ? '#b48a5a'
               : entity.color
 
-  useFrame(({ camera }) => {
+  useFrame(({ camera }, delta) => {
+    const spin = spinRef.current
+    if (spin && spinPeriod > 0 && !active) {
+      spin.rotation.y += delta * spinTimeScale * ((2 * Math.PI) / spinPeriod)
+    }
     if (skipDistanceBasedScale) return
     const root = rootRef.current
     if (!root) return
@@ -163,6 +178,7 @@ export function ShowcaseDiffuseGlobe({
 
   return (
     <group ref={rootRef}>
+      <group ref={spinRef}>
       <mesh {...meshProps}>
         <sphereGeometry args={[radius, 96, 88]} />
         {bundle.map || bundle.normalMap || bundle.specularMap ? (
@@ -170,12 +186,15 @@ export function ShowcaseDiffuseGlobe({
             map={bundle.map || undefined}
             normalMap={bundle.normalMap || undefined}
             specularMap={bundle.specularMap || undefined}
-            color={entity.color}
-            specular={0xa8a8b8}
-            shininess={20}
+            color={bundle.map ? '#ffffff' : entity.color}
+            specular={0xb8b8c8}
+            shininess={24}
+            emissive={bundle.map ? '#ffffff' : '#000000'}
+            emissiveMap={bundle.map || undefined}
+            emissiveIntensity={bundle.map ? 0.38 : 0}
             transparent={visualOpacity < 0.999}
             opacity={visualOpacity}
-            toneMapped={false}
+            toneMapped
           />
         ) : (
           <meshBasicMaterial
@@ -199,6 +218,7 @@ export function ShowcaseDiffuseGlobe({
           />
         </mesh>
       ) : null}
+      </group>
     </group>
   )
 }

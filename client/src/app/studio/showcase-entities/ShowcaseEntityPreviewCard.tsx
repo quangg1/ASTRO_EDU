@@ -64,9 +64,10 @@ export function ShowcaseEntityPreviewCard({
           }}
         >
           <color attach="background" args={['#04070c']} />
-          <ambientLight intensity={0.8} />
-          <directionalLight position={[2, 1.6, 2.2]} intensity={1.15} />
-          <directionalLight position={[-2, -1, -1.6]} intensity={0.28} />
+          <ambientLight intensity={1.05} />
+          <hemisphereLight color="#b8c8e8" groundColor="#141820" intensity={0.55} />
+          <directionalLight position={[2, 1.6, 2.2]} intensity={1.05} />
+          <directionalLight position={[-2, -1, -1.6]} intensity={0.45} />
           <Stars radius={22} depth={12} count={1300} factor={2} saturation={0.85} fade speed={0.2} />
           <Suspense fallback={null}>
             <PreviewEntityNode entity={entity} />
