@@ -21,7 +21,7 @@ export function ExploreEarthOverlay({ onBackToShowcase }: Props) {
             onClick={onBackToShowcase}
             className="rounded border border-cyan-300/40 px-2 py-1 text-[10px] uppercase tracking-wider text-cyan-100 hover:bg-cyan-500/15"
           >
-            Back to Showcase
+            Quay lại Showcase
           </button>
         </div>
       </div>

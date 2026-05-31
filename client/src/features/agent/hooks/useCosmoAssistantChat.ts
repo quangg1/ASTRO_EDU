@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import type { DepthLevel } from '@/data/learningPathCurriculum'
 import type { TutorAction } from '@/components/ai-tutor/parseTutorActions'
 import { useAuthStore } from '@/features/auth/public'
+import { useToast } from '@/design-system'
 import { postAgentMessage, postDepthPreference, prefetchAgentContext, fetchAgentSessionDetail } from '../api/agentApi'
 import { executeAgentClientAction, mergeAgentToolCalls } from '../lib/executeToolCall'
 import type { AgentChip } from '../ui/AgentChips'
@@ -39,6 +40,7 @@ export function useCosmoAssistantChat({
 }: Params) {
   const router = useRouter()
   const { user } = useAuthStore()
+  const toast = useToast()
   const [messages, setMessages] = useState<CosmoChatMessage[]>([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
@@ -282,7 +284,13 @@ export function useCosmoAssistantChat({
         )
 
         for (const tr of res.tool_results || []) {
-          if (!tr.ok || !tr.clientAction) continue
+          if (!tr.ok) {
+            if (tr.suggestion) {
+              toast.show(tr.suggestion, { tone: tr.code === 'auth_required' ? 'info' : 'warning' })
+            }
+            continue
+          }
+          if (!tr.clientAction) continue
           if (tr.clientAction.type === 'show_related_lessons') {
             setRelatedLessons(tr.clientAction.lessons)
             continue
@@ -314,7 +322,7 @@ export function useCosmoAssistantChat({
         setLoading(false)
       }
     },
-    [loading, user, messages, sessionContext, learnerSnapshot, sessionId, runClientAction],
+    [loading, user, messages, sessionContext, learnerSnapshot, sessionId, runClientAction, toast],
   )
 
   const explainActiveSection = useCallback(() => {

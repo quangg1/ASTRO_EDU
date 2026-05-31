@@ -12,6 +12,7 @@ const PREFIX = 'cosmo-gem-wallet-v1'
 
 /** Mirror server base — chỉ hiển thị UI; earn thật do server quyết định (× seasonal). */
 export const GEM_REWARD_LEARNING_PATH_LESSON = 5
+export const GEM_EARN_CONTEXTUAL_QUIZ = 3
 
 function walletKey(userId?: string | null): string {
   const id = userId != null && String(userId).trim() ? String(userId).trim() : 'guest'

@@ -163,6 +163,15 @@ async function sceneDiscoveryRewarded(userId, entityId) {
   return c > 0;
 }
 
+async function contextualQuizPassedRewarded(userId, entityId) {
+  const c = await GemTransaction.countDocuments({
+    userId,
+    entityId,
+    reason: 'scene_contextual_quiz_passed',
+  });
+  return c > 0;
+}
+
 async function deepHistoryGemsEarnedThisWeek(userId) {
   const since = new Date(Date.now() - 7 * 86400_000);
   const agg = await GemTransaction.aggregate([
@@ -356,6 +365,40 @@ async function processLearningPathRewardEvent(userId, ev) {
       newAchievements,
       streakResult,
       label: 'Khám phá 3D',
+    };
+  }
+
+  if (ev.eventName === 'scene_contextual_quiz_passed') {
+    const meta = ev.metadata && typeof ev.metadata === 'object' ? ev.metadata : {};
+    const entityId = String(meta.entityId || '').trim();
+    const correctCount = Number(meta.correctCount ?? 0);
+    const totalCount = Number(meta.totalCount ?? 0);
+    if (!entityId || totalCount < 1 || correctCount < totalCount) return null;
+
+    const up = await UserProgress.findOne({ userId }).select('learningPathCompletedLessonIds').lean();
+    const completed = up?.learningPathCompletedLessonIds || [];
+    if (!Array.isArray(completed) || completed.length < 1) return null;
+
+    if (await contextualQuizPassedRewarded(userId, entityId)) return null;
+
+    const amt = scaleEarn(GEM_EARN.scene_contextual_quiz_passed, seasonalMult);
+    const agg = await applyGemEarn(userId, amt, {
+      reason: 'scene_contextual_quiz_passed',
+      entityId,
+      sessionId: ev.sessionId || null,
+      metadata: { correctCount, totalCount, seasonalMultiplier: seasonalMult },
+    });
+    if (!agg) return null;
+    const urAfter = await UserReward.findOne({ userId }).lean();
+    const streakResult = await updateStreak(userId, urAfter);
+    const newAchievements = await checkAchievements(userId);
+    return {
+      gemsEarned: amt,
+      newBalance: agg.updated.gemBalance,
+      levelUp: agg.levelUp,
+      newAchievements,
+      streakResult,
+      label: 'Quiz ngữ cảnh Explore',
     };
   }
 

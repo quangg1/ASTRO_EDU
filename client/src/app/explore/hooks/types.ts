@@ -36,9 +36,7 @@ export type ExploreLearningBridgeSlice = {
   bridgeQuizPromptOpen: boolean
   setBridgeQuizPromptOpen: (open: boolean) => void
   bridgeQuizQuestions: QuizQuestion[]
-  bridgeQuizAnswers: Record<string, number>
-  setBridgeQuizAnswers: Dispatch<SetStateAction<Record<string, number>>>
-  bridgeQuizScore: { answered: number; correct: number; total: number }
+  handleQuizComplete: (result: { correct: number; total: number; allCorrect: boolean }) => void
   effectiveConceptCards: LearningConcept[]
   effectiveLessonLinks: ExploreLessonLink[]
   bridgeVisitedLessonsForEntity: number

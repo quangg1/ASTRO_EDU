@@ -102,7 +102,7 @@ export function useExploreShowcaseCatalog(planetHistoryEntityId: string | null) 
   }, [planetHistoryEntityId, mergedOrbitEntities, showcaseContent])
 
   const planetHistoryLabel = useMemo(() => {
-    if (!planetHistoryEntityId) return 'Deep History'
+    if (!planetHistoryEntityId) return 'Lịch sử sâu'
     const cat = getNasaCatalogItemById(planetHistoryEntityId)
     return cat?.name || planetHistoryEntityId
   }, [planetHistoryEntityId, showcaseCatalogGen])

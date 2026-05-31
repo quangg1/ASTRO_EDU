@@ -41,6 +41,7 @@ function applyPlatformSecurity(app) {
   app.use('/upload', uploadLimiter);
   // Agent chat limit gắn trên POST /message trong features/agent (không chặn prefetch/snapshot/coach).
   app.use('/api/learning-path/editor/generate-quiz', aiGenerateLimiter);
+  app.use('/api/explore/contextual-quiz/editor', aiGenerateLimiter);
   app.use('/api/learning-path/events/batch', lpEventsLimiter);
 }
 

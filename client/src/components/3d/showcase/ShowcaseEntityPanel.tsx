@@ -47,9 +47,19 @@ const TAB_META: Record<
   },
 }
 
+/** Bật khi đã có story viewer + khóa quỹ đạo 3D theo unlock. */
+const SHOWCASE_PREMIUM_UNLOCK_UI = false
+
+const GROUP_LABEL_VI: Record<string, string> = {
+  planets_moons: 'HÀNH TINH · VỆ TINH',
+  dwarf_asteroids: 'HÀNH TINH LÙN · TIỂU HÀNH TINH',
+  comets: 'SAO CHỔI',
+  spacecraft: 'TÀU VŨ TRỤ',
+}
+
 function formatGroupLabel(group: string | undefined): string {
-  if (!group) return 'SHOWCASE ENTITY'
-  return group.replace(/_/g, ' · ').toUpperCase()
+  if (!group) return 'THỰC THỂ SHOWCASE'
+  return GROUP_LABEL_VI[group] || group.replace(/_/g, ' · ').toUpperCase()
 }
 
 function firstTextBlock(blocks: ShowcasePanelBlockDTO[] | undefined): { title?: string; body?: string } | null {
@@ -96,9 +106,9 @@ export function ShowcaseEntityPanel({
     const wanted = Array.isArray(panelConfig?.tabs) ? panelConfig?.tabs : null
     const include = (id: TabId) => !!wanted && wanted.includes(id)
     const lbl = panelConfig?.tabLabels || {}
-    if (include('overview')) next.push({ id: 'overview', label: String(lbl.overview || 'Overview') })
-    if (include('physical')) next.push({ id: 'physical', label: String(lbl.physical || 'Physical') })
-    if (include('sky')) next.push({ id: 'sky', label: String(lbl.sky || 'Sky') })
+    if (include('overview')) next.push({ id: 'overview', label: String(lbl.overview || 'Tổng quan') })
+    if (include('physical')) next.push({ id: 'physical', label: String(lbl.physical || 'Vật lý') })
+    if (include('sky')) next.push({ id: 'sky', label: String(lbl.sky || 'Bầu trời') })
     return next
   }, [panelConfig?.tabs, panelConfig?.tabLabels])
 
@@ -139,7 +149,7 @@ export function ShowcaseEntityPanel({
           </p>
         </div>
         <h2 className="mt-2 font-[family-name:var(--font-heading)] text-[2rem] font-bold uppercase leading-[0.95] tracking-tight text-white">
-          {item?.displayName || 'No selection'}
+          {item?.displayName || 'Chưa chọn'}
         </h2>
         {subtitle ? <p className="mt-1.5 text-sm text-white/50">{subtitle}</p> : null}
         {description && safeTab === 'overview' ? (
@@ -152,7 +162,7 @@ export function ShowcaseEntityPanel({
           <div className="mb-2 flex items-center gap-2">
             <Orbit className="h-3.5 w-3.5 text-ds-accent" strokeWidth={1.75} />
             <p className="text-[9px] font-medium uppercase tracking-[0.18em] text-white/45">
-              {hostPlanetName} · moons & satellites
+              {hostPlanetName} · vệ tinh & quỹ đạo
             </p>
           </div>
           <div className="flex max-h-[7.5rem] flex-wrap gap-1.5 overflow-y-auto pr-0.5">
@@ -301,8 +311,9 @@ export function ShowcaseEntityPanel({
             </span>
             <span className="tabular-nums font-semibold text-ds-accent">{gamification.gemBalance}</span>
           </div>
-          {(!gamification.storyUnlocked && gamification.storyCost > 0) ||
-          (!gamification.orbitUnlocked && gamification.orbitCost > 0) ? (
+          {SHOWCASE_PREMIUM_UNLOCK_UI &&
+          ((!gamification.storyUnlocked && gamification.storyCost > 0) ||
+            (!gamification.orbitUnlocked && gamification.orbitCost > 0)) ? (
             <div className="flex flex-wrap gap-1.5">
               {!gamification.storyUnlocked && gamification.storyCost > 0 ? (
                 <button
@@ -335,7 +346,7 @@ export function ShowcaseEntityPanel({
             className="flex w-full items-center justify-center gap-2 rounded-xl bg-ds-accent px-4 py-3 text-[11px] font-bold uppercase tracking-[0.16em] text-ds-accent-fg shadow-[0_8px_28px_color-mix(in_srgb,var(--color-accent)_35%,transparent)] transition hover:brightness-110 active:scale-[0.99]"
           >
             <History className="h-4 w-4" strokeWidth={2} />
-            Deep History
+            Lịch sử sâu
           </button>
           {isEarth ? (
             <p className="mt-2 text-center text-[10px] leading-snug text-white/40">
@@ -346,13 +357,15 @@ export function ShowcaseEntityPanel({
       ) : null}
 
       <footer className="flex shrink-0 items-center justify-between gap-2 border-t border-white/[0.06] px-5 py-2.5">
-        <p className="text-[10px] text-white/35">{learningLinks.length} lessons in your path</p>
+        <p className="text-[10px] text-white/35">
+          {learningLinks.length} bài trên lộ trình của bạn
+        </p>
         {learningLinks[0] ? (
           <a
             href={learningLinks[0].href}
             className="rounded-lg border border-ds-accent-strong px-2.5 py-1 text-[11px] font-medium text-ds-accent transition hover:bg-ds-accent-soft"
           >
-            Learning path →
+            Lộ trình học →
           </a>
         ) : null}
       </footer>

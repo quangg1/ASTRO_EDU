@@ -37,9 +37,7 @@ type Props = Pick<
   | 'bridgeQuizPromptOpen'
   | 'setBridgeQuizPromptOpen'
   | 'bridgeQuizQuestions'
-  | 'bridgeQuizAnswers'
-  | 'setBridgeQuizAnswers'
-  | 'bridgeQuizScore'
+  | 'handleQuizComplete'
   | 'mergedOrbitEntities'
 >
 
@@ -69,9 +67,7 @@ export function ExploreShowcaseOverlay(props: Props) {
     bridgeQuizPromptOpen,
     setBridgeQuizPromptOpen,
     bridgeQuizQuestions,
-    bridgeQuizAnswers,
-    setBridgeQuizAnswers,
-    bridgeQuizScore,
+    handleQuizComplete,
     mergedOrbitEntities,
   } = props
 
@@ -116,12 +112,12 @@ export function ExploreShowcaseOverlay(props: Props) {
           <div className="flex items-center gap-2">
             {user ? (
               <span className="rounded border border-cyan-400/35 px-2 py-1 text-[10px] uppercase tracking-wider text-cyan-100 bg-cyan-950/45 tabular-nums">
-                {gemBalance} gem
+                {gemBalance} Gem
               </span>
             ) : null}
             {effectiveLessonLinks.length > 0 ? (
               <span className="rounded border border-emerald-300/35 px-2 py-1 text-[10px] uppercase tracking-wider text-emerald-100 bg-emerald-500/10">
-                Progress {bridgeVisitedLessonsForEntity}/{effectiveLessonLinks.length}
+                Tiến độ {bridgeVisitedLessonsForEntity}/{effectiveLessonLinks.length}
               </span>
             ) : null}
             <button
@@ -150,7 +146,7 @@ export function ExploreShowcaseOverlay(props: Props) {
 
       {bridgeDebugOn ? (
         <aside className="fixed right-4 top-24 z-[24] w-[21rem] rounded-xl border border-white/15 bg-black/55 p-2.5 backdrop-blur">
-          <p className="text-[10px] uppercase tracking-[0.16em] text-slate-300">Bridge debug</p>
+          <p className="text-[10px] uppercase tracking-[0.16em] text-slate-300">Gỡ lỗi cầu nối</p>
           <p className="mt-1 text-[10px] text-slate-500">
             entity={showcaseActiveItemId} | lessons={effectiveLessonLinks.length}
           </p>
@@ -195,12 +191,9 @@ export function ExploreShowcaseOverlay(props: Props) {
         entityLabel={activeResolved?.displayName ?? ''}
         entityId={showcaseActiveItemId}
         questions={bridgeQuizQuestions}
-        answers={bridgeQuizAnswers}
-        onAnswer={(questionId, optionIndex) =>
-          setBridgeQuizAnswers((prev) => ({ ...prev, [questionId]: optionIndex }))
-        }
-        onClose={() => setBridgeQuizPromptOpen(false)}
-        score={bridgeQuizScore}
+        loggedIn={Boolean(user)}
+        onDismiss={() => setBridgeQuizPromptOpen(false)}
+        onComplete={handleQuizComplete}
       />
     </>
   )

@@ -2,7 +2,7 @@ const Enrollment = require('../../../courses/models/Enrollment');
 const Course = require('../../../courses/models/Course');
 const { isToolAllowedForTier, resolveToolName } = require('../../lib/toolSchema');
 const { getLearningPathLessonIndex } = require('./lpCurriculum');
-const { hasShowcaseUnlock } = require('./showcaseAccess');
+const { assertShowcaseEntityAccess } = require('./showcaseAccess');
 const { resolveShowcaseTarget, loadShowcaseCatalog, inferPlanetFocusFromMessage } = require('../showcaseNavigationService');
 const { searchCommunityThreadsForAgent } = require('../agentContextEnrichment');
 
@@ -93,15 +93,13 @@ async function executeAuthorizedTool({
       };
     }
     const openHistory = args?.open_history === true || args?.openHistory === true;
-    if (openHistory && userId) {
-      const unlocked = await hasShowcaseUnlock(userId, resolved.entityId);
-      if (!unlocked) {
-        return {
-          ok: false,
-          code: 'no_access',
-          suggestion: 'Mở khóa showcase (gem) hoặc đăng ký khóa để xem Deep History entity này.',
-        };
-      }
+    const access = await assertShowcaseEntityAccess(userId, resolved.entityId, { openHistory });
+    if (!access.ok) {
+      return {
+        ok: false,
+        code: access.code || 'no_access',
+        suggestion: access.suggestion || 'Không thể điều hướng tới thiên thể này.',
+      };
     }
     return {
       ok: true,
@@ -135,6 +133,14 @@ async function executeAuthorizedTool({
     }
 
     if (focusTarget?.entityId && !openHistory) {
+      const access = await assertShowcaseEntityAccess(userId, focusTarget.entityId);
+      if (!access.ok) {
+        return {
+          ok: false,
+          code: access.code || 'no_access',
+          suggestion: access.suggestion || 'Không thể điều hướng tới thiên thể này.',
+        };
+      }
       return {
         ok: true,
         clientAction: {
@@ -153,13 +159,13 @@ async function executeAuthorizedTool({
     const entityId = typeof entityIdRaw === 'string' ? entityIdRaw.trim() : '';
     const pinId = typeof args?.pin_id === 'string' ? args.pin_id.trim() : '';
 
-    if (entityId && openHistory && userId) {
-      const unlocked = await hasShowcaseUnlock(userId, entityId);
-      if (!unlocked) {
+    if (entityId && openHistory) {
+      const access = await assertShowcaseEntityAccess(userId, entityId, { openHistory: true });
+      if (!access.ok) {
         return {
           ok: false,
-          code: 'no_access',
-          suggestion: 'Mở khóa showcase (gem) hoặc đăng ký khóa để xem Deep History entity này.',
+          code: access.code || 'no_access',
+          suggestion: access.suggestion || 'Không thể mở Lịch sử sâu cho thiên thể này.',
         };
       }
     }

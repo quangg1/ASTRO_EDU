@@ -8,6 +8,8 @@ const userProgressSchema = new mongoose.Schema(
     learningPathVisited3DLessonIds: { type: [String], default: [] },
     learningPathLastLessonId: { type: String, default: '' },
     solarJourneyCompletedMilestoneIds: { type: [String], default: [] },
+    /** entityId → recent contextual quiz question ids (rotation) */
+    exploreQuizRecentByEntity: { type: mongoose.Schema.Types.Mixed, default: {} },
   },
   { timestamps: true, minimize: false },
 );

@@ -152,6 +152,7 @@ export type AgentMessageResponse = {
     id?: string
     name?: string
     ok: boolean
+    code?: string
     clientAction?: AgentClientAction
     suggestion?: string
   }>

@@ -1,8 +1,9 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { fetchExploreContextualQuiz } from '@/features/content3d/showcase/api/exploreContextualQuizApi'
 import {
-  buildContextualQuizFromLessons,
+  buildExploreContextualQuiz,
   getShowcaseMuseumLabelVi,
   guessEntityRarity,
   loadBridgeVisitedEntityMap,
@@ -25,7 +26,7 @@ import type { LearningConcept } from '@/data/learningPathCurriculum'
 import type { LearningModule } from '@/data/learningPathCurriculum'
 import type { ShowcaseEntityContentDTO } from '@/features/content3d/showcase/public'
 import type { ResolvedNasaCatalogItem } from '@/lib/mergeShowcaseCatalog'
-import { mcqAnswerIndex } from '@/shared/types/quizQuestion'
+import type { ShowcaseOrbitEntity } from '@/lib/showcaseEntities'
 import type { QuizQuestion } from '@/shared/types/quizQuestion'
 import { useToast } from '@/design-system'
 
@@ -41,6 +42,8 @@ type BridgeArgs = {
   concepts: LearningConcept[]
   activeContentRow: ShowcaseEntityContentDTO | null
   activeResolved: ResolvedNasaCatalogItem | null
+  activeOrbitEntity: ShowcaseOrbitEntity | null
+  resolvedCatalog: ResolvedNasaCatalogItem[]
 }
 
 export function useExploreLearningBridge({
@@ -53,17 +56,18 @@ export function useExploreLearningBridge({
   concepts,
   activeContentRow,
   activeResolved,
+  activeOrbitEntity,
+  resolvedCatalog,
 }: BridgeArgs) {
   const toast = useToast()
-  const [bridgeOverlayOpen, setBridgeOverlayOpen] = useState(false)
-  const [bridgeOverlayEntityId, setBridgeOverlayEntityId] = useState<string | null>(null)
   const [bridgeQuizPromptOpen, setBridgeQuizPromptOpen] = useState(false)
   const [bridgeQuizQuestions, setBridgeQuizQuestions] = useState<QuizQuestion[]>([])
-  const [bridgeQuizAnswers, setBridgeQuizAnswers] = useState<Record<string, number>>({})
   const [bridgeDebugEntries, setBridgeDebugEntries] = useState<string[]>([])
   const [visited3DMap, setVisited3DMap] = useState<LessonVisited3DMap>({})
   const bridgeFocusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const bridgeQuizTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const activeEntityRef = useRef(showcaseActiveItemId)
+  activeEntityRef.current = showcaseActiveItemId
 
   const pushBridgeDebug = useCallback(
     (msg: string) => {
@@ -144,22 +148,14 @@ export function useExploreLearningBridge({
     [showcaseActiveItemId, activeResolved?.displayName, activeResolved?.museumBlurbVi],
   )
 
-  const bridgeQuizScore = useMemo(() => {
-    const answered = bridgeQuizQuestions.filter((q) => bridgeQuizAnswers[q.id] !== undefined).length
-    const correct = bridgeQuizQuestions.filter((q) => bridgeQuizAnswers[q.id] === mcqAnswerIndex(q)).length
-    return { answered, correct, total: bridgeQuizQuestions.length }
-  }, [bridgeQuizQuestions, bridgeQuizAnswers])
-
   useEffect(() => {
     if (bridgeFocusTimerRef.current) clearTimeout(bridgeFocusTimerRef.current)
     if (bridgeQuizTimerRef.current) clearTimeout(bridgeQuizTimerRef.current)
-    setBridgeOverlayOpen(false)
     setBridgeQuizPromptOpen(false)
     if (earthHistoryOpen || planetHistoryOpen || !showcaseActiveItemId) return
 
     bridgeFocusTimerRef.current = setTimeout(() => {
-      setBridgeOverlayEntityId(showcaseActiveItemId)
-      setBridgeOverlayOpen(true)
+      const focusEntityId = showcaseActiveItemId
       trackLearningPathBehavior({
         eventName: 'scene_entity_focus_duration',
         metadata: {
@@ -187,7 +183,7 @@ export function useExploreLearningBridge({
           const nextDiscovered = { ...discovered, [showcaseActiveItemId]: true }
           saveDiscoveryMap(nextDiscovered, userId ?? null)
           const rarity = guessEntityRarity(showcaseActiveItemId)
-          toast.show(`Unlock: ${showcaseActiveItemId} • rarity: ${rarity}`, { tone: 'info' })
+          toast.show(`Khám phá mới: ${activeResolved?.displayName ?? showcaseActiveItemId}`, { tone: 'info' })
           trackLearningPathBehavior({
             eventName: 'scene_entity_discovered',
             metadata: { schemaVersion: 'scene_event_v2', entityId: showcaseActiveItemId, rarity },
@@ -207,26 +203,38 @@ export function useExploreLearningBridge({
         window.dispatchEvent(new Event('lp-progress-changed'))
       }
 
-      const contextual = buildContextualQuizFromLessons(
-        modules,
-        effectiveLessonLinks.map((r) => r.lessonId),
-        2,
-      )
-      if (contextual.length >= 1) {
-        bridgeQuizTimerRef.current = setTimeout(() => {
+      const contextualFallback = () =>
+        buildExploreContextualQuiz({
+          entityId: focusEntityId,
+          item: activeResolved,
+          orbit: activeOrbitEntity,
+          concepts: effectiveConceptCards,
+          catalog: resolvedCatalog,
+          limit: 2,
+        })
+
+      bridgeQuizTimerRef.current = setTimeout(() => {
+        void (async () => {
+          let contextual = contextualFallback()
+          try {
+            const pool = await fetchExploreContextualQuiz(focusEntityId)
+            if (pool?.questions?.length) contextual = pool.questions
+          } catch {
+            /* offline / API lỗi → template client */
+          }
+          if (focusEntityId !== activeEntityRef.current || contextual.length < 1) return
           setBridgeQuizQuestions(contextual)
-          setBridgeQuizAnswers({})
           setBridgeQuizPromptOpen(true)
           trackLearningPathBehavior({
             eventName: 'scene_contextual_quiz_prompted',
             metadata: {
               schemaVersion: 'scene_event_v2',
-              entityId: showcaseActiveItemId,
+              entityId: focusEntityId,
               questionCount: contextual.length,
             },
           })
-        }, 3000)
-      }
+        })()
+      }, 3000)
     }, FOCUS_DELAY_SEC * 1000)
 
     return () => {
@@ -239,25 +247,40 @@ export function useExploreLearningBridge({
     showcaseActiveItemId,
     effectiveConceptCards,
     effectiveLessonLinks,
-    modules,
+    resolvedCatalog,
+    activeOrbitEntity,
+    activeResolved,
     userId,
     toast,
+    activeResolved?.displayName,
   ])
 
+  const handleQuizComplete = useCallback(
+    (result: { correct: number; total: number; allCorrect: boolean }) => {
+      if (!userId || !showcaseActiveItemId || !result.allCorrect) return
+      trackLearningPathBehavior({
+        eventName: 'scene_contextual_quiz_passed',
+        metadata: {
+          schemaVersion: 'scene_event_v2',
+          entityId: showcaseActiveItemId,
+          correctCount: result.correct,
+          totalCount: result.total,
+        },
+      })
+    },
+    [userId, showcaseActiveItemId],
+  )
+
   return {
-    bridgeOverlayOpen,
-    bridgeOverlayEntityId,
     bridgeQuizPromptOpen,
     setBridgeQuizPromptOpen,
     bridgeQuizQuestions,
-    bridgeQuizAnswers,
-    setBridgeQuizAnswers,
     bridgeDebugEntries,
     pushBridgeDebug,
     effectiveConceptCards,
     effectiveLessonLinks,
     bridgeVisitedLessonsForEntity,
     museumLabelVi,
-    bridgeQuizScore,
+    handleQuizComplete,
   }
 }

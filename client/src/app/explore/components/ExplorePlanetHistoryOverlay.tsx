@@ -37,7 +37,7 @@ export function ExplorePlanetHistoryOverlay({
     <div className={isEarth ? 'explore-deep-history-shell explore-deep-history-shell--earth' : 'explore-deep-history-shell'}>
       <header className="explore-deep-history-header flex flex-wrap items-center justify-between gap-2 rounded-lg border border-white/10 bg-black/50 px-3 py-2 text-[11px] backdrop-blur-md">
         <span className="shrink-0 tracking-[0.14em] uppercase text-slate-200">
-          Deep History · {planetHistoryLabel}
+          Lịch sử sâu · {planetHistoryLabel}
         </span>
         {planetHistoryLessonLinks.length > 0 ? (
           <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">

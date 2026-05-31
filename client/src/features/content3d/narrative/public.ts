@@ -32,9 +32,6 @@ export {
   usePlanetNarrativeStore,
   applyPlanetNarrativeBundle,
 } from '@/features/content3d/narrative/stores/planetNarrativeStore'
-export { NarrativeTimeline } from '@/features/content3d/narrative/ui/NarrativeTimeline'
-export { NarrativeInfoPanel } from '@/features/content3d/narrative/ui/NarrativeInfoPanel'
-export { NarrativeControls } from '@/features/content3d/narrative/ui/NarrativeControls'
 export { NarrativeBottomDock } from '@/features/content3d/narrative/ui/NarrativeBottomDock'
 export { NarrativeBeatDetailLeft } from '@/features/content3d/narrative/ui/NarrativeBeatDetailLeft'
 export { NarrativeBeatDetailRight } from '@/features/content3d/narrative/ui/NarrativeBeatDetailRight'

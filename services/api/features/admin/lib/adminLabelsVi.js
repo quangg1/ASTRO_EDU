@@ -4,6 +4,7 @@ const GEM_REASON_LABELS = {
   recall_quiz_first: 'Đạt quiz nhớ lần đầu',
   recall_quiz_retry: 'Đạt quiz nhớ khi ôn lại',
   scene_entity_discovered: 'Khám phá vật thể 3D mới',
+  scene_contextual_quiz_passed: 'Quiz ngữ cảnh Explore',
   dh_beat_dwell: 'Xem Deep History (đủ thời gian)',
   dh_site_opened: 'Mở điểm Deep History',
   showcase_unlock: 'Mở khóa nội dung Showcase',

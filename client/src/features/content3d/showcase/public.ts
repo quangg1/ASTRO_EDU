@@ -1,6 +1,9 @@
 /** Showcase 3D catalog / orbit experience surface. */
 export { useShowcaseStore } from './stores/showcaseStore'
 export type { ShowcaseCameraState, ShowcaseEntityRef } from './types'
+export { fetchExploreContextualQuiz } from './api/exploreContextualQuizApi'
+export type { ExploreContextualQuizResponse } from './api/exploreContextualQuizApi'
+export { buildExploreContextualQuiz } from './lib/buildExploreContextualQuiz'
 export * from './lib/showcaseLearningBridge'
 export { resolveExplorePanelConfig, deriveExploreStateBadge } from './lib/resolveExplorePanelConfig'
 export {

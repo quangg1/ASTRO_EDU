@@ -134,6 +134,7 @@ export default function GemPage() {
       { label: 'Độ sâu bài học lần đầu (Beginner / Explorer / Researcher)', reward: '+8 / +14 / +20 Gem' },
       { label: 'Quiz nhớ đạt (lần đầu / ôn lại)', reward: '+8 / +3 Gem' },
       { label: 'Khám phá thể 3D mới trên Explore', reward: '+5 Gem' },
+      { label: 'Quiz ngữ cảnh Explore (đúng hết)', reward: '+3 Gem' },
       { label: 'Deep History — xem giai đoạn / mở điểm', reward: '+4 / +2 Gem' },
       { label: 'Cộng đồng — đăng bài / trả lời hữu ích / upvote', reward: '+3 / +8 / +1 Gem' },
     ],
@@ -171,7 +172,10 @@ export default function GemPage() {
       return { label: base, detail: lessonTitleById[lessonId] || `Bài: ${lessonId}` }
     }
 
-    if (entityId && reason === 'scene_entity_discovered') {
+    if (
+      entityId &&
+      (reason === 'scene_contextual_quiz_passed' || reason === 'scene_entity_discovered')
+    ) {
       return { label: base, detail: entityNameById[entityId] || `Vật thể: ${entityId}` }
     }
 

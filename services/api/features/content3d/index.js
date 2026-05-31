@@ -7,11 +7,13 @@ const {
   phylaRouter,
 } = require('./earth-history');
 const { planetNarrativeRouter } = require('./planet-narrative');
+const exploreContextualQuizRouter = require('./routes/exploreContextualQuiz');
 
 module.exports = {
   showcaseEntitiesRouter,
   showcaseCatalogRouter,
   showcaseOrbitsJplRouter,
+  exploreContextualQuizRouter,
   earthHistoryRouter,
   fossilsRouter,
   phylaRouter,

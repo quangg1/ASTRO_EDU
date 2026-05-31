@@ -1,6 +1,8 @@
-# `/explore` — 3D hub orchestration
+# `/explore` — hub 3D & lộ trình nội dung
 
-Single route that switches three scene engines (Earth history, planet deep-history, solar showcase).
+Một route, ba engine scene (Earth fossil, Lịch sử sâu, showcase hệ Mặt Trời).
+
+**Kiến trúc đầy đủ & lộ trình triển khai:** [`docs/plans/3d-learning-system.md`](../../docs/plans/3d-learning-system.md)
 
 ## Layout
 

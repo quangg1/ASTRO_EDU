@@ -24,6 +24,7 @@ const GEM_EARN = Object.freeze({
   recall_quiz_first: 8,
   recall_quiz_retry: 3,
   scene_entity_discovered: 5,
+  scene_contextual_quiz_passed: 3,
   dh_beat_dwell: 4,
   dh_site_opened: 2,
   community_post: 3,

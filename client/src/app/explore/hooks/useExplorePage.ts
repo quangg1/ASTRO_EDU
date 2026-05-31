@@ -53,6 +53,8 @@ export function useExplorePage() {
     concepts: planet.concepts,
     activeContentRow,
     activeResolved,
+    activeOrbitEntity,
+    resolvedCatalog: catalog.resolvedCatalog,
   })
 
   const rewards = useExploreRewards(userId, mode.showcaseActiveItemId)

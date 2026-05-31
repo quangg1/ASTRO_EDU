@@ -78,10 +78,6 @@ export function useExploreModeState() {
     [closePlanetHistory],
   )
 
-  const setPlanetHistoryEntityId = useCallback(() => {
-    /* URL-driven — noop for callers that still set entity id locally */
-  }, [])
-
   return {
     pathname,
     router,
@@ -93,7 +89,6 @@ export function useExploreModeState() {
     planetHistoryOpen,
     setPlanetHistoryOpen,
     planetHistoryEntityId,
-    setPlanetHistoryEntityId,
     showcaseMenuOpen,
     setShowcaseMenuOpen,
     showcaseActiveItemId,

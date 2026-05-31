@@ -4,8 +4,6 @@ import type {
   LessonHistoryFocus,
   LessonItem,
 } from '@/data/learningPathCurriculum'
-import type { RecallQuestion } from '@/features/learning-path/lib/lessonRecallQuiz'
-import { normalizeStudioRecallQuiz } from '@/features/learning-path/lib/lessonRecallQuiz'
 import { NASA_SHOWCASE_ITEMS } from './showcaseCatalogRuntime'
 
 export type ShowcaseBridgeMap = {
@@ -259,26 +257,6 @@ export function resolveAllLessonsForEntity(
     if (a.source !== b.source) return a.source === 'scene' ? -1 : 1
     return a.title.localeCompare(b.title, 'vi')
   })
-}
-
-export function buildContextualQuizFromLessons(modules: LearningModule[], lessonIds: string[], limit = 2): RecallQuestion[] {
-  const set = new Set(lessonIds)
-  const picked: RecallQuestion[] = []
-  for (const mod of modules) {
-    for (const node of mod.nodes) {
-      for (const depth of ['beginner', 'explorer', 'researcher'] as const) {
-        for (const lesson of node.depths[depth] || []) {
-          if (!set.has(lesson.id)) continue
-          const qs = normalizeStudioRecallQuiz(lesson)
-          for (const q of qs) {
-            picked.push(q)
-            if (picked.length >= limit) return picked
-          }
-        }
-      }
-    }
-  }
-  return picked
 }
 
 export type ExploreHistoryFocus = LessonHistoryFocus

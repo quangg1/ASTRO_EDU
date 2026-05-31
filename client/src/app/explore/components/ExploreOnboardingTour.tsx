@@ -34,7 +34,7 @@ export function ExploreOnboardingTour({ open, onClose }: Props) {
     >
       <div className="flex items-start justify-between mb-2">
         <p className="text-[10px] font-[JetBrains_Mono,monospace] uppercase tracking-[0.18em] text-[#7ee7ff]">
-          Explore 3D · {step + 1}/{STEPS.length}
+          Khám phá 3D · {step + 1}/{STEPS.length}
         </p>
         <button type="button" onClick={onClose} className="text-[#5c6886] hover:text-white" aria-label="Đóng tour">
           <X className="w-4 h-4" />

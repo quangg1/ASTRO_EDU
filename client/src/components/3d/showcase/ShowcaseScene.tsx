@@ -303,11 +303,6 @@ function ShowcaseSceneContent({
         }}
       />
       {runtimePlanetsData.map((data, i) => (
-        (() => {
-          const isContextPlanet = contextPlanetName ? data.name === contextPlanetName : false
-          const showPlanet = true
-          if (!showPlanet) return null
-          return (
         <Planet
           key={data.name}
           data={data}
@@ -329,8 +324,6 @@ function ShowcaseSceneContent({
           }}
           onPlanetSelect={onPlanetSelect}
         />
-          )
-        })()
       ))}
 
       <ExploreEntityFx

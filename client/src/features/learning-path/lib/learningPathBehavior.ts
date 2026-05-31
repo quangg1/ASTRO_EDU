@@ -17,6 +17,7 @@ export type LearningPathBehaviorEventName =
   | 'scene_entity_clicked'
   | 'scene_concept_overlay_shown'
   | 'scene_contextual_quiz_prompted'
+  | 'scene_contextual_quiz_passed'
   | 'scene_entity_discovered'
   | 'deep_history_beat_dwell'
   | 'deep_history_site_opened'
