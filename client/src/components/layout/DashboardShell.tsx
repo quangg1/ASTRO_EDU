@@ -8,6 +8,8 @@ import {
   Shield, Newspaper, Settings, UserPlus,
 } from 'lucide-react'
 import { useAuthStore } from '@/features/auth/public'
+import { useEquippedDecoration } from '@/features/rewards/hooks/useEquippedDecoration'
+import { AvatarWithDecoration } from '@/components/profile/AvatarWithDecoration'
 import { canModerate } from '@/lib/roles'
 
 const chamfer = (cut = 14) => ({
@@ -126,7 +128,7 @@ const rewardItems: NavItem[] = [
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const { user } = useAuthStore()
-  const initials = (user?.displayName || user?.email || '?').slice(0, 1).toUpperCase()
+  const equippedOverlay = useEquippedDecoration()
 
   return (
     <>
@@ -183,15 +185,13 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           >
             <Brackets c="#7ee7ff" s={10} o={5} />
             <div className="flex items-center gap-3">
-              <div
-                className="h-[42px] w-[42px] shrink-0 rounded-full flex items-center justify-center text-sm font-bold text-white"
-                style={{
-                  background: 'linear-gradient(135deg, #4dd2ff 0%, #7c5cff 100%)',
-                  boxShadow: '0 0 0 1px rgba(126,231,255,0.4)',
-                }}
-              >
-                {initials}
-              </div>
+              <AvatarWithDecoration
+                avatarUrl={user?.avatar}
+                displayName={user?.displayName || 'Khách'}
+                email={user?.email}
+                overlayUrl={equippedOverlay}
+                size="md"
+              />
               <div className="min-w-0">
                 <p className="text-sm font-semibold truncate" style={{ color: '#eaf6ff' }}>
                   {user?.displayName || 'Khách'}

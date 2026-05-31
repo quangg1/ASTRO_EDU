@@ -81,11 +81,33 @@ export function OnboardingLaunchOverlay({ intent, gemsEarned, apiReady, onComple
     return () => timers.forEach(clearTimeout)
   }, [lines])
 
-  useLayoutEffect(() => {
+  const attemptPlay = useCallback(() => {
     const video = videoRef.current
     if (!video) return
-    video.load()
-    void video.play().then(() => setVideoMode('playing')).catch(() => setVideoMode('error'))
+
+    void video
+      .play()
+      .then(() => setVideoMode('playing'))
+      .catch(() => {
+        // play() often rejects with AbortError right after src/load changes — retry once.
+        window.setTimeout(() => {
+          void video
+            .play()
+            .then(() => setVideoMode('playing'))
+            .catch(() => {
+              if (videoSrc !== localSrc) {
+                setVideoSrc(localSrc)
+                setVideoMode('loading')
+                return
+              }
+              setVideoMode('error')
+            })
+        }, 200)
+      })
+  }, [videoSrc, localSrc])
+
+  useLayoutEffect(() => {
+    setVideoMode('loading')
   }, [videoSrc])
 
   const handleVideoError = useCallback(() => {
@@ -131,6 +153,7 @@ export function OnboardingLaunchOverlay({ intent, gemsEarned, apiReady, onComple
           playsInline
           autoPlay
           preload="auto"
+          onLoadedData={attemptPlay}
           onPlaying={() => setVideoMode('playing')}
           onEnded={() => {
             videoEndedRef.current = true
