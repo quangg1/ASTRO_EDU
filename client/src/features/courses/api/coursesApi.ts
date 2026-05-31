@@ -1,12 +1,11 @@
 import { parseCourseEditorListResponse } from '@galaxies/contracts'
 import { getToken } from '@/features/auth/public'
-import { getApiPathBase, getMediaBase } from '@/lib/apiConfig'
+import { getApiPathBase, getUploadBase } from '@/lib/apiConfig'
 import type { QuizQuestion } from '@/shared/types/quizQuestion'
 
 export type { QuizQuestion }
 
 const COURSES_BASE = getApiPathBase()
-const MEDIA_BASE = getMediaBase()
 
 function authHeaders(): HeadersInit {
   const token = getToken()
@@ -352,12 +351,32 @@ export async function uploadMedia(
   appendUploadContext(form, context)
   const headers: HeadersInit = {}
   if (token) headers['Authorization'] = `Bearer ${token}`
-  const res = await fetch(`${MEDIA_BASE}/upload`, { method: 'POST', headers, body: form })
-  const data = await res.json()
-  if (data.success && data.url) {
-    return { success: true, url: data.url, storageKey: data.storageKey }
+
+  let uploadBase = ''
+  try {
+    uploadBase = getUploadBase()
+  } catch (e) {
+    return { success: false, error: e instanceof Error ? e.message : 'Upload failed' }
   }
-  return { success: false, error: data.error || 'Upload failed' }
+
+  try {
+    const res = await fetch(`${uploadBase}/upload`, { method: 'POST', headers, body: form })
+    let data: { success?: boolean; url?: string; storageKey?: string; error?: string }
+    try {
+      data = (await res.json()) as typeof data
+    } catch {
+      return {
+        success: false,
+        error: res.ok ? 'Phản hồi upload không hợp lệ' : `Upload thất bại (HTTP ${res.status})`,
+      }
+    }
+    if (data.success && data.url) {
+      return { success: true, url: data.url, storageKey: data.storageKey }
+    }
+    return { success: false, error: data.error || 'Upload failed' }
+  } catch (e) {
+    return { success: false, error: e instanceof Error ? e.message : 'Upload failed' }
+  }
 }
 
 export async function fetchCourseForEditor(slug: string): Promise<CourseEditorPayload | null> {

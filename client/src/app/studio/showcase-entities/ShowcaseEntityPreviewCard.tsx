@@ -6,6 +6,7 @@ import { OrbitControls, Stars } from '@react-three/drei'
 import * as THREE from 'three'
 import type { ShowcaseOrbitEntity } from '@/lib/showcaseEntities'
 import { ShowcaseEntityMesh } from '@/components/3d/showcase/ShowcaseEntityMesh'
+import { ErrorBoundary } from '@/components/system/ErrorBoundary'
 
 function PreviewEntityNode({ entity }: { entity: ShowcaseOrbitEntity }) {
   return (
@@ -51,29 +52,31 @@ export function ShowcaseEntityPreviewCard({
         <span className="text-[11px] text-ds-muted">Orbit drag • wheel zoom</span>
       </div>
       <div className="h-[290px] w-full overflow-hidden rounded-xl border border-ds-border bg-black">
-        <Canvas
-          key={entity.id}
-          frameloop={pageVisible ? 'always' : 'never'}
-          camera={{ position: [0, 0, 4.2], fov: 42 }}
-          dpr={[1, 2]}
-          gl={{ antialias: true, alpha: false, powerPreference: 'high-performance' }}
-          onCreated={({ gl }) => {
-            gl.outputColorSpace = THREE.SRGBColorSpace
-            gl.toneMapping = THREE.ACESFilmicToneMapping
-            gl.toneMappingExposure = 1.05
-          }}
-        >
-          <color attach="background" args={['#04070c']} />
-          <ambientLight intensity={1.05} />
-          <hemisphereLight color="#b8c8e8" groundColor="#141820" intensity={0.55} />
-          <directionalLight position={[2, 1.6, 2.2]} intensity={1.05} />
-          <directionalLight position={[-2, -1, -1.6]} intensity={0.45} />
-          <Stars radius={22} depth={12} count={1300} factor={2} saturation={0.85} fade speed={0.2} />
-          <Suspense fallback={null}>
-            <PreviewEntityNode entity={entity} />
-          </Suspense>
-          <OrbitControls enablePan={false} minDistance={1.8} maxDistance={9} autoRotate autoRotateSpeed={0.9} />
-        </Canvas>
+        <ErrorBoundary key={`${entity.id}-${mediaSummary.model}`}>
+          <Canvas
+            key={entity.id}
+            frameloop={pageVisible ? 'always' : 'never'}
+            camera={{ position: [0, 0, 4.2], fov: 42 }}
+            dpr={[1, 2]}
+            gl={{ antialias: true, alpha: false, powerPreference: 'high-performance' }}
+            onCreated={({ gl }) => {
+              gl.outputColorSpace = THREE.SRGBColorSpace
+              gl.toneMapping = THREE.ACESFilmicToneMapping
+              gl.toneMappingExposure = 1.05
+            }}
+          >
+            <color attach="background" args={['#04070c']} />
+            <ambientLight intensity={1.05} />
+            <hemisphereLight color="#b8c8e8" groundColor="#141820" intensity={0.55} />
+            <directionalLight position={[2, 1.6, 2.2]} intensity={1.05} />
+            <directionalLight position={[-2, -1, -1.6]} intensity={0.45} />
+            <Stars radius={22} depth={12} count={1300} factor={2} saturation={0.85} fade speed={0.2} />
+            <Suspense fallback={null}>
+              <PreviewEntityNode entity={entity} />
+            </Suspense>
+            <OrbitControls enablePan={false} minDistance={1.8} maxDistance={9} autoRotate autoRotateSpeed={0.9} />
+          </Canvas>
+        </ErrorBoundary>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-[11px]">

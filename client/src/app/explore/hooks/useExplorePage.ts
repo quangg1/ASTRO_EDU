@@ -85,7 +85,6 @@ export function useExplorePage() {
     activeResolved,
     activeOrbitEntity,
     activeContentRow,
-    catalogByGroup: catalog.catalogByGroup,
   }
 }
 

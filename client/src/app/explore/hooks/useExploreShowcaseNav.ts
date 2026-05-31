@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { planetsData } from '@/lib/solarSystemData'
-import { NASA_SHOWCASE_ITEMS } from '@/lib/showcaseEntities'
+import { getNasaCatalogItemById } from '@/lib/showcaseEntities'
 import { resolvePlanetAccent } from '@/features/content3d/showcase/public'
 import { trackLearningPathBehavior } from '@/features/learning-path/public'
 import type { ShowcaseCameraSpherical } from '@/components/3d/showcase/ShowcaseCameraManager'
@@ -62,7 +62,7 @@ export function useExploreShowcaseNav({
   }, [planetHistoryOpen, planetBeatAccent, selectedSolarPlanetIndex, activeResolved?.linkedPlanetName])
 
   const syncSelectedPlanetFromItem = useCallback((entityId: string) => {
-    const item = NASA_SHOWCASE_ITEMS.find((x) => x.id === entityId)
+    const item = getNasaCatalogItemById(entityId)
     const planetName = item?.linkedPlanetName
     if (!planetName) return
     const idx = planetsData.findIndex((p) => p.name === planetName)
@@ -110,8 +110,7 @@ export function useExploreShowcaseNav({
   useEffect(() => {
     const entityParam = searchParams.get('entity')?.trim()
     if (!entityParam) return
-    const exists = NASA_SHOWCASE_ITEMS.some((item) => item.id === entityParam)
-    if (exists) {
+    if (getNasaCatalogItemById(entityParam)) {
       setShowcaseActiveItemId(entityParam)
       syncSelectedPlanetFromItem(entityParam)
     }
@@ -127,7 +126,7 @@ export function useExploreShowcaseNav({
     next.set('mode', 'showcase')
     if (showcaseActiveItemId) {
       next.set('entity', showcaseActiveItemId)
-      const item = NASA_SHOWCASE_ITEMS.find((x) => x.id === showcaseActiveItemId)
+      const item = getNasaCatalogItemById(showcaseActiveItemId)
       if (item?.group) next.set('group', item.group)
       if (item?.linkedPlanetName) next.set('target', item.linkedPlanetName.toLowerCase())
     }

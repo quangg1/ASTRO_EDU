@@ -25,7 +25,8 @@ type Props = Pick<
   | 'openPlanetHistory'
   | 'showcaseMenuOpen'
   | 'setShowcaseMenuOpen'
-  | 'catalogByGroup'
+  | 'resolvedCatalog'
+  | 'showcaseContent'
   | 'handleShowcaseEntityClicked'
   | 'syncSelectedPlanetFromItem'
   | 'activeOrbitEntity'
@@ -56,7 +57,8 @@ export function ExploreShowcaseOverlay(props: Props) {
     openPlanetHistory,
     showcaseMenuOpen,
     setShowcaseMenuOpen,
-    catalogByGroup,
+    resolvedCatalog,
+    showcaseContent,
     handleShowcaseEntityClicked,
     syncSelectedPlanetFromItem,
     activeOrbitEntity,
@@ -105,7 +107,11 @@ export function ExploreShowcaseOverlay(props: Props) {
 
   return (
     <>
-      <div className="fixed top-14 left-0 right-0 z-[22] border-b border-white/10 bg-black/35 backdrop-blur-sm">
+      <div
+        className={`fixed top-14 left-0 right-0 border-b border-white/10 bg-black/35 backdrop-blur-sm pointer-events-auto ${
+          showcaseMenuOpen ? 'z-[40]' : 'z-[22]'
+        }`}
+      >
         <div className="mx-auto max-w-[1400px] px-4 py-2 flex items-center justify-end text-[11px]">
           <div className="flex items-center gap-2">
             {user ? (
@@ -120,14 +126,14 @@ export function ExploreShowcaseOverlay(props: Props) {
             ) : null}
             <button
               type="button"
-              onClick={() => setShowcaseMenuOpen((v) => !v)}
+              onClick={() => setShowcaseMenuOpen((open) => !open)}
               className={`rounded border px-2 py-1 text-[10px] uppercase tracking-wider ${
                 showcaseMenuOpen
                   ? 'border-cyan-300/45 bg-cyan-500/20 text-cyan-100'
                   : 'border-white/15 text-slate-300 hover:bg-white/10'
               }`}
             >
-              {showcaseMenuOpen ? 'Close' : 'Menu'}
+              {showcaseMenuOpen ? 'Đóng' : 'Danh mục'}
             </button>
           </div>
         </div>
@@ -135,10 +141,9 @@ export function ExploreShowcaseOverlay(props: Props) {
 
       <ExploreShowcaseMenu
         open={showcaseMenuOpen}
-        planetsMoons={catalogByGroup.planetsMoons}
-        dwarfPlanets={catalogByGroup.dwarfPlanets}
-        comets={catalogByGroup.comets}
-        spacecraft={catalogByGroup.spacecraft}
+        activeEntityId={showcaseActiveItemId}
+        resolvedCatalog={resolvedCatalog}
+        showcaseContent={showcaseContent}
         onSelect={onMenuSelect}
         onClose={() => setShowcaseMenuOpen(false)}
       />

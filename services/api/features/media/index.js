@@ -15,7 +15,7 @@ if (!fs.existsSync(UPLOAD_DIR)) {
 }
 
 const fileFilter = (_req, file, cb) => {
-  const allowed = /\.(jpg|jpeg|png|gif|webp|svg|mp4|webm|pdf|glb|gltf|lottie|json)$/i;
+  const allowed = /\.(jpg|jpeg|png|gif|webp|svg|mp4|webm|pdf|glb|gltf|bin|lottie|json)$/i;
   cb(null, allowed.test(path.extname(file.originalname)));
 };
 

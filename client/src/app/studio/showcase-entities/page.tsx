@@ -642,11 +642,11 @@ function StudioShowcaseEntitiesPage() {
                 <div className="border-t border-ds-border pt-4 space-y-2">
                   <p className="text-xs font-medium text-slate-300 uppercase tracking-wide">Model 3D</p>
                   <ShowcaseMediaUrlField
-                    label="glTF / glB (tuỳ chọn)"
-                    description="Khi có URL — runtime dùng model thay vì sphere + maps. Ghi đè modelPath tĩnh trong catalog."
+                    label="glB (tuỳ chọn)"
+                    description="Một file .glb tự chứa mesh + texture. URL tự điền sau upload (S3: …/model.glb). Nhớ bấm Lưu."
                     value={selected.modelUrl}
                     onChange={(url) => patchSelected({ modelUrl: url })}
-                    accept=".glb,.gltf,model/gltf-binary,model/gltf+json"
+                    accept=".glb,model/gltf-binary"
                     uploadContext={showcaseUploadContext(selected.entityId, 'model')}
                   />
                 </div>

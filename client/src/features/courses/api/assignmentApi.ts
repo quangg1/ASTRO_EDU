@@ -1,8 +1,7 @@
 import { getToken } from '@/features/auth/public'
-import { getApiPathBase, getMediaBase } from '@/lib/apiConfig'
+import { getApiPathBase, getUploadBase } from '@/lib/apiConfig'
 
 const BASE = getApiPathBase()
-const MEDIA = getMediaBase()
 
 function authHeaders(json = true): HeadersInit {
   const token = getToken()
@@ -34,7 +33,7 @@ export async function uploadAssignmentStagingFile(
   form.append('purpose', 'assignment-staging')
   form.append('entityId', submissionId)
   form.append('variant', variant)
-  const res = await fetch(`${MEDIA}/upload/assignment-staging`, {
+  const res = await fetch(`${getUploadBase()}/upload/assignment-staging`, {
     method: 'POST',
     headers: authHeaders(false),
     body: form,

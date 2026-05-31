@@ -184,22 +184,25 @@ export function getEarthHistoryApiPathBase(): string {
   return getApiPathBase()
 }
 
-export function getMediaBase(): string {
-  const base = resolveUnifiedBase()
-  if (base) {
-    if (process.env.NODE_ENV === 'development' && isSameBrowserOriginAs(base)) {
-      return ''
-    }
-    const ssrRedirect = resolveMisconfiguredUnifiedBaseForSSR()
-    if (ssrRedirect) return ssrRedirect
-    return base
+/** Host gốc unified API (không `/api`) — POST /upload, GET /files. Khác `NEXT_PUBLIC_MEDIA_CDN` (đọc file từ S3). */
+export function getUploadBase(): string {
+  if (process.env.NODE_ENV === 'development' && isBrowser()) {
+    const proxy = devProxyApiOrigin()
+    if (proxy) return ''
   }
-  const legacy = trimEndSlash(readEnv('NEXT_PUBLIC_MEDIA_URL'))
-  if (legacy) return legacy
-  if (process.env.NODE_ENV === 'development' && isBrowser()) return ''
-  const proxy = devProxyApiOrigin()
-  if (proxy) return proxy
-  missingApiBaseError()
+
+  try {
+    const apiPath = getApiPathBase()
+    if (!apiPath) return ''
+    return apiPath.replace(/\/api\/?$/i, '')
+  } catch {
+    const proxy = devProxyApiOrigin()
+    return proxy || ''
+  }
+}
+
+export function getMediaBase(): string {
+  return getUploadBase()
 }
 
 export function getMediaCdnBase(): string {

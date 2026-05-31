@@ -105,17 +105,7 @@ export function useExploreShowcaseCatalog(planetHistoryEntityId: string | null) 
     if (!planetHistoryEntityId) return 'Deep History'
     const cat = getNasaCatalogItemById(planetHistoryEntityId)
     return cat?.name || planetHistoryEntityId
-  }, [planetHistoryEntityId])
-
-  const catalogByGroup = useMemo(
-    () => ({
-      planetsMoons: resolvedCatalog.filter((i) => i.group === 'planets_moons'),
-      dwarfPlanets: resolvedCatalog.filter((i) => i.group === 'dwarf_asteroids'),
-      comets: resolvedCatalog.filter((i) => i.group === 'comets'),
-      spacecraft: resolvedCatalog.filter((i) => i.group === 'spacecraft'),
-    }),
-    [resolvedCatalog],
-  )
+  }, [planetHistoryEntityId, showcaseCatalogGen])
 
   return {
     showcaseContent,
@@ -124,6 +114,5 @@ export function useExploreShowcaseCatalog(planetHistoryEntityId: string | null) 
     mergedOrbitEntities,
     planetGlobeEntity,
     planetHistoryLabel,
-    catalogByGroup,
   }
 }
