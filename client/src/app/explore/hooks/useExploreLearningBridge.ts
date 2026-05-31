@@ -1,9 +1,9 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { fetchExploreContextualQuiz } from '@/features/content3d/showcase/api/exploreContextualQuizApi'
 import {
   buildExploreContextualQuiz,
+  fetchExploreContextualQuiz,
   getShowcaseMuseumLabelVi,
   guessEntityRarity,
   loadBridgeVisitedEntityMap,
