@@ -6,9 +6,11 @@ import { useRouter } from 'next/navigation'
 import { useAuthStore } from '@/features/auth/public'
 import { canAccessAdmin, canAccessAdminPath, hasAdminScope, isFullAdmin } from '@/lib/roles'
 import {
+  deleteUserPermanently,
   fetchAdminUsers,
-  updateUserRole,
   updateUserAdminScopes,
+  updateUserRole,
+  updateUserStatus,
   type AdminUser,
   type UserRole,
 } from '@/features/admin/public'
@@ -35,6 +37,7 @@ export default function AdminUsersPage() {
   const [updatingId, setUpdatingId] = useState<string | null>(null)
   const [scopeEditorId, setScopeEditorId] = useState<string | null>(null)
   const [draftScopes, setDraftScopes] = useState<string[]>([])
+  const [feedback, setFeedback] = useState<{ kind: 'success' | 'error'; text: string } | null>(null)
 
   useEffect(() => {
     if (checked && !user) router.replace('/login?redirect=/admin/users')
@@ -82,9 +85,67 @@ export default function AdminUsersPage() {
     setUpdatingId(null)
   }
 
+  const handleStatusChange = async (u: AdminUser, nextStatus: 'active' | 'deactivated') => {
+    if (u.accountStatus === nextStatus || u.id === user?.id) return
+    const reason =
+      nextStatus === 'deactivated'
+        ? window.prompt('Lý do ngừng hoạt động tài khoản này:', u.deactivationReason || 'Ngừng hoạt động từ admin') || ''
+        : ''
+    setUpdatingId(u.id)
+    setFeedback(null)
+    const res = await updateUserStatus(u.id, nextStatus, reason)
+    setUpdatingId(null)
+    if (res.success && res.user) {
+      setUsers((prev) => prev.map((x) => (x.id === u.id ? res.user! : x)))
+      setFeedback({ kind: 'success', text: nextStatus === 'deactivated' ? 'Đã ngừng hoạt động tài khoản.' : 'Đã khôi phục tài khoản.' })
+    } else {
+      setFeedback({ kind: 'error', text: res.error || 'Cập nhật trạng thái thất bại.' })
+    }
+  }
+
+  const handleDeleteUser = async (u: AdminUser) => {
+    if (u.id === user?.id) return
+    if (!u.email) {
+      setFeedback({ kind: 'error', text: 'Tài khoản không có email — không thể xóa (cần gửi thông báo trước).' })
+      return
+    }
+    const reason =
+      window.prompt(
+        'Lý do xóa vĩnh viễn (gửi cho người dùng qua email, tối thiểu 10 ký tự):',
+        u.deactivationReason || '',
+      ) || ''
+    if (!reason.trim() || reason.trim().length < 10) {
+      setFeedback({ kind: 'error', text: 'Cần nhập lý do ít nhất 10 ký tự.' })
+      return
+    }
+    const ok = window.confirm(
+      `XÓA VĨNH VIỄN «${u.email}»?\n\nEmail thông báo (kèm lý do) sẽ gửi trước. Không thể hoàn tác.`,
+    )
+    if (!ok) return
+    const confirmEmail = window.prompt(`Nhập lại email để xác nhận:\n${u.email}`, '')
+    if (!confirmEmail?.trim()) return
+    setUpdatingId(u.id)
+    setFeedback(null)
+    const res = await deleteUserPermanently(u.id, confirmEmail.trim(), reason.trim())
+    setUpdatingId(null)
+    if (res.success) {
+      setUsers((prev) => prev.filter((x) => x.id !== u.id))
+      setTotal((prev) => Math.max(0, prev - 1))
+      setFeedback({ kind: 'success', text: res.message || 'Đã xóa tài khoản vĩnh viễn.' })
+    } else {
+      setFeedback({ kind: 'error', text: res.error || 'Xóa tài khoản thất bại.' })
+    }
+  }
+
   return (
     <AdminGate checked={checked} allowed={Boolean(user && canAccessAdminPath(user, '/admin/users'))}>
-      <PageHeader title="Người dùng" description="Tra cứu, đổi vai trò và quản lý tài khoản." />
+      <PageHeader
+        title="Người dùng"
+        description="Tra cứu, đổi vai trò, ngừng hoạt động / xóa tài khoản. Thu hồi ghi danh & gem: mở chi tiết từng user."
+      />
+      {feedback ? (
+        <p className={`text-sm mb-4 ${feedback.kind === 'success' ? 'text-emerald-300' : 'text-red-300'}`}>{feedback.text}</p>
+      ) : null}
       <div className="flex flex-wrap gap-2 mb-4">
         <input
           value={q}
@@ -115,6 +176,7 @@ export default function AdminUsersPage() {
                   <th className="px-4 py-3">Vai trò</th>
                   <th className="px-4 py-3">Trạng thái</th>
                   <th className="px-4 py-3">Phạm vi admin</th>
+                  <th className="px-4 py-3">Thao tác</th>
                   <th className="px-4 py-3">Chi tiết</th>
                 </tr>
               </thead>
@@ -182,9 +244,36 @@ export default function AdminUsersPage() {
                       )}
                     </td>
                     <td className="px-4 py-3">
+                      <div className="flex flex-col gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => void handleStatusChange(u, u.accountStatus === 'active' ? 'deactivated' : 'active')}
+                          disabled={updatingId === u.id || u.id === user?.id}
+                          className={`text-xs rounded-lg px-2 py-1.5 border disabled:opacity-50 w-fit ${
+                            u.accountStatus === 'active'
+                              ? 'border-red-500/30 bg-red-500/10 text-red-200'
+                              : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-200'
+                          }`}
+                        >
+                          {u.accountStatus === 'active' ? 'Ngừng hoạt động' : 'Khôi phục'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => void handleDeleteUser(u)}
+                          disabled={updatingId === u.id || u.id === user?.id}
+                          className="text-xs rounded-lg px-2 py-1.5 border border-red-600/50 bg-red-950/40 text-red-300 hover:bg-red-900/50 disabled:opacity-50 w-fit"
+                        >
+                          Xóa vĩnh viễn
+                        </button>
+                        {u.deactivationReason ? (
+                          <p className="text-[11px] text-gray-500 max-w-[220px]">{u.deactivationReason}</p>
+                        ) : null}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
                       {hasAdminScope(user, 'users') ? (
                         <Link href={`/admin/users/${u.id}`} className="text-cyan-400 hover:underline text-xs">
-                          Xem →
+                          Ghi danh / gem →
                         </Link>
                       ) : (
                         '—'
