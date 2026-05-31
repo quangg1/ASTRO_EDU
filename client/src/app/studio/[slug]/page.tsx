@@ -142,7 +142,7 @@ export default function StudioEditorPage() {
   }, [checked, user?.id, slug, router])
 
   useEffect(() => {
-    if (!user?.id || user.role !== 'admin') return
+    if (!user?.id || user?.role !== 'admin') return
     let cancelled = false
     fetchTeachersForCourseEditor()
       .then((opts) => { if (!cancelled) setTeacherOptions(opts) })
@@ -280,7 +280,7 @@ export default function StudioEditorPage() {
       distributionStrategy: resolveDistributionStrategy(course),
       modules: course.modules.map((m, i) => ({ ...m, order: i })),
       lessons: course.lessons.map((l, i) => ({ ...l, order: i })),
-      ...(user.role === 'admin' ? { teacherId: course.teacherId ?? null } : {}),
+      ...(user?.role === 'admin' ? { teacherId: course.teacherId ?? null } : {}),
     })
     setSaving(false); setMsg(r.success ? 'Saved!' : r.error || 'Failed')
     if (r.success && course) {
@@ -592,7 +592,7 @@ export default function StudioEditorPage() {
             onChange={(patch) => uc((p) => ({ ...p, ...patch }))}
           />
 
-          {user.role === 'admin' && (
+          {user?.role === 'admin' && (
             <div className="rounded-2xl border border-ds-border bg-ds-overlay backdrop-blur p-4 space-y-3">
               <p className="text-xs font-semibold text-gray-300">Giảng viên hiển thị (xác minh)</p>
               <p className="text-[10px] text-ds-subtle leading-relaxed">
