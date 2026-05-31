@@ -4,7 +4,7 @@ import { Suspense, useEffect, useRef, useState, useMemo } from 'react'
 import dynamic from 'next/dynamic'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { Eye, Grid2X2, List, Search, Sparkles } from 'lucide-react'
+import { Eye, Grid2X2, List, Search } from 'lucide-react'
 import { useAuthStore } from '@/features/auth/public'
 import {
   fetchForum,
@@ -30,6 +30,8 @@ const RichTextEditor = dynamic(() => import('@/components/studio/RichTextEditor'
 })
 import { NewsCardLink } from '@/components/community/NewsCardLink'
 import { NewsHeroSlider } from '@/components/community/NewsHeroSlider'
+import { DiscussionPostList } from '@/components/community/discussion/DiscussionPostList'
+import { PostSortBar } from '@/components/community/shared/PostSortBar'
 
 function formatDate(date?: string): string {
   if (!date) return ''
@@ -843,20 +845,6 @@ function ForumPageContent() {
             </div>
           )}
         </div>
-
-        {/* FAB */}
-        <button
-          type="button"
-          className="fixed bottom-6 right-6 z-50 flex items-center justify-center w-14 h-14 rounded-full transition-all hover:scale-110"
-          style={{
-            background: 'radial-gradient(circle at 40% 40%, #7ee7ff 0%, #4dd2ff 100%)',
-            boxShadow: '0 0 0 2px rgba(126,231,255,0.3), 0 0 32px rgba(126,231,255,0.55)',
-            color: '#03060f',
-          }}
-          aria-label="Tạo bài mới"
-        >
-          <Sparkles className="w-6 h-6" strokeWidth={2} />
-        </button>
       </div>
     )
   }
@@ -895,31 +883,14 @@ function ForumPageContent() {
                 )}
               </div>
 
-              <div className="mt-5 flex flex-wrap items-center gap-2 border-t border-white/10 pt-4">
-                <span className="text-xs uppercase tracking-wide text-gray-500">Sắp xếp:</span>
-                {(
-                  [
-                      { value: 'newest' as const, label: 'Mới nhất' },
-                      { value: 'hot' as const, label: 'Nổi bật' },
-                      { value: 'top' as const, label: 'Top vote' },
-                    ]
-                ).map((option) => (
-                  <button
-                    key={option.value}
-                    type="button"
-                    onClick={() => {
-                      setSort(option.value)
-                      setPage(1)
-                    }}
-                    className={`rounded-lg px-3 py-1.5 text-sm transition-colors ${
-                      sort === option.value
-                        ? 'bg-cyan-500/25 text-cyan-200 border border-cyan-300/40'
-                        : 'bg-white/5 text-gray-300 border border-white/10 hover:bg-white/10'
-                    }`}
-                  >
-                    {option.label}
-                  </button>
-                ))}
+              <div className="mt-5 border-t border-white/10 pt-4">
+                <PostSortBar
+                  sort={sort}
+                  onSortChange={(s) => {
+                    setSort(s)
+                    setPage(1)
+                  }}
+                />
               </div>
             </div>
 
@@ -1011,39 +982,17 @@ function ForumPageContent() {
                   <div className="h-24 rounded-xl border border-white/10 bg-white/5 animate-pulse" />
               </div>
             ) : (
-              <div className="space-y-3">
-                {displayPosts.map((p) => (
-                  <Link
-                    key={p._id}
-                    href={`/community/post/${p._id}`}
-                    className="block rounded-xl border border-white/10 bg-white/5 p-4 hover:bg-white/10 hover:border-cyan-300/20 transition-colors"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <h3 className="font-medium text-white leading-snug">{p.title}</h3>
-                      {p.isPinned && (
-                        <span className="shrink-0 rounded-full bg-amber-500/20 px-2 py-0.5 text-[11px] text-amber-300 border border-amber-300/30">
-                          Ghim
-                        </span>
-                      )}
-                    </div>
-                    {p.content && (
-                      <p className="text-sm text-gray-400 mt-1 line-clamp-2">{p.content}</p>
-                    )}
-                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-3 text-xs text-gray-500">
-                      <span>{p.authorName}</span>
-                      <span>{p.commentCount} bình luận</span>
-                      <span>{p.voteCount} vote</span>
-                      {p.sourceName && <span>{p.sourceName}</span>}
-                      <span>{formatDate(p.createdAt)}</span>
-                    </div>
-                  </Link>
-                ))}
-                {!posts.length && (
-                  <div className="rounded-xl border border-dashed border-white/20 bg-white/[0.03] p-8 text-center text-gray-400">
-                    Chưa có bài viết nào trong chuyên mục này.
-                  </div>
-                )}
-              </div>
+              <DiscussionPostList
+                posts={displayPosts}
+                user={user}
+                onVoteChange={(postId, voteCount, myVote) => {
+                  setPosts((prev) =>
+                    prev.map((p) =>
+                      p._id === postId ? { ...p, voteCount, myVote: myVote ?? undefined } : p,
+                    ),
+                  )
+                }}
+              />
             )}
 
             {total > 20 && (

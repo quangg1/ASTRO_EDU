@@ -14,6 +14,8 @@ const courseLearningEventSchema = new mongoose.Schema(
         'course_lesson_opened',
         'course_lesson_dwell',
         'course_lesson_completed',
+        'course_lesson_favorited',
+        'course_lesson_unfavorited',
         'course_quiz_entered',
         'course_assignment_viewed',
       ],

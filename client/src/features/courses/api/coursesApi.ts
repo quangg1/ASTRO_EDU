@@ -2,6 +2,7 @@ import { parseCourseEditorListResponse } from '@galaxies/contracts'
 import { getToken } from '@/features/auth/public'
 import { getApiPathBase, getUploadBase } from '@/lib/apiConfig'
 import type { QuizQuestion } from '@/shared/types/quizQuestion'
+import type { VideoTranscript } from '@/features/courses/lib/videoTranscript'
 
 export type { QuizQuestion }
 
@@ -44,6 +45,7 @@ export interface LessonSection {
   sliderLabel?: string
   sliderUnit?: string
   notebookUrl?: string | null
+  videoTranscript?: VideoTranscript | null
 }
 
 export interface ResourceLink {
@@ -148,6 +150,8 @@ export interface Course {
   published?: boolean
   /** true when GV/admin xem khóa chưa publish */
   editorPreview?: boolean
+  /** Server: GV/admin — bypass paywall + full quiz for preview */
+  staffAccess?: boolean
   /** Server-computed: isPaid && price > 0 */
   requiresPayment?: boolean
   modules?: CourseModule[]
@@ -260,10 +264,28 @@ export async function fetchCoursesForEditor(): Promise<Course[]> {
   }
 }
 
+export type CourseEditorTeacherOption = {
+  id: string
+  email: string | null
+  displayName: string
+  fullName: string
+  headline: string
+}
+
+/** Admin Studio — chọn giảng viên hiển thị trên trang khóa học */
+export async function fetchTeachersForCourseEditor(): Promise<CourseEditorTeacherOption[]> {
+  const res = await fetch(`${COURSES_BASE}/courses/editor/teachers`, { headers: authHeaders() })
+  const data = await res.json()
+  if (data.success && Array.isArray(data.data)) return data.data
+  return []
+}
+
 export async function fetchCourse(slug: string): Promise<Course | null> {
   const res = await fetch(`${COURSES_BASE}/courses/${encodeURIComponent(slug)}`, {
     headers: authHeaders(),
+    cache: 'no-store',
   })
+  if (!res.ok) return null
   const data = await res.json()
   if (data.success && data.data) return data.data
   return null
@@ -380,12 +402,18 @@ export async function uploadMedia(
 }
 
 export async function fetchCourseForEditor(slug: string): Promise<CourseEditorPayload | null> {
-  const res = await fetch(`${COURSES_BASE}/courses/${encodeURIComponent(slug)}/editor`, {
-    headers: authHeaders(),
-  })
-  const data = await res.json()
-  if (data.success && data.data) return data.data as CourseEditorPayload
-  return null
+  try {
+    const res = await fetch(`${COURSES_BASE}/courses/${encodeURIComponent(slug)}/editor`, {
+      headers: authHeaders(),
+      cache: 'no-store',
+    })
+    if (!res.ok || res.status === 304) return null
+    const data = await res.json()
+    if (data.success && data.data) return data.data as CourseEditorPayload
+    return null
+  } catch {
+    return null
+  }
 }
 
 export async function saveCourseFromEditor(

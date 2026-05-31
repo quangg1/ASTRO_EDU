@@ -175,7 +175,7 @@ function newPanelBlock(type: 'text' | 'image' | 'chart'): ShowcasePanelBlockDTO 
     title: '',
     body: '',
     imageUrl: '',
-    chartKind: '',
+    chartKind: type === 'chart' ? 'bar' : '',
     points: type === 'chart' ? [{ label: 'Metric', value: 1 }] : [],
     style: {
       variant: 'glass',
@@ -972,18 +972,153 @@ function StudioShowcaseEntitiesPage() {
                           placeholder="Title"
                           className="studio-field mt-1"
                         />
-                        <textarea
-                          value={b.body || ''}
-                          onChange={(e) =>
-                            patchPanelConfig((cfg) => ({
-                              ...cfg,
-                              [key]: (cfg[key] || []).map((x) => (x.id === b.id ? { ...x, body: e.target.value } : x)),
-                            }))
-                          }
-                          rows={2}
-                          placeholder="Body"
-                          className="studio-field mt-1"
-                        />
+                        {b.type === 'chart' ? (
+                          <div className="rounded-md border border-cyan-500/25 bg-cyan-950/20 p-3 space-y-2">
+                            <p className="text-[11px] text-cyan-100/90 leading-relaxed">
+                              Chart hiển thị <strong>thanh bar</strong> từ bảng <em>Nhãn + Giá trị</em> — không gõ số liệu vào ô Body.
+                            </p>
+                            <label className="block text-xs text-ds-muted">
+                              Loại biểu đồ
+                              <select
+                                value={b.chartKind || 'bar'}
+                                onChange={(e) =>
+                                  patchPanelConfig((cfg) => ({
+                                    ...cfg,
+                                    [key]: (cfg[key] || []).map((x) =>
+                                      x.id === b.id ? { ...x, chartKind: e.target.value } : x,
+                                    ),
+                                  }))
+                                }
+                                className="studio-field mt-1"
+                              >
+                                <option value="bar">bar (thanh ngang)</option>
+                              </select>
+                            </label>
+                            <div className="space-y-2">
+                              <div className="flex items-center justify-between">
+                                <p className="text-[11px] uppercase tracking-wide text-slate-400">Điểm dữ liệu</p>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    patchPanelConfig((cfg) => ({
+                                      ...cfg,
+                                      [key]: (cfg[key] || []).map((x) =>
+                                        x.id === b.id
+                                          ? {
+                                              ...x,
+                                              points: [...(x.points || []), { label: 'Chỉ số mới', value: 0 }],
+                                            }
+                                          : x,
+                                      ),
+                                    }))
+                                  }
+                                  className="rounded border border-ds-border-strong px-2 py-0.5 text-[10px] text-slate-200"
+                                >
+                                  + Thêm dòng
+                                </button>
+                              </div>
+                              {(b.points || []).map((p, pointIdx) => (
+                                <div key={`${b.id}-pt-${pointIdx}`} className="grid grid-cols-[1fr_120px_auto] gap-2 items-end">
+                                  <label className="block text-[11px] text-ds-muted">
+                                    Nhãn
+                                    <input
+                                      value={p.label}
+                                      onChange={(e) =>
+                                        patchPanelConfig((cfg) => ({
+                                          ...cfg,
+                                          [key]: (cfg[key] || []).map((x) => {
+                                            if (x.id !== b.id) return x
+                                            const points = [...(x.points || [])]
+                                            points[pointIdx] = { ...points[pointIdx], label: e.target.value }
+                                            return { ...x, points }
+                                          }),
+                                        }))
+                                      }
+                                      placeholder="vd: Bán kính (km)"
+                                      className="studio-field mt-1"
+                                    />
+                                  </label>
+                                  <label className="block text-[11px] text-ds-muted">
+                                    Giá trị
+                                    <input
+                                      type="number"
+                                      step="any"
+                                      value={Number.isFinite(p.value) ? p.value : ''}
+                                      onChange={(e) =>
+                                        patchPanelConfig((cfg) => ({
+                                          ...cfg,
+                                          [key]: (cfg[key] || []).map((x) => {
+                                            if (x.id !== b.id) return x
+                                            const points = [...(x.points || [])]
+                                            points[pointIdx] = {
+                                              ...points[pointIdx],
+                                              value: Number(e.target.value),
+                                            }
+                                            return { ...x, points }
+                                          }),
+                                        }))
+                                      }
+                                      placeholder="6371"
+                                      className="studio-field mt-1"
+                                    />
+                                  </label>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      patchPanelConfig((cfg) => ({
+                                        ...cfg,
+                                        [key]: (cfg[key] || []).map((x) =>
+                                          x.id === b.id
+                                            ? {
+                                                ...x,
+                                                points: (x.points || []).filter((_, i) => i !== pointIdx),
+                                              }
+                                            : x,
+                                        ),
+                                      }))
+                                    }
+                                    className="rounded border border-rose-400/30 px-2 py-1.5 text-[10px] text-rose-300"
+                                  >
+                                    Xóa
+                                  </button>
+                                </div>
+                              ))}
+                              {(b.points || []).length === 0 ? (
+                                <p className="text-[11px] text-amber-200/80">Chưa có điểm nào — bấm «+ Thêm dòng».</p>
+                              ) : null}
+                            </div>
+                            <label className="block text-xs text-ds-muted">
+                              Ghi chú dưới chart (tuỳ chọn)
+                              <textarea
+                                value={b.body || ''}
+                                onChange={(e) =>
+                                  patchPanelConfig((cfg) => ({
+                                    ...cfg,
+                                    [key]: (cfg[key] || []).map((x) =>
+                                      x.id === b.id ? { ...x, body: e.target.value } : x,
+                                    ),
+                                  }))
+                                }
+                                rows={2}
+                                placeholder="Nguồn số liệu, footnote…"
+                                className="studio-field mt-1"
+                              />
+                            </label>
+                          </div>
+                        ) : (
+                          <textarea
+                            value={b.body || ''}
+                            onChange={(e) =>
+                              patchPanelConfig((cfg) => ({
+                                ...cfg,
+                                [key]: (cfg[key] || []).map((x) => (x.id === b.id ? { ...x, body: e.target.value } : x)),
+                              }))
+                            }
+                            rows={2}
+                            placeholder="Body"
+                            className="studio-field mt-1"
+                          />
+                        )}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                           <label className="block text-xs text-ds-muted">
                             Variant

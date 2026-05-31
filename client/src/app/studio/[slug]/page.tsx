@@ -6,8 +6,10 @@ import { useParams, useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import {
   fetchCourseForEditor,
+  fetchTeachersForCourseEditor,
   saveCourseFromEditor,
   uploadMedia,
+  type CourseEditorTeacherOption,
   type UploadMediaContext,
   type Course,
   type CourseEditorPayload,
@@ -122,6 +124,7 @@ export default function StudioEditorPage() {
   const { user, checked } = useAuthStore()
   const [course, setCourse] = useState<EditorCourse | null>(null)
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [si, setSi] = useState(0)
   const [msg, setMsg] = useState<string | null>(null)
@@ -131,7 +134,7 @@ export default function StudioEditorPage() {
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({})
   const [editingModId, setEditingModId] = useState<string | null>(null)
   const [materialsModId, setMaterialsModId] = useState<string | null>(null)
-  const editorLoadKeyRef = useRef('')
+  const [teacherOptions, setTeacherOptions] = useState<CourseEditorTeacherOption[]>([])
 
   useEffect(() => {
     if (checked && !user) router.replace(`/login?redirect=/studio/${slug}`)
@@ -139,25 +142,34 @@ export default function StudioEditorPage() {
   }, [checked, user?.id, slug, router])
 
   useEffect(() => {
+    if (!user?.id || user.role !== 'admin') return
+    let cancelled = false
+    fetchTeachersForCourseEditor()
+      .then((opts) => { if (!cancelled) setTeacherOptions(opts) })
+      .catch(() => { if (!cancelled) setTeacherOptions([]) })
+    return () => { cancelled = true }
+  }, [user?.id, user?.role])
+
+  useEffect(() => {
     if (!slug || !user?.id) return
-    const loadKey = `${slug}:${user.id}`
-    if (editorLoadKeyRef.current === loadKey) return
 
     const draft = loadStudioEditorDraft(slug)
     if (draft) {
-      editorLoadKeyRef.current = loadKey
       setCourse(normalizeEditorCourse(draft.course))
       setBaselineSnapshot(draft.baseline)
       setLoading(false)
       if (studioDraftIsDirty(draft)) return
     }
 
-    editorLoadKeyRef.current = loadKey
     let cancelled = false
     if (!draft) setLoading(true)
-    fetchCourseForEditor(slug).then((c) => {
-      if (cancelled || !c?.lessons) {
-        if (!cancelled) setLoading(false)
+    setLoadError(null)
+    fetchCourseForEditor(slug)
+      .then((c) => {
+      if (cancelled) return
+      if (!c?.lessons) {
+        setLoadError('Không tải được khóa học — kiểm tra slug, quyền sửa, hoặc thử reload trang.')
+        setLoading(false)
         return
       }
       const base = normalizeEditorCourse(c)
@@ -186,6 +198,11 @@ export default function StudioEditorPage() {
       saveStudioEditorDraft(slug, nextCourse, snap)
       setLoading(false)
     })
+      .catch(() => {
+        if (cancelled) return
+        setLoadError('Lỗi kết nối API khi tải khóa học.')
+        setLoading(false)
+      })
     return () => { cancelled = true }
   }, [slug, user?.id])
 
@@ -263,6 +280,7 @@ export default function StudioEditorPage() {
       distributionStrategy: resolveDistributionStrategy(course),
       modules: course.modules.map((m, i) => ({ ...m, order: i })),
       lessons: course.lessons.map((l, i) => ({ ...l, order: i })),
+      ...(user.role === 'admin' ? { teacherId: course.teacherId ?? null } : {}),
     })
     setSaving(false); setMsg(r.success ? 'Saved!' : r.error || 'Failed')
     if (r.success && course) {
@@ -283,9 +301,22 @@ export default function StudioEditorPage() {
     return () => window.removeEventListener('beforeunload', onBeforeUnload)
   }, [isDirty, saving])
 
-  if (!checked || !user) return <div className="min-h-screen bg-ds-base pt-24 text-center text-ds-subtle">Loading studio...</div>
-  if (loading && !course) return <div className="min-h-screen bg-ds-base pt-24 text-center text-ds-subtle">Loading studio...</div>
-  if (!course) return <div className="min-h-screen bg-ds-base pt-24 text-center text-ds-subtle">Course not found.</div>
+  if (!checked || !user) {
+    return <div className="min-h-screen bg-ds-base pt-24 text-center text-ds-subtle">Đang kiểm tra đăng nhập…</div>
+  }
+  if (loading && !course) {
+    return <div className="min-h-screen bg-ds-base pt-24 text-center text-ds-subtle">Đang tải khóa học…</div>
+  }
+  if (!course) {
+    return (
+      <div className="min-h-screen bg-ds-base pt-24 px-4 text-center">
+        <p className="text-ds-subtle">{loadError || 'Không tìm thấy khóa học.'}</p>
+        <Link href="/studio" className="inline-block mt-4 text-sm text-ds-accent hover:underline">
+          ← Về Studio
+        </Link>
+      </div>
+    )
+  }
 
   const uploadEntityId = courseUploadEntityId(course)
   const uploadErr = (message: string) => setMsg(message)
@@ -560,6 +591,37 @@ export default function StudioEditorPage() {
             }}
             onChange={(patch) => uc((p) => ({ ...p, ...patch }))}
           />
+
+          {user.role === 'admin' && (
+            <div className="rounded-2xl border border-ds-border bg-ds-overlay backdrop-blur p-4 space-y-3">
+              <p className="text-xs font-semibold text-gray-300">Giảng viên hiển thị (xác minh)</p>
+              <p className="text-[10px] text-ds-subtle leading-relaxed">
+                Khóa tạo bởi admin không tự gán giảng viên. Chọn người dạy để học viên thấy hồ sơ trên{' '}
+                <span className="text-ds-subtle">/courses/{course.slug}</span>.
+              </p>
+              <label className="text-xs text-ds-muted block">
+                Giảng viên
+                <select
+                  value={course.teacherId ?? ''}
+                  onChange={(e) => uc((p) => ({ ...p, teacherId: e.target.value || null }))}
+                  className="mt-1 studio-field"
+                >
+                  <option value="">— Chưa gán —</option>
+                  {teacherOptions.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.fullName || t.displayName}
+                      {t.headline ? ` · ${t.headline}` : ''}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              {teacherOptions.length === 0 && (
+                <p className="text-[10px] text-amber-300/90">
+                  Chưa có tài khoản giảng viên — tạo user role &quot;teacher&quot; trước khi gán.
+                </p>
+              )}
+            </div>
+          )}
 
           <div className="rounded-2xl border border-ds-border bg-ds-overlay backdrop-blur p-4 space-y-3">
             <p className="text-xs font-semibold text-gray-300">Trang khóa học công khai</p>

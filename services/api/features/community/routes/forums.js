@@ -9,6 +9,7 @@ const { buildForumPostFilter } = require('../lib/postListQuery');
 const { mergePostTags } = require('../lib/postTags');
 const { assertCohortForumAccess } = require('../lib/cohortForumGate');
 const { maybeRewardCommunityPost } = require('../services/communityGemService');
+const { mapMyVotes } = require('../services/voteService');
 
 const router = express.Router();
 
@@ -61,7 +62,15 @@ router.get('/:slug/posts', optionalAuth, async (req, res) => {
         : await Post.find(filter).sort(sortOpt).skip(skip).limit(limitNum).lean();
 
     const total = await Post.countDocuments(filter);
-    const data = await enrichPostsWithAuthors(posts);
+    let data = await enrichPostsWithAuthors(posts);
+    if (req.userId && data.length) {
+      const voteMap = await mapMyVotes(
+        req.userId,
+        'post',
+        data.map((p) => p._id),
+      );
+      data = data.map((p) => ({ ...p, myVote: voteMap[String(p._id)] ?? null }));
+    }
     res.json({ success: true, data, total, page: parseInt(page, 10), limit: limitNum });
   } catch (err) {
     console.error('List posts error:', err);

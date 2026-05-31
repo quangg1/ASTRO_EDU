@@ -49,6 +49,32 @@ async function getTeacherProfileByUserId(userId, { requirePublished = false } = 
   return formatPublicProfile(doc, user);
 }
 
+/** Hồ sơ công khai trên trang khóa học — fallback từ User nếu chưa có TeacherProfile đầy đủ. */
+async function resolveCourseTeacherPublic(userId, { requirePublished = true } = {}) {
+  if (!userId) return null;
+  const profile = await getTeacherProfileByUserId(userId, { requirePublished });
+  if (profile) return profile;
+
+  const user = await User.findById(userId).select('email displayName avatar role').lean();
+  if (!user || user.role !== 'teacher') return null;
+
+  return {
+    userId: String(userId),
+    fullName: user.displayName?.trim() || user.email?.split('@')[0] || 'Giảng viên',
+    headline: '',
+    bio: '',
+    organization: '',
+    expertise: [],
+    education: '',
+    yearsExperience: null,
+    website: '',
+    linkedin: '',
+    avatarUrl: user.avatar || null,
+    email: user.email || null,
+    verified: false,
+  };
+}
+
 async function upsertTeacherProfileFromApplication(userId, payload) {
   const expertise = normalizeExpertise(payload.expertise);
   const set = {
@@ -139,6 +165,7 @@ async function updateMyTeacherProfile(userId, body) {
 
 module.exports = {
   getTeacherProfileByUserId,
+  resolveCourseTeacherPublic,
   upsertTeacherProfileFromApplication,
   getMyTeacherProfile,
   updateMyTeacherProfile,

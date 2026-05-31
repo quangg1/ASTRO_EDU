@@ -592,31 +592,6 @@ export default function GemPage() {
           </span>
         </div>
       </div>
-
-      {/* FAB */}
-      <button
-        aria-label="AI tutor"
-        style={{
-          position: 'fixed',
-          bottom: 28,
-          right: 28,
-          width: 52,
-          height: 52,
-          borderRadius: '50%',
-          background: 'linear-gradient(135deg, #f5a524 0%, #e8950f 100%)',
-          border: 'none',
-          cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          boxShadow: '0 0 24px rgba(245,165,36,0.5), 0 4px 20px rgba(0,0,0,0.4)',
-          zIndex: 50,
-        }}
-      >
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1a0e00" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-        </svg>
-      </button>
     </div>
   )
 }

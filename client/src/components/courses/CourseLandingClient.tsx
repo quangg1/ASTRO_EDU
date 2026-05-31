@@ -23,6 +23,7 @@ import { CommunityAskButton } from '@/components/community/learning/CommunityAsk
 import { CourseCohortsJoin } from '@/features/courses/cohort/CourseCohortsJoin'
 import { ModuleMaterialsList } from '@/features/courses/cohort/ModuleMaterialsList'
 import { CourseInstructorCard } from '@/components/courses/CourseInstructorCard'
+import { hasCourseLearnerAccess } from '@/features/courses/lib/courseLearnerAccess'
 
 function isOutlineEntry(l: Lesson | CourseLessonOutline): l is CourseLessonOutline {
   return !('content' in l)
@@ -160,7 +161,11 @@ export function CourseLandingClient({
     if (previewBootstrap || !slug) return
     let cancelled = false
     fetchCourse(slug).then((c) => {
-      if (!cancelled && c) setCourse(c)
+      if (cancelled || !c) return
+      setCourse((prev) => {
+        if (c.teacher || !prev?.teacher) return c
+        return { ...c, teacher: prev.teacher }
+      })
     })
     return () => {
       cancelled = true
@@ -216,7 +221,7 @@ export function CourseLandingClient({
     )
   }
 
-  const isEnrolled = course.enrollment != null
+  const hasLearnerAccess = hasCourseLearnerAccess(course)
   const catalogOpen = course.catalogEnabled !== false
 
   const firstLessonSlug = lessons.length ? [...lessons].sort((a, b) => a.order - b.order)[0]?.slug : null
@@ -280,7 +285,7 @@ export function CourseLandingClient({
           ← Danh sách khóa học
         </Link>
 
-        {!isEnrolled && isPaid && promoBanner && (
+        {!hasLearnerAccess && isPaid && promoBanner && (
           <CoursePromoBanner banner={promoBanner} checkoutHref={checkoutHref} />
         )}
 
@@ -321,15 +326,17 @@ export function CourseLandingClient({
             ) : null}
 
             <div className="mt-6 flex flex-wrap gap-3">
-              {isEnrolled && learnHref && (
+              {hasLearnerAccess && learnHref && (
                 <Link
                   href={learnHref}
                   className="inline-flex items-center justify-center px-5 py-2.5 rounded-xl bg-cyan-600 text-white text-sm font-medium hover:bg-cyan-500 transition-colors"
                 >
-                  Vào học
+                  {course.deliveryContext?.mode === 'editor' && !course.enrollment
+                    ? 'Vào học (giảng viên)'
+                    : 'Vào học'}
                 </Link>
               )}
-              {!isEnrolled && isPaid && catalogOpen && (
+              {!hasLearnerAccess && isPaid && catalogOpen && (
                 <button
                   type="button"
                   onClick={handleBuyNow}
@@ -338,7 +345,7 @@ export function CourseLandingClient({
                   Mua ngay · {priceLabel}
                 </button>
               )}
-              {!isEnrolled && learnHref && (
+              {!hasLearnerAccess && learnHref && (
                 <Link
                   href={learnHref}
                   className="inline-flex items-center justify-center px-5 py-2.5 rounded-xl border border-ds-border-strong text-gray-200 text-sm hover:bg-white/5 transition-colors"
@@ -365,7 +372,7 @@ export function CourseLandingClient({
                 Hỏi cộng đồng về khóa này
               </CommunityAskButton>
             </div>
-            {!isEnrolled && isPaid && (
+            {!hasLearnerAccess && isPaid && (
               <p className="mt-4 text-xs text-ds-subtle leading-relaxed">
                 Thanh toán trên trang checkout (demo thẻ — không trừ tiền thật). Gem chỉ dùng để giảm giá.
               </p>
@@ -373,7 +380,7 @@ export function CourseLandingClient({
           </div>
         </div>
 
-        {!isEnrolled && isPaid && catalogOpen && (
+        {!hasLearnerAccess && isPaid && catalogOpen && (
           <aside className="rounded-2xl border border-amber-500/25 bg-amber-500/5 p-5 mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
               <p className="text-sm font-semibold text-amber-100">Một lần mua — truy cập trọn khóa</p>
@@ -389,7 +396,7 @@ export function CourseLandingClient({
           </aside>
         )}
 
-        {!catalogOpen && !isEnrolled && (
+        {!catalogOpen && !hasLearnerAccess && (
           <p className="text-sm text-amber-200/90 mb-4 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3">
             Khóa theo kỳ — chọn lớp bên dưới và đăng ký trước ngày khai giảng. Mã lớp gửi qua email sau khi hoàn tất.
           </p>
@@ -400,7 +407,7 @@ export function CourseLandingClient({
           courseId={course.id}
           catalogPrice={course.price}
           catalogCurrency={course.currency}
-          catalogEnrolled={isEnrolled}
+          catalogEnrolled={hasLearnerAccess}
           catalogOpen={catalogOpen}
           cohortPlacedFlash={cohortPlacedFlash}
         />

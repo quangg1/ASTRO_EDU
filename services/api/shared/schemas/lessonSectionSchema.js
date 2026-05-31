@@ -47,6 +47,15 @@ const lessonSectionSchema = new mongoose.Schema(
     sliderLabel: { type: String, default: '' },
     sliderUnit: { type: String, default: '' },
     notebookUrl: { type: String, default: null },
+    videoTranscript: {
+      language: { type: String, default: 'vi' },
+      cues: [
+        {
+          startSeconds: { type: Number, default: 0 },
+          text: { type: String, default: '' },
+        },
+      ],
+    },
   },
   { _id: false },
 );

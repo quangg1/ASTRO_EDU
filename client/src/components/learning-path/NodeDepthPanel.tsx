@@ -19,6 +19,7 @@ import {
 } from '@/features/learning-path/public'
 import { useAuthStore } from '@/features/auth/public'
 import { suggestExploreTargetsForLesson } from '@/features/content3d/showcase/public'
+import { useSavedItems } from '@/features/saved/public'
 
 type Props = {
   module: LearningModule
@@ -67,6 +68,8 @@ export default function NodeDepthPanel({ module, node }: Props) {
   const [visited3D, setVisited3D] = useState<LessonVisited3DMap>({})
   const [hoveredLesson, setHoveredLesson] = useState<string | null>(null)
   const [hoveredTab, setHoveredTab] = useState<DepthLevel | null>(null)
+  const [favoritesOnly, setFavoritesOnly] = useState(false)
+  const { isLpLessonSaved, items: savedItems } = useSavedItems('learning-path')
 
   useEffect(() => {
     const refresh = () => {
@@ -98,9 +101,28 @@ export default function NodeDepthPanel({ module, node }: Props) {
   }, [depths, active])
 
   const lessons = node.depths[active] ?? []
+  const visibleLessons = favoritesOnly ? lessons.filter((l) => isLpLessonSaved(l.id)) : lessons
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+
+      <div className="flex flex-wrap items-center justify-between gap-2 px-0.5">
+        <button
+          type="button"
+          onClick={() => setFavoritesOnly((v) => !v)}
+          className="rounded-full border px-3 py-1 text-[11px] transition-colors"
+          style={{
+            borderColor: favoritesOnly ? 'rgba(244,114,182,0.45)' : 'rgba(255,255,255,0.1)',
+            background: favoritesOnly ? 'rgba(244,114,182,0.1)' : 'transparent',
+            color: favoritesOnly ? '#fecdd3' : '#9aa8c4',
+          }}
+        >
+          {favoritesOnly ? `♥ Yêu thích (${savedItems.length})` : '♡ Chỉ yêu thích'}
+        </button>
+        {favoritesOnly && visibleLessons.length === 0 ? (
+          <span className="text-[11px] text-ds-subtle">Chưa lưu bài nào ở cấp độ này</span>
+        ) : null}
+      </div>
 
       {/* ── Level tabs ── */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }} role="tablist">
@@ -254,7 +276,7 @@ export default function NodeDepthPanel({ module, node }: Props) {
 
           {/* Lesson rows */}
           <ul style={{ padding: 0, margin: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {lessons.map((lesson, i) => {
+            {visibleLessons.map((lesson, i) => {
               const done = isLessonComplete(completion, lesson.id)
               const mast = isLessonMastered(mastery, lesson.id)
               const href = `/tutorial/${encodeURIComponent(module.id)}/${encodeURIComponent(node.id)}/${encodeURIComponent(lesson.id)}`

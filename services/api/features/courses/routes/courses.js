@@ -2,6 +2,8 @@ const express = require('express');
 const { parseCourseEditorListResponse } = require('@galaxies/contracts');
 const Course = require('../models/Course');
 const Enrollment = require('../models/Enrollment');
+const User = require('../../auth/models/User');
+const TeacherProfile = require('../../auth/models/TeacherProfile');
 const { authMiddleware, optionalAuth, requireRole, canEditCourse } = require('../../../shared/jwtAuth');
 const { findCourseForLearnerOrEditor } = require('../services/courseAccess');
 const { requireString } = require('../../../shared/validation');
@@ -18,11 +20,13 @@ const {
   applyDistributionStrategy,
 } = require('../lib/distributionStrategy');
 const { notifyFreeEnrollment } = require('../../notifications/services/notificationService');
-const { getTeacherProfileByUserId } = require('../../auth/services/teacherProfileService');
+const { getTeacherProfileByUserId, resolveCourseTeacherPublic } = require('../../auth/services/teacherProfileService');
 const {
   viewerMaySeeQuizSecrets,
   redactLessonsForLearnerDelivery,
   resolveDeliveryContext,
+  isCourseEditor,
+  ensureStaffEnrollment,
 } = require('../services/courseContentSecurity');
 
 const router = express.Router();
@@ -33,6 +37,23 @@ function sortedModules(course) {
 
 function sortedLessons(course) {
   return [...(course.lessons || [])].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+}
+
+async function applyAdminCourseTeacherId(course, teacherId) {
+  if (teacherId === undefined) return;
+  if (teacherId === null || teacherId === '') {
+    course.teacherId = null;
+    return;
+  }
+  const id = String(teacherId).trim();
+  const user = await User.findById(id).select('role accountStatus').lean();
+  if (!user || user.role !== 'teacher') {
+    throw new AppError(400, 'INVALID_TEACHER', 'Giảng viên không hợp lệ — chọn tài khoản role teacher');
+  }
+  if (user.accountStatus === 'deactivated') {
+    throw new AppError(400, 'TEACHER_DEACTIVATED', 'Tài khoản giảng viên đã ngừng hoạt động');
+  }
+  course.teacherId = id;
 }
 
 function courseIsPaidLocked(course) {
@@ -77,8 +98,10 @@ function redactLessonForPaywall(l) {
 /** @param {object} enrollment - null hoặc doc enrollment */
 async function buildCourseDetailPayload(course, enrollment, outlineOnly, options = {}) {
   const { includeQuizSecrets = false, deliveryContext = null } = options;
+  const staffEditor = Boolean(includeQuizSecrets);
   const mods = sortedModules(course);
-  const locksContent = outlineOnly ? false : courseIsPaidLocked(course) && !enrollment;
+  const locksContent =
+    outlineOnly ? false : courseIsPaidLocked(course) && !enrollment && !staffEditor;
   let lessons = sortedLessons(course);
   if (outlineOnly) {
     lessons = lessons.map((l) => lessonOutlinePayload(l));
@@ -89,7 +112,7 @@ async function buildCourseDetailPayload(course, enrollment, outlineOnly, options
   }
   let teacher = null;
   if (course.teacherId) {
-    teacher = await getTeacherProfileByUserId(course.teacherId, { requirePublished: true });
+    teacher = await resolveCourseTeacherPublic(course.teacherId, { requirePublished: true });
   }
   return {
     id: course._id,
@@ -129,6 +152,7 @@ async function buildCourseDetailPayload(course, enrollment, outlineOnly, options
       typeof course.crossSellTutorialBodyVi === 'string' ? course.crossSellTutorialBodyVi : '',
     published: Boolean(course.published),
     editorPreview: Boolean(!course.published),
+    staffAccess: staffEditor,
     teacherId: course.teacherId || null,
     teacher,
     deliveryContext: deliveryContext || { mode: 'catalog' },
@@ -183,6 +207,38 @@ router.get('/', optionalAuth, async (req, res) => {
     res.json({ success: true, data: list });
   } catch (err) {
     console.error('List courses error:', err);
+    res.status(500).json({ success: false, error: 'Lỗi server' });
+  }
+});
+
+router.get('/editor/teachers', authMiddleware, requireRole('admin'), async (req, res) => {
+  try {
+    const users = await User.find({ role: 'teacher', accountStatus: { $ne: 'deactivated' } })
+      .select('_id email displayName avatar')
+      .sort({ displayName: 1, email: 1 })
+      .limit(200)
+      .lean();
+    const ids = users.map((u) => String(u._id));
+    const profiles = ids.length
+      ? await TeacherProfile.find({ userId: { $in: ids } }).select('userId fullName headline').lean()
+      : [];
+    const profileByUserId = Object.fromEntries(profiles.map((p) => [String(p.userId), p]));
+    res.json({
+      success: true,
+      data: users.map((u) => {
+        const id = String(u._id);
+        const profile = profileByUserId[id];
+        return {
+          id,
+          email: u.email || null,
+          displayName: u.displayName || '',
+          fullName: profile?.fullName?.trim() || u.displayName?.trim() || u.email?.split('@')[0] || 'Giảng viên',
+          headline: profile?.headline || '',
+        };
+      }),
+    });
+  } catch (err) {
+    console.error('List editor teachers error:', err);
     res.status(500).json({ success: false, error: 'Lỗi server' });
   }
 });
@@ -289,6 +345,7 @@ router.post('/', authMiddleware, requireRole('teacher', 'admin'), async (req, re
       lessons: [],
       teacherId: req.userRole === 'teacher' ? req.userId : null,
     });
+    await ensureStaffEnrollment(course.toObject(), { userId: req.userId, userRole: req.userRole });
     res.status(201).json({
       success: true,
       data: {
@@ -315,10 +372,13 @@ router.get('/:slug', optionalAuth, async (req, res) => {
     }
     let enrollment = null;
     if (req.userId) {
-      enrollment = await Enrollment.findOne({
-        userId: req.userId,
-        courseId: course._id,
-      }).lean();
+      enrollment = await ensureStaffEnrollment(course, { userId: req.userId, userRole: req.userRole });
+      if (!enrollment) {
+        enrollment = await Enrollment.findOne({
+          userId: req.userId,
+          courseId: course._id,
+        }).lean();
+      }
     }
     const outlineOnly = String(req.query.outline || '').trim() === '1';
     const includeQuizSecrets = viewerMaySeeQuizSecrets(req, course);
@@ -338,6 +398,7 @@ router.get('/:slug', optionalAuth, async (req, res) => {
       deliveryContext,
     });
 
+    res.set('Cache-Control', 'private, no-store');
     res.json({
       success: true,
       data,
@@ -350,18 +411,22 @@ router.get('/:slug', optionalAuth, async (req, res) => {
 
 router.post('/:slug/enroll', authMiddleware, async (req, res) => {
   try {
-    const course = await Course.findOne({ slug: req.params.slug, published: true });
+    const course = await Course.findOne({ slug: req.params.slug });
     if (!course) {
       return res.status(404).json({ success: false, error: 'Không tìm thấy khóa học' });
     }
-    if (course.catalogEnabled === false) {
+    const isStaff = isCourseEditor(req.userId, req.userRole, course);
+    if (!course.published && !isStaff) {
+      return res.status(404).json({ success: false, error: 'Không tìm thấy khóa học' });
+    }
+    if (course.catalogEnabled === false && !isStaff) {
       return res.status(403).json({
         success: false,
         code: 'catalog_disabled',
         error: 'Khóa học chỉ mở qua lớp theo kỳ. Dùng mã lớp để tham gia.',
       });
     }
-    if (course.isPaid && (course.price ?? 0) > 0) {
+    if (course.isPaid && (course.price ?? 0) > 0 && !isStaff) {
       return res.status(400).json({
         success: false,
         requiresPayment: true,
@@ -480,6 +545,7 @@ router.get('/:slug/editor', authMiddleware, requireRole('teacher', 'admin'), asy
         crossSellTutorialHref: data.crossSellTutorialHref ?? '/tutorial',
         crossSellTutorialLabelVi: data.crossSellTutorialLabelVi ?? '',
         crossSellTutorialBodyVi: data.crossSellTutorialBodyVi ?? '',
+        teacherId: data.teacherId || null,
         modules: (data.modules || []).sort((a, b) => a.order - b.order),
         lessons: (data.lessons || []).sort((a, b) => a.order - b.order),
       },
@@ -511,6 +577,7 @@ router.put('/:slug/editor', authMiddleware, requireRole('teacher', 'admin'), asy
       crossSellTutorialBodyVi,
       catalogEnabled,
       distributionStrategy,
+      teacherId,
     } = req.body || {};
     const course = await Course.findOne({ slug: req.params.slug });
     if (!course) {
@@ -524,6 +591,9 @@ router.put('/:slug/editor', authMiddleware, requireRole('teacher', 'admin'), asy
       } else if (!canEditCourse(course, { id: req.userId, role: req.userRole })) {
         return res.status(403).json({ success: false, error: 'Không có quyền sửa khóa học này' });
       }
+    }
+    if (req.userRole === 'admin') {
+      await applyAdminCourseTeacherId(course, teacherId);
     }
 
     if (typeof title === 'string' && title.trim()) course.title = title.trim();
@@ -619,6 +689,7 @@ router.put('/:slug/editor', authMiddleware, requireRole('teacher', 'admin'), asy
     }
 
     await course.save();
+    await ensureStaffEnrollment(course.toObject(), { userId: req.userId, userRole: req.userRole });
     res.json({ success: true, message: 'Lưu khóa học thành công' });
   } catch (err) {
     console.error('Save editor course error:', err);

@@ -9,6 +9,7 @@ import type { Lesson } from '@/features/courses/public'
 import { FeaturedOrganisms } from '@/features/content3d/earth/ui/FeaturedOrganisms'
 import { Loading } from '@/components/ui/Loading'
 import { SectionPreview } from '@/components/studio/LessonPreview'
+import { VideoWithTranscriptPanel } from '@/components/courses/VideoWithTranscriptPanel'
 
 const EarthScene = dynamic(() => import('@/components/3d/EarthScene'), { ssr: false, loading: () => <Loading /> })
 
@@ -94,15 +95,15 @@ export function LessonContentBody({ lesson }: { lesson: Lesson }) {
 
           {videoSections.map((sec, idx) => (
             <section key={`${sec.title ?? 'video'}-${idx}`} className="hud-chamfer border p-4 space-y-3" style={{ borderColor: 'rgba(126,231,255,0.12)', background: '#08111f' }}>
-              <h3 className="text-white font-medium">{sec.title || `Video ${idx + 1}`}</h3>
-              {sec.content && <p className="text-sm text-ds-muted">{sec.content}</p>}
-              <div className="w-full aspect-video rounded-xl overflow-hidden bg-black/60 border border-ds-border">
-                {sec.videoUrl && (sec.videoUrl.includes('youtube.com') || sec.videoUrl.includes('youtu.be')) ? (
-                  <iframe className="w-full h-full" src={resolveMediaUrl(sec.videoUrl)} title={sec.title || 'Video'} allowFullScreen />
-                ) : (
-                  <video className="w-full h-full" controls src={resolveMediaUrl(sec.videoUrl)}>Video not supported.</video>
-                )}
-              </div>
+              {sec.title ? <h3 className="text-white font-medium">{sec.title}</h3> : null}
+              {sec.content ? <p className="text-sm text-ds-muted">{sec.content}</p> : null}
+              {sec.videoUrl ? (
+                <VideoWithTranscriptPanel
+                  videoUrl={sec.videoUrl}
+                  title={sec.title || `Video ${idx + 1}`}
+                  transcript={sec.videoTranscript ?? null}
+                />
+              ) : null}
             </section>
           ))}
         </div>
@@ -172,6 +173,20 @@ export function LessonContentBody({ lesson }: { lesson: Lesson }) {
                 </section>
               ))}
             </div>
+          ) : lesson.content?.trim() ? (
+            <section
+              className="hud-chamfer border p-5"
+              style={{ borderColor: 'rgba(126,231,255,0.12)', background: '#08111f' }}
+            >
+              {lesson.content.includes('<') ? (
+                <div
+                  className="prose prose-invert prose-sm max-w-none text-gray-200 leading-relaxed [&_p]:my-4"
+                  dangerouslySetInnerHTML={{ __html: lesson.content }}
+                />
+              ) : (
+                <p className="text-gray-200 text-sm md:text-[15px] leading-relaxed whitespace-pre-wrap">{lesson.content}</p>
+              )}
+            </section>
           ) : (
             <div className="text-ds-muted text-sm">Chưa có nội dung đọc cho bài này.</div>
           )}

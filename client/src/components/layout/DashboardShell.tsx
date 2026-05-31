@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, BookMarked, BookOpen, Map, Globe, Receipt,
-  MessageCircle, Search, Gem, ShoppingBag, Video,
+  MessageCircle, Search, Gem, ShoppingBag, Video, Heart,
   Shield, Newspaper, Settings, UserPlus,
 } from 'lucide-react'
 import { useAuthStore } from '@/features/auth/public'
@@ -110,6 +110,7 @@ function NavSection({ title, items, pathname }: { title: string; items: NavItem[
 
 const learnItems: NavItem[] = [
   { href: '/dashboard', label: 'Tổng quan', icon: LayoutDashboard },
+  { href: '/dashboard/saved', label: 'Đã lưu', icon: Heart },
   { href: '/my-courses', label: 'Khóa của tôi', icon: BookMarked },
   { href: '/my-orders', label: 'Thanh toán', icon: Receipt },
   { href: '/courses', label: 'Khóa học', icon: BookOpen },

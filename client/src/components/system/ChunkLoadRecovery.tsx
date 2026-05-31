@@ -10,6 +10,20 @@ const SESSION_KEY = '__chunk_reload_once'
  */
 export function ChunkLoadRecovery() {
   useEffect(() => {
+    if (typeof window === 'undefined' || !('serviceWorker' in navigator)) return
+    void navigator.serviceWorker.getRegistrations().then((regs) => {
+      regs.forEach((reg) => void reg.unregister())
+    })
+    if ('caches' in window) {
+      void caches.keys().then((keys) => {
+        keys
+          .filter((key) => key.startsWith('cosmolearn') || key.startsWith('shell-') || key.startsWith('runtime-'))
+          .forEach((key) => void caches.delete(key))
+      })
+    }
+  }, [])
+
+  useEffect(() => {
     const looksLikeChunkFailure = (msg: string) => {
       const m = msg.toLowerCase()
       return (

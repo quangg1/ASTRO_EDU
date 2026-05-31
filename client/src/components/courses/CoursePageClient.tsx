@@ -15,6 +15,8 @@ import {
   type Course,
   type Lesson,
 } from '@/features/courses/public'
+import { hasCourseLearnerAccess } from '@/features/courses/lib/courseLearnerAccess'
+import { SaveLessonButton } from '@/features/saved/public'
 import { earthHistoryData, findStageByTime, useCourseStageFossils } from '@/features/content3d/earth/public'
 import { FeaturedOrganisms } from '@/features/content3d/earth/ui/FeaturedOrganisms'
 import { Loading } from '@/components/ui/Loading'
@@ -193,6 +195,9 @@ export function CoursePageClient({
   const setCourseContext = useTutorContextStore((s) => s.setCourseContext)
   const [course, setCourse] = useState<Course | null>(initialCourse)
   const [enrolling, setEnrolling] = useState(false)
+  const [refreshingAuthCourse, setRefreshingAuthCourse] = useState(
+    () => Boolean(initialCourse?.paywalledLessonBodies),
+  )
   const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null)
   const [showMobileLessons, setShowMobileLessons] = useState(false)
   const [reducedMode, setReducedMode] = useState(false)
@@ -240,29 +245,20 @@ export function CoursePageClient({
 
   useEffect(() => {
     if (!slug || !checked) return
+    if (!user) {
+      setRefreshingAuthCourse(false)
+      return
+    }
     let cancelled = false
-    const needRefresh =
-      refreshAfterEnroll ||
-      !!user ||
-      Boolean(
-        initialCourse?.paywalledLessonBodies && initialCourse.isPaid && (initialCourse.price ?? 0) > 0,
-      )
-    if (!needRefresh) return
+    setRefreshingAuthCourse((prev) => prev || Boolean(initialCourse?.paywalledLessonBodies))
     fetchCourse(slug).then((freshCourse) => {
       if (!cancelled && freshCourse) setCourse(freshCourse)
+      if (!cancelled) setRefreshingAuthCourse(false)
     })
     return () => {
       cancelled = true
     }
-  }, [
-    slug,
-    checked,
-    user?.id,
-    refreshAfterEnroll,
-    initialCourse?.paywalledLessonBodies,
-    initialCourse?.isPaid,
-    initialCourse?.price,
-  ])
+  }, [slug, checked, user?.id, refreshAfterEnroll, initialCourse?.paywalledLessonBodies])
 
   useEffect(() => {
     if (!course) return
@@ -416,7 +412,17 @@ export function CoursePageClient({
     )
   }
 
-  const isEnrolled = course.enrollment != null
+  if (refreshingAuthCourse && user) {
+    return (
+      <div className="min-h-screen bg-black">
+        <main className="pt-16 flex items-center justify-center min-h-[50vh]">
+          <p className="text-ds-subtle">Đang tải nội dung khóa học…</p>
+        </main>
+      </div>
+    )
+  }
+
+  const hasLearnerAccess = hasCourseLearnerAccess(course)
   const courseModules = (course.modules ?? []).sort((a, b) => a.order - b.order)
   const lessonsByModule = courseModules.length > 0
     ? (() => {
@@ -478,7 +484,7 @@ export function CoursePageClient({
                 <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: '#5c6886' }}>{progressPercent}% complete</span>
               </div>
             </div>
-            {!isEnrolled && user && (
+            {!hasLearnerAccess && user && (
               course.isPaid && (course.price ?? 0) > 0 ? (
                 <Link
                   href={`/courses/${slug}/checkout`}
@@ -566,6 +572,17 @@ export function CoursePageClient({
                   <h2 className="font-semibold text-lg leading-tight" style={{ color: '#eaf6ff' }}>{selectedLesson.title}</h2>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
+                  <SaveLessonButton
+                    source="course"
+                    courseSlug={course.slug}
+                    lessonSlug={selectedLesson.slug}
+                    title={selectedLesson.title}
+                    subtitle={
+                      selectedLesson.moduleId
+                        ? courseModules.find((m) => m._id === selectedLesson.moduleId)?.title || course.title
+                        : course.title
+                    }
+                  />
                   <CommunityAskButton
                     variant="compact"
                     context={{
@@ -577,7 +594,7 @@ export function CoursePageClient({
                       lessonTitle: selectedLesson.title,
                     }}
                   />
-                  {isEnrolled && (
+                  {hasLearnerAccess && (
                     <button
                       type="button"
                       onClick={() => markComplete(selectedLesson.slug, !progressBySlug.get(selectedLesson.slug))}
@@ -594,7 +611,7 @@ export function CoursePageClient({
                 </div>
               </div>
               <div className="flex-1 min-h-0 overflow-auto">
-                {!isEnrolled && course.isPaid && (course.price ?? 0) > 0 ? (
+                {!hasLearnerAccess && course.isPaid && (course.price ?? 0) > 0 ? (
                   <div className="flex flex-col items-center justify-center min-h-[320px] p-8 text-center">
                     <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-8 max-w-md">
                       <p className="text-amber-200 font-medium mb-2">Nội dung khóa học trả phí</p>

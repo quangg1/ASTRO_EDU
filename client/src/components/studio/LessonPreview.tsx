@@ -8,6 +8,7 @@ import type { LearningConcept, LessonConceptAnchor } from '@/data/learningPathCu
 import { lessonPreviewFromCourseLesson, type LessonPreviewContract } from '@/components/studio/lessonPreviewTypes'
 import { applyConceptAnchorsToHtml } from '@/features/concepts/public'
 import { resolveMediaUrl } from '@/lib/apiConfig'
+import { VideoWithTranscriptPanel } from '@/components/courses/VideoWithTranscriptPanel'
 import { earthHistoryData, findStageByTime, useCourseStageFossils } from '@/features/content3d/earth/public'
 
 const EarthScene = dynamic(() => import('@/components/3d/EarthScene'), { ssr: false, loading: () => <div className="h-full flex items-center justify-center text-ds-subtle text-sm">Loading 3D scene...</div> })
@@ -112,13 +113,11 @@ export function SectionPreview({ sec, conceptAnchors, concepts }: SectionPreview
         <div className="space-y-2">
           {sec.title && <h3 className="text-xl font-semibold tracking-tight text-white mb-2">{sec.title}</h3>}
           {sec.videoUrl ? (
-            <div className="aspect-video rounded-xl overflow-hidden border border-ds-border bg-black/50">
-              {(sec.videoUrl.includes('youtube.com') || sec.videoUrl.includes('youtu.be')) ? (
-                <iframe src={sec.videoUrl.replace('watch?v=', 'embed/').replace('youtu.be/', 'youtube.com/embed/')} className="w-full h-full" allowFullScreen />
-              ) : (
-                <video src={sec.videoUrl} controls className="w-full h-full" />
-              )}
-            </div>
+            <VideoWithTranscriptPanel
+              videoUrl={sec.videoUrl}
+              title={sec.title || 'Video'}
+              transcript={sec.videoTranscript ?? null}
+            />
           ) : (
             <div className="aspect-video rounded-xl border border-dashed border-ds-border-strong flex items-center justify-center text-ds-subtle text-sm">No video set</div>
           )}

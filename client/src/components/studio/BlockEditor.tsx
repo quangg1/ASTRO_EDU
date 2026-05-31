@@ -3,6 +3,9 @@
 import { useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
 import type { LessonSection, SectionType } from '@/features/courses/api/coursesApi'
+import type { VideoTranscript } from '@/features/courses/lib/videoTranscript'
+import { VideoTranscriptEditor } from '@/components/studio/VideoTranscriptEditor'
+import { VideoWithTranscriptPanel } from '@/components/courses/VideoWithTranscriptPanel'
 import { uploadMedia, type UploadMediaContext } from '@/features/courses/api/coursesApi'
 import { resolveMediaUrl } from '@/lib/apiConfig'
 import MathBlock from './blocks/MathBlock'
@@ -164,18 +167,6 @@ function ImageBlockEditor({
   )
 }
 
-function toYouTubeEmbed(url: string): string | null {
-  let videoId: string | null = null
-  if (url.includes('youtube.com/watch')) {
-    const u = new URL(url); videoId = u.searchParams.get('v')
-  } else if (url.includes('youtu.be/')) {
-    videoId = url.split('youtu.be/')[1]?.split(/[?#]/)[0] ?? null
-  } else if (url.includes('youtube.com/embed/')) {
-    return url
-  }
-  return videoId ? `https://www.youtube.com/embed/${videoId}` : null
-}
-
 function VideoBlockEditor({
   section,
   update,
@@ -192,9 +183,6 @@ function VideoBlockEditor({
     const trimmed = urlInput.trim()
     update({ videoUrl: trimmed || null })
   }
-
-  const embedUrl = section.videoUrl ? toYouTubeEmbed(section.videoUrl) : null
-  const isDirectVideo = section.videoUrl && !embedUrl && (section.videoUrl.endsWith('.mp4') || section.videoUrl.endsWith('.webm') || section.videoUrl.startsWith('/course-media'))
 
   return (
     <div className="space-y-2">
@@ -222,22 +210,23 @@ function VideoBlockEditor({
           uploadContext={uploadContext}
         />
       )}
-      {embedUrl && (
-        <div className="rounded-lg overflow-hidden border border-ds-border aspect-video bg-black/30">
-          <iframe src={embedUrl} className="w-full h-full" allowFullScreen />
+      {section.videoUrl ? (
+        <div className="space-y-1">
+          <p className="text-[10px] uppercase tracking-wider text-ds-subtle">Xem trước · như học viên</p>
+          <VideoWithTranscriptPanel
+            videoUrl={section.videoUrl}
+            title={section.title || 'Video'}
+            transcript={(section.videoTranscript as VideoTranscript | null | undefined) ?? null}
+          />
         </div>
-      )}
-      {isDirectVideo && (
-        <div className="rounded-lg overflow-hidden border border-ds-border aspect-video bg-black/30">
-          <video src={section.videoUrl!} controls className="w-full h-full" />
-        </div>
-      )}
-      {section.videoUrl && !embedUrl && !isDirectVideo && (
-        <div className="rounded-lg border border-ds-border bg-black/30 p-3 text-center">
-          <p className="text-xs text-ds-muted">URL set: <span className="text-ds-accent">{section.videoUrl}</span></p>
-        </div>
-      )}
+      ) : null}
       <input value={section.caption ?? ''} onChange={(e) => update({ caption: e.target.value })} placeholder="Caption (optional)" className="studio-field" />
+      {section.videoUrl ? (
+        <VideoTranscriptEditor
+          value={(section.videoTranscript as VideoTranscript | null | undefined) ?? null}
+          onChange={(videoTranscript) => update({ videoTranscript: videoTranscript ?? undefined })}
+        />
+      ) : null}
     </div>
   )
 }

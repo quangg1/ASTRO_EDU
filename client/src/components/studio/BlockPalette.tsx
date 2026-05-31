@@ -50,7 +50,7 @@ function makeDefaultSection(type: SectionType): LessonSection {
     case 'math': return { ...base, latex: 'E = mc^2' }
     case 'image': return { ...base, imageUrl: null, caption: '' }
     case 'gif': return { ...base, imageUrl: null, caption: '' }
-    case 'video': return { ...base, videoUrl: null }
+    case 'video': return { ...base, videoUrl: null, videoTranscript: { language: 'vi', cues: [] } }
     case '3d': return { ...base, modelUrl: null }
     case 'chart': return { ...base, chartType: 'line', chartData: [{ x: 0, y: 0 }, { x: 1, y: 2 }, { x: 2, y: 4 }] }
     case 'slider': return { ...base, sliderMin: 0, sliderMax: 100, sliderStep: 1, sliderFormula: 'x^2', sliderLabel: 'x', sliderUnit: '' }

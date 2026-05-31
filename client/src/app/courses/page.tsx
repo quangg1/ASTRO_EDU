@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { fetchCourses, type Course } from '@/features/courses/public'
+import { resolveMediaUrl } from '@/lib/apiConfig'
 import { SkeletonList } from '@/components/ui/Skeleton'
 import { useLiveClock } from '@/hooks/useLiveClock'
 
@@ -316,6 +317,7 @@ function CourseCard({ course, index }: { course: Course; index: number }) {
     accent: '#7ee7ff',
   }
 
+  const thumbSrc = course.thumbnail ? resolveMediaUrl(course.thumbnail) : null
   const lessonCount = course.lessonCount ?? 0
   const level = course.level ?? 'intermediate'
   const cardNum = String(index + 1).padStart(2, '0')
@@ -343,7 +345,15 @@ function CourseCard({ course, index }: { course: Course; index: number }) {
             ...chamfer(18),
           }}
         >
-          {meta.cover}
+          {thumbSrc ? (
+            <img
+              src={thumbSrc}
+              alt=""
+              style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+            />
+          ) : (
+            meta.cover
+          )}
           <Brackets c={meta.accent} s={16} o={10} />
 
           {/* dot + number top-left */}

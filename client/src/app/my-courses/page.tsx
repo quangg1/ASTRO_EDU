@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ChevronDown, ChevronUp, Layers, Lock, Sparkles } from 'lucide-react'
+import { ChevronDown, ChevronUp, Layers, Lock } from 'lucide-react'
 import { useAuthStore } from '@/features/auth/public'
 import { fetchMyCourses, type MyCourse } from '@/features/courses/public'
 import { SkeletonList } from '@/components/ui/Skeleton'
@@ -1084,27 +1084,6 @@ export default function MyCoursesPage() {
         </section>
 
       </main>
-
-      {/* FAB sparkle */}
-      <button
-        type="button"
-        style={{
-          position: 'fixed',
-          bottom: 28, right: 28,
-          width: 52, height: 52,
-          border: '1.5px solid rgba(126,231,255,0.5)',
-          background: 'linear-gradient(135deg,rgba(126,231,255,0.15) 0%,rgba(77,210,255,0.08) 100%)',
-          boxShadow: '0 0 20px rgba(126,231,255,0.25)',
-          color: '#7ee7ff',
-          cursor: 'pointer',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          zIndex: 50,
-          borderRadius: '50%',
-          transition: 'box-shadow 0.2s',
-        }}
-      >
-        <Sparkles size={20} strokeWidth={1.5} />
-      </button>
     </div>
   )
 }

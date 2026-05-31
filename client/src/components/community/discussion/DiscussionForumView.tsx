@@ -256,7 +256,18 @@ export function DiscussionForumView({ forum, slug, user }: Props) {
           <div className="h-24 rounded-xl border border-white/10 bg-white/5 animate-pulse" />
         </div>
       ) : (
-        <DiscussionPostList posts={posts} />
+        <DiscussionPostList
+          posts={posts}
+          user={user}
+          onVoteChange={(postId, voteCount, myVote) => {
+            setPosts((prev) =>
+              prev.map((p) =>
+                p._id === postId ? { ...p, voteCount, myVote: myVote ?? undefined } : p,
+              ),
+            )
+          }}
+          onLoginRequired={() => router.push(`/login?redirect=/community/${slug}`)}
+        />
       )}
 
       {total > 20 && (

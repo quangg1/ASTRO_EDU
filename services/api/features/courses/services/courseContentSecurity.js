@@ -62,6 +62,35 @@ function isCourseEditor(userId, userRole, course) {
   return userRole === 'teacher' && canEditCourse(course, { id: userId, role: userRole });
 }
 
+/** GV/admin sở hữu khóa — tự ghi danh để vào học/thử ngay (kể cả nháp, trả phí). */
+async function ensureStaffEnrollment(course, { userId, userRole }) {
+  if (!userId || !course?._id || !isCourseEditor(userId, userRole, course)) {
+    return null;
+  }
+  const existing = await Enrollment.findOne({ userId, courseId: course._id }).lean();
+  if (existing) return existing;
+
+  const progress = (course.lessons || []).map((l) => ({
+    lessonSlug: l.slug,
+    completed: false,
+    completedAt: null,
+  }));
+
+  try {
+    const created = await Enrollment.create({
+      userId,
+      courseId: course._id,
+      progress,
+    });
+    return created.toObject();
+  } catch (err) {
+    if (err?.code === 11000) {
+      return Enrollment.findOne({ userId, courseId: course._id }).lean();
+    }
+    throw err;
+  }
+}
+
 async function assertCatalogAccess({ course, userId }) {
   if (course.catalogEnabled === false) {
     const err = new Error('Khóa học chỉ mở qua lớp theo kỳ, không tự học catalog');
@@ -214,6 +243,8 @@ module.exports = {
   redactLessonsForLearnerDelivery,
   findCourseCohortEnrollments,
   resolveDeliveryContext,
+  isCourseEditor,
+  ensureStaffEnrollment,
   assertQuizDeliveryAccess,
   assertAssignmentDeliveryAccess,
   assertCatalogAccess,

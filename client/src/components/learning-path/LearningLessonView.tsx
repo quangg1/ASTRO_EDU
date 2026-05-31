@@ -54,6 +54,7 @@ import {
   useAgentCoach,
 } from '@/features/agent/public'
 import { CommunityAskButton } from '@/components/community/learning/CommunityAskButton'
+import { SaveLessonButton } from '@/features/saved/public'
 import { LessonRelatedQuestions } from '@/components/community/learning/LessonRelatedQuestions'
 type Props = {
   /** Từ server merge API — đồng bộ SSR */
@@ -707,6 +708,15 @@ export default function LearningLessonView({
                 nodeTitle: displayNode.titleVi,
                 lessonTitle: lesson.titleVi,
               }}
+            />
+            <SaveLessonButton
+              source="learning-path"
+              lessonId={lesson.id}
+              moduleId={displayModule.id}
+              nodeId={displayNode.id}
+              depth={depth}
+              title={lesson.titleVi}
+              subtitle={`${displayModule.titleVi} · ${displayNode.titleVi}`}
             />
           </div>
           <div className="mt-3 flex flex-wrap gap-2">

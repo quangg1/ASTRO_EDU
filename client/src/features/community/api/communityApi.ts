@@ -61,6 +61,7 @@ export interface Post {
   /** Từ RSS &lt;category&gt; — filter theo metadata */
   rssCategories?: string[]
   voteCount: number
+  myVote?: number | null
   commentCount: number
   viewCount: number
   isPinned?: boolean

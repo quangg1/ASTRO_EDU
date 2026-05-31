@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { Plus } from 'lucide-react'
 import { fetchForums, fetchNews, fetchNewsCategories, type Forum, type Post } from '@/features/community/public'
 import { NewsHeroSlider } from '@/components/community/NewsHeroSlider'
 import { NewsHotRow } from '@/components/community/NewsHotRow'
@@ -389,20 +388,6 @@ export default function CommunityPage() {
           </div>
         )}
       </div>
-
-      {/* FAB — New post */}
-      <button
-        type="button"
-        className="fixed bottom-6 right-6 z-50 flex items-center justify-center w-14 h-14 rounded-full transition-all hover:scale-110"
-        style={{
-          background: 'var(--hud-plasma)',
-          boxShadow: '0 0 0 2px rgba(126,231,255,0.3), 0 0 30px rgba(126,231,255,0.5)',
-          color: '#03060f',
-        }}
-        aria-label="Tạo bài mới"
-      >
-        <Plus className="w-6 h-6" strokeWidth={2.5} />
-      </button>
     </div>
   )
 }
