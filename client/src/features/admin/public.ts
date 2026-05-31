@@ -45,6 +45,8 @@ export {
   fetchAdminAnalyticsCohort,
   fetchAdminLearningPathAnalytics,
   fetchAdminAgentAnalytics,
+  fetchAdminExploreAnalytics,
+  fetchAdminUnifiedLearnerAnalytics,
 } from './api/adminAnalyticsApi'
 export type {
   AnalyticsRange,
@@ -55,6 +57,9 @@ export type {
   AdminLearningPathFunnelItem,
   AdminLearningPathAnalytics,
   AdminAgentAnalytics,
+  AdminExploreAnalytics,
+  AdminExploreFunnelItem,
+  AdminUnifiedLearnerAnalytics,
 } from './api/adminAnalyticsApi'
 
 // Gem economy (bounded config + metrics) --------------------------------------

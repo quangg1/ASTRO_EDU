@@ -124,6 +124,7 @@ export function setToken(token: string): void {
   if (!isTokenFormatValid(token)) return
   localStorage.setItem(TOKEN_KEY, token)
   setSecureToken(token).catch(() => {})
+  window.dispatchEvent(new CustomEvent('galaxies-auth-signed-in'))
 }
 
 export function clearToken(): void {

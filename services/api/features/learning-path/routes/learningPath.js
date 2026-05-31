@@ -1,7 +1,6 @@
 const express = require('express');
 const LearningPath = require('../models/LearningPath');
 const UserProgress = require('../models/UserProgress');
-const LearningPathEvent = require('../models/LearningPathEvent');
 const Concept = require('../../concepts/models/Concept');
 const { authMiddleware, optionalAuth, requireRole } = require('../../../shared/jwtAuth');
 const { generateRecallQuizFromLesson } = require('../../../lib/ai/tasks/generateRecallQuiz');
@@ -14,6 +13,8 @@ const {
   submitRecallQuiz,
   filterRecallGatedMasteredIds,
 } = require('../services/recallQuizService');
+const { ingestLearningPathEvents } = require('../services/learningPathEventIngest');
+const { attributeGuestLearningSession } = require('../services/sessionAttributionService');
 
 const router = express.Router();
 
@@ -356,67 +357,48 @@ router.put('/solar-journey/progress', authMiddleware, async (req, res) => {
   }
 });
 
-function normalizeClient(raw) {
-  const value = String(raw || '').trim().toLowerCase();
-  if (value === 'android' || value === 'ios') return value;
-  return 'web';
-}
-
-function normalizeEvent(rawEvent, userId) {
-  const allowed = new Set([
-    'lp_module_viewed', 'lp_node_viewed', 'lp_lesson_opened', 'lp_lesson_completed_toggled', 'lp_lesson_dwell',
-    'lp_lesson_mastered', 'lp_concept_opened', 'lp_concept_anchor_clicked', 'lp_depth_switched', 'lp_path_exited',
-    'scene_entity_focus_duration', 'scene_entity_clicked', 'scene_concept_overlay_shown', 'scene_contextual_quiz_prompted', 'scene_contextual_quiz_passed', 'scene_entity_discovered',
-  ]);
-  const eventName = String(rawEvent?.eventName || '').trim();
-  const sessionId = String(rawEvent?.sessionId || '').trim();
-  const depthRaw = String(rawEvent?.depth || '').trim();
-  const depth = ['beginner', 'explorer', 'researcher'].includes(depthRaw) ? depthRaw : null;
-  if (!eventName || !allowed.has(eventName) || !sessionId) return null;
-  const timestampRaw = rawEvent?.timestamp ? new Date(rawEvent.timestamp) : new Date();
-  const timestamp = Number.isNaN(timestampRaw.getTime()) ? new Date() : timestampRaw;
-  return {
-    userId: userId || null,
-    sessionId,
-    eventName,
-    timestamp,
-    moduleId: rawEvent?.moduleId ? String(rawEvent.moduleId).trim() : null,
-    nodeId: rawEvent?.nodeId ? String(rawEvent.nodeId).trim() : null,
-    lessonId: rawEvent?.lessonId ? String(rawEvent.lessonId).trim() : null,
-    depth,
-    durationSec: Number.isFinite(Number(rawEvent?.durationSec)) ? Number(rawEvent.durationSec) : null,
-    activeSec: Number.isFinite(Number(rawEvent?.activeSec)) ? Number(rawEvent.activeSec) : null,
-    idleSec: Number.isFinite(Number(rawEvent?.idleSec)) ? Number(rawEvent.idleSec) : null,
-    completed: typeof rawEvent?.completed === 'boolean' ? rawEvent.completed : null,
-    client: normalizeClient(rawEvent?.client),
-    appVersion: rawEvent?.appVersion ? String(rawEvent.appVersion).trim() : null,
-    metadata: rawEvent?.metadata && typeof rawEvent.metadata === 'object' ? rawEvent.metadata : {},
-  };
-}
+router.post('/attribute-session', authMiddleware, async (req, res) => {
+  try {
+    const anonSessionId = String(req.body?.anonSessionId || '').trim();
+    const result = await attributeGuestLearningSession(req.userId, anonSessionId);
+    if (!result.ok) {
+      return res.status(400).json({ success: false, code: result.code, error: result.error });
+    }
+    res.json({ success: true, data: { matched: result.matched, modified: result.modified } });
+  } catch (err) {
+    console.error('POST learning-path attribute-session error:', err);
+    res.status(500).json({ success: false, code: 'ATTRIBUTE_SESSION_FAILED', error: 'Lỗi máy chủ' });
+  }
+});
 
 router.post('/events/batch', optionalAuth, async (req, res) => {
   try {
     const events = Array.isArray(req.body?.events) ? req.body.events : [];
     if (!events.length) return res.status(400).json({ success: false, code: 'LEARNING_PATH_EVENTS_EMPTY', error: 'events phải là mảng có dữ liệu' });
     if (events.length > 100) return res.status(400).json({ success: false, code: 'LEARNING_PATH_EVENTS_TOO_LARGE', error: 'Tối đa 100 events mỗi batch' });
-    const normalized = [];
-    const rejections = [];
-    events.forEach((event, index) => {
-      const item = normalizeEvent(event, req.userId || null);
-      if (!item) { rejections.push({ index, reason: 'invalid_event_shape' }); return; }
-      normalized.push(item);
-    });
-    if (normalized.length > 0) await LearningPathEvent.insertMany(normalized, { ordered: false });
+
+    const { normalized, inserted, rejections } = await ingestLearningPathEvents(events, req.userId || null);
+
     let rewards = null;
-    if (req.userId && normalized.length > 0) {
+    if (req.userId && inserted.length > 0) {
       const segments = [];
-      for (const ev of normalized) {
+      for (const ev of inserted) {
         const results = await emitAsync('learning.event.processed', { userId: req.userId, event: ev });
         for (const r of results) if (r && r.gemsEarned > 0) segments.push(r);
       }
       if (segments.length) rewards = mergeRewardSegments(segments);
     }
-    res.json({ success: true, data: { acceptedCount: normalized.length, rejectedCount: rejections.length, rejections, rewards } });
+    res.json({
+      success: true,
+      data: {
+        acceptedCount: normalized.length,
+        insertedCount: inserted.length,
+        duplicateCount: Math.max(0, normalized.length - inserted.length),
+        rejectedCount: rejections.length,
+        rejections,
+        rewards,
+      },
+    });
   } catch (err) {
     console.error('POST learning-path events batch error:', err);
     res.status(500).json({ success: false, code: 'LEARNING_PATH_EVENTS_BATCH_FAILED', error: 'Lỗi máy chủ' });

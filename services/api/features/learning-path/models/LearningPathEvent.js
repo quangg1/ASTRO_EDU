@@ -2,7 +2,10 @@ const mongoose = require('mongoose');
 
 const learningPathEventSchema = new mongoose.Schema(
   {
+    eventId: { type: String, unique: true, sparse: true, index: true },
+    schemaVersion: { type: Number, default: 1 },
     userId: { type: String, default: null, index: true },
+    anonSessionId: { type: String, default: null, index: true },
     sessionId: { type: String, required: true, index: true },
     eventName: {
       type: String,
@@ -47,6 +50,6 @@ const learningPathEventSchema = new mongoose.Schema(
 
 learningPathEventSchema.index({ sessionId: 1, timestamp: 1 });
 learningPathEventSchema.index({ eventName: 1, timestamp: -1 });
-learningPathEventSchema.index({ moduleId: 1, nodeId: 1, lessonId: 1, timestamp: -1 });
+learningPathEventSchema.index({ anonSessionId: 1, userId: 1, timestamp: -1 });
 
 module.exports = mongoose.models.LearningPathEvent || mongoose.model('LearningPathEvent', learningPathEventSchema);

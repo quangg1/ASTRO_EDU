@@ -8,14 +8,12 @@ import { canAccessAdmin, canAccessAdminPath } from '@/lib/roles'
 import {
   fetchAdminShopItems,
   fetchGemEarnConstants,
-  fetchGemEconomyAuditLog,
   fetchGemEconomyMetrics,
   fetchGemRuntimeConfig,
   patchAdminShopItem,
   patchGemRuntimeConfig,
   createAdminShopItem,
   postManualGemAdjust,
-  type GemEconomyAuditDTO,
   type GemEconomyMetricsDTO,
   type GemRuntimeConfigDTO,
   type ShopItemAdminDTO,
@@ -24,11 +22,7 @@ import { Badge, Button, Card, Input, Tabs, Tab, TabList, TabPanel, Textarea } fr
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Spinner } from '@/components/ui/Spinner'
 import { labelShopCategoryVi } from '@/features/rewards/lib/shopCategoryVi'
-import {
-  labelGemEconomyActionVi,
-  labelGemReasonCode,
-  labelGemTxnSignVi,
-} from '@/features/admin/lib/adminLabelsVi'
+import { labelGemReasonCode, labelGemTxnSignVi } from '@/features/admin/lib/adminLabelsVi'
 import { AdminAvatarDecorationsPanel } from '@/app/admin/gem-economy/AdminAvatarDecorationsPanel'
 
 function toLocalInputValue(iso: string | null | undefined): string {
@@ -47,16 +41,13 @@ const RANGE_DISPLAY: Record<'7d' | '30d', string> = {
 export default function AdminGemEconomyPage() {
   const router = useRouter()
   const { user, checked } = useAuthStore()
-  const [tab, setTab] = useState<
-    'metrics' | 'config' | 'shop' | 'decorations' | 'manual' | 'audit' | 'constants'
-  >('metrics')
+  const [tab, setTab] = useState<'metrics' | 'config' | 'shop' | 'decorations' | 'manual' | 'constants'>('metrics')
   const [range, setRange] = useState<'7d' | '30d'>('7d')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [metrics, setMetrics] = useState<GemEconomyMetricsDTO | null>(null)
   const [config, setConfig] = useState<GemRuntimeConfigDTO | null>(null)
   const [shopItems, setShopItems] = useState<ShopItemAdminDTO[]>([])
-  const [audit, setAudit] = useState<GemEconomyAuditDTO[]>([])
   const [earnConstants, setEarnConstants] = useState<Record<string, number> | null>(null)
   const [earnNote, setEarnNote] = useState('')
 
@@ -83,11 +74,10 @@ export default function AdminGemEconomyPage() {
 
   const refreshAll = useCallback(async () => {
     setError('')
-    const [m, c, s, a, e] = await Promise.all([
+    const [m, c, s, e] = await Promise.all([
       fetchGemEconomyMetrics(range),
       fetchGemRuntimeConfig(),
       fetchAdminShopItems(),
-      fetchGemEconomyAuditLog(48),
       fetchGemEarnConstants(),
     ])
     setMetrics(m)
@@ -97,7 +87,6 @@ export default function AdminGemEconomyPage() {
     setCfgDhCap(String(c.weeklyDeepHistoryCap ?? 50))
     setCfgVoucherPct(String(c.voucherMaxDiscountPct ?? 20))
     setShopItems(s)
-    setAudit(a)
     setEarnConstants(e.GEM_EARN)
     setEarnNote(e.note)
   }, [range])
@@ -262,7 +251,6 @@ export default function AdminGemEconomyPage() {
             <Tab value="shop">Danh mục cửa hàng</Tab>
             <Tab value="decorations">Trang trí avatar</Tab>
             <Tab value="manual">Điều chỉnh gem</Tab>
-            <Tab value="audit">Nhật ký kiểm tra</Tab>
             <Tab value="constants">GEM_EARN (chỉ đọc)</Tab>
           </TabList>
 
@@ -459,7 +447,11 @@ export default function AdminGemEconomyPage() {
           <TabPanel value="manual" current={tab} className="mt-4">
             <Card className="p-4 space-y-3 max-w-md">
               <p className="text-sm text-ds-muted">
-                Một lần tối đa ±500 gem. Mọi thay đổi được ghi nhật ký kiểm tra và luồng giao dịch gem.
+                Một lần tối đa ±500 gem. Mọi thay đổi được ghi nhật ký — xem tại{' '}
+                <Link href="/admin/audit?source=gem" className="text-cyan-400 hover:underline">
+                  Nhật ký vận hành
+                </Link>
+                .
               </p>
               <Input value={manualUser} onChange={(e) => setManualUser(e.target.value)} placeholder="ID người dùng (MongoDB)" />
               <Input
@@ -472,39 +464,6 @@ export default function AdminGemEconomyPage() {
               <Button type="button" onClick={() => void handleManual()} disabled={manualBusy}>
                 {manualBusy ? 'Đang xử lý…' : 'Áp dụng'}
               </Button>
-            </Card>
-          </TabPanel>
-
-          <TabPanel value="audit" current={tab} className="mt-4">
-            <Card className="p-4 overflow-x-auto max-h-[520px] overflow-y-auto">
-              <table className="w-full text-xs text-left border-collapse min-w-[720px]">
-                <thead className="sticky top-0 bg-[#0a0f17]">
-                  <tr className="text-ds-muted border-b border-white/10">
-                    <th className="py-2 pr-2">Thời gian</th>
-                    <th className="py-2 pr-2">Hành động</th>
-                    <th className="py-2 pr-2">Người thực hiện</th>
-                    <th className="py-2 pr-2">Đối tượng</th>
-                    <th className="py-2 pr-2">Thay đổi</th>
-                    <th className="py-2">Lý do</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {audit.map((a) => (
-                    <tr key={a._id} className="border-b border-white/5 align-top">
-                      <td className="py-2 pr-2 text-ds-muted whitespace-nowrap">
-                        {new Date(a.createdAt).toLocaleString()}
-                      </td>
-                      <td className="py-2 pr-2">
-                        <Badge>{labelGemEconomyActionVi(a.action)}</Badge>
-                      </td>
-                      <td className="py-2 pr-2 font-mono text-[10px]">{a.actorUserId}</td>
-                      <td className="py-2 pr-2 font-mono text-[10px]">{a.targetUserId || '—'}</td>
-                      <td className="py-2 pr-2">{a.delta ?? '—'}</td>
-                      <td className="py-2 text-ds-muted max-w-xs">{a.reason}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
             </Card>
           </TabPanel>
 

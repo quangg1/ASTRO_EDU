@@ -115,7 +115,9 @@ export type AdminLearningPathAnalytics = {
     moduleTitle: string
     nodeTitle: string
     lessonTitle: string
+    locationLabel: string
     depth: 'beginner' | 'explorer' | 'researcher' | null
+    depthLabel: string | null
     opens: number
     uniqueSessions: number
     completions: number
@@ -284,5 +286,94 @@ export async function fetchAdminAgentAnalytics(
     }
   } catch {
     return { success: false, error: 'Không kết nối được API agent analytics' }
+  }
+}
+
+export type AdminExploreFunnelItem = {
+  step: string
+  label: string
+  events: number
+  uniqueUsers: number
+  uniqueSessions: number
+  conversionFromStart: number
+  conversionFromPrev: number
+}
+
+export type AdminExploreAnalytics = {
+  range: AnalyticsRange
+  funnel: AdminExploreFunnelItem[]
+  summary: {
+    discoveries: number
+    discoveryUsers: number
+    quizPrompts: number
+    quizPasses: number
+  }
+  topEntities: Array<{
+    entityId: string
+    discoveries: number
+    quizPasses: number
+  }>
+}
+
+export type AdminUnifiedLearnerAnalytics = {
+  range: AnalyticsRange
+  learningPath: {
+    totalEvents: number
+    uniqueUsers: number
+    uniqueSessions: number
+  }
+  course: {
+    totalEvents: number
+    uniqueUsers: number
+    uniqueSessions: number
+  }
+  crossModule: {
+    uniqueUsersAny: number
+    usersBothLpAndCourse: number
+    pctBoth: number
+  }
+  daily: {
+    learningPath: Array<{ date: string; events: number }>
+    course: Array<{ date: string; events: number }>
+  }
+}
+
+export async function fetchAdminExploreAnalytics(
+  range: AnalyticsRange = '30d',
+): Promise<{ success: boolean; data?: AdminExploreAnalytics; error?: string }> {
+  try {
+    const res = await fetch(`${API_BASE}/admin/analytics/explore?range=${encodeURIComponent(range)}`, {
+      headers: authHeaders(),
+      cache: 'no-store',
+    })
+    const data = await res.json()
+    if (!res.ok || !data.success) {
+      return { success: false, error: data.error || 'Không tải được Explore analytics' }
+    }
+    const payload = unwrapAnalyticsPayload<AdminExploreAnalytics>(data)
+    if (!payload) return { success: false, error: 'Dữ liệu Explore không đúng định dạng' }
+    return { success: true, data: payload }
+  } catch {
+    return { success: false, error: 'Không kết nối được API Explore analytics' }
+  }
+}
+
+export async function fetchAdminUnifiedLearnerAnalytics(
+  range: AnalyticsRange = '30d',
+): Promise<{ success: boolean; data?: AdminUnifiedLearnerAnalytics; error?: string }> {
+  try {
+    const res = await fetch(`${API_BASE}/admin/analytics/unified-learner?range=${encodeURIComponent(range)}`, {
+      headers: authHeaders(),
+      cache: 'no-store',
+    })
+    const data = await res.json()
+    if (!res.ok || !data.success) {
+      return { success: false, error: data.error || 'Không tải được unified learner analytics' }
+    }
+    const payload = unwrapAnalyticsPayload<AdminUnifiedLearnerAnalytics>(data)
+    if (!payload) return { success: false, error: 'Dữ liệu unified learner không đúng định dạng' }
+    return { success: true, data: payload }
+  } catch {
+    return { success: false, error: 'Không kết nối được API unified learner analytics' }
   }
 }

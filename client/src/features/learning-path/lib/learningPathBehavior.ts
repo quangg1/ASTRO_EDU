@@ -36,14 +36,26 @@ export type LearningPathBehaviorEvent = {
   metadata?: Record<string, unknown>
 }
 
+type QueuedLearningPathEvent = LearningPathBehaviorEvent & {
+  eventId: string
+  schemaVersion: number
+  sessionId: string
+  anonSessionId: string
+  client: 'web'
+  timestamp: string
+}
+
 const SESSION_KEY = 'lp_behavior_session_id'
 const SESSION_LAST_SEEN_KEY = 'lp_behavior_session_last_seen'
+const ANON_SESSION_KEY = 'lp_anon_session_id'
+const ANON_ATTRIBUTED_PREFIX = 'lp_anon_attributed_'
+const SCHEMA_VERSION = 1
 const MAX_BATCH_SIZE = 20
 const FLUSH_INTERVAL_MS = 12000
 const SESSION_IDLE_MS = 30 * 60 * 1000
 const DEDUPE_WINDOW_MS = 1500
 
-let queue: Array<LearningPathBehaviorEvent & { sessionId: string; client: 'web'; timestamp: string }> = []
+let queue: QueuedLearningPathEvent[] = []
 let flushTimer: number | null = null
 let flushInFlight = false
 let listenersBound = false
@@ -69,6 +81,17 @@ export function getLearningPathSessionId() {
   window.sessionStorage.setItem(SESSION_KEY, next)
   window.sessionStorage.setItem(SESSION_LAST_SEEN_KEY, String(now))
   return next
+}
+
+/** Persistent guest id — gán userId sau login qua attribute-session. */
+export function getAnonLearningSessionId() {
+  if (typeof window === 'undefined') return null
+  let existing = window.localStorage.getItem(ANON_SESSION_KEY)
+  if (!existing) {
+    existing = randomId()
+    window.localStorage.setItem(ANON_SESSION_KEY, existing)
+  }
+  return existing
 }
 
 function makeEventKey(event: LearningPathBehaviorEvent) {
@@ -107,14 +130,45 @@ function bindLifecycleListeners() {
   if (typeof window === 'undefined' || listenersBound) return
   listenersBound = true
 
-  const flushNow = () => {
-    void flushLearningPathBehavior()
+  const flushKeepalive = () => {
+    void flushLearningPathBehavior({ keepalive: true })
   }
 
-  window.addEventListener('beforeunload', flushNow)
+  window.addEventListener('beforeunload', flushKeepalive)
+  window.addEventListener('pagehide', flushKeepalive)
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'hidden') flushNow()
+    if (document.visibilityState === 'hidden') flushKeepalive()
   })
+  window.addEventListener('galaxies-auth-signed-in', () => {
+    void attributeGuestLearningSessionToUser()
+  })
+}
+
+export async function attributeGuestLearningSessionToUser() {
+  if (typeof window === 'undefined') return
+  const token = getToken()
+  const anonSessionId = getAnonLearningSessionId()
+  if (!token || !anonSessionId) return
+
+  const flagKey = `${ANON_ATTRIBUTED_PREFIX}${anonSessionId}`
+  if (window.localStorage.getItem(flagKey)) return
+
+  try {
+    const res = await fetch(`${getApiPathBase()}/learning-path/attribute-session`, {
+      method: 'POST',
+      credentials: 'omit',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ anonSessionId }),
+    })
+    if (res.ok) {
+      window.localStorage.setItem(flagKey, '1')
+    }
+  } catch {
+    // retry on next auth event or flush
+  }
 }
 
 export function trackLearningPathBehavior(event: LearningPathBehaviorEvent) {
@@ -124,7 +178,10 @@ export function trackLearningPathBehavior(event: LearningPathBehaviorEvent) {
 
   queue.push({
     ...event,
+    eventId: randomId(),
+    schemaVersion: SCHEMA_VERSION,
     sessionId: getLearningPathSessionId(),
+    anonSessionId: getAnonLearningSessionId() || getLearningPathSessionId(),
     client: 'web',
     timestamp: event.timestamp || new Date().toISOString(),
   })
@@ -136,7 +193,7 @@ export function trackLearningPathBehavior(event: LearningPathBehaviorEvent) {
   scheduleFlush()
 }
 
-export async function flushLearningPathBehavior() {
+export async function flushLearningPathBehavior(opts?: { keepalive?: boolean }) {
   if (flushInFlight || queue.length === 0) return
   flushInFlight = true
 
@@ -148,11 +205,12 @@ export async function flushLearningPathBehavior() {
     const res = await fetch(`${getApiPathBase()}/learning-path/events/batch`, {
       method: 'POST',
       credentials: 'omit',
+      keepalive: Boolean(opts?.keepalive),
       headers: {
         'Content-Type': 'application/json',
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
-      body: JSON.stringify({ events: batch }),
+      body: JSON.stringify({ events: batch, schemaVersion: SCHEMA_VERSION }),
     })
     const data = (await res.json().catch(() => null)) as {
       data?: {
@@ -169,6 +227,9 @@ export async function flushLearningPathBehavior() {
       window.dispatchEvent(new CustomEvent('learning-path-rewards', { detail: rewards }))
       void syncGemWallet()
       window.dispatchEvent(new CustomEvent('gem-wallet-changed'))
+    }
+    if (token) {
+      void attributeGuestLearningSessionToUser()
     }
   } catch {
     queue = [...batch, ...queue].slice(0, 200)

@@ -22,12 +22,19 @@ const Order = require('../payment/models/Order');
 const Post = require('../community/models/Post');
 const LearningPathEvent = require('../learning-path/models/LearningPathEvent');
 const LearningPath = require('../learning-path/models/LearningPath');
+const Concept = require('../concepts/models/Concept');
 const gemEconomyRouter = require('./gemEconomy');
 const adminPromoRoutes = require('../promotions/adminPromoRoutes');
 const adminOpsRoutes = require('./routes/adminOpsRoutes');
 const { broadcastAdminNotification, VALID_ROLES } = require('./adminBroadcastService');
 const { requireString } = require('../../shared/validation');
 const { amountToVndAggExpr, getUsdToVndRate } = require('../../shared/money/revenueVnd');
+const { getExploreAnalytics } = require('./services/exploreAnalyticsService');
+const { getUnifiedLearnerAnalytics } = require('./services/unifiedLearnerAnalyticsService');
+const {
+  resolveLessonDisplay,
+  resolveConceptTitle,
+} = require('./services/adminLearningPathAnalyticsLabels');
 
 const router = express.Router();
 
@@ -94,7 +101,10 @@ function buildLearningPathLookup(doc) {
   for (const c of Array.isArray(doc?.concepts) ? doc.concepts : []) {
     const id = String(c?.id || '').trim();
     if (!id) continue;
-    conceptMap.set(id, String(c.title || c.short_description || id).trim() || id);
+    conceptMap.set(
+      id,
+      String(c.labelVi || c.label || c.title || c.short_description || id).trim() || id,
+    );
   }
 
   for (const module of modules) {
@@ -782,6 +792,24 @@ router.get('/analytics/learning-path', authMiddleware, requireAdminScope('analyt
       { $limit: 25 },
     ]);
 
+    const conceptIds = conceptEngagementAgg.map((row) => String(row._id || '').trim()).filter(Boolean);
+    if (conceptIds.length) {
+      const missingIds = conceptIds.filter((id) => {
+        const t = lookup.conceptMap.get(id);
+        return !t || t === id;
+      });
+      if (missingIds.length) {
+        const fromDb = await Concept.find({ id: { $in: missingIds } })
+          .select('id title short_description')
+          .lean();
+        for (const c of fromDb) {
+          const id = String(c.id || '').trim();
+          if (!id) continue;
+          lookup.conceptMap.set(id, String(c.title || c.short_description || id).trim() || id);
+        }
+      }
+    }
+
     const summaryRow = summaryAgg[0] || {};
     const uniqueUsers = ensureArray(summaryRow.uniqueUsers).filter(Boolean);
     const uniqueSessions = ensureArray(summaryRow.uniqueSessions).filter(Boolean);
@@ -817,7 +845,7 @@ router.get('/analytics/learning-path', authMiddleware, requireAdminScope('analyt
         depths: [
           { value: 'beginner', label: 'Cơ bản' },
           { value: 'explorer', label: 'Cơ chế' },
-          { value: 'researcher', label: 'Sâu' },
+          { value: 'researcher', label: 'Chuyên sâu' },
         ],
       },
       summary: {
@@ -847,17 +875,24 @@ router.get('/analytics/learning-path', authMiddleware, requireAdminScope('analyt
       topLessons: lessonStatsAgg
         .map((row) => {
           const lessonId = String(row._id?.lessonId || '');
-          const meta = lookup.lessonMap.get(lessonId);
+          const display = resolveLessonDisplay(
+            lessonId,
+            row._id?.moduleId,
+            row._id?.nodeId,
+            lookup,
+          );
           const opens = row.opens || 0;
           const completions = row.completions || 0;
           return {
             lessonId,
             moduleId: row._id?.moduleId || null,
             nodeId: row._id?.nodeId || null,
-            moduleTitle: meta?.moduleTitle || String(row._id?.moduleId || ''),
-            nodeTitle: meta?.nodeTitle || String(row._id?.nodeId || ''),
-            lessonTitle: meta?.lessonTitle || lessonId,
-            depth: meta?.depth || null,
+            moduleTitle: display.moduleTitle,
+            nodeTitle: display.nodeTitle,
+            lessonTitle: display.lessonTitle,
+            locationLabel: display.locationLabel,
+            depth: display.depth,
+            depthLabel: display.depthLabel,
             opens,
             uniqueSessions: ensureArray(row.openSessions).filter(Boolean).length,
             completions,
@@ -870,9 +905,10 @@ router.get('/analytics/learning-path', authMiddleware, requireAdminScope('analyt
         .slice(0, 15),
       topConcepts: conceptEngagementAgg.map((row) => {
         const conceptId = String(row._id || '').trim();
+        const conceptTitle = resolveConceptTitle(conceptId, lookup);
         return {
           conceptId,
-          conceptTitle: lookup.conceptMap.get(conceptId) || conceptId,
+          conceptTitle,
           opens: row.opens || 0,
           uniqueUsers: ensureArray(row.users).filter(Boolean).length,
         };
@@ -881,6 +917,32 @@ router.get('/analytics/learning-path', authMiddleware, requireAdminScope('analyt
   } catch (err) {
     req.logger?.error('admin_analytics_learning_path_failed', { error: err.message, range: req.query.range });
     res.status(500).json({ success: false, error: 'Lỗi tải learning path analytics' });
+  }
+});
+
+router.get('/analytics/explore', authMiddleware, requireAdminScope('analytics'), async (req, res) => {
+  try {
+    const range = String(req.query.range || '30d');
+    const days = parseRangeDays(range);
+    const { startDate } = buildDateRange(days);
+    const data = await getExploreAnalytics(startDate);
+    res.json({ success: true, range, ...data });
+  } catch (err) {
+    req.logger?.error('admin_analytics_explore_failed', { error: err.message, range: req.query.range });
+    res.status(500).json({ success: false, error: 'Lỗi tải Explore analytics' });
+  }
+});
+
+router.get('/analytics/unified-learner', authMiddleware, requireAdminScope('analytics'), async (req, res) => {
+  try {
+    const range = String(req.query.range || '30d');
+    const days = parseRangeDays(range);
+    const { startDate } = buildDateRange(days);
+    const data = await getUnifiedLearnerAnalytics(startDate);
+    res.json({ success: true, range, ...data });
+  } catch (err) {
+    req.logger?.error('admin_analytics_unified_failed', { error: err.message, range: req.query.range });
+    res.status(500).json({ success: false, error: 'Lỗi tải unified learner analytics' });
   }
 });
 
