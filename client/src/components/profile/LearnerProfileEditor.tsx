@@ -8,7 +8,7 @@ import {
   updateMyLearnerProfile,
   type EducationEntry,
   type LearnerProfile,
-} from '@/features/users/api/learnerProfileApi'
+} from '@/features/users/public'
 import { useAuthStore } from '@/features/auth/public'
 
 const EMPTY_EDU: EducationEntry = { school: '', degree: '', field: '', yearEnd: null }

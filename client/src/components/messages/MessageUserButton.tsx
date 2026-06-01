@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { MessageCircle } from 'lucide-react'
 import { useAuthStore } from '@/features/auth/public'
-import { openConversationWithUser } from '@/features/messages/api/messagesApi'
+import { openConversationWithUser } from '@/features/messages/public'
 
 type Props = {
   userId: string
