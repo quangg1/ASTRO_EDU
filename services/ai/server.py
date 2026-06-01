@@ -3,16 +3,18 @@ AI Service – Python: RAG, security, hội thoại đa phương thức (text + 
 LLM: Groq Cloud (OpenAI-compatible). Chạy: uvicorn server:app --host 0.0.0.0 --port 5005
 """
 import asyncio
+import json
 import os
 import time
 from pathlib import Path
-from typing import Annotated, Any
+from typing import Annotated, Any, AsyncIterator
 
 from dotenv import load_dotenv
 
 import httpx
 import knowledge_pipeline as kp
 from fastapi import Depends, FastAPI, Header, HTTPException
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from agent_tools import (
@@ -921,6 +923,267 @@ async def chat(body: ChatRequestBody):
     if rag_ms is not None:
         out["rag_ms"] = round(rag_ms, 1)
     return out
+
+
+def _sse_line(event: str, data: dict[str, Any]) -> str:
+    return f"event: {event}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
+
+
+async def _stream_llm_tokens(
+    api_messages: list[dict],
+    *,
+    has_image: bool,
+    temperature: float,
+    max_tokens: int,
+    tools: list[dict[str, Any]] | None,
+) -> AsyncIterator[dict[str, Any]]:
+    """Yield {kind: token|tools_raw|provider|error, ...} from first working provider."""
+    chain = build_provider_chain(has_image)
+    if not chain:
+        yield {"kind": "error", "message": "Không có LLM provider khả dụng"}
+        return
+
+    provider_errors: list[str] = []
+    async with httpx.AsyncClient(timeout=90.0) as client:
+        for idx, provider in enumerate(chain):
+            msgs = (
+                _merge_system_for_openrouter(api_messages)
+                if provider.merge_system_into_user
+                else api_messages
+            )
+            payload: dict[str, Any] = {
+                "model": provider.model,
+                "messages": msgs,
+                "stream": True,
+                "max_tokens": max_tokens,
+                "temperature": temperature,
+            }
+            if tools:
+                payload["tools"] = tools
+                payload["tool_choice"] = "auto"
+            try:
+                async with client.stream(
+                    "POST",
+                    provider.chat_completions_url,
+                    json=payload,
+                    headers=provider.request_headers(),
+                ) as r:
+                    if r.status_code != 200:
+                        err_snip = (await r.aread()).decode("utf-8", errors="replace")[:300]
+                        provider_errors.append(f"{provider.label}:{r.status_code}:{err_snip}")
+                        if idx < len(chain) - 1 and should_fallback_to_next_provider(
+                            r.status_code, err_snip
+                        ):
+                            continue
+                        yield {
+                            "kind": "error",
+                            "message": " | ".join(provider_errors) or "LLM stream failed",
+                        }
+                        return
+
+                    tool_acc: dict[int, dict[str, Any]] = {}
+                    async for line in r.aiter_lines():
+                        if not line or not line.startswith("data: "):
+                            continue
+                        raw = line[6:].strip()
+                        if raw == "[DONE]":
+                            break
+                        try:
+                            chunk = json.loads(raw)
+                        except json.JSONDecodeError:
+                            continue
+                        choices = chunk.get("choices")
+                        if not isinstance(choices, list) or not choices:
+                            continue
+                        delta = (choices[0] or {}).get("delta") or {}
+                        piece = delta.get("content")
+                        if isinstance(piece, str) and piece:
+                            yield {"kind": "token", "content": piece}
+                        for td in delta.get("tool_calls") or []:
+                            if not isinstance(td, dict):
+                                continue
+                            i = int(td.get("index", 0))
+                            acc = tool_acc.setdefault(
+                                i,
+                                {
+                                    "id": "",
+                                    "type": "function",
+                                    "function": {"name": "", "arguments": ""},
+                                },
+                            )
+                            if td.get("id"):
+                                acc["id"] = td["id"]
+                            fn = td.get("function") or {}
+                            if isinstance(fn, dict):
+                                if fn.get("name"):
+                                    acc["function"]["name"] += str(fn["name"])
+                                if fn.get("arguments"):
+                                    acc["function"]["arguments"] += str(fn["arguments"])
+
+                    yield {"kind": "provider", "label": provider.label}
+                    yield {"kind": "tools_raw", "tool_calls": list(tool_acc.values())}
+                    return
+            except Exception as e:
+                provider_errors.append(f"{provider.label}:connect:{e}")
+                if idx < len(chain) - 1:
+                    continue
+
+    yield {
+        "kind": "error",
+        "message": " | ".join(provider_errors) if provider_errors else "LLM stream failed",
+    }
+
+
+async def _chat_stream_generator(body: ChatRequestBody) -> AsyncIterator[str]:
+    messages = [m.model_dump() for m in body.messages]
+    if is_request_blocked(messages):
+        yield _sse_line("token", {"content": REFUSAL_MESSAGE_VI})
+        yield _sse_line(
+            "done",
+            {"message": {"role": "assistant", "content": REFUSAL_MESSAGE_VI}, "tool_calls": []},
+        )
+        return
+
+    rag_ms: float | None = None
+    if body.context == "course" and body.course:
+        base_system = build_course_system(body.course)
+    elif body.context == "learning_path" and body.learning_path:
+        base_system = build_learning_path_system(body.learning_path)
+    elif body.context == "explore":
+        base_system = build_explore_system()
+    else:
+        base_system = build_general_system()
+
+    system_content = augment_system_with_agent_state(base_system, body.agent_state)
+
+    if USE_RAG:
+        query = _last_user_text(messages)
+        if query:
+            timeout_s = body.rag_timeout_ms / 1000.0
+            try:
+                t_rag = time.perf_counter()
+                lesson_id = body.rag_lesson_id
+                if not lesson_id and body.agent_state:
+                    lesson_id = body.agent_state.lesson_id
+                chunks = await asyncio.wait_for(
+                    retrieve(query, lesson_id=lesson_id),
+                    timeout=timeout_s,
+                )
+                rag_ms = (time.perf_counter() - t_rag) * 1000.0
+            except asyncio.TimeoutError:
+                chunks = []
+                system_content = (
+                    system_content.rstrip()
+                    + "\n\n[RAG timeout — trả lời từ ngữ cảnh bài học và kiến thức chung, không bịa số liệu cụ thể.]\n"
+                )
+            if chunks:
+                rag_block = (
+                    "Tài liệu tham khảo (ưu tiên khi liên quan; có thể là cập nhật mới hơn kiến thức cut-off của model):\n"
+                    + "\n---\n".join(chunks[:4])
+                )
+                system_content = system_content.rstrip() + "\n\n" + rag_block + "\n"
+
+    api_messages = _build_messages_for_llm(
+        messages,
+        system_content,
+        body.image_base64,
+        body.image_media_type,
+    )
+    use_tools = USE_AGENT_TOOLS and not body.image_base64
+    tools = (
+        tools_for_context(body.context, body.allowed_tools) if use_tools else None
+    )
+    temp = 0.7 if body.context == "general" else 0.6
+
+    if body.image_base64:
+        r, llm_provider_used, provider_errors = await _complete_chat(
+            api_messages,
+            has_image=True,
+            temperature=temp,
+            max_tokens=1024,
+            tools=None,
+        )
+        if r is None:
+            detail = " | ".join(provider_errors) if provider_errors else "Không có provider"
+            yield _sse_line("error", {"error": detail})
+            return
+        data = r.json()
+        msg = (data.get("choices") or [{}])[0].get("message") or {}
+        content = (msg.get("content") or "").strip() if isinstance(msg.get("content"), str) else ""
+        if content:
+            yield _sse_line("token", {"content": content})
+        yield _sse_line(
+            "done",
+            {
+                "message": {"role": "assistant", "content": content},
+                "tool_calls": [],
+                "rag_ms": round(rag_ms, 1) if rag_ms is not None else None,
+                "llm_provider": llm_provider_used,
+            },
+        )
+        return
+
+    content_parts: list[str] = []
+    tools_raw: list[dict[str, Any]] = []
+    llm_provider_used: str | None = None
+
+    async for ev in _stream_llm_tokens(
+        api_messages,
+        has_image=False,
+        temperature=temp,
+        max_tokens=1024,
+        tools=tools,
+    ):
+        kind = ev.get("kind")
+        if kind == "token":
+            piece = ev.get("content") or ""
+            if piece:
+                content_parts.append(piece)
+                yield _sse_line("token", {"content": piece})
+        elif kind == "tools_raw":
+            tools_raw = ev.get("tool_calls") or []
+        elif kind == "provider":
+            llm_provider_used = ev.get("label")
+        elif kind == "error":
+            yield _sse_line("error", {"error": ev.get("message", "LLM stream failed")})
+            return
+
+    content = "".join(content_parts).strip()
+    validated = (
+        validate_and_normalize_tool_calls(
+            body.context, body.course, tools_raw, body.learning_path
+        )
+        if tools_raw
+        else []
+    )
+    if not content and validated:
+        content = "Mình đã chọn thao tác phù hợp — bạn có thể bấm nút bên dưới."
+    elif not content and not validated:
+        content = REFUSAL_MESSAGE_VI
+
+    done_payload: dict[str, Any] = {
+        "message": {"role": "assistant", "content": content},
+        "tool_calls": validated,
+    }
+    if llm_provider_used:
+        done_payload["llm_provider"] = llm_provider_used
+    if rag_ms is not None:
+        done_payload["rag_ms"] = round(rag_ms, 1)
+    yield _sse_line("done", done_payload)
+
+
+@app.post("/chat/stream")
+async def chat_stream(body: ChatRequestBody):
+    """SSE: event token {content} … event done {message, tool_calls, rag_ms}."""
+    return StreamingResponse(
+        _chat_stream_generator(body),
+        media_type="text/event-stream; charset=utf-8",
+        headers={
+            "Cache-Control": "no-cache, no-transform",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 @app.post("/quiz/generate")

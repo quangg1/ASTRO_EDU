@@ -66,11 +66,22 @@ export function NotificationBell() {
       const n = msg.notification
       setUnread((c) => c + (msg.unreadDelta ?? (n.readAt ? 0 : 1)))
       setItems((prev) => {
-        if (prev.some((x) => x.id === n.id)) return prev
-        return [n, ...prev].slice(0, 12)
+        const withoutDup = prev.filter((x) => x.id !== n.id)
+        return [n, ...withoutDup].slice(0, 12)
       })
     })
   }, [onMessage])
+
+  /** Tin nhắn mới — refresh số chưa đọc (thông báo chính vẫn qua type: notification từ server). */
+  useEffect(() => {
+    if (!user) return
+    const onDm = () => {
+      void refreshCount()
+      if (open) void loadPanel()
+    }
+    window.addEventListener('galaxies-dm', onDm)
+    return () => window.removeEventListener('galaxies-dm', onDm)
+  }, [user, open, refreshCount, loadPanel])
 
   useEffect(() => {
     function onDoc(e: MouseEvent) {

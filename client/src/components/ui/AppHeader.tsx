@@ -74,6 +74,7 @@ export function AppHeader() {
   } as const
   const dropdownIconById = {
     profile: UserRound,
+    messages: MessageCircle,
     myLearning: BookOpen,
     courses: Sparkles,
     learningPath: ListTree,
@@ -81,7 +82,15 @@ export function AppHeader() {
     search: Search,
   } as const
   const mobileTopItemIds = new Set(['dashboard', 'community'])
-  const mobileMoreItemIds = new Set(['profile', 'myLearning', 'courses', 'learningPath', 'explore', 'search'])
+  const mobileMoreItemIds = new Set([
+    'profile',
+    'messages',
+    'myLearning',
+    'courses',
+    'learningPath',
+    'explore',
+    'search',
+  ])
   const sciFiClip = 'polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px)'
   const navBtnBase =
     'inline-flex items-center gap-2 px-4 py-[7px] text-[11px] font-bold uppercase tracking-widest border-2 transition-colors'

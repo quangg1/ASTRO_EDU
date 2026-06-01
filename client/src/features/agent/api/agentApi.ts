@@ -47,12 +47,24 @@ export function getAgentApiBase(): string {
 
 export type AgentStreamEvent =
   | { event: 'session'; data: AgentMessageResponse['session'] }
+  | { event: 'status'; data: { phase?: string } }
   | { event: 'token'; data: { content: string } }
   | { event: 'tool_calls'; data: { tool_calls: unknown } }
   | { event: 'tool_results'; data: { tool_results: AgentMessageResponse['tool_results'] } }
   | { event: 'fallback'; data: { chips?: Array<{ label: string; action: string }> } }
   | { event: 'done'; data: { ok?: boolean; fallback?: boolean } }
   | { event: 'error'; data: { error?: string } }
+
+/** Let the browser paint between SSE events (avoids one React commit for the whole reply). */
+function yieldToRenderer(): Promise<void> {
+  return new Promise((resolve) => {
+    if (typeof requestAnimationFrame === 'function') {
+      requestAnimationFrame(() => resolve())
+    } else {
+      setTimeout(resolve, 0)
+    }
+  })
+}
 
 async function consumeSse(
   res: Response,
@@ -80,6 +92,9 @@ async function consumeSse(
       try {
         const data = JSON.parse(dataLine) as AgentStreamEvent['data']
         onEvent({ event, data } as AgentStreamEvent)
+        if (event === 'token') {
+          await yieldToRenderer()
+        }
       } catch {
         /* ignore malformed */
       }

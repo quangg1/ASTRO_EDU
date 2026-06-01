@@ -6,6 +6,7 @@ deepened: 2026-05-25
 audit: final audit 16/16 + gaps D3/schema/misconception; context prefetch, tools, coach, RAG, metrics; UI unified CosmoAssistantWidget (2026-05-27)
 origin: user request — agent thông minh tối ưu quá trình học tập
 related:
+  - docs/architecture/learning-agent.md
   - docs/AI_TUTOR_PLAN.md
   - docs/plans/agent-entitlement-guardrails.md
   - docs/EDU_ARCHITECTURE.md
@@ -14,6 +15,8 @@ related:
 ---
 
 # Hệ thống AI Learning Agent — Thiết kế & lộ trình
+
+> **Kiến trúc & vận hành (as-built):** xem [`docs/architecture/learning-agent.md`](../architecture/learning-agent.md) — tài liệu này giữ vision, phase, và backlog.
 
 ## 1. Tầm nhìn
 

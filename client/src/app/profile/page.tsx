@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { changePassword, deactivateMyAccount, updateProfile, useAuthStore } from '@/features/auth/public'
 import { canModerate } from '@/lib/roles'
 import { TeacherProfileEditor } from '@/components/profile/TeacherProfileEditor'
+import { LearnerProfileEditor } from '@/components/profile/LearnerProfileEditor'
 import { useLiveClock } from '@/hooks/useLiveClock'
 
 // ── Design primitives ──────────────────────────────────────────────────────────
@@ -399,6 +400,11 @@ export default function ProfilePage() {
               XIN QUYỀN GIẢNG VIÊN
             </Link>
           )}
+        </div>
+
+        {/* ── Learning profile (public) ── */}
+        <div style={{ marginBottom: 20 }}>
+          <LearnerProfileEditor />
         </div>
 
         {/* ── 2-column: Details + Security ── */}

@@ -22,6 +22,7 @@ const notificationSchema = new mongoose.Schema(
         'admin_broadcast',
         'community_post_upvote',
         'community_comment_upvote',
+        'direct_message',
       ],
       default: 'system',
       index: true,

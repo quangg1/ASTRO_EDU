@@ -3,7 +3,7 @@ const { AppError } = require('../../../shared/errors');
 const { resolveAgentTier } = require('./entitlementResolver');
 const { checkHourlyLimit, checkGuestDemoLimit } = require('./rateLimit');
 const { buildAgentContext } = require('./contextBuilder');
-const { callAiChat, mapContextForAi } = require('./aiClient');
+const { callAiChat, callAiChatStream, mapContextForAi } = require('./aiClient');
 const { toolsForTier } = require('../lib/toolSchema');
 const { executeAuthorizedTool, loadCourseForTools } = require('./toolAuthorizers/executeTool');
 const AgentSession = require('../models/AgentSession');
@@ -138,5 +138,6 @@ module.exports = {
   toolsForTier,
   mapContextForAi,
   callAiChat,
+  callAiChatStream,
   loadCourseForTools,
 };

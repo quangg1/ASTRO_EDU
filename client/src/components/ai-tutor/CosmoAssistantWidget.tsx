@@ -714,7 +714,16 @@ function CosmoAssistantInner() {
               </div>
             )})}
 
-                      {loading && <p className="animate-pulse text-xs text-gray-500">Đang suy nghĩ…</p>}
+                      {loading &&
+                        !messages.some(
+                          (m) =>
+                            m.role === 'assistant' &&
+                            'streaming' in m &&
+                            (m as { streaming?: boolean }).streaming &&
+                            m.content.length > 0,
+                        ) && (
+                          <p className="animate-pulse text-xs text-gray-500">Đang suy nghĩ…</p>
+                        )}
                       {error && <p className="text-xs text-red-300">{error}</p>}
                       <div ref={listEndRef} />
                     </div>

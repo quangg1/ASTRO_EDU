@@ -175,6 +175,69 @@ async function notifyCommunityCommentUpvote({ userId, voterName, postId, postTit
   );
 }
 
+/**
+ * Tin nhắn riêng — gộp vào một thông báo chưa đọc / cuộc trò chuyện (tránh spam chuông).
+ */
+async function notifyDirectMessage(
+  { userId, senderName, messagePreview, conversationId, senderId },
+  opts = {},
+) {
+  const uid = String(userId || '').trim();
+  const convId = String(conversationId || '').trim();
+  if (!uid || !convId) return null;
+
+  const titleVi = `${String(senderName || 'Học viên').trim()} nhắn tin`;
+  const bodyVi = String(messagePreview || '').trim() || '…';
+  const href = `/messages/${encodeURIComponent(convId)}`;
+
+  const existing = await Notification.findOne({
+    userId: uid,
+    type: 'direct_message',
+    readAt: null,
+    'metadata.conversationId': convId,
+  })
+    .sort({ createdAt: -1 })
+    .exec();
+
+  if (existing) {
+    existing.titleVi = titleVi;
+    existing.bodyVi = bodyVi;
+    existing.href = href;
+    existing.metadata = {
+      ...(existing.metadata || {}),
+      conversationId: convId,
+      senderId: senderId ? String(senderId) : null,
+    };
+    await existing.save();
+    if (!opts.deferRealtime) {
+      const dto = notificationToClientDto(existing);
+      if (dto) {
+        publishToUser(uid, {
+          type: 'notification',
+          notification: dto,
+          unreadDelta: 0,
+        });
+      }
+    }
+    return existing;
+  }
+
+  return createNotification(
+    {
+      userId: uid,
+      type: 'direct_message',
+      titleVi,
+      bodyVi,
+      href,
+      metadata: {
+        conversationId: convId,
+        senderId: senderId ? String(senderId) : null,
+      },
+    },
+    opts,
+  );
+}
+
 async function notifyEnrollmentRevoked(
   { userId, kind, courseTitle, courseSlug, cohortTitle, reason },
   opts = {},
@@ -219,4 +282,5 @@ module.exports = {
   notifyCommunityPostUpvote,
   notifyCommunityCommentUpvote,
   notifyEnrollmentRevoked,
+  notifyDirectMessage,
 };

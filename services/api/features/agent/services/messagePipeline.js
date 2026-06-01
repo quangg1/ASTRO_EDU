@@ -12,6 +12,7 @@ const {
   toolsForTier,
   mapContextForAi,
   callAiChat,
+  callAiChatStream,
   loadCourseForTools,
 } = require('./pipelineSteps');
 const { getCachedContext } = require('./contextCache');
@@ -29,6 +30,24 @@ function wantsStream(req) {
 function writeSse(res, event, data) {
   res.write(`event: ${event}\n`);
   res.write(`data: ${JSON.stringify(data)}\n\n`);
+}
+
+function flushSse(res) {
+  if (typeof res.flush === 'function') res.flush();
+}
+
+/** Smaller chunks + short pause so the browser can paint between SSE events (LLM itself is non-streaming). */
+const STREAM_WORDS_PER_CHUNK = 3;
+const STREAM_CHUNK_DELAY_MS = 18;
+
+async function writeTokenStream(res, text) {
+  for (const chunk of chunkTextForStream(text, STREAM_WORDS_PER_CHUNK)) {
+    writeSse(res, 'token', { content: chunk });
+    flushSse(res);
+    if (STREAM_CHUNK_DELAY_MS > 0) {
+      await new Promise((resolve) => setTimeout(resolve, STREAM_CHUNK_DELAY_MS));
+    }
+  }
 }
 
 /**
@@ -106,10 +125,6 @@ async function runMessagePipeline(req, res) {
     image_media_type: body.image_media_type,
   };
 
-  const tBeforeAi = Date.now();
-  const aiResult = await callAiChat(aiBody);
-  const tAfterAi = Date.now();
-
   const sessionMeta = {
     sessionId,
     tier: effectiveTier,
@@ -118,6 +133,37 @@ async function runMessagePipeline(req, res) {
     allowedTools,
     guestSessionId: tier === 'guest' ? guestSessionId : undefined,
   };
+
+  if (stream) {
+    res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-cache, no-transform');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no');
+    writeSse(res, 'session', sessionMeta);
+    writeSse(res, 'status', { phase: 'thinking' });
+    flushSse(res);
+  }
+
+  const tBeforeAi = Date.now();
+  let streamedToClient = false;
+  let firstTokenAt = null;
+
+  const aiResult = stream
+    ? await callAiChatStream(aiBody, {
+        onToken: (delta) => {
+          if (!firstTokenAt) {
+            firstTokenAt = Date.now();
+            writeSse(res, 'status', { phase: 'streaming' });
+            flushSse(res);
+          }
+          streamedToClient = true;
+          writeSse(res, 'token', { content: delta });
+          flushSse(res);
+          if (res.socket) res.socket.setNoDelay(true);
+        },
+      })
+    : await callAiChat(aiBody);
+  const tAfterAi = Date.now();
 
   if (aiResult.error) {
     const fallback = buildFallbackResponse(sessionContext);
@@ -130,15 +176,10 @@ async function runMessagePipeline(req, res) {
       error: aiResult.error,
     });
     if (stream) {
-      res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
-      res.setHeader('Cache-Control', 'no-cache');
-      res.setHeader('Connection', 'keep-alive');
-      writeSse(res, 'session', sessionMeta);
-      for (const chunk of chunkTextForStream(fallback.message.content, 8)) {
-        writeSse(res, 'token', { content: chunk });
-      }
+      await writeTokenStream(res, fallback.message.content);
       writeSse(res, 'fallback', { chips: fallback.chips });
       writeSse(res, 'done', { ok: true, fallback: true });
+      flushSse(res);
       return res.end();
     }
     return res.json({ success: true, session: sessionMeta, ...fallback });
@@ -165,7 +206,7 @@ async function runMessagePipeline(req, res) {
   });
 
   const content = aiResult.message?.content ?? '';
-  const tFirstToken = Date.now();
+  const tFirstToken = firstTokenAt ?? Date.now();
 
   await stepPersistSession(req.userId, sessionId, sessionMeta, agentContext, {
     sessionContext,
@@ -186,26 +227,20 @@ async function runMessagePipeline(req, res) {
   });
 
   if (stream) {
-    res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
-    res.setHeader('Cache-Control', 'no-cache');
-    res.setHeader('Connection', 'keep-alive');
-    writeSse(res, 'session', sessionMeta);
-    let first = true;
-    for (const chunk of chunkTextForStream(content, 10)) {
-      if (first) {
-        logAgentMetrics({
-          sessionId,
-          tier: effectiveTier,
-          t_first_token_ms: Date.now() - t0,
-          stream: true,
-        });
-        first = false;
-      }
-      writeSse(res, 'token', { content: chunk });
+    if (!streamedToClient && content) {
+      await writeTokenStream(res, content);
     }
+    logAgentMetrics({
+      sessionId,
+      tier: effectiveTier,
+      t_first_token_ms: tFirstToken - t0,
+      t_stream_proxy: streamedToClient,
+      stream: true,
+    });
     if (rawToolCalls.length) writeSse(res, 'tool_calls', { tool_calls: rawToolCalls });
     if (tool_results.length) writeSse(res, 'tool_results', { tool_results });
     writeSse(res, 'done', { ok: true });
+    flushSse(res);
     return res.end();
   }
 

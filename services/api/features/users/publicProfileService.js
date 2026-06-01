@@ -9,6 +9,7 @@ const {
   formatTierPublic,
 } = require('../rewards/constants/learnerTiers');
 const { getOverlayUrl, isAvatarDecorationItem } = require('../rewards/constants/avatarDecoration');
+const { getLearnerProfileForPublic } = require('./services/learnerProfileService');
 
 function toObjectIds(ids) {
   const out = [];
@@ -144,6 +145,7 @@ async function getPublicProfile(userId) {
 
   const totalGemsEarned = reward?.totalGemsEarned ?? 0;
   const learnerTier = formatPublicLearnerTier(totalGemsEarned);
+  const learnerProfile = await getLearnerProfileForPublic(uid);
 
   return {
     id: uid,
@@ -154,6 +156,7 @@ async function getPublicProfile(userId) {
     memberSince: user.createdAt?.toISOString?.() || null,
     learnerTier,
     totalGemsEarned,
+    learnerProfile,
     stats: {
       postCount,
       commentCount,

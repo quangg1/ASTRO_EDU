@@ -5,9 +5,22 @@ import { useAuthStore } from '@/features/auth/public'
 import { getNotificationWsUrl } from '@/features/notifications/lib/notificationWsUrl'
 import type { AppNotification } from '@/features/notifications/api/notificationsApi'
 
+export type DmWsPayload = {
+  conversationId: string
+  message: {
+    id: string
+    conversationId: string
+    senderId: string
+    body: string
+    createdAt: string | null
+    isMine: boolean
+  }
+}
+
 export type NotificationWsMessage =
   | { type: 'connected'; userId: string }
   | { type: 'notification'; notification: AppNotification; unreadDelta?: number }
+  | ({ type: 'dm' } & DmWsPayload)
 
 const RECONNECT_MS = 4_000
 
@@ -49,6 +62,16 @@ export function useNotificationRealtime(enabled = true) {
           if (msg.type === 'notification') {
             window.dispatchEvent(
               new CustomEvent('galaxies-notification', { detail: msg.notification }),
+            )
+          }
+          if (msg.type === 'dm') {
+            window.dispatchEvent(
+              new CustomEvent('galaxies-dm', {
+                detail: {
+                  conversationId: msg.conversationId,
+                  message: msg.message,
+                },
+              }),
             )
           }
         } catch {

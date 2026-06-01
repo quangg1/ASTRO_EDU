@@ -1,5 +1,6 @@
 import { getApiPathBase } from '@/lib/apiConfig'
 import type { LearnerTierPublic } from '@/features/rewards/api/learnerTiersApi'
+import type { LearnerProfile } from '@/features/users/api/learnerProfileApi'
 
 const API = `${getApiPathBase()}/users`
 
@@ -12,6 +13,7 @@ export interface PublicUserProfile {
   memberSince: string | null
   learnerTier: LearnerTierPublic
   totalGemsEarned: number
+  learnerProfile: LearnerProfile | null
   stats: {
     postCount: number
     commentCount: number

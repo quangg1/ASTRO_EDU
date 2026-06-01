@@ -232,6 +232,7 @@ export function useCosmoAssistantChat({
           stream: true,
           onStreamEvent: (ev) => {
             if (ev.event === 'token') {
+              setLoading(false)
               streamContentRef.current += ev.data.content || ''
               setMessages((m) =>
                 m.map((msg) =>

@@ -110,4 +110,100 @@ function mapContextForAi(tier, agentContext, sessionContext, coursePayload) {
   return { context: contextLabel, course, learning_path, agent_state: agentState };
 }
 
-module.exports = { callAiChat, mapContextForAi, RAG_TIMEOUT_MS, AI_SERVICE_URL };
+/**
+ * Stream tokens from Python `/chat/stream` (true LLM streaming).
+ * @param {object} body
+ * @param {{ onToken?: (chunk: string) => void }} handlers
+ * @returns {Promise<{ message?: { role: string, content: string }, tool_calls?: unknown[], error?: string, rag_ms?: number }>}
+ */
+async function callAiChatStream(body, handlers = {}) {
+  if (!AI_SERVICE_URL) {
+    return { error: 'AI_SERVICE_URL not configured' };
+  }
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), CHAT_TIMEOUT_MS);
+
+  try {
+    const res = await fetch(`${AI_SERVICE_URL}/chat/stream`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'text/event-stream',
+      },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      const err =
+        typeof data.error === 'string' ? data.error : data.detail || 'AI service error';
+      return { error: err };
+    }
+
+    const reader = res.body?.getReader();
+    if (!reader) return { error: 'AI stream body missing' };
+
+    const dec = new TextDecoder();
+    let buf = '';
+    let donePayload = null;
+
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      const parts = buf.split('\n\n');
+      buf = parts.pop() || '';
+      for (const block of parts) {
+        const lines = block.split('\n');
+        let event = 'message';
+        let dataLine = '';
+        for (const line of lines) {
+          if (line.startsWith('event:')) event = line.slice(6).trim();
+          if (line.startsWith('data:')) dataLine = line.slice(5).trim();
+        }
+        if (!dataLine) continue;
+        let data;
+        try {
+          data = JSON.parse(dataLine);
+        } catch {
+          continue;
+        }
+        if (event === 'token' && typeof data.content === 'string' && data.content) {
+          handlers.onToken?.(data.content);
+        } else if (event === 'done') {
+          donePayload = data;
+        } else if (event === 'error') {
+          return {
+            error: typeof data.error === 'string' ? data.error : 'AI stream error',
+          };
+        }
+      }
+    }
+
+    if (!donePayload?.message) {
+      return { error: 'AI stream ended without response' };
+    }
+
+    return {
+      message: donePayload.message,
+      tool_calls: Array.isArray(donePayload.tool_calls) ? donePayload.tool_calls : [],
+      rag_ms: donePayload.rag_ms,
+      llm_provider: donePayload.llm_provider,
+    };
+  } catch (e) {
+    const msg = e?.name === 'AbortError' ? 'AI request timeout' : e?.message || 'AI unavailable';
+    return { error: msg };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+module.exports = {
+  callAiChat,
+  callAiChatStream,
+  mapContextForAi,
+  RAG_TIMEOUT_MS,
+  AI_SERVICE_URL,
+};

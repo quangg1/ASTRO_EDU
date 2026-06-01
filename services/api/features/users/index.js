@@ -2,6 +2,10 @@ const express = require('express');
 const { authMiddleware, requireRole } = require('../../shared/jwtAuth');
 const { getPublicProfile } = require('./publicProfileService');
 const {
+  getOrCreateLearnerProfile,
+  updateMyLearnerProfile,
+} = require('./services/learnerProfileService');
+const {
   listSavedItems,
   listSavedItemKeys,
   toggleSavedItem,
@@ -78,6 +82,29 @@ router.get('/admin/saved-analytics', authMiddleware, requireRole('admin'), async
     res.json({ success: true, data });
   } catch (err) {
     console.error('GET /api/users/admin/saved-analytics error:', err);
+    res.status(500).json({ success: false, error: 'Lỗi máy chủ' });
+  }
+});
+
+router.get('/me/learner-profile', authMiddleware, async (req, res) => {
+  try {
+    const data = await getOrCreateLearnerProfile(req.userId);
+    res.json({ success: true, data });
+  } catch (err) {
+    console.error('GET /api/users/me/learner-profile error:', err);
+    res.status(500).json({ success: false, error: 'Lỗi máy chủ' });
+  }
+});
+
+router.patch('/me/learner-profile', authMiddleware, async (req, res) => {
+  try {
+    const data = await updateMyLearnerProfile(req.userId, req.body || {});
+    res.json({ success: true, data });
+  } catch (err) {
+    if (err.name === 'ValidationError') {
+      return res.status(400).json({ success: false, error: err.message });
+    }
+    console.error('PATCH /api/users/me/learner-profile error:', err);
     res.status(500).json({ success: false, error: 'Lỗi máy chủ' });
   }
 });

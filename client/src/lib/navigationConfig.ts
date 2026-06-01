@@ -19,6 +19,14 @@ export const NAV_ITEMS: NavItemConfig[] = [
   { id: 'dashboard', href: '/dashboard', labelKey: 'dashboard', group: 'learning', surfaces: ['headerDesktop', 'headerMobileMenu', 'dashboardSidebar'] },
   { id: 'community', href: '/community', labelKey: 'community', group: 'community', surfaces: ['headerDesktop', 'headerMobileMenu', 'mobileBottom', 'dashboardSidebar'] },
   { id: 'profile', href: '/profile', labelKey: 'profile', group: 'account', surfaces: ['headerMobileMenu'] },
+  {
+    id: 'messages',
+    href: '/messages',
+    labelKey: 'more',
+    labelOverride: 'Tin nhắn',
+    group: 'community',
+    surfaces: ['headerMobileMenu', 'dashboardSidebar'],
+  },
   { id: 'myLearning', href: '/my-courses', labelKey: 'myLearning', group: 'learning', surfaces: ['headerMobileMenu', 'dashboardSidebar'] },
   {
     id: 'myOrders',
