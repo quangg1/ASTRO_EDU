@@ -10,10 +10,10 @@ import {
   fetchConversationMessages,
   fetchConversations,
   sendDirectMessage,
+  useDmRealtime,
   type DmConversationSummary,
   type DmMessage,
-} from '@/features/messages/api/messagesApi'
-import { useDmRealtime } from '@/features/messages/hooks/useDmRealtime'
+} from '@/features/messages/public'
 
 export default function MessageThreadPage() {
   const params = useParams()

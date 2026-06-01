@@ -8,9 +8,9 @@ import { useAuthStore } from '@/features/auth/public'
 import { AvatarWithDecoration } from '@/components/profile/AvatarWithDecoration'
 import {
   fetchConversations,
+  useDmRealtime,
   type DmConversationSummary,
-} from '@/features/messages/api/messagesApi'
-import { useDmRealtime } from '@/features/messages/hooks/useDmRealtime'
+} from '@/features/messages/public'
 
 function formatTime(iso: string | null): string {
   if (!iso) return ''
