@@ -6,9 +6,8 @@ import { resolveMappedLessons } from '@/features/content3d/showcase/public'
 import {
   fetchConceptLearningStates,
   type ConceptLearningStateSummary,
-} from '@/features/learning-state/api/learningStateApi'
-import { startConceptQuiz } from '@/features/agent/api/agentApi'
-import { openCosmoAssistant } from '@/features/agent/public'
+} from '@/features/learning-state/public'
+import { openCosmoAssistant, startConceptQuiz } from '@/features/agent/public'
 import { useToast } from '@/design-system'
 import {
   masteryStatusLabel,

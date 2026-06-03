@@ -35,7 +35,9 @@ export {
   fetchAgentSessionDetail,
   postAgentMessageFeedback,
   getAgentApiBase,
+  startConceptQuiz,
 } from './api/agentApi'
+export type { ConceptQuizStartPayload } from './api/agentApi'
 export {
   executeAgentClientAction,
   mergeAgentToolCalls,

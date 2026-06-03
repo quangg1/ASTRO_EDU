@@ -1,4 +1,4 @@
-import type { ConceptLearningStateSummary } from '@/features/learning-state/api/learningStateApi'
+import type { ConceptLearningStateSummary } from '@/features/learning-state/public'
 
 export type ConceptChipView = {
   id: string

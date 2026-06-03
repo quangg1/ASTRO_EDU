@@ -30,7 +30,7 @@ import type { ShowcaseEntityContentDTO } from '@/features/content3d/showcase/pub
 import type { ResolvedNasaCatalogItem } from '@/lib/mergeShowcaseCatalog'
 import type { ShowcaseOrbitEntity } from '@/lib/showcaseEntities'
 import type { QuizQuestion } from '@/shared/types/quizQuestion'
-import { postExploreLearningStateEvent } from '@/features/learning-state/api/learningStateApi'
+import { postExploreLearningStateEvent } from '@/features/learning-state/public'
 import {
   loadExploreContextualQuizDoneToday,
   saveExploreContextualQuizDoneToday,
