@@ -31,7 +31,8 @@ async function callAiChat(body) {
         typeof data.error === 'string' ? data.error : data.detail || 'AI service error';
       return { error: err };
     }
-    return data;
+    const usage = data.usage || null;
+    return { ...data, usage };
   } catch (e) {
     const msg = e?.name === 'AbortError' ? 'AI request timeout' : e?.message || 'AI unavailable';
     return { error: msg };
@@ -40,7 +41,14 @@ async function callAiChat(body) {
   }
 }
 
-function mapContextForAi(tier, agentContext, sessionContext, coursePayload) {
+function mapContextForAi(
+  tier,
+  agentContext,
+  sessionContext,
+  coursePayload,
+  contextBudget,
+  learnerSnapshot = null,
+) {
   const surface = sessionContext?.surface;
   const isCourse =
     tier === 'course_enrolled' ||
@@ -64,6 +72,11 @@ function mapContextForAi(tier, agentContext, sessionContext, coursePayload) {
     module_id: sessionContext?.moduleId ?? null,
     node_id: sessionContext?.nodeId ?? null,
     depth: sessionContext?.depth ?? null,
+    preferred_depth:
+      agentContext?.preferredDepth ??
+      learnerSnapshot?.preferredDepth ??
+      sessionContext?.preferredDepth ??
+      null,
     planet: sessionContext?.planet ?? null,
     stage_time_ma: sessionContext?.stageTimeMa ?? null,
     progress: agentContext?.progress ?? null,
@@ -85,6 +98,30 @@ function mapContextForAi(tier, agentContext, sessionContext, coursePayload) {
     deep_history_disclaimer: agentContext?.narrativeContext?.confidenceDisclaimerVi ?? null,
     earth_fossil_context: agentContext?.earthFossilContext ?? null,
     showcase_context: agentContext?.showcaseContext ?? null,
+    tutoring_style: agentContext?.tutoringStyle ?? 'balanced',
+    learner_interests: agentContext?.learnerInterests?.length
+      ? agentContext.learnerInterests
+      : null,
+    current_concept_ids: agentContext?.currentLesson?.conceptIds?.length
+      ? agentContext.currentLesson.conceptIds
+      : null,
+    lesson_learning_state: agentContext?.lessonLearningState
+      ? {
+          mastery: agentContext.lessonLearningState.mastery,
+          confidence: agentContext.lessonLearningState.confidence,
+          quiz_fail_streak: agentContext.lessonLearningState.quizFailStreak,
+          next_best_action: agentContext.lessonLearningState.nextBestAction,
+          signals: agentContext.lessonLearningState.signals,
+        }
+      : null,
+    concept_learning_states: (agentContext?.conceptLearningStates || []).map((c) => ({
+      concept_id: c.conceptId,
+      mastery: c.mastery,
+      confidence: c.confidence,
+      recommended_difficulty: c.recommendedDifficulty,
+      misconceptions: (c.misconceptions || []).map((m) => m.tag),
+    })),
+    context_budget: contextBudget ?? null,
   };
 
   let learning_path = null;
@@ -96,6 +133,7 @@ function mapContextForAi(tier, agentContext, sessionContext, coursePayload) {
       moduleId: agentContext.currentLesson.moduleId,
       nodeId: agentContext.currentLesson.nodeId,
       depth: sessionContext?.depth ?? null,
+      preferredDepth: agentContext?.preferredDepth ?? learnerSnapshot?.preferredDepth ?? null,
     };
   }
 
@@ -191,6 +229,7 @@ async function callAiChatStream(body, handlers = {}) {
       tool_calls: Array.isArray(donePayload.tool_calls) ? donePayload.tool_calls : [],
       rag_ms: donePayload.rag_ms,
       llm_provider: donePayload.llm_provider,
+      usage: donePayload.usage || null,
     };
   } catch (e) {
     const msg = e?.name === 'AbortError' ? 'AI request timeout' : e?.message || 'AI unavailable';

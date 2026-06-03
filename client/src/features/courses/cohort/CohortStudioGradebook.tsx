@@ -19,7 +19,7 @@ const RISK_LABEL: Record<CohortAtRiskReason, string> = {
 const CELL_CLASS: Record<LessonCellStatus, string> = {
   completed: 'bg-emerald-500/25 text-emerald-200 border-emerald-500/40',
   open: 'bg-white/5 text-ds-muted border-ds-border/60',
-  locked: 'bg-black/30 text-ds-subtle border-ds-border/30',
+  locked: 'bg-ds-surface/70 text-ds-subtle border-ds-border/30',
   missed: 'bg-amber-950/40 text-amber-200 border-amber-500/45',
 }
 
@@ -103,9 +103,9 @@ export function CohortStudioGradebook({
           </p>
           <div className="rounded-xl border border-ds-border overflow-x-auto max-h-[420px] overflow-y-auto">
             <table className="w-full text-[10px] min-w-[640px]">
-              <thead className="sticky top-0 bg-[#0a0f17] z-10">
+              <thead className="sticky top-0 bg-ds-base z-10">
                 <tr className="text-ds-subtle border-b border-ds-border">
-                  <th className="text-left px-2 py-2 font-medium sticky left-0 bg-[#0a0f17] min-w-[120px]">
+                  <th className="text-left px-2 py-2 font-medium sticky left-0 bg-ds-base min-w-[120px]">
                     Học viên
                   </th>
                   {cols.map((col) => (
@@ -202,7 +202,7 @@ export function CohortStudioGradebook({
       {behavior && (behavior.lessonEngagement.length > 0 || behavior.studentActivity.length > 0) && (
         <section className="rounded-xl border border-cyan-500/25 bg-cyan-950/10 p-4 space-y-3">
           <div className="flex items-center gap-2">
-            <Activity className="w-4 h-4 text-cyan-300" aria-hidden />
+            <Activity className="w-4 h-4 text-ds-accent" aria-hidden />
             <h3 className="text-sm font-semibold text-white">
               Hành vi học ({behavior.windowDays} ngày gần nhất)
             </h3>

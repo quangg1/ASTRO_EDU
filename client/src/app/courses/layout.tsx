@@ -6,5 +6,9 @@ import type { ReactNode } from 'react'
  * share one visual language.
  */
 export default function CoursesLayout({ children }: { children: ReactNode }) {
-  return <div className="surface-edu">{children}</div>
+  return (
+    <div className="surface-edu relative z-10 text-ds-text w-full relative">
+      {children}
+    </div>
+  )
 }

@@ -142,7 +142,7 @@ export function CohortScheduleTimeline({
               key={week}
               className="rounded-2xl border border-ds-border/80 overflow-hidden bg-gradient-to-r from-white/[0.02] to-transparent"
             >
-              <div className="flex items-stretch bg-white/[0.04]">
+              <div className="flex items-stretch bg-ds-surface/50">
                 <button
                   type="button"
                   onClick={() => toggleWeek(week)}
@@ -166,7 +166,7 @@ export function CohortScheduleTimeline({
                   type="button"
                   title="Sửa nhanh hàng loạt tuần này"
                   onClick={() => setBulkWeek({ week, lessons })}
-                  className="shrink-0 px-3 border-l border-ds-border/50 text-[10px] uppercase tracking-wide text-cyan-300/90 hover:bg-cyan-950/30 flex items-center gap-1"
+                  className="shrink-0 px-3 border-l border-ds-border/50 text-[10px] uppercase tracking-wide text-ds-accent/90 hover:bg-ds-accent/10 flex items-center gap-1"
                 >
                   <Layers className="w-3.5 h-3.5" aria-hidden />
                   Sửa nhanh

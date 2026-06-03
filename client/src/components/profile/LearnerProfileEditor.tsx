@@ -61,7 +61,7 @@ export function LearnerProfileEditor() {
   }, [])
 
   if (loading || !profile) {
-    return <p className="text-sm text-slate-500 py-4">Đang tải hồ sơ học tập…</p>
+    return <p className="text-sm text-ds-subtle py-4">Đang tải hồ sơ học tập…</p>
   }
 
   const addEducation = () => {
@@ -96,18 +96,18 @@ export function LearnerProfileEditor() {
             Hồ sơ công khai
           </p>
           <h2 className="text-xl font-semibold text-white">Hồ sơ học tập</h2>
-          <p className="text-sm text-slate-400 mt-1 max-w-xl">
+          <p className="text-sm text-ds-muted mt-1 max-w-xl">
             Giới thiệu, học vấn và sở thích — người khác sẽ thấy khi xem trang của bạn.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Link
             href={previewHref}
-            className="text-xs px-3 py-1.5 rounded-lg border border-white/15 text-slate-300 hover:bg-white/5"
+            className="text-xs px-3 py-1.5 rounded-lg border border-ds-border text-ds-muted hover:bg-white/5"
           >
             Xem trước
           </Link>
-          <label className="flex items-center gap-2 text-xs text-slate-400 cursor-pointer">
+          <label className="flex items-center gap-2 text-xs text-ds-muted cursor-pointer">
             <input
               type="checkbox"
               checked={profile.isPublic}
@@ -127,16 +127,16 @@ export function LearnerProfileEditor() {
         <p className="text-xs text-cyan-200/80 mb-4 font-mono">{message}</p>
       ) : null}
 
-      <label className="block text-xs text-slate-400 mb-1.5">Giới thiệu bản thân</label>
+      <label className="block text-xs text-ds-muted mb-1.5">Giới thiệu bản thân</label>
       <textarea
         value={profile.bio}
         onChange={(e) => setProfile({ ...profile, bio: e.target.value })}
         placeholder="Chia sẻ đam mê học thiên văn, mục tiêu học tập, điều bạn đang khám phá…"
-        className="w-full min-h-[120px] rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white placeholder:text-slate-600 focus:border-cyan-500/40 focus:outline-none"
+        className="w-full min-h-[120px] rounded-xl border border-ds-border bg-ds-elevated/80 px-4 py-3 text-sm text-white placeholder:text-ds-subtle focus:border-cyan-500/40 focus:outline-none"
         maxLength={2000}
       />
 
-      <label className="flex items-center gap-2 text-xs text-slate-400 mt-4 mb-1.5">
+      <label className="flex items-center gap-2 text-xs text-ds-muted mt-4 mb-1.5">
         <MapPin className="h-3.5 w-3.5" aria-hidden />
         Khu vực (tuỳ chọn)
       </label>
@@ -144,12 +144,12 @@ export function LearnerProfileEditor() {
         value={profile.location}
         onChange={(e) => setProfile({ ...profile, location: e.target.value })}
         placeholder="Ví dụ: Hà Nội, Việt Nam"
-        className="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-2.5 text-sm text-white placeholder:text-slate-600"
+        className="w-full rounded-xl border border-ds-border bg-ds-elevated/80 px-4 py-2.5 text-sm text-white placeholder:text-ds-subtle"
         maxLength={120}
       />
 
       <div className="mt-6 flex items-center justify-between gap-2">
-        <h3 className="text-sm font-medium text-cyan-100 flex items-center gap-2">
+        <h3 className="text-sm font-medium text-ds-text flex items-center gap-2">
           <GraduationCap className="h-4 w-4" aria-hidden />
           Trình độ học vấn
         </h3>
@@ -157,7 +157,7 @@ export function LearnerProfileEditor() {
           type="button"
           onClick={addEducation}
           disabled={profile.education.length >= 6}
-          className="text-xs text-cyan-400 hover:text-cyan-300 inline-flex items-center gap-1 disabled:opacity-40"
+          className="text-xs text-ds-accent hover:text-ds-text inline-flex items-center gap-1 disabled:opacity-40"
         >
           <Plus className="h-3.5 w-3.5" />
           Thêm
@@ -166,32 +166,32 @@ export function LearnerProfileEditor() {
 
       <div className="mt-3 space-y-3">
         {profile.education.length === 0 ? (
-          <p className="text-xs text-slate-500 border border-dashed border-white/10 rounded-lg px-4 py-6 text-center">
+          <p className="text-xs text-ds-subtle border border-dashed border-ds-border rounded-lg px-4 py-6 text-center">
             Thêm trường, bằng cấp hoặc chuyên ngành để hồ sơ sinh động hơn.
           </p>
         ) : null}
         {profile.education.map((edu, i) => (
           <div
             key={i}
-            className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-3 rounded-xl border border-white/8 bg-white/[0.02]"
+            className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-3 rounded-xl border border-white/8 bg-ds-surface/40"
           >
             <input
               value={edu.school}
               onChange={(e) => updateEducation(i, { school: e.target.value })}
               placeholder="Trường / tổ chức"
-              className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm text-white sm:col-span-2"
+              className="rounded-lg border border-ds-border bg-ds-surface/70 px-3 py-2 text-sm text-white sm:col-span-2"
             />
             <input
               value={edu.degree}
               onChange={(e) => updateEducation(i, { degree: e.target.value })}
               placeholder="Bằng (VD: Cử nhân)"
-              className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm text-white"
+              className="rounded-lg border border-ds-border bg-ds-surface/70 px-3 py-2 text-sm text-white"
             />
             <input
               value={edu.field}
               onChange={(e) => updateEducation(i, { field: e.target.value })}
               placeholder="Chuyên ngành"
-              className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm text-white"
+              className="rounded-lg border border-ds-border bg-ds-surface/70 px-3 py-2 text-sm text-white"
             />
             <div className="flex gap-2 sm:col-span-2">
               <input
@@ -203,14 +203,14 @@ export function LearnerProfileEditor() {
                   })
                 }
                 placeholder="Năm tốt nghiệp"
-                className="flex-1 rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm text-white"
+                className="flex-1 rounded-lg border border-ds-border bg-ds-surface/70 px-3 py-2 text-sm text-white"
                 min={1950}
                 max={2100}
               />
               <button
                 type="button"
                 onClick={() => removeEducation(i)}
-                className="p-2 rounded-lg border border-white/10 text-slate-500 hover:text-rose-300 hover:border-rose-400/30"
+                className="p-2 rounded-lg border border-ds-border text-ds-subtle hover:text-rose-300 hover:border-rose-400/30"
                 aria-label="Xóa mục học vấn"
               >
                 <Trash2 className="h-4 w-4" />
@@ -221,7 +221,7 @@ export function LearnerProfileEditor() {
       </div>
 
       <div className="mt-6">
-        <h3 className="text-sm font-medium text-cyan-100 flex items-center gap-2 mb-2">
+        <h3 className="text-sm font-medium text-ds-text flex items-center gap-2 mb-2">
           <Sparkles className="h-4 w-4" aria-hidden />
           Sở thích
         </h3>
@@ -257,7 +257,7 @@ export function LearnerProfileEditor() {
               }
             }}
             placeholder="Thêm sở thích và Enter"
-            className="flex-1 rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
+            className="flex-1 rounded-xl border border-ds-border bg-ds-elevated/80 px-3 py-2 text-sm text-white"
           />
           <button
             type="button"
@@ -265,7 +265,7 @@ export function LearnerProfileEditor() {
               addInterest(interestDraft)
               setInterestDraft('')
             }}
-            className="px-3 py-2 rounded-xl border border-cyan-500/30 text-cyan-200 text-sm hover:bg-cyan-500/10"
+            className="px-3 py-2 rounded-xl border border-cyan-500/30 text-cyan-200 text-sm hover:opacity-90/10"
           >
             Thêm
           </button>
@@ -276,7 +276,7 @@ export function LearnerProfileEditor() {
               key={s}
               type="button"
               onClick={() => addInterest(s)}
-              className="text-[10px] px-2 py-0.5 rounded-full border border-white/10 text-slate-500 hover:text-cyan-200 hover:border-cyan-500/30"
+              className="text-[10px] px-2 py-0.5 rounded-full border border-ds-border text-ds-subtle hover:text-cyan-200 hover:border-cyan-500/30"
             >
               + {s}
             </button>

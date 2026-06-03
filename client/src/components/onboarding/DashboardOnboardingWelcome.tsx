@@ -34,7 +34,7 @@ function WidgetCard({
   return (
     <Link
       href={href}
-      className="block p-4 transition-colors hover:bg-white/[0.04]"
+      className="block p-4 transition-colors hover:bg-ds-surface/50"
       style={{
         ...chamfer(10),
         border: `1px solid ${border}`,
@@ -45,7 +45,7 @@ function WidgetCard({
         <Icon className={`w-5 h-5 shrink-0 ${accent === 'amber' ? 'text-amber-400' : 'text-cyan-400'}`} />
         <div>
           <p className="text-sm font-medium text-white">{title}</p>
-          <p className="text-xs text-gray-500 mt-1 line-clamp-2">{description}</p>
+          <p className="text-xs text-ds-subtle mt-1 line-clamp-2">{description}</p>
         </div>
       </div>
     </Link>

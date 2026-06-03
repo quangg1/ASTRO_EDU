@@ -101,7 +101,7 @@ export function Organism3DViewer({ organism, onClose }: Organism3DViewerProps) {
         <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/90 to-transparent">
           <h3 className="text-lg font-bold text-white">{organism.nameVi}</h3>
           {organism.name !== organism.nameVi && (
-            <p className="text-sm text-gray-400">{organism.name}</p>
+            <p className="text-sm text-ds-muted">{organism.name}</p>
           )}
           <p className="text-sm text-gray-300 mt-1 line-clamp-2">{organism.description}</p>
         </div>

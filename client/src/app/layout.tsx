@@ -5,6 +5,7 @@ import { getStaticAssetUrl } from '@/lib/apiConfig'
 import { AuthProvider } from '@/components/auth/AuthProvider'
 import { AppChrome } from '@/components/layout/AppChrome'
 import { CosmoAssistantWidget } from '@/components/ai-tutor/CosmoAssistantWidget'
+import { CosmoConceptQuizHost } from '@/components/ai-tutor/CosmoConceptQuizHost'
 import { ErrorBoundaryWrap } from '@/components/system/ErrorBoundaryWrap'
 import { Analytics } from '@/components/system/Analytics'
 import { ChunkLoadRecovery } from '@/components/system/ChunkLoadRecovery'
@@ -32,7 +33,7 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
-  themeColor: '#0a0f17',
+  themeColor: '#0a0b10',
   width: 'device-width',
   initialScale: 1,
   viewportFit: 'cover',
@@ -45,7 +46,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="vi">
-      <body className="antialiased">
+      <body className="antialiased bg-ds-base text-ds-text">
         <RuntimePublicConfigScript />
         <Suspense fallback={null}>
           <Analytics />
@@ -59,6 +60,7 @@ export default function RootLayout({
                   <AppChrome>{children}</AppChrome>
                   <Suspense fallback={null}>
                     <CosmoAssistantWidget />
+                    <CosmoConceptQuizHost />
                   </Suspense>
                 </ErrorBoundaryWrap>
               </ToastProvider>

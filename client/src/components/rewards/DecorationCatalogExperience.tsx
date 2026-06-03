@@ -194,13 +194,13 @@ export function DecorationCatalogExperience({
   }
 
   if (loading) {
-    return <p className="text-sm text-slate-500">Đang tải trang trí avatar…</p>
+    return <p className="text-sm text-ds-subtle">Đang tải trang trí avatar…</p>
   }
 
   if (!flatCatalog.length) {
     return (
-      <Card className={`p-4 border-white/10 ${className}`}>
-        <p className="text-sm text-slate-400">
+      <Card className={`p-4 border-ds-border ${className}`}>
+        <p className="text-sm text-ds-muted">
           Chưa có trang trí.{' '}
           {isProfile ? (
             <>
@@ -227,10 +227,10 @@ export function DecorationCatalogExperience({
   return (
     <div className={`space-y-6 ${className}`}>
       <Card
-        className={`p-5 ${isProfile ? 'border-violet-500/20 bg-[#0c0a14]/80' : 'border-violet-500/25 bg-[#0c0a14]'}`}
+        className={`p-5 ${isProfile ? 'border-violet-500/20 bg-ds-elevated/80' : 'border-violet-500/25 bg-ds-elevated'}`}
       >
         {!isProfile ? (
-          <p className="text-xs text-slate-500 uppercase tracking-wide mb-3">
+          <p className="text-xs text-ds-subtle uppercase tracking-wide mb-3">
             Xem trước trên avatar của bạn
           </p>
         ) : null}
@@ -244,7 +244,7 @@ export function DecorationCatalogExperience({
               size="xl"
               className={isProfile ? '' : 'mx-auto sm:mx-0'}
             />
-            <p className="text-[11px] text-slate-500 text-center max-w-[140px]">{previewHint}</p>
+            <p className="text-[11px] text-ds-subtle text-center max-w-[140px]">{previewHint}</p>
           </div>
 
           <div className="flex-1 w-full min-w-0 text-center sm:text-left space-y-3">
@@ -254,10 +254,10 @@ export function DecorationCatalogExperience({
                   <p className="text-lg font-medium text-white">
                     {previewItem.nameVi || previewItem.skuId}
                   </p>
-                  <p className={`text-sm mt-0.5 ${isProfile ? 'text-slate-400' : 'text-cyan-300'}`}>
+                  <p className={`text-sm mt-0.5 ${isProfile ? 'text-ds-muted' : 'text-ds-accent'}`}>
                     {formatDecorationPrice(previewItem.effectivePriceGem)}
                     {gemBalance !== null ? (
-                      <span className={isProfile ? 'text-slate-600' : 'text-slate-500'}>
+                      <span className={isProfile ? 'text-slate-600' : 'text-ds-subtle'}>
                         {' '}
                         · Số dư {gemBalance} gem
                       </span>
@@ -278,7 +278,7 @@ export function DecorationCatalogExperience({
                 })}
               </>
             ) : (
-              <p className="text-sm text-slate-400">
+              <p className="text-sm text-ds-muted">
                 {isProfile
                   ? 'Chưa đeo trang trí. Nhấn hoặc rê chuột lên một ô để xem trước trên avatar của bạn.'
                   : 'Chọn một trang trí bên dưới.'}
@@ -289,7 +289,7 @@ export function DecorationCatalogExperience({
                 type="button"
                 variant="ghost"
                 size="sm"
-                className="text-slate-400"
+                className="text-ds-muted"
                 disabled={busySku !== null}
                 onClick={() => void handleEquip(null)}
               >
@@ -313,7 +313,7 @@ export function DecorationCatalogExperience({
                 variant="lg"
               />
             ) : (
-              <h3 className="text-sm font-medium text-slate-300">{section.nameVi}</h3>
+              <h3 className="text-sm font-medium text-ds-muted">{section.nameVi}</h3>
             )}
 
             <div
@@ -338,7 +338,7 @@ export function DecorationCatalogExperience({
                       onClick={() => setPreviewSku(item.skuId)}
                       onMouseEnter={() => setPreviewSku(item.skuId)}
                     />
-                    <p className="text-[10px] text-slate-400 text-center line-clamp-1 px-0.5">
+                    <p className="text-[10px] text-ds-muted text-center line-clamp-1 px-0.5">
                       {item.nameVi}
                     </p>
                     {(isProfile || !owned) && (
@@ -346,7 +346,7 @@ export function DecorationCatalogExperience({
                         {owned ? (
                           <span className="text-emerald-400/90">Đã có</span>
                         ) : (
-                          <span className="text-cyan-300/80">
+                          <span className="text-ds-accent/80">
                             {formatDecorationPrice(item.effectivePriceGem)}
                           </span>
                         )}
@@ -388,7 +388,7 @@ function renderPreviewActions({
 }) {
   if (!loggedIn) {
     return (
-      <p className="text-sm text-slate-400">
+      <p className="text-sm text-ds-muted">
         <Link href="/login?redirect=/gem-shop" className="text-cyan-400 hover:underline">
           Đăng nhập
         </Link>{' '}
@@ -418,7 +418,7 @@ function renderPreviewActions({
               type="button"
               size="sm"
               variant="ghost"
-              className="text-slate-400"
+              className="text-ds-muted"
               disabled={busySku !== null}
               onClick={() => onEquip(null)}
             >

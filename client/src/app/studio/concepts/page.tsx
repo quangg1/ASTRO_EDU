@@ -18,7 +18,7 @@ import { fetchEditorLearningPath } from '@/features/learning-path/public'
 
 // ─── UI constants ─────────────────────────────────────────────────────────────
 const inputCls =
-  'w-full bg-[#060b18] border border-[rgba(126,231,255,0.15)] px-3 py-2 text-[#eaf6ff] text-sm focus:border-[rgba(126,231,255,0.5)] focus:outline-none transition-colors placeholder:text-[#5c6886]'
+  'w-full bg-ds-surface border border-[var(--color-accent-soft)] px-3 py-2 text-ds-text text-sm focus:border-[var(--color-accent-strong)] focus:outline-none transition-colors placeholder:text-ds-subtle'
 
 const chf = (cut = 14): React.CSSProperties => ({
   clipPath: `polygon(${cut}px 0,100% 0,100% calc(100% - ${cut}px),calc(100% - ${cut}px) 100%,0 100%,0 ${cut}px)`,
@@ -402,11 +402,11 @@ export default function StudioConceptsPage() {
     return (
       <div
         className="min-h-screen pt-20 px-4 flex items-center justify-center"
-        style={{ background: '#03060f' }}
+        style={{ background: 'var(--color-bg-base)' }}
       >
         <p
           className="text-xs tracking-[0.2em] uppercase"
-          style={{ fontFamily: 'JetBrains Mono, monospace', color: '#5c6886' }}
+          style={{ fontFamily: 'JetBrains Mono, monospace', color: 'var(--color-text-subtle)' }}
         >
           // verifying credentials...
         </p>
@@ -418,7 +418,7 @@ export default function StudioConceptsPage() {
   return (
     <div
       className="min-h-screen pt-14 pb-16 px-3 md:px-6"
-      style={{ background: 'linear-gradient(135deg,#03060f 0%,#050c1a 60%,#03060f 100%)' }}
+      style={{ background: 'linear-gradient(135deg,var(--color-bg-base) 0%,#050c1a 60%,var(--color-bg-base) 100%)' }}
     >
       {/* Google Fonts */}
       {/* eslint-disable-next-line @next/next/no-page-custom-font */}
@@ -451,18 +451,18 @@ export default function StudioConceptsPage() {
             className="text-xs transition-colors"
             style={{
               fontFamily: 'JetBrains Mono, monospace',
-              color: '#7ee7ff',
+              color: 'var(--color-accent)',
               letterSpacing: '0.1em',
             }}
           >
             ← Studio
           </Link>
-          <span style={{ color: '#5c6886', fontSize: 11 }}>/</span>
+          <span style={{ color: 'var(--color-text-subtle)', fontSize: 11 }}>/</span>
           <span
             className="text-xs"
             style={{
               fontFamily: 'JetBrains Mono, monospace',
-              color: '#5c6886',
+              color: 'var(--color-text-subtle)',
               letterSpacing: '0.1em',
             }}
           >
@@ -483,7 +483,7 @@ export default function StudioConceptsPage() {
           {/* Eyebrow */}
           <p
             className="mb-2 text-[10px] uppercase tracking-[0.22em]"
-            style={{ fontFamily: 'JetBrains Mono, monospace', color: '#7ee7ff' }}
+            style={{ fontFamily: 'JetBrains Mono, monospace', color: 'var(--color-accent)' }}
           >
             // concept.studio · knowledge management
           </p>
@@ -492,14 +492,14 @@ export default function StudioConceptsPage() {
             <div>
               <h1
                 className="text-2xl md:text-3xl font-medium"
-                style={{ fontFamily: 'Space Grotesk, sans-serif', color: '#eaf6ff', letterSpacing: '-0.02em' }}
+                style={{ fontFamily: 'Space Grotesk, sans-serif', color: 'var(--color-text-primary)', letterSpacing: '-0.02em' }}
               >
                 Concept{' '}
-                <em style={{ fontStyle: 'italic', fontWeight: 300, color: '#f5a524' }}>Studio</em>
+                <em style={{ fontStyle: 'italic', fontWeight: 300, color: 'var(--color-brand-amber)' }}>Studio</em>
               </h1>
               <p
                 className="mt-1 text-xs"
-                style={{ fontFamily: 'JetBrains Mono, monospace', color: '#5c6886', letterSpacing: '0.05em' }}
+                style={{ fontFamily: 'JetBrains Mono, monospace', color: 'var(--color-text-subtle)', letterSpacing: '0.05em' }}
               >
                 Tạo và quản lý thư viện concept dùng chung toàn hệ thống · lesson chỉ map bằng concept id
               </p>
@@ -512,7 +512,7 @@ export default function StudioConceptsPage() {
                 className="text-xs px-4 py-2 inline-flex items-center gap-2 transition-all"
                 style={{
                   fontFamily: 'JetBrains Mono, monospace',
-                  color: '#7ee7ff',
+                  color: 'var(--color-accent)',
                   border: '1px solid rgba(126,231,255,0.3)',
                   letterSpacing: '0.05em',
                   ...chf(8),
@@ -541,7 +541,7 @@ export default function StudioConceptsPage() {
                 className="text-xs px-5 py-2 font-medium transition-all disabled:opacity-40"
                 style={{
                   fontFamily: 'JetBrains Mono, monospace',
-                  background: saving || loading ? '#6b4a10' : '#f5a524',
+                  background: saving || loading ? '#6b4a10' : 'var(--color-brand-amber)',
                   color: '#1a0e00',
                   letterSpacing: '0.05em',
                   boxShadow: saving || loading ? 'none' : '0 0 20px -4px rgba(245,165,36,0.6)',
@@ -599,21 +599,21 @@ export default function StudioConceptsPage() {
             <div>
               <p
                 className="text-[10px] uppercase tracking-[0.2em] mb-1"
-                style={{ fontFamily: 'JetBrains Mono, monospace', color: '#7ee7ff' }}
+                style={{ fontFamily: 'JetBrains Mono, monospace', color: 'var(--color-accent)' }}
               >
                 // 01 · taxonomy-registry
               </p>
               <h2
                 className="text-sm font-medium"
-                style={{ fontFamily: 'Space Grotesk, sans-serif', color: '#eaf6ff' }}
+                style={{ fontFamily: 'Space Grotesk, sans-serif', color: 'var(--color-text-primary)' }}
               >
                 Domain &amp; Subdomain{' '}
-                <em style={{ fontStyle: 'italic', fontWeight: 300, color: '#f5a524' }}>Registry</em>
+                <em style={{ fontStyle: 'italic', fontWeight: 300, color: 'var(--color-brand-amber)' }}>Registry</em>
               </h2>
             </div>
             <p
               className="text-[10px] uppercase tracking-[0.15em]"
-              style={{ fontFamily: 'JetBrains Mono, monospace', color: '#5c6886' }}
+              style={{ fontFamily: 'JetBrains Mono, monospace', color: 'var(--color-text-subtle)' }}
             >
               domain/subdomain chỉ tạo tại đây
             </p>
@@ -631,7 +631,7 @@ export default function StudioConceptsPage() {
             >
               <p
                 className="text-[10px] uppercase tracking-[0.15em]"
-                style={{ fontFamily: 'JetBrains Mono, monospace', color: '#9aa8c4' }}
+                style={{ fontFamily: 'JetBrains Mono, monospace', color: 'var(--color-text-muted)' }}
               >
                 + Thêm domain
               </p>
@@ -650,7 +650,7 @@ export default function StudioConceptsPage() {
                   style={{
                     fontFamily: 'JetBrains Mono, monospace',
                     border: '1px solid rgba(126,231,255,0.35)',
-                    color: '#7ee7ff',
+                    color: 'var(--color-accent)',
                     ...chf(6),
                   }}
                 >
@@ -666,11 +666,11 @@ export default function StudioConceptsPage() {
                       className="text-left transition-colors flex items-center gap-1.5"
                       style={{
                         fontFamily: 'JetBrains Mono, monospace',
-                        color: registryDomainTarget === domain ? '#7ee7ff' : '#9aa8c4',
+                        color: registryDomainTarget === domain ? 'var(--color-accent)' : 'var(--color-text-muted)',
                       }}
                     >
                       {registryDomainTarget === domain && (
-                        <span style={{ width: 4, height: 4, borderRadius: '50%', background: '#7ee7ff', display: 'inline-block' }} />
+                        <span style={{ width: 4, height: 4, borderRadius: '50%', background: 'var(--color-accent)', display: 'inline-block' }} />
                       )}
                       {domain}
                     </button>
@@ -698,7 +698,7 @@ export default function StudioConceptsPage() {
             >
               <p
                 className="text-[10px] uppercase tracking-[0.15em]"
-                style={{ fontFamily: 'JetBrains Mono, monospace', color: '#9aa8c4' }}
+                style={{ fontFamily: 'JetBrains Mono, monospace', color: 'var(--color-text-muted)' }}
               >
                 + Thêm subdomain
               </p>
@@ -729,7 +729,7 @@ export default function StudioConceptsPage() {
                   style={{
                     fontFamily: 'JetBrains Mono, monospace',
                     border: '1px solid rgba(126,231,255,0.35)',
-                    color: '#7ee7ff',
+                    color: 'var(--color-accent)',
                     ...chf(6),
                   }}
                 >
@@ -745,7 +745,7 @@ export default function StudioConceptsPage() {
                     <span
                       style={{
                         fontFamily: 'JetBrains Mono, monospace',
-                        color: '#9aa8c4',
+                        color: 'var(--color-text-muted)',
                       }}
                     >
                       {subdomain}
@@ -780,16 +780,16 @@ export default function StudioConceptsPage() {
                 width: 6,
                 height: 6,
                 borderRadius: '50%',
-                background: '#f5a524',
+                background: 'var(--color-brand-amber)',
                 flexShrink: 0,
                 display: 'inline-block',
-                boxShadow: '0 0 8px #f5a524',
+                boxShadow: '0 0 8px var(--color-brand-amber)',
                 animation: 'pulse 2s ease-in-out infinite',
               }}
             />
             <p
               className="text-xs"
-              style={{ fontFamily: 'JetBrains Mono, monospace', color: '#f5a524', letterSpacing: '0.05em' }}
+              style={{ fontFamily: 'JetBrains Mono, monospace', color: 'var(--color-brand-amber)', letterSpacing: '0.05em' }}
             >
               {unclassifiedCount} concept chưa gán đủ taxonomy (domain/subdomain)
             </p>
@@ -811,7 +811,7 @@ export default function StudioConceptsPage() {
               <div>
                 <p
                   className="text-[10px] uppercase tracking-[0.2em] mb-1"
-                  style={{ fontFamily: 'JetBrains Mono, monospace', color: '#f5a524' }}
+                  style={{ fontFamily: 'JetBrains Mono, monospace', color: 'var(--color-brand-amber)' }}
                 >
                   // 02 · unclassified-queue
                 </p>
@@ -824,20 +824,20 @@ export default function StudioConceptsPage() {
                       width: 6,
                       height: 6,
                       borderRadius: '50%',
-                      background: '#f5a524',
+                      background: 'var(--color-brand-amber)',
                       display: 'inline-block',
-                      boxShadow: '0 0 8px #f5a524',
+                      boxShadow: '0 0 8px var(--color-brand-amber)',
                     }}
                   />
                   Unclassified{' '}
-                  <em style={{ fontStyle: 'italic', fontWeight: 300, color: '#f5a524' }}>Queue</em>
+                  <em style={{ fontStyle: 'italic', fontWeight: 300, color: 'var(--color-brand-amber)' }}>Queue</em>
                 </h2>
               </div>
               <span
                 className="text-xs px-3 py-1"
                 style={{
                   fontFamily: 'JetBrains Mono, monospace',
-                  color: '#f5a524',
+                  color: 'var(--color-brand-amber)',
                   border: '1px solid rgba(245,165,36,0.35)',
                   ...chf(6),
                   background: 'rgba(245,165,36,0.08)',
@@ -873,7 +873,7 @@ export default function StudioConceptsPage() {
                   <div className="flex items-center justify-between mb-2">
                     <p
                       className="text-[10px] uppercase tracking-[0.15em]"
-                      style={{ fontFamily: 'JetBrains Mono, monospace', color: '#9aa8c4' }}
+                      style={{ fontFamily: 'JetBrains Mono, monospace', color: 'var(--color-text-muted)' }}
                     >
                       Chọn concept áp dụng cùng lúc
                     </p>
@@ -881,7 +881,7 @@ export default function StudioConceptsPage() {
                       type="button"
                       onClick={() => setQueueSelectedIds(unclassifiedConcepts.map((c) => c.id))}
                       className="text-[10px] transition-colors"
-                      style={{ fontFamily: 'JetBrains Mono, monospace', color: '#7ee7ff' }}
+                      style={{ fontFamily: 'JetBrains Mono, monospace', color: 'var(--color-accent)' }}
                     >
                       Chọn tất cả
                     </button>
@@ -899,9 +899,9 @@ export default function StudioConceptsPage() {
                                 e.target.checked ? [...new Set([...prev, c.id])] : prev.filter((id) => id !== c.id),
                               )
                             }
-                            style={{ accentColor: '#f5a524' }}
+                            style={{ accentColor: 'var(--color-brand-amber)' }}
                           />
-                          <span style={{ fontFamily: 'JetBrains Mono, monospace', color: '#9aa8c4', fontSize: 11 }}>
+                          <span style={{ fontFamily: 'JetBrains Mono, monospace', color: 'var(--color-text-muted)', fontSize: 11 }}>
                             {c.id} — {c.title || c.id}
                           </span>
                         </label>
@@ -920,19 +920,19 @@ export default function StudioConceptsPage() {
                 >
                   <p
                     className="text-[10px] mb-1"
-                    style={{ fontFamily: 'JetBrains Mono, monospace', color: '#7ee7ff' }}
+                    style={{ fontFamily: 'JetBrains Mono, monospace', color: 'var(--color-accent)' }}
                   >
                     #{activeQueueConcept.id}
                   </p>
                   <p
                     className="text-sm font-medium"
-                    style={{ fontFamily: 'Space Grotesk, sans-serif', color: '#eaf6ff' }}
+                    style={{ fontFamily: 'Space Grotesk, sans-serif', color: 'var(--color-text-primary)' }}
                   >
                     {activeQueueConcept.title || activeQueueConcept.id}
                   </p>
                   <p
                     className="mt-1 text-xs leading-relaxed"
-                    style={{ color: '#5c6886', fontFamily: 'Space Grotesk, sans-serif' }}
+                    style={{ color: 'var(--color-text-subtle)', fontFamily: 'Space Grotesk, sans-serif' }}
                   >
                     {activeQueueConcept.short_description || activeQueueConcept.explanation || 'Không có mô tả'}
                   </p>
@@ -973,7 +973,7 @@ export default function StudioConceptsPage() {
                     className="text-xs font-medium px-4 py-2 transition-all"
                     style={{
                       fontFamily: 'JetBrains Mono, monospace',
-                      background: '#f5a524',
+                      background: 'var(--color-brand-amber)',
                       color: '#1a0e00',
                       boxShadow: '0 0 16px -4px rgba(245,165,36,0.5)',
                       letterSpacing: '0.05em',
@@ -1008,7 +1008,7 @@ export default function StudioConceptsPage() {
           <div className="py-16 text-center">
             <p
               className="text-xs tracking-[0.2em] uppercase"
-              style={{ fontFamily: 'JetBrains Mono, monospace', color: '#5c6886' }}
+              style={{ fontFamily: 'JetBrains Mono, monospace', color: 'var(--color-text-subtle)' }}
             >
               // loading concept library...
             </p>
@@ -1021,22 +1021,22 @@ export default function StudioConceptsPage() {
               className="relative p-4 space-y-3"
               style={{
                 background: 'rgba(6,11,24,0.85)',
-                ...panelStyle('rgba(126,231,255,0.15)'),
+                ...panelStyle('var(--color-accent-soft)'),
               }}
             >
               <div>
                 <p
                   className="text-[10px] uppercase tracking-[0.2em] mb-1"
-                  style={{ fontFamily: 'JetBrains Mono, monospace', color: '#7ee7ff' }}
+                  style={{ fontFamily: 'JetBrains Mono, monospace', color: 'var(--color-accent)' }}
                 >
                   // 03 · new-concept
                 </p>
                 <h2
                   className="text-sm font-medium"
-                  style={{ fontFamily: 'Space Grotesk, sans-serif', color: '#eaf6ff' }}
+                  style={{ fontFamily: 'Space Grotesk, sans-serif', color: 'var(--color-text-primary)' }}
                 >
                   Tạo concept{' '}
-                  <em style={{ fontStyle: 'italic', fontWeight: 300, color: '#f5a524' }}>mới</em>
+                  <em style={{ fontStyle: 'italic', fontWeight: 300, color: 'var(--color-brand-amber)' }}>mới</em>
                 </h2>
               </div>
 
@@ -1120,7 +1120,7 @@ export default function StudioConceptsPage() {
               <label className="block">
                 <span
                   className="text-[10px] uppercase tracking-[0.15em]"
-                  style={{ fontFamily: 'JetBrains Mono, monospace', color: '#9aa8c4' }}
+                  style={{ fontFamily: 'JetBrains Mono, monospace', color: 'var(--color-text-muted)' }}
                 >
                   Prerequisites mapping
                 </span>
@@ -1145,9 +1145,9 @@ export default function StudioConceptsPage() {
                                 e.target.checked ? [...new Set([...prev, c.id])] : prev.filter((id) => id !== c.id),
                               )
                             }
-                            style={{ accentColor: '#7ee7ff' }}
+                            style={{ accentColor: 'var(--color-accent)' }}
                           />
-                          <span style={{ fontFamily: 'JetBrains Mono, monospace', color: '#9aa8c4', fontSize: 10 }}>
+                          <span style={{ fontFamily: 'JetBrains Mono, monospace', color: 'var(--color-text-muted)', fontSize: 10 }}>
                             {c.id} — {c.title || c.id}
                           </span>
                         </label>
@@ -1224,16 +1224,16 @@ export default function StudioConceptsPage() {
                 <div>
                   <p
                     className="text-[10px] uppercase tracking-[0.2em] mb-1"
-                    style={{ fontFamily: 'JetBrains Mono, monospace', color: '#7ee7ff' }}
+                    style={{ fontFamily: 'JetBrains Mono, monospace', color: 'var(--color-accent)' }}
                   >
                     // 04 · usage-report
                   </p>
                   <h2
                     className="text-sm font-medium"
-                    style={{ fontFamily: 'Space Grotesk, sans-serif', color: '#eaf6ff' }}
+                    style={{ fontFamily: 'Space Grotesk, sans-serif', color: 'var(--color-text-primary)' }}
                   >
                     Concept{' '}
-                    <em style={{ fontStyle: 'italic', fontWeight: 300, color: '#f5a524' }}>Usage Report</em>
+                    <em style={{ fontStyle: 'italic', fontWeight: 300, color: 'var(--color-brand-amber)' }}>Usage Report</em>
                   </h2>
                 </div>
 
@@ -1279,7 +1279,7 @@ export default function StudioConceptsPage() {
 
                 <p
                   className="text-[10px]"
-                  style={{ fontFamily: 'JetBrains Mono, monospace', color: '#5c6886', letterSpacing: '0.1em' }}
+                  style={{ fontFamily: 'JetBrains Mono, monospace', color: 'var(--color-text-subtle)', letterSpacing: '0.1em' }}
                 >
                   Hiển thị {filteredConcepts.length}/{concepts.length} concept
                 </p>
@@ -1289,7 +1289,7 @@ export default function StudioConceptsPage() {
                 {filteredConcepts.length === 0 ? (
                   <p
                     className="text-xs py-8 text-center"
-                    style={{ fontFamily: 'JetBrains Mono, monospace', color: '#5c6886' }}
+                    style={{ fontFamily: 'JetBrains Mono, monospace', color: 'var(--color-text-subtle)' }}
                   >
                     // no concepts found
                   </p>
@@ -1316,35 +1316,35 @@ export default function StudioConceptsPage() {
                                 width: 5,
                                 height: 5,
                                 borderRadius: '50%',
-                                background: c.domain ? '#7ee7ff' : '#f5a524',
+                                background: c.domain ? 'var(--color-accent)' : 'var(--color-brand-amber)',
                                 flexShrink: 0,
                                 display: 'inline-block',
                               }}
                             />
                             <span
                               className="text-xs truncate"
-                              style={{ fontFamily: 'JetBrains Mono, monospace', color: '#7ee7ff' }}
+                              style={{ fontFamily: 'JetBrains Mono, monospace', color: 'var(--color-accent)' }}
                             >
                               #{c.id}
                             </span>
                             <span
                               className="text-xs truncate hidden sm:inline"
-                              style={{ color: '#9aa8c4', fontFamily: 'Space Grotesk, sans-serif' }}
+                              style={{ color: 'var(--color-text-muted)', fontFamily: 'Space Grotesk, sans-serif' }}
                             >
                               · {c.title || c.id}
                             </span>
                           </div>
                           <span
                             className="text-[10px] shrink-0"
-                            style={{ fontFamily: 'JetBrains Mono, monospace', color: '#5c6886' }}
+                            style={{ fontFamily: 'JetBrains Mono, monospace', color: 'var(--color-text-subtle)' }}
                           >
                             {rows.length} lesson{rows.length !== 1 ? 's' : ''}
                           </span>
                         </summary>
 
                         <div className="px-3 pb-3 pt-1 space-y-2">
-                          <p className="text-[11px]" style={{ color: '#5c6886' }}>{c.short_description}</p>
-                          <p className="text-[11px] leading-relaxed" style={{ color: '#9aa8c4' }}>{c.explanation}</p>
+                          <p className="text-[11px]" style={{ color: 'var(--color-text-subtle)' }}>{c.short_description}</p>
+                          <p className="text-[11px] leading-relaxed" style={{ color: 'var(--color-text-muted)' }}>{c.explanation}</p>
 
                           {/* Full fields */}
                           <details
@@ -1357,13 +1357,13 @@ export default function StudioConceptsPage() {
                           >
                             <summary
                               className="cursor-pointer px-3 py-1.5 text-[10px] uppercase tracking-[0.15em]"
-                              style={{ fontFamily: 'JetBrains Mono, monospace', color: '#9aa8c4' }}
+                              style={{ fontFamily: 'JetBrains Mono, monospace', color: 'var(--color-text-muted)' }}
                             >
                               Thông tin chính (full fields)
                             </summary>
                             <div className="px-3 pb-3 pt-2 space-y-2">
                               <label className="block">
-                                <span className="text-[10px] uppercase tracking-[0.12em]" style={{ fontFamily: 'JetBrains Mono, monospace', color: '#5c6886' }}>Title</span>
+                                <span className="text-[10px] uppercase tracking-[0.12em]" style={{ fontFamily: 'JetBrains Mono, monospace', color: 'var(--color-text-subtle)' }}>Title</span>
                                 <input
                                   value={c.title || ''}
                                   onChange={(e) =>
@@ -1376,7 +1376,7 @@ export default function StudioConceptsPage() {
                                 />
                               </label>
                               <label className="block">
-                                <span className="text-[10px] uppercase tracking-[0.12em]" style={{ fontFamily: 'JetBrains Mono, monospace', color: '#5c6886' }}>Short description</span>
+                                <span className="text-[10px] uppercase tracking-[0.12em]" style={{ fontFamily: 'JetBrains Mono, monospace', color: 'var(--color-text-subtle)' }}>Short description</span>
                                 <input
                                   value={c.short_description || ''}
                                   onChange={(e) =>
@@ -1391,7 +1391,7 @@ export default function StudioConceptsPage() {
                                 />
                               </label>
                               <label className="block">
-                                <span className="text-[10px] uppercase tracking-[0.12em]" style={{ fontFamily: 'JetBrains Mono, monospace', color: '#5c6886' }}>Explanation</span>
+                                <span className="text-[10px] uppercase tracking-[0.12em]" style={{ fontFamily: 'JetBrains Mono, monospace', color: 'var(--color-text-subtle)' }}>Explanation</span>
                                 <textarea
                                   value={c.explanation || ''}
                                   onChange={(e) =>
@@ -1404,7 +1404,7 @@ export default function StudioConceptsPage() {
                                 />
                               </label>
                               <label className="block">
-                                <span className="text-[10px] uppercase tracking-[0.12em]" style={{ fontFamily: 'JetBrains Mono, monospace', color: '#5c6886' }}>Examples (phân tách bởi "|")</span>
+                                <span className="text-[10px] uppercase tracking-[0.12em]" style={{ fontFamily: 'JetBrains Mono, monospace', color: 'var(--color-text-subtle)' }}>Examples (phân tách bởi "|")</span>
                                 <input
                                   value={(c.examples || []).join('|')}
                                   onChange={(e) =>
@@ -1420,7 +1420,7 @@ export default function StudioConceptsPage() {
                                 />
                               </label>
                               <label className="block">
-                                <span className="text-[10px] uppercase tracking-[0.12em]" style={{ fontFamily: 'JetBrains Mono, monospace', color: '#5c6886' }}>Related (ids, phân tách bởi "|")</span>
+                                <span className="text-[10px] uppercase tracking-[0.12em]" style={{ fontFamily: 'JetBrains Mono, monospace', color: 'var(--color-text-subtle)' }}>Related (ids, phân tách bởi "|")</span>
                                 <input
                                   value={(c.related || []).join('|')}
                                   onChange={(e) =>
@@ -1440,7 +1440,7 @@ export default function StudioConceptsPage() {
                                   style={{ fontFamily: 'JetBrains Mono, monospace' }}
                                 />
                               </label>
-                              <label className="inline-flex items-center gap-2 text-[11px] cursor-pointer" style={{ color: '#9aa8c4' }}>
+                              <label className="inline-flex items-center gap-2 text-[11px] cursor-pointer" style={{ color: 'var(--color-text-muted)' }}>
                                 <input
                                   type="checkbox"
                                   checked={c.published !== false}
@@ -1451,7 +1451,7 @@ export default function StudioConceptsPage() {
                                       ),
                                     )
                                   }
-                                  style={{ accentColor: '#7ee7ff' }}
+                                  style={{ accentColor: 'var(--color-accent)' }}
                                 />
                                 <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase' }}>Published</span>
                               </label>
@@ -1465,9 +1465,9 @@ export default function StudioConceptsPage() {
                                 <li
                                   key={`${c.id}-ex-${i}`}
                                   className="text-[11px] flex items-start gap-1.5"
-                                  style={{ color: '#9aa8c4' }}
+                                  style={{ color: 'var(--color-text-muted)' }}
                                 >
-                                  <span style={{ color: '#7ee7ff', flexShrink: 0 }}>·</span>
+                                  <span style={{ color: 'var(--color-accent)', flexShrink: 0 }}>·</span>
                                   {ex}
                                 </li>
                               ))}
@@ -1484,13 +1484,13 @@ export default function StudioConceptsPage() {
                           >
                             <summary
                               className="cursor-pointer px-3 py-1.5 text-[10px] uppercase tracking-[0.15em]"
-                              style={{ fontFamily: 'JetBrains Mono, monospace', color: '#9aa8c4' }}
+                              style={{ fontFamily: 'JetBrains Mono, monospace', color: 'var(--color-text-muted)' }}
                             >
                               Taxonomy &amp; mapping
                             </summary>
                             <div className="px-3 pb-3 pt-2 grid grid-cols-1 md:grid-cols-2 gap-2">
                               <label className="block">
-                                <span className="text-[10px] uppercase tracking-[0.12em]" style={{ fontFamily: 'JetBrains Mono, monospace', color: '#5c6886' }}>Domain</span>
+                                <span className="text-[10px] uppercase tracking-[0.12em]" style={{ fontFamily: 'JetBrains Mono, monospace', color: 'var(--color-text-subtle)' }}>Domain</span>
                                 <select
                                   value={c.domain || ''}
                                   onChange={(e) => {
@@ -1522,7 +1522,7 @@ export default function StudioConceptsPage() {
                                 </select>
                               </label>
                               <label className="block">
-                                <span className="text-[10px] uppercase tracking-[0.12em]" style={{ fontFamily: 'JetBrains Mono, monospace', color: '#5c6886' }}>Subdomain</span>
+                                <span className="text-[10px] uppercase tracking-[0.12em]" style={{ fontFamily: 'JetBrains Mono, monospace', color: 'var(--color-text-subtle)' }}>Subdomain</span>
                                 <select
                                   value={c.subdomain || ''}
                                   onChange={(e) => {
@@ -1556,7 +1556,7 @@ export default function StudioConceptsPage() {
                           >
                             <summary
                               className="cursor-pointer px-3 py-1.5 text-[10px] uppercase tracking-[0.15em]"
-                              style={{ fontFamily: 'JetBrains Mono, monospace', color: '#9aa8c4' }}
+                              style={{ fontFamily: 'JetBrains Mono, monospace', color: 'var(--color-text-muted)' }}
                             >
                               Metadata nâng cao
                             </summary>
@@ -1570,7 +1570,7 @@ export default function StudioConceptsPage() {
                               >
                                 <summary
                                   className="cursor-pointer px-3 py-1.5 text-[10px] uppercase tracking-[0.12em]"
-                                  style={{ fontFamily: 'JetBrains Mono, monospace', color: '#9aa8c4' }}
+                                  style={{ fontFamily: 'JetBrains Mono, monospace', color: 'var(--color-text-muted)' }}
                                 >
                                   Aliases ({(c.aliases || []).length})
                                 </summary>
@@ -1600,7 +1600,7 @@ export default function StudioConceptsPage() {
                               >
                                 <summary
                                   className="cursor-pointer px-3 py-1.5 text-[10px] uppercase tracking-[0.12em]"
-                                  style={{ fontFamily: 'JetBrains Mono, monospace', color: '#9aa8c4' }}
+                                  style={{ fontFamily: 'JetBrains Mono, monospace', color: 'var(--color-text-muted)' }}
                                 >
                                   Prerequisites mapping ({(c.prerequisites || []).length})
                                 </summary>
@@ -1635,9 +1635,9 @@ export default function StudioConceptsPage() {
                                                   }),
                                                 )
                                               }
-                                              style={{ accentColor: '#7ee7ff' }}
+                                              style={{ accentColor: 'var(--color-accent)' }}
                                             />
-                                            <span style={{ fontFamily: 'JetBrains Mono, monospace', color: '#9aa8c4', fontSize: 10 }}>
+                                            <span style={{ fontFamily: 'JetBrains Mono, monospace', color: 'var(--color-text-muted)', fontSize: 10 }}>
                                               {cc.id} — {cc.title || cc.id}
                                             </span>
                                           </label>
@@ -1659,22 +1659,22 @@ export default function StudioConceptsPage() {
                           >
                             <summary
                               className="cursor-pointer px-3 py-1.5 text-[10px] uppercase tracking-[0.15em]"
-                              style={{ fontFamily: 'JetBrains Mono, monospace', color: '#9aa8c4' }}
+                              style={{ fontFamily: 'JetBrains Mono, monospace', color: 'var(--color-text-muted)' }}
                             >
                               Lesson usage ({rows.length})
                             </summary>
                             <div className="px-3 pb-3 pt-2 space-y-1">
                               {rows.length === 0 ? (
-                                <p className="text-[10px]" style={{ fontFamily: 'JetBrains Mono, monospace', color: '#5c6886' }}>
+                                <p className="text-[10px]" style={{ fontFamily: 'JetBrains Mono, monospace', color: 'var(--color-text-subtle)' }}>
                                   // chưa được map vào lesson nào
                                 </p>
                               ) : (
                                 rows.map((r, idx) => (
                                   <p key={`${c.id}-${idx}`} className="text-[11px] leading-relaxed">
-                                    <span style={{ color: '#5c6886' }}>{r.moduleTitle}</span>
-                                    <span style={{ color: '#9aa8c4' }}> → {r.nodeTitle} → </span>
-                                    <span style={{ color: '#7ee7ff' }}>{DEPTH_META[r.depth].labelVi}</span>
-                                    <span style={{ color: '#9aa8c4' }}> → {r.lessonTitle}</span>
+                                    <span style={{ color: 'var(--color-text-subtle)' }}>{r.moduleTitle}</span>
+                                    <span style={{ color: 'var(--color-text-muted)' }}> → {r.nodeTitle} → </span>
+                                    <span style={{ color: 'var(--color-accent)' }}>{DEPTH_META[r.depth].labelVi}</span>
+                                    <span style={{ color: 'var(--color-text-muted)' }}> → {r.lessonTitle}</span>
                                   </p>
                                 ))
                               )}

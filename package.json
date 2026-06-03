@@ -7,10 +7,12 @@
     "dev:client": "cd client && npm run dev",
     "dev:client:poll": "cd client && npm run dev:poll",
     "dev:ai": "cd services/ai && uvicorn server:app --host 0.0.0.0 --port 5005",
+    "dev:embedding": "cd services/embedding && uvicorn server:app --host 0.0.0.0 --port 5004",
     "build": "cd client && npm run build",
     "start": "cd client && npm run start",
     "install:all": "npm install && cd packages/contracts && npm install && npm run build && cd ../auth-shared && npm install && cd ../../services/api && npm install && cd ../../client && npm install",
     "rag:validate": "python services/ai/scripts/validate_corpus.py",
-    "rag:build": "cd services/ai && python scripts/build_rag_index.py"
+    "rag:build": "cd services/ai && python scripts/build_rag_index.py",
+    "rag:reindex-full": "cd services/api && npm run rag:reindex-full"
   }
 }

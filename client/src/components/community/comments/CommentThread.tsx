@@ -87,7 +87,7 @@ function CommentVoteButtons({
   }
 
   if (!user) {
-    return <span className="text-xs text-gray-500">{node.voteCount} vote</span>
+    return <span className="text-xs text-ds-subtle">{node.voteCount} vote</span>
   }
 
   return (
@@ -98,8 +98,8 @@ function CommentVoteButtons({
         onClick={() => void handleVote(1)}
         className={`px-2 py-0.5 rounded text-xs transition-colors disabled:opacity-50 ${
           node.myVote === 1
-            ? 'bg-cyan-500/30 text-cyan-300 border border-cyan-300/40'
-            : 'bg-white/10 text-gray-400 hover:text-white border border-white/10'
+            ? 'bg-cyan-500/30 text-ds-accent border border-cyan-300/40'
+            : 'bg-white/10 text-ds-muted hover:text-white border border-ds-border'
         }`}
       >
         ▲ {node.voteCount}
@@ -111,7 +111,7 @@ function CommentVoteButtons({
         className={`px-2 py-0.5 rounded text-xs transition-colors disabled:opacity-50 ${
           node.myVote === -1
             ? 'bg-red-500/30 text-red-300 border border-red-300/40'
-            : 'bg-white/10 text-gray-400 hover:text-white border border-white/10'
+            : 'bg-white/10 text-ds-muted hover:text-white border border-ds-border'
         }`}
       >
         ▼
@@ -177,8 +177,8 @@ function CommentItem({
   }
 
   return (
-    <div className={depth > 0 ? 'mt-3 ml-3 sm:ml-4 pl-3 border-l border-white/10' : ''}>
-      <article className="rounded-xl border border-white/10 bg-white/5 p-4">
+    <div className={depth > 0 ? 'mt-3 ml-3 sm:ml-4 pl-3 border-l border-ds-border' : ''}>
+      <article className="rounded-xl border border-ds-border bg-white/5 p-4">
         <div className="flex items-center gap-2 text-sm flex-wrap">
           <UserProfileLink
             userId={node.authorId}
@@ -195,7 +195,7 @@ function CommentItem({
               Hữu ích
             </span>
           ) : null}
-          <span className="text-gray-500 text-xs">{formatDate(node.createdAt)}</span>
+          <span className="text-ds-subtle text-xs">{formatDate(node.createdAt)}</span>
         </div>
         <div className="mt-2">
           <CommentBody content={node.content} />
@@ -216,7 +216,7 @@ function CommentItem({
             <button
               type="button"
               onClick={() => setReplyOpen((v) => !v)}
-              className="text-xs text-cyan-400/90 hover:text-cyan-300"
+              className="text-xs text-cyan-400/90 hover:text-ds-text"
             >
               {replyOpen ? 'Đóng' : 'Trả lời'}
             </button>
@@ -226,7 +226,7 @@ function CommentItem({
           )}
         </div>
         {replyOpen && user && (
-          <div className="mt-3 pt-3 border-t border-white/10">
+          <div className="mt-3 pt-3 border-t border-ds-border">
             <CommentComposer
               placeholder="Trả lời bình luận…"
               submitLabel="Gửi trả lời"
@@ -275,13 +275,13 @@ export function CommentThread({
   return (
     <div className="space-y-4">
       {user && (
-        <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+        <div className="rounded-xl border border-ds-border bg-white/[0.03] p-4">
           <CommentComposer onSubmit={(html) => onAddComment(html)} />
         </div>
       )}
 
       {tree.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-white/20 bg-white/[0.03] p-6 text-center text-gray-400">
+        <div className="rounded-xl border border-dashed border-white/20 bg-white/[0.03] p-6 text-center text-ds-muted">
           Chưa có bình luận nào. Hãy là người mở đầu cuộc thảo luận.
         </div>
       ) : (

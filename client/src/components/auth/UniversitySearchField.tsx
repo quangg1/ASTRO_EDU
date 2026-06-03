@@ -7,9 +7,9 @@ import { searchUniversities, type HipolabsUniversity } from '@/lib/hipolabsUnive
 const fieldStyle: React.CSSProperties = {
   width: '100%',
   background: 'rgba(0,0,0,0.45)',
-  border: '1px solid rgba(126,231,255,0.15)',
+  border: '1px solid var(--color-accent-soft)',
   borderRadius: 2,
-  color: '#eaf6ff',
+  color: 'var(--color-text-primary)',
   padding: '10px 14px',
   fontSize: 14,
   outline: 'none',
@@ -144,14 +144,14 @@ export function UniversitySearchField({
         id={`uni-menu-${listId}`}
         role="listbox"
         style={{ top: menuRect.top, left: menuRect.left, width: menuRect.width }}
-        className="fixed z-[9999] max-h-52 overflow-y-auto rounded border border-cyan-500/25 bg-[#06091a] shadow-xl text-sm"
+        className="fixed z-[9999] max-h-52 overflow-y-auto rounded border border-cyan-500/25 bg-ds-surface shadow-xl text-sm"
       >
         {loading ? (
-          <li className="px-3 py-2 text-slate-500 text-xs">Đang tìm…</li>
+          <li className="px-3 py-2 text-ds-subtle text-xs">Đang tìm…</li>
         ) : searchError ? (
           <li className="px-3 py-2 text-red-300/90 text-xs">{searchError}</li>
         ) : results.length === 0 ? (
-          <li className="px-3 py-2 text-slate-500 text-xs">
+          <li className="px-3 py-2 text-ds-subtle text-xs">
             Không có kết quả — Enter để giữ tên đã gõ
           </li>
         ) : (
@@ -160,12 +160,12 @@ export function UniversitySearchField({
               <button
                 type="button"
                 role="option"
-                className="w-full text-left px-3 py-2 hover:bg-cyan-500/10 text-slate-200 border-b border-white/5 last:border-0"
+                className="w-full text-left px-3 py-2 hover:opacity-90/10 text-slate-200 border-b border-white/5 last:border-0"
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => pick(u)}
               >
                 <span className="block font-medium">{u.name}</span>
-                <span className="block text-[10px] text-slate-500 mt-0.5">
+                <span className="block text-[10px] text-ds-subtle mt-0.5">
                   {u.country}
                   {u['state-province'] ? ` · ${u['state-province']}` : ''}
                   {u.domains?.[0] ? ` · ${u.domains[0]}` : ''}
@@ -179,7 +179,7 @@ export function UniversitySearchField({
 
   return (
     <div ref={wrapRef}>
-      <label className="block text-xs text-slate-400">
+      <label className="block text-xs text-ds-muted">
         {label}
         <span className="block text-[10px] text-slate-600 font-normal mt-0.5 normal-case tracking-normal">
           Hipolabs + danh sách bổ sung VN (Nông Lâm, Bách khoa, …)
@@ -194,7 +194,7 @@ export function UniversitySearchField({
             setOpen(true)
             updateMenuRect()
           }}
-          className="text-xs rounded border border-white/10 bg-black/40 text-slate-300 px-2 py-1"
+          className="text-xs rounded border border-ds-border bg-ds-elevated/80 text-ds-muted px-2 py-1"
           aria-label="Lọc quốc gia"
         >
           <option value="Vietnam">Việt Nam</option>
@@ -204,7 +204,7 @@ export function UniversitySearchField({
         </select>
         <button
           type="button"
-          className="text-[10px] text-slate-500 hover:text-slate-300 underline"
+          className="text-[10px] text-ds-subtle hover:text-ds-muted underline"
           onClick={() => {
             setCountryFilter('')
             setOpen(true)

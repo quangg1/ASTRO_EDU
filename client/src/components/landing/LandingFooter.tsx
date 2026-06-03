@@ -38,7 +38,7 @@ export function LandingFooter() {
       className="relative"
       style={{
         background: 'rgba(3,6,15,0.92)',
-        borderTop: '1px solid rgba(126,231,255,0.18)',
+        borderTop: '1px solid var(--color-border)',
       }}
     >
       <div className="container mx-auto px-4 sm:px-6 py-14 md:py-20 max-w-[1440px]">
@@ -51,7 +51,7 @@ export function LandingFooter() {
             <p className="text-sm text-white/45 leading-[1.7] max-w-xs">
               Nền tảng học thiên văn trực tuyến hàng đầu Việt Nam — kết nối đam mê với kiến thức vũ trụ.
             </p>
-            <div className="hud-mono hud-mono-sm mt-5 text-[color:var(--hud-plasma)]/70">
+            <div className="hud-mono hud-mono-sm mt-5 text-[color:var(--color-accent)]/70">
               v2.6 · Hanoi observatory link
             </div>
           </div>
@@ -59,7 +59,7 @@ export function LandingFooter() {
           {/* Nav columns */}
           {NAV_COLS.map((col) => (
             <div key={col.title}>
-              <h4 className="hud-mono hud-mono-md text-[color:var(--hud-plasma)] mb-5">
+              <h4 className="hud-mono hud-mono-md text-[color:var(--color-accent)] mb-5">
                 {col.title}
               </h4>
               <ul className="space-y-3">
@@ -67,7 +67,7 @@ export function LandingFooter() {
                   <li key={`${col.title}-${link.label}`}>
                     <Link
                       href={link.href}
-                      className="text-sm text-white/50 hover:text-[color:var(--hud-amber)] transition-colors"
+                      className="text-sm text-white/50 hover:text-[color:var(--color-brand-amber)] transition-colors"
                     >
                       {link.label}
                     </Link>
@@ -81,7 +81,7 @@ export function LandingFooter() {
         {/* Bottom bar */}
         <div
           className="pt-7 flex flex-col md:flex-row items-center justify-between gap-4"
-          style={{ borderTop: '1px solid rgba(126,231,255,0.12)' }}
+          style={{ borderTop: '1px solid var(--color-border)' }}
         >
           <span className="hud-mono hud-mono-sm text-white/35 inline-flex items-center gap-2">
             <span className="hud-status-dot-cyan" aria-hidden />

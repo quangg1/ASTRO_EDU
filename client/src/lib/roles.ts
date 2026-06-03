@@ -61,11 +61,6 @@ export function canEnterStudio(user: AuthUser | null): boolean {
   return canAccessStudio(user) || canAdminContentOverride(user)
 }
 
-/** @deprecated Dùng canEnterStudio — giữ tương thích ngắn hạn */
-export function canEditContent(user: AuthUser | null): boolean {
-  return canEnterStudio(user)
-}
-
 export function canManageUsers(user: AuthUser | null): boolean {
   return hasAdminScope(user, 'users')
 }

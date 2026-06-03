@@ -1,7 +1,10 @@
 'use client'
 
+import { useEffect } from 'react'
 import dynamic from 'next/dynamic'
 import { Suspense } from 'react'
+import { preloadHipBrightCatalog } from '@/features/explore/lib/hipBrightCatalogCache'
+import { isConstellationTargetId } from '@/features/explore/public'
 import { Loading } from '@/components/ui/Loading'
 import { planetsData } from '@/lib/solarSystemData'
 import { NASA_SHOWCASE_ITEMS } from '@/lib/showcaseEntities'
@@ -19,9 +22,21 @@ const ShowcaseScene = dynamic(() => import('@/components/3d/showcase/ShowcaseSce
   ssr: false,
   loading: () => <Loading />,
 })
+const SkyPlanetariumScene = dynamic(
+  () => import('@/components/3d/sky/SkyPlanetariumScene').then((m) => m.SkyPlanetariumScene),
+  { ssr: false, loading: () => <Loading /> },
+)
 
 type Props = Pick<
   ExplorePageModel,
+  | 'exploreView'
+  | 'skyTargets'
+  | 'skyActiveTargetId'
+  | 'skySceneHighlightId'
+  | 'selectSkyTarget'
+  | 'handleSkyScenePick'
+  | 'observer'
+  | 'ephemerisBodies'
   | 'sceneMode'
   | 'planetHistoryEntityId'
   | 'planetGlobeEntity'
@@ -40,6 +55,14 @@ type Props = Pick<
 }
 
 export function ExploreSceneCanvas({
+  exploreView,
+  skyTargets,
+  skyActiveTargetId,
+  skySceneHighlightId,
+  selectSkyTarget,
+  handleSkyScenePick,
+  observer,
+  ephemerisBodies,
   sceneMode,
   planetHistoryEntityId,
   earthHistoryStage,
@@ -55,10 +78,26 @@ export function ExploreSceneCanvas({
   syncSelectedPlanetFromItem,
   handleShowcaseCameraSettled,
 }: Props) {
+  useEffect(() => {
+    if (exploreView === 'sky') preloadHipBrightCatalog()
+  }, [exploreView])
+
   return (
-    <div className="canvas-container explore-scene-canvas">
+    <div className="canvas-container explore-scene-canvas" data-explore-tour="explore-scene-canvas">
       <Suspense fallback={<Loading />}>
-        {sceneMode === 'earth' ? (
+        {exploreView === 'sky' ? (
+          <SkyPlanetariumScene
+            targets={skyTargets}
+            pinnedTargetId={skyActiveTargetId}
+            sceneHighlightId={skySceneHighlightId}
+            constellationTargetId={
+              isConstellationTargetId(skyActiveTargetId) ? skyActiveTargetId : null
+            }
+            onSkyScenePick={handleSkyScenePick}
+            observer={observer}
+            ephemerisBodies={ephemerisBodies}
+          />
+        ) : sceneMode === 'earth' ? (
           <EarthScene />
         ) : sceneMode === 'planet-history' &&
           planetHistoryEntityId === 'planet-earth' &&

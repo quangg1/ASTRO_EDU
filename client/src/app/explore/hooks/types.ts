@@ -7,6 +7,8 @@ import type { ShowcaseOrbitEntity } from '@/lib/showcaseEntities'
 import type { LearningConcept } from '@/data/learningPathCurriculum'
 import type { LessonVisited3DMap } from '@/features/learning-path/public'
 import type { QuizQuestion } from '@/shared/types/quizQuestion'
+import type { ExploreView } from '@/features/explore/public'
+import type { SkyExploreTarget } from '@/features/explore/public'
 
 export type ExploreSceneMode = 'earth' | 'planet-history' | 'showcase'
 
@@ -48,7 +50,26 @@ export type ExploreRewardsSlice = {
   gamificationStrip: ShowcaseGamificationStrip | null
 }
 
+export type ExploreSkySlice = {
+  exploreView: ExploreView
+  skyActiveTargetId: string
+  skySceneHighlightId: string | null
+  skyTargets: SkyExploreTarget[]
+  activeSkyTarget: SkyExploreTarget | null
+  constellationTargets: SkyExploreTarget[]
+  bodyTargets: SkyExploreTarget[]
+  skyDataSource: 'api' | 'bundled' | 'loading'
+  navigateExploreView: (view: ExploreView, targetId?: string | null) => void
+  selectSkyTarget: (targetId: string) => void
+  handleSkyScenePick: (pickedId: string) => void
+  openSkyForEntity: (entityId: string) => void
+  openSolarForTarget: (targetId: string, solarEntityId?: string | null) => void
+  setSkyActiveTargetId: (id: string) => void
+}
+
 export type ExploreModeSlice = {
+  exploreView: ExploreView
+  activeTargetId: string
   sceneMode: ExploreSceneMode
   earthHistoryOpen: boolean
   setEarthHistoryOpen: (open: boolean) => void

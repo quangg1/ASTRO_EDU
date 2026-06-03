@@ -40,7 +40,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select
         'disabled:cursor-not-allowed disabled:opacity-60',
         /** Native dropdown list — tránh nền trắng/chữ trắng trên theme tối */
         '[color-scheme:dark]',
-        '[&>option]:bg-[#0a0f17] [&>option]:text-gray-100',
+        '[&>option]:bg-ds-base [&>option]:text-gray-100',
         invalid
           ? 'border-ds-danger-strong focus:border-ds-danger'
           : 'border-ds-border focus:border-ds-accent-strong',

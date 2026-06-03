@@ -21,8 +21,8 @@ function lessonCountForNode(node: LearningModule['nodes'][0]) {
 }
 
 // ── Design tokens ──────────────────────────────────────────────
-const AMBER = '#f5a524'
-const CYAN = '#7ee7ff'
+const AMBER = 'var(--color-brand-amber)'
+const CYAN = 'var(--color-accent)'
 const AMBER_ORDERS = new Set([1, 4, 5])
 
 function getAccent(order: number) { return AMBER_ORDERS.has(order) ? AMBER : CYAN }
@@ -160,7 +160,7 @@ export default function LearningModuleView({ module }: Props) {
   const nextMod = modules.find((x) => x.order === m.order + 1)
 
   return (
-    <div style={{ minHeight: '100vh', background: '#03060f', position: 'relative', overflow: 'hidden', fontFamily: "'Space Grotesk', sans-serif" }}>
+    <div style={{ minHeight: '100vh', background: 'var(--color-bg-base)', position: 'relative', overflow: 'hidden', fontFamily: "'Space Grotesk', sans-serif" }}>
 
       {/* ── Keyframes + hover CSS ── */}
       <style>{`
@@ -220,7 +220,7 @@ export default function LearningModuleView({ module }: Props) {
       {/* ── Ambient corner glow ── */}
       <div aria-hidden style={{
         position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0,
-        background: 'radial-gradient(ellipse 55% 35% at 6% 68%,rgba(245,165,36,0.05) 0%,transparent 60%),radial-gradient(ellipse 55% 35% at 94% 32%,rgba(126,231,255,0.05) 0%,transparent 60%)',
+        background: 'radial-gradient(ellipse 55% 35% at 6% 68%,rgba(245,165,36,0.05) 0%,transparent 60%),radial-gradient(ellipse 55% 35% at 94% 32%,var(--color-accent-soft) 0%,transparent 60%)',
       }} />
 
       {/* ── Edge labels ── */}
@@ -294,7 +294,7 @@ export default function LearningModuleView({ module }: Props) {
                 fontSize: 'clamp(32px,5vw,54px)',
                 fontFamily: "'Space Grotesk',sans-serif",
                 fontWeight: 600, lineHeight: 1.1, letterSpacing: '-0.025em',
-                color: '#eaf6ff', margin: '0 0 10px',
+                color: 'var(--color-text-primary)', margin: '0 0 10px',
               }}>
                 <TitleDisplay titleVi={m.titleVi} accentColor={ac} />
               </h1>
@@ -311,7 +311,7 @@ export default function LearningModuleView({ module }: Props) {
             padding: '12px 18px',
             marginBottom: 28,
           }}>
-            <p style={{ margin: 0, fontSize: 16, color: '#9aa8c4', lineHeight: 1.7, fontFamily: "'Space Grotesk',sans-serif" }}>
+            <p style={{ margin: 0, fontSize: 16, color: 'var(--color-text-muted)', lineHeight: 1.7, fontFamily: "'Space Grotesk',sans-serif" }}>
               {m.goalVi}
             </p>
           </div>
@@ -326,7 +326,7 @@ export default function LearningModuleView({ module }: Props) {
             </div>
             <div style={{ position: 'relative', height: 8, background: 'rgba(255,255,255,0.04)', clipPath: 'polygon(5px 0%,100% 0%,calc(100% - 5px) 100%,0% 100%)', border: 'rgba(126,231,255,0.12)' }}>
               {[1, 2, 3, 4].map(i => (
-                <span key={i} style={{ position: 'absolute', left: `${i * 20}%`, top: 0, bottom: 0, width: 1, background: 'rgba(126,231,255,0.15)', zIndex: 1 }} />
+                <span key={i} style={{ position: 'absolute', left: `${i * 20}%`, top: 0, bottom: 0, width: 1, background: 'var(--color-accent-soft)', zIndex: 1 }} />
               ))}
               <motion.div
                 style={{ height: '100%', background: `linear-gradient(90deg,rgba(126,231,255,0.3),${CYAN})`, position: 'relative' }}
@@ -350,7 +350,7 @@ export default function LearningModuleView({ module }: Props) {
                   padding: '7px 18px',
                   clipPath: 'polygon(8px 0%,100% 0%,calc(100% - 8px) 100%,0% 100%)',
                   background: 'rgba(126,231,255,0.07)',
-                  border: '1px solid rgba(126,231,255,0.35)',
+                  border: '1px solid var(--color-border-accent, var(--color-border))',
                   fontFamily: "'JetBrains Mono',monospace", fontSize: 13, letterSpacing: '0.12em', textTransform: 'uppercase',
                   color: CYAN, fontWeight: 600,
                 }}>
@@ -383,8 +383,8 @@ export default function LearningModuleView({ module }: Props) {
             </span>
             // Chủ đề
           </div>
-          <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 11, color: '#5c6886', letterSpacing: '0.12em', whiteSpace: 'nowrap', flexShrink: 0 }}>
-            / <b style={{ color: '#9aa8c4' }}>{m.nodes.length}</b> chủ đề
+          <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 11, color: 'var(--color-text-subtle)', letterSpacing: '0.12em', whiteSpace: 'nowrap', flexShrink: 0 }}>
+            / <b style={{ color: 'var(--color-text-muted)' }}>{m.nodes.length}</b> chủ đề
           </span>
           <div style={{ flex: 1, height: 1, background: `linear-gradient(90deg,rgba(${acRgb},0.22),transparent)` }} />
         </motion.div>
@@ -412,7 +412,7 @@ export default function LearningModuleView({ module }: Props) {
                       '--n-rgb': nRgb,
                       position: 'relative',
                       display: 'flex', alignItems: 'center',
-                      background: `linear-gradient(135deg, rgba(${nRgb},0.04) 0%, rgba(6,9,26,0.82) 55%)`,
+                      background: `linear-gradient(135deg, rgba(${nRgb},0.06) 0%, color-mix(in srgb, var(--color-bg-surface) 94%, transparent) 55%)`,
                       border: `1px solid rgba(${nRgb},0.15)`,
                       clipPath: 'polygon(10px 0%,100% 0%,100% calc(100% - 10px),calc(100% - 10px) 100%,0% 100%,0% 10px)',
                       overflow: 'hidden',
@@ -458,10 +458,10 @@ export default function LearningModuleView({ module }: Props) {
 
                     {/* Content */}
                     <div style={{ flex: 1, padding: '14px 18px', minWidth: 0 }}>
-                      <p style={{ margin: '0 0 5px', fontFamily: "'Space Grotesk',sans-serif", fontWeight: 600, fontSize: 17, color: '#eaf6ff', lineHeight: 1.3 }}>
+                      <p style={{ margin: '0 0 5px', fontFamily: "'Space Grotesk',sans-serif", fontWeight: 600, fontSize: 17, color: 'var(--color-text-primary)', lineHeight: 1.3 }}>
                         {node.titleVi}
                       </p>
-                      <p style={{ margin: 0, fontFamily: "'JetBrains Mono',monospace", fontSize: 10, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#5c6886' }}>
+                      <p style={{ margin: 0, fontFamily: "'JetBrains Mono',monospace", fontSize: 10, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--color-text-subtle)' }}>
                         // {node.title}
                       </p>
                     </div>
@@ -509,7 +509,7 @@ export default function LearningModuleView({ module }: Props) {
             marginTop: 16,
             padding: '11px 18px',
             clipPath: 'polygon(10px 0%,100% 0%,100% calc(100% - 10px),calc(100% - 10px) 100%,0% 100%,0% 10px)',
-            background: 'rgba(6,9,26,0.45)',
+            background: 'var(--color-panel-muted)',
             border: '1px dashed rgba(126,231,255,0.16)',
             display: 'flex', alignItems: 'center', gap: 14,
           }}
@@ -520,7 +520,7 @@ export default function LearningModuleView({ module }: Props) {
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             color: CYAN, fontFamily: "'JetBrains Mono',monospace", fontSize: 12, fontWeight: 700,
           }}>i</div>
-          <div style={{ flex: 1, display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6, fontFamily: "'JetBrains Mono',monospace", fontSize: 10, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#9aa8c4' }}>
+          <div style={{ flex: 1, display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6, fontFamily: "'JetBrains Mono',monospace", fontSize: 10, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--color-text-muted)' }}>
             <span style={{ padding: '2px 9px', border: '1px solid rgba(126,231,255,0.28)', clipPath: 'polygon(4px 0%,100% 0%,calc(100% - 4px) 100%,0% 100%)', color: CYAN }}>↵ Enter</span>
             <span>mở chủ đề đầu</span>
             <span style={{ color: '#3a4560', margin: '0 2px' }}>—</span>
@@ -550,7 +550,7 @@ export default function LearningModuleView({ module }: Props) {
             <Link
               href={`/tutorial/${nextMod?.id ?? ''}`}
               style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 13, letterSpacing: '0.12em', textTransform: 'uppercase', color: ac, textDecoration: 'none', fontWeight: 600 }}
-              onMouseEnter={e => (e.currentTarget.style.color = '#eaf6ff')}
+              onMouseEnter={e => (e.currentTarget.style.color = 'var(--color-text-primary)')}
               onMouseLeave={e => (e.currentTarget.style.color = ac)}
             >
               Module tiếp theo →

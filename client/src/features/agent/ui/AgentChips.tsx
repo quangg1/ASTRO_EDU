@@ -31,8 +31,8 @@ export function AgentChips({ chips, onChip, className, variant = 'default' }: Pr
           className={clsx(
             'rounded-full border text-xs transition-all duration-200',
             prominent
-              ? 'border-cyan-400/40 bg-cyan-500/10 px-4 py-2.5 text-sm text-cyan-100 hover:border-cyan-300/60 hover:bg-cyan-500/20 hover:shadow-[0_0_14px_rgba(6,182,212,0.35)] active:scale-[0.98]'
-              : 'border-white/15 bg-white/5 px-3 py-1.5 text-gray-300 hover:border-cyan-400/30 hover:bg-cyan-500/10 hover:text-cyan-100 hover:shadow-[0_0_10px_rgba(6,182,212,0.2)]',
+              ? 'border-cyan-400/40 bg-cyan-500/10 px-4 py-2.5 text-sm text-ds-text hover:border-cyan-300/60 hover:bg-ds-accent/15 hover:shadow-[0_0_14px_rgba(6,182,212,0.35)] active:scale-[0.98]'
+              : 'border-ds-border bg-white/5 px-3 py-1.5 text-gray-300 hover:border-cyan-400/30 hover:opacity-90/10 hover:text-ds-text hover:shadow-[0_0_10px_rgba(6,182,212,0.2)]',
           )}
           onClick={() => onChip(c)}
         >

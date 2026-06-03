@@ -319,13 +319,13 @@ export function CourseCheckoutClient({ slug, courseId, courseTitle, initialCohor
     <main className="surface-edu min-h-screen px-4 pb-16 pt-20">
       <div className="max-w-4xl mx-auto">
         <nav className="text-sm text-ds-muted mb-6 flex flex-wrap items-center gap-x-2 gap-y-1">
-          <Link href="/courses" className="text-ds-accent hover:text-cyan-100">
+          <Link href="/courses" className="text-ds-accent hover:text-ds-text">
             Khóa học
           </Link>
           <span aria-hidden>/</span>
           <Link
             href={`/courses/${slug}`}
-            className="text-ds-accent hover:text-cyan-100 truncate max-w-[12rem] sm:max-w-xs"
+            className="text-ds-accent hover:text-ds-text truncate max-w-[12rem] sm:max-w-xs"
           >
             {displayTitle}
           </Link>

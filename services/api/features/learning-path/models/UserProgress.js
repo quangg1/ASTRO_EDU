@@ -10,6 +10,10 @@ const userProgressSchema = new mongoose.Schema(
     solarJourneyCompletedMilestoneIds: { type: [String], default: [] },
     /** entityId → recent contextual quiz question ids (rotation) */
     exploreQuizRecentByEntity: { type: mongoose.Schema.Types.Mixed, default: {} },
+    /** entityId → YYYY-MM-DD (VN) when recent ids were last recorded */
+    exploreQuizRecentDayByEntity: { type: mongoose.Schema.Types.Mixed, default: {} },
+    /** entityId → YYYY-MM-DD (VN) when user last finished contextual quiz */
+    exploreContextualQuizDayByEntity: { type: mongoose.Schema.Types.Mixed, default: {} },
   },
   { timestamps: true, minimize: false },
 );

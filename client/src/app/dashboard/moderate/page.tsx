@@ -11,8 +11,8 @@ const chamfer = (cut = 14) => ({
   clipPath: `polygon(${cut}px 0,100% 0,100% calc(100% - ${cut}px),calc(100% - ${cut}px) 100%,0 100%,0 ${cut}px)`,
 })
 
-function Brackets({ c = '#7ee7ff', s = 14, o = 6, amber }: { c?: string; s?: number; o?: number; amber?: boolean }) {
-  const accent = amber ? '#f5a524' : c
+function Brackets({ c = 'var(--color-accent)', s = 14, o = 6, amber }: { c?: string; s?: number; o?: number; amber?: boolean }) {
+  const accent = amber ? 'var(--color-brand-amber)' : c
   const b = (ex: React.CSSProperties): React.CSSProperties => ({
     position: 'absolute', width: s, height: s, opacity: 0.75, pointerEvents: 'none', transition: 'all 0.2s', ...ex,
   })
@@ -43,14 +43,14 @@ export default function ModerateHubPage() {
 
   if (!checked || !user || !canModerate(user)) {
     return (
-      <div className="min-h-[40vh] flex items-center justify-center" style={{ color: '#5c6886', fontFamily: 'JetBrains Mono, monospace', fontSize: 13 }}>
+      <div className="min-h-[40vh] flex items-center justify-center" style={{ color: 'var(--color-text-subtle)', fontFamily: 'JetBrains Mono, monospace', fontSize: 13 }}>
         Đang tải…
       </div>
     )
   }
 
   return (
-    <div style={{ color: '#eaf6ff', fontFamily: 'Space Grotesk, sans-serif' }}>
+    <div style={{ color: 'var(--color-text-primary)', fontFamily: 'Space Grotesk, sans-serif' }}>
 
       {/* ── Zone 1: Page Head ── */}
       <header style={{ marginBottom: 24 }}>
@@ -61,14 +61,14 @@ export default function ModerateHubPage() {
             padding: '5px 14px',
             background: 'rgba(126,231,255,0.08)',
             border: '1px solid rgba(126,231,255,0.3)',
-            color: '#7ee7ff',
+            color: 'var(--color-accent)',
             fontFamily: 'JetBrains Mono, monospace', fontSize: 11, letterSpacing: '0.2em', textTransform: 'uppercase',
             marginBottom: 14,
             ...chamfer(8),
           }}>
             <span style={{
-              width: 6, height: 6, borderRadius: '50%', background: '#7ee7ff',
-              boxShadow: '0 0 6px #7ee7ff',
+              width: 6, height: 6, borderRadius: '50%', background: 'var(--color-accent)',
+              boxShadow: '0 0 6px var(--color-accent)',
               animation: 'pulseDot 1.6s infinite',
             }} />
             Điều hành viên cộng đồng
@@ -76,16 +76,16 @@ export default function ModerateHubPage() {
 
           <h1 style={{ fontSize: 'clamp(30px,3.5vw,48px)', fontWeight: 500, letterSpacing: '-0.03em', lineHeight: 1.05, margin: '0 0 12px' }}>
             Kiểm duyệt{' '}
-            <em style={{ fontStyle: 'italic', fontWeight: 300, color: '#f5a524' }}>diễn đàn</em>
+            <em style={{ fontStyle: 'italic', fontWeight: 300, color: 'var(--color-brand-amber)' }}>diễn đàn</em>
           </h1>
 
-          <p style={{ fontSize: 14, color: '#9aa8c4', maxWidth: 540, lineHeight: 1.65, margin: 0 }}>
-            Bạn có thể <b style={{ color: '#eaf6ff', fontWeight: 500 }}>ghim</b> hoặc <b style={{ color: '#eaf6ff', fontWeight: 500 }}>gỡ</b> bài viết không phù hợp trên các diễn đàn công khai.
+          <p style={{ fontSize: 14, color: 'var(--color-text-muted)', maxWidth: 540, lineHeight: 1.65, margin: 0 }}>
+            Bạn có thể <b style={{ color: 'var(--color-text-primary)', fontWeight: 500 }}>ghim</b> hoặc <b style={{ color: 'var(--color-text-primary)', fontWeight: 500 }}>gỡ</b> bài viết không phù hợp trên các diễn đàn công khai.
             Mở một bài viết để thấy các nút{' '}
             <span style={{
               display: 'inline-block', padding: '1px 7px',
               background: 'rgba(245,165,36,0.12)', border: '1px solid rgba(245,165,36,0.4)',
-              color: '#f5a524', fontFamily: 'JetBrains Mono, monospace', fontSize: 11,
+              color: 'var(--color-brand-amber)', fontFamily: 'JetBrains Mono, monospace', fontSize: 11,
               ...chamfer(5),
             }}>Ghim</span>
             {' '}và{' '}
@@ -104,28 +104,28 @@ export default function ModerateHubPage() {
       <div style={{
         display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0 28px',
         padding: '10px 18px',
-        background: 'rgba(6,9,26,0.7)',
-        border: '1px solid rgba(126,231,255,0.12)',
+        background: 'var(--color-panel-muted)',
+        border: '1px solid var(--color-border)',
         borderBottom: '2px solid rgba(126,231,255,0.08)',
         fontFamily: 'JetBrains Mono, monospace', fontSize: 11, letterSpacing: '0.18em', textTransform: 'uppercase',
-        color: '#5c6886',
+        color: 'var(--color-text-subtle)',
         marginBottom: 24,
         ...chamfer(10),
       }}>
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
           <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#6dffb0', boxShadow: '0 0 6px #6dffb0', animation: 'pulseDot 1.6s infinite' }} />
-          <span style={{ color: '#9aa8c4' }}>moderation channel</span>
+          <span style={{ color: 'var(--color-text-muted)' }}>moderation channel</span>
           <span style={{ color: '#6dffb0' }}>· online</span>
         </span>
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-          <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#7ee7ff', boxShadow: '0 0 5px #7ee7ff' }} />
+          <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'var(--color-accent)', boxShadow: '0 0 5px var(--color-accent)' }} />
           <span>phạm vi ·</span>
-          <span style={{ color: '#7ee7ff' }}>diễn đàn công khai</span>
+          <span style={{ color: 'var(--color-accent)' }}>diễn đàn công khai</span>
         </span>
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-          <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#f5a524', boxShadow: '0 0 5px #f5a524' }} />
+          <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'var(--color-brand-amber)', boxShadow: '0 0 5px var(--color-brand-amber)' }} />
           <span>hành động hôm nay ·</span>
-          <span style={{ color: '#f5a524' }}>00</span>
+          <span style={{ color: 'var(--color-brand-amber)' }}>00</span>
         </span>
         <span style={{ marginLeft: 'auto', color: '#3a4460' }}>// last sync · just now</span>
       </div>
@@ -173,7 +173,7 @@ export default function ModerateHubPage() {
                   background: 'rgba(245,165,36,0.15)', border: '1px solid rgba(245,165,36,0.35)',
                   ...chamfer(8),
                 }}>
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#f5a524" strokeWidth="1.6" aria-hidden>
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--color-brand-amber)" strokeWidth="1.6" aria-hidden>
                     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
                     <polyline points="14 2 14 8 20 8" />
                     <line x1="16" y1="13" x2="8" y2="13" />
@@ -197,21 +197,21 @@ export default function ModerateHubPage() {
               </div>
             </div>
 
-            <h3 style={{ fontSize: 20, fontWeight: 600, color: '#eaf6ff', margin: '0 0 6px', letterSpacing: '-0.01em' }}>
+            <h3 style={{ fontSize: 20, fontWeight: 600, color: 'var(--color-text-primary)', margin: '0 0 6px', letterSpacing: '-0.01em' }}>
               Tin thiên văn
             </h3>
-            <p style={{ fontSize: 13, color: '#9aa8c4', margin: '0 0 16px', lineHeight: 1.5 }}>
+            <p style={{ fontSize: 13, color: 'var(--color-text-muted)', margin: '0 0 16px', lineHeight: 1.5 }}>
               Diễn đàn tin và cập nhật — kiểm duyệt bài đăng tại đây.
             </p>
 
             <div style={{ borderTop: '1px dashed rgba(245,165,36,0.2)', paddingTop: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 11, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#5c6886' }}>
+              <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 11, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--color-text-subtle)' }}>
                 cần duyệt ·{' '}
-                <span style={{ color: '#f5a524' }}>00</span>
+                <span style={{ color: 'var(--color-brand-amber)' }}>00</span>
               </span>
               <span style={{
                 fontFamily: 'JetBrains Mono, monospace', fontSize: 11, letterSpacing: '0.12em', textTransform: 'uppercase',
-                color: '#f5a524', display: 'inline-flex', alignItems: 'center', gap: 4,
+                color: 'var(--color-brand-amber)', display: 'inline-flex', alignItems: 'center', gap: 4,
               }}>
                 Mở diễn đàn →
               </span>
@@ -227,8 +227,8 @@ export default function ModerateHubPage() {
           <div
             style={{
               position: 'relative',
-              background: 'rgba(6,9,26,0.92)',
-              border: '1px solid rgba(126,231,255,0.18)',
+              background: 'var(--color-panel-solid)',
+              border: '1px solid var(--color-border)',
               boxShadow: 'inset 0 0 24px rgba(126,231,255,0.04)',
               padding: '20px 22px 18px',
               cursor: 'pointer', transition: 'all 0.2s',
@@ -237,13 +237,13 @@ export default function ModerateHubPage() {
             onMouseEnter={(e) => {
               const el = e.currentTarget
               el.style.transform = 'translateY(-2px)'
-              el.style.borderColor = 'rgba(126,231,255,0.5)'
-              el.style.boxShadow = 'inset 0 0 24px rgba(126,231,255,0.06), 0 0 24px rgba(126,231,255,0.14)'
+              el.style.borderColor = 'var(--color-accent-strong)'
+              el.style.boxShadow = 'inset 0 0 24px rgba(126,231,255,0.06), 0 0 24px var(--color-accent-soft)'
             }}
             onMouseLeave={(e) => {
               const el = e.currentTarget
               el.style.transform = 'none'
-              el.style.borderColor = 'rgba(126,231,255,0.18)'
+              el.style.borderColor = 'var(--color-accent-soft)'
               el.style.boxShadow = 'inset 0 0 24px rgba(126,231,255,0.04)'
             }}
           >
@@ -255,7 +255,7 @@ export default function ModerateHubPage() {
                 background: 'rgba(126,231,255,0.08)', border: '1px solid rgba(126,231,255,0.25)',
                 ...chamfer(8),
               }}>
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#7ee7ff" strokeWidth="1.6" aria-hidden>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent)" strokeWidth="1.6" aria-hidden>
                   <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
                 </svg>
               </div>
@@ -274,21 +274,21 @@ export default function ModerateHubPage() {
               </div>
             </div>
 
-            <h3 style={{ fontSize: 20, fontWeight: 600, color: '#eaf6ff', margin: '0 0 6px', letterSpacing: '-0.01em' }}>
+            <h3 style={{ fontSize: 20, fontWeight: 600, color: 'var(--color-text-primary)', margin: '0 0 6px', letterSpacing: '-0.01em' }}>
               Tất cả diễn đàn
             </h3>
-            <p style={{ fontSize: 13, color: '#9aa8c4', margin: '0 0 16px', lineHeight: 1.5 }}>
+            <p style={{ fontSize: 13, color: 'var(--color-text-muted)', margin: '0 0 16px', lineHeight: 1.5 }}>
               Chọn khu vực khác nếu cần duyệt bài ngoài mục tin.
             </p>
 
-            <div style={{ borderTop: '1px dashed rgba(126,231,255,0.15)', paddingTop: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 11, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#5c6886' }}>
+            <div style={{ borderTop: '1px dashed var(--color-accent-soft)', paddingTop: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 11, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--color-text-subtle)' }}>
                 khu vực ·{' '}
-                <span style={{ color: '#7ee7ff' }}>nhiều</span>
+                <span style={{ color: 'var(--color-accent)' }}>nhiều</span>
               </span>
               <span style={{
                 fontFamily: 'JetBrains Mono, monospace', fontSize: 11, letterSpacing: '0.12em', textTransform: 'uppercase',
-                color: '#7ee7ff', display: 'inline-flex', alignItems: 'center', gap: 4,
+                color: 'var(--color-accent)', display: 'inline-flex', alignItems: 'center', gap: 4,
               }}>
                 duyệt theo khu vực →
               </span>
@@ -300,20 +300,20 @@ export default function ModerateHubPage() {
       {/* ── Zone 4: Tips Panel ── */}
       <div style={{
         position: 'relative',
-        background: 'rgba(6,9,26,0.7)',
-        border: '1px solid rgba(126,231,255,0.12)',
+        background: 'var(--color-panel-muted)',
+        border: '1px solid var(--color-border)',
         padding: '20px 24px',
         ...chamfer(14),
       }}>
         {/* Only top-left + bottom-right brackets */}
-        <span style={{ position: 'absolute', top: 6, left: 6, width: 14, height: 14, borderTop: '1.5px solid rgba(126,231,255,0.5)', borderLeft: '1.5px solid rgba(126,231,255,0.5)', pointerEvents: 'none' }} />
-        <span style={{ position: 'absolute', bottom: 6, right: 6, width: 14, height: 14, borderBottom: '1.5px solid rgba(126,231,255,0.5)', borderRight: '1.5px solid rgba(126,231,255,0.5)', pointerEvents: 'none' }} />
+        <span style={{ position: 'absolute', top: 6, left: 6, width: 14, height: 14, borderTop: '1.5px solid var(--color-accent-strong)', borderLeft: '1.5px solid var(--color-accent-strong)', pointerEvents: 'none' }} />
+        <span style={{ position: 'absolute', bottom: 6, right: 6, width: 14, height: 14, borderBottom: '1.5px solid var(--color-accent-strong)', borderRight: '1.5px solid var(--color-accent-strong)', pointerEvents: 'none' }} />
 
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <span style={{ width: 20, height: 1, background: 'rgba(126,231,255,0.4)', display: 'inline-block' }} />
-            <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 11, letterSpacing: '0.22em', textTransform: 'uppercase', color: '#9aa8c4' }}>
+            <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 11, letterSpacing: '0.22em', textTransform: 'uppercase', color: 'var(--color-text-muted)' }}>
               Gợi ý thao tác
             </span>
           </div>
@@ -342,19 +342,19 @@ export default function ModerateHubPage() {
               background: 'rgba(245,165,36,0.12)', border: '1px solid rgba(245,165,36,0.3)',
               ...chamfer(7),
             }}>
-              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#f5a524" strokeWidth="1.8" aria-hidden>
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--color-brand-amber)" strokeWidth="1.8" aria-hidden>
                 <line x1="12" y1="17" x2="12" y2="22" />
                 <path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z" />
               </svg>
             </div>
             <div>
-              <span style={{ color: '#f5a524', fontWeight: 600 }}>Ghim</span>
-              <span style={{ color: '#9aa8c4', fontSize: 13 }}> — đưa bài quan trọng lên đầu danh sách trong diễn đàn đó.</span>
+              <span style={{ color: 'var(--color-brand-amber)', fontWeight: 600 }}>Ghim</span>
+              <span style={{ color: 'var(--color-text-muted)', fontSize: 13 }}> — đưa bài quan trọng lên đầu danh sách trong diễn đàn đó.</span>
             </div>
             <span style={{
               fontFamily: 'JetBrains Mono, monospace', fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase',
               padding: '2px 8px', background: 'rgba(245,165,36,0.1)', border: '1px solid rgba(245,165,36,0.25)',
-              color: '#f5a524', whiteSpace: 'nowrap',
+              color: 'var(--color-brand-amber)', whiteSpace: 'nowrap',
               ...chamfer(5),
             }}>
               action · pin
@@ -387,7 +387,7 @@ export default function ModerateHubPage() {
             </div>
             <div>
               <span style={{ color: '#ff9090', fontWeight: 600 }}>Xóa bài</span>
-              <span style={{ color: '#9aa8c4', fontSize: 13 }}> — chỉ khi vi phạm nội quy; hành động <strong style={{ color: '#eaf6ff' }}>không thể hoàn tác</strong> qua giao diện này.</span>
+              <span style={{ color: 'var(--color-text-muted)', fontSize: 13 }}> — chỉ khi vi phạm nội quy; hành động <strong style={{ color: 'var(--color-text-primary)' }}>không thể hoàn tác</strong> qua giao diện này.</span>
             </div>
             <span style={{
               fontFamily: 'JetBrains Mono, monospace', fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase',

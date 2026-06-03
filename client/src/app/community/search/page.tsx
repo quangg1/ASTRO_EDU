@@ -48,13 +48,12 @@ function SearchContent() {
   const discussionPosts = posts.filter((p) => !p.forumIsNews)
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#03060d] via-black to-[#040810]">
-      <div className="pt-20 px-4 pb-16 max-w-4xl mx-auto">
-        <Link href="/community" className="text-sm text-cyan-400 hover:text-cyan-300 mb-6 inline-block">
+    <div className="relative z-10 px-4 pb-16 max-w-4xl mx-auto pt-6">
+        <Link href="/community" className="text-sm text-ds-accent hover:text-ds-text mb-6 inline-block">
           ← Cộng đồng
         </Link>
         <h1 className="text-2xl font-bold text-white mb-2">Tìm bài viết</h1>
-        <p className="text-sm text-slate-400 mb-6">Tìm trong tiêu đề và nội dung thảo luận; tin lọc theo tiêu đề.</p>
+        <p className="text-sm text-ds-muted mb-6">Tìm trong tiêu đề và nội dung thảo luận; tin lọc theo tiêu đề.</p>
 
         <div className="mb-4 flex flex-wrap gap-2">
           {(['all', 'discussion', 'news'] as const).map((s) => (
@@ -69,8 +68,8 @@ function SearchContent() {
               }}
               className={`rounded-full px-3 py-1 text-xs border ${
                 scope === s
-                  ? 'border-cyan-400/50 bg-cyan-500/20 text-cyan-100'
-                  : 'border-white/15 text-gray-400'
+                  ? 'border-ds-accent/50 bg-ds-accent/15 text-ds-text'
+                  : 'border-ds-border text-ds-muted'
               }`}
             >
               {s === 'all' ? 'Tất cả' : s === 'news' ? 'Tin' : 'Thảo luận'}
@@ -91,13 +90,13 @@ function SearchContent() {
         />
 
         {q.trim().length < 2 && (
-          <p className="mt-8 text-sm text-slate-500">Nhập ít nhất 2 ký tự để tìm.</p>
+          <p className="mt-8 text-sm text-ds-subtle">Nhập ít nhất 2 ký tự để tìm.</p>
         )}
 
-        {loading && <p className="mt-8 text-sm text-slate-500">Đang tìm…</p>}
+        {loading && <p className="mt-8 text-sm text-ds-subtle">Đang tìm…</p>}
 
         {!loading && q.trim().length >= 2 && (
-          <p className="mt-6 text-sm text-slate-400">{total} kết quả</p>
+          <p className="mt-6 text-sm text-ds-muted">{total} kết quả</p>
         )}
 
         {!loading && discussionPosts.length > 0 && (scope === 'all' || scope === 'discussion') && (
@@ -116,14 +115,14 @@ function SearchContent() {
                 <NewsCardLink
                   key={p._id}
                   post={p}
-                  className="flex gap-4 rounded-xl border border-white/10 bg-white/[0.03] p-3 hover:border-cyan-300/25"
+                  className="flex gap-4 rounded-xl border border-ds-border bg-white/[0.03] p-3 hover:border-cyan-300/25"
                 >
                   {thumb ? (
                     <img src={thumb} alt="" className="w-24 h-16 object-cover rounded-lg shrink-0" referrerPolicy="no-referrer" />
                   ) : null}
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-white line-clamp-2">{p.title}</p>
-                    <p className="text-xs text-slate-500 mt-1">
+                    <p className="text-xs text-ds-subtle mt-1">
                       {p.forumTitle} · {formatDate(p.publishedAt || p.createdAt)}
                     </p>
                   </div>
@@ -132,14 +131,13 @@ function SearchContent() {
             })}
           </section>
         )}
-      </div>
     </div>
   )
 }
 
 export default function CommunitySearchPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-black pt-24 text-center text-slate-500">Đang tải…</div>}>
+    <Suspense fallback={<div className="relative z-10 text-ds-text w-full pt-24 text-center text-ds-subtle">Đang tải…</div>}>
       <SearchContent />
     </Suspense>
   )

@@ -390,7 +390,7 @@ export default function KnowledgeStarMap() {
   )
 
   return (
-    <div className="min-h-screen bg-[#02040a] text-slate-100">
+    <div className="min-h-screen bg-ds-base text-slate-100">
       <div
         className="pointer-events-none fixed inset-0 opacity-[0.4]"
         style={{
@@ -399,18 +399,18 @@ export default function KnowledgeStarMap() {
         }}
       />
 
-      <header className="relative z-10 border-b border-white/10 bg-[#070a10]/80 backdrop-blur-md">
+      <header className="relative z-10 border-b border-ds-border bg-ds-base/80 backdrop-blur-md">
         <div className="mx-auto flex max-w-[1600px] flex-col gap-3 px-4 py-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex items-start gap-3">
             <Link
               href="/tutorial"
-              className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-white/15 text-slate-300 hover:bg-white/10"
+              className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-ds-border text-ds-muted hover:bg-white/10"
               aria-label="Về Learning Path"
             >
               <ArrowLeft className="h-4 w-4" />
             </Link>
             <div>
-              <div className="inline-flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.16em] text-cyan-300/90">
+              <div className="inline-flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.16em] text-ds-accent/90">
                 <Sparkles className="h-3.5 w-3.5" />
                 Knowledge star map
                 <Orbit className="h-3.5 w-3.5 opacity-80" />
@@ -421,9 +421,9 @@ export default function KnowledgeStarMap() {
               >
                 Bản đồ tri thức
               </h1>
-              <p className="mt-1 max-w-2xl text-sm text-slate-400">
-                Chọn một điểm kiến thức để xem <strong className="text-slate-300">cần học trước gì</strong> và{' '}
-                <strong className="text-slate-300">mở khóa được gì</strong>.{' '}
+              <p className="mt-1 max-w-2xl text-sm text-ds-muted">
+                Chọn một điểm kiến thức để xem <strong className="text-ds-muted">cần học trước gì</strong> và{' '}
+                <strong className="text-ds-muted">mở khóa được gì</strong>.{' '}
                 {studioMode
                   ? 'Bạn đang ở chế độ kỹ thuật để kiểm tra graph.'
                   : 'Các điểm màu vàng là phần bạn đã đủ điều kiện để học tiếp.'}
@@ -434,11 +434,11 @@ export default function KnowledgeStarMap() {
       </header>
 
       <div className="relative z-10 mx-auto max-w-[1600px] px-4 pb-10 pt-4">
-        <div className="mb-4 flex flex-col gap-3 rounded-2xl border border-white/10 bg-black/30 p-4 backdrop-blur-sm lg:flex-row lg:flex-wrap lg:items-end">
+        <div className="mb-4 flex flex-col gap-3 rounded-2xl border border-ds-border bg-ds-surface/70 p-4 backdrop-blur-sm lg:flex-row lg:flex-wrap lg:items-end">
           {studioMode ? (
             <div className="flex flex-wrap gap-2">
-              <span className="w-full text-[10px] uppercase tracking-wide text-slate-500 lg:w-auto">Góc nhìn</span>
-              <div className="flex rounded-lg border border-white/15 p-0.5">
+              <span className="w-full text-[10px] uppercase tracking-wide text-ds-subtle lg:w-auto">Góc nhìn</span>
+              <div className="flex rounded-lg border border-ds-border p-0.5">
                 <button
                   type="button"
                   onClick={() => {
@@ -455,7 +455,7 @@ export default function KnowledgeStarMap() {
                     )
                   }}
                   className={`rounded-md px-3 py-1.5 text-xs font-medium ${
-                    viewMode === 'focus' ? 'bg-cyan-600/40 text-cyan-50' : 'text-slate-400 hover:text-white'
+                    viewMode === 'focus' ? 'bg-cyan-600/40 text-cyan-50' : 'text-ds-muted hover:text-white'
                   }`}
                 >
                   Xem quanh concept này
@@ -476,7 +476,7 @@ export default function KnowledgeStarMap() {
                     )
                   }}
                   className={`rounded-md px-3 py-1.5 text-xs font-medium ${
-                    viewMode === 'full' ? 'bg-violet-600/40 text-violet-50' : 'text-slate-400 hover:text-white'
+                    viewMode === 'full' ? 'bg-violet-600/40 text-violet-50' : 'text-ds-muted hover:text-white'
                   }`}
                 >
                   Xem tất cả
@@ -487,7 +487,7 @@ export default function KnowledgeStarMap() {
 
           {studioMode && viewMode === 'focus' ? (
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-[10px] uppercase tracking-wide text-slate-500">Mức mở rộng</span>
+              <span className="text-[10px] uppercase tracking-wide text-ds-subtle">Mức mở rộng</span>
               {[1, 2, 3].map((h) => (
                 <button
                   key={h}
@@ -506,8 +506,8 @@ export default function KnowledgeStarMap() {
                   }
                   className={`rounded-md border px-2.5 py-1 text-xs ${
                     egoHops === h
-                      ? 'border-cyan-400/50 bg-cyan-500/20 text-cyan-100'
-                      : 'border-white/10 text-slate-400 hover:border-white/20'
+                      ? 'border-ds-accent/50 bg-ds-accent/15 text-ds-text'
+                      : 'border-ds-border text-ds-muted hover:border-white/20'
                   }`}
                 >
                   {h} lớp
@@ -518,7 +518,7 @@ export default function KnowledgeStarMap() {
 
           {studioMode ? (
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-[10px] uppercase tracking-wide text-slate-500">Chủ đề</span>
+              <span className="text-[10px] uppercase tracking-wide text-ds-subtle">Chủ đề</span>
               <select
                 value={domain}
                 onChange={(e) => {
@@ -540,7 +540,7 @@ export default function KnowledgeStarMap() {
                     { scroll: false },
                   )
                 }}
-                className="rounded-lg border border-white/15 bg-black/50 px-3 py-2 text-sm text-slate-200 outline-none focus:ring-2 focus:ring-cyan-500/40"
+                className="rounded-lg border border-ds-border bg-black/50 px-3 py-2 text-sm text-slate-200 outline-none focus:ring-2 focus:ring-ds-accent/40"
               >
                 <option value="all">Tất cả ({concepts.length})</option>
                 {domains.map((d) => (
@@ -552,7 +552,7 @@ export default function KnowledgeStarMap() {
             </div>
           ) : (
             <div className="flex items-center gap-2">
-              <p className="text-[11px] text-cyan-100/90">Chế độ học tập: tập trung quanh concept hiện tại.</p>
+              <p className="text-[11px] text-ds-text/90">Chế độ học tập: tập trung quanh concept hiện tại.</p>
               <button
                 type="button"
                 onClick={() =>
@@ -575,7 +575,7 @@ export default function KnowledgeStarMap() {
           )}
 
           {studioMode && viewMode === 'full' ? (
-            <label className="flex cursor-pointer items-center gap-2 text-xs text-slate-400">
+            <label className="flex cursor-pointer items-center gap-2 text-xs text-ds-muted">
               <input
                 type="checkbox"
                 checked={sparseFullLinks}
@@ -591,12 +591,12 @@ export default function KnowledgeStarMap() {
                     { scroll: false },
                   )
                 }
-                className="rounded border-white/20 bg-black/40"
+                className="rounded border-white/20 bg-ds-elevated/80"
               />
               Chỉ hiện đường nối khi rê chuột (dễ nhìn hơn)
             </label>
           ) : studioMode ? (
-            <p className="text-[11px] text-slate-500">
+            <p className="text-[11px] text-ds-subtle">
               Trung tâm:{' '}
               <span className="font-medium text-cyan-200/90">
                 {focusConcept ? focusConcept.title || focusId : '—'}
@@ -605,15 +605,15 @@ export default function KnowledgeStarMap() {
           ) : null}
 
           <div className="relative min-w-[200px] flex-1 lg:max-w-sm">
-            <ScanSearch className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-500" />
+            <ScanSearch className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-ds-subtle" />
               <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
                 placeholder="Tìm kiến thức theo tên hoặc mã..."
-              className="w-full rounded-lg border border-white/15 bg-black/50 py-2 pl-8 pr-3 text-sm text-slate-200 outline-none placeholder:text-slate-600 focus:ring-2 focus:ring-cyan-500/35"
+              className="w-full rounded-lg border border-ds-border bg-black/50 py-2 pl-8 pr-3 text-sm text-slate-200 outline-none placeholder:text-ds-subtle focus:ring-2 focus:ring-ds-accent/35"
             />
             {search.trim() && searchHits.length > 0 ? (
-              <ul className="absolute left-0 right-0 top-full z-20 mt-1 max-h-52 overflow-auto rounded-lg border border-white/15 bg-[#0a1020] py-1 shadow-xl">
+              <ul className="absolute left-0 right-0 top-full z-20 mt-1 max-h-52 overflow-auto rounded-lg border border-ds-border bg-ds-elevated py-1 shadow-xl">
                 {searchHits.map((c) => (
                   <li key={c.id}>
                     <button
@@ -622,7 +622,7 @@ export default function KnowledgeStarMap() {
                       className="flex w-full flex-col px-3 py-2 text-left text-xs hover:bg-white/10"
                     >
                       <span className="font-medium text-slate-100">{c.title || c.id}</span>
-                      <span className="text-[10px] text-slate-500">
+                      <span className="text-[10px] text-ds-subtle">
                         {c.id} · {c.domain || '—'}
                       </span>
                     </button>
@@ -635,16 +635,16 @@ export default function KnowledgeStarMap() {
           <button
             type="button"
             onClick={() => fgRef.current?.zoomToFit?.(400, 48)}
-            className="rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-xs text-slate-200 hover:bg-white/10"
+            className="rounded-lg border border-ds-border bg-white/5 px-3 py-2 text-xs text-slate-200 hover:bg-white/10"
           >
             Đưa bản đồ vào khung nhìn
           </button>
         </div>
 
-        <div className="mb-2 flex flex-wrap gap-4 text-xs text-slate-500">
+        <div className="mb-2 flex flex-wrap gap-4 text-xs text-ds-subtle">
           <span>
-            Bạn đã khám phá <strong className="text-slate-300">{encounteredCount}</strong>/
-            <strong className="text-slate-300">{fullGraph.nodes.length}</strong> concept
+            Bạn đã khám phá <strong className="text-ds-muted">{encounteredCount}</strong>/
+            <strong className="text-ds-muted">{fullGraph.nodes.length}</strong> concept
           </span>
           <span>
             Gợi ý học tiếp ngay: <strong className="text-amber-300">{frontierCount}</strong> concept (màu vàng)
@@ -663,10 +663,10 @@ export default function KnowledgeStarMap() {
         <div className="grid min-h-0 gap-4 lg:grid-cols-[1fr_minmax(260px,300px)]">
           <div
             ref={graphColRef}
-            className="relative h-[min(72vh,720px)] min-h-[400px] w-full overflow-hidden rounded-2xl border border-cyan-500/20 bg-[#030711] shadow-[0_0_60px_rgba(34,211,238,0.08)]"
+            className="relative h-[min(72vh,720px)] min-h-[400px] w-full overflow-hidden rounded-2xl border border-cyan-500/20 bg-ds-surface shadow-[0_0_60px_rgba(34,211,238,0.08)]"
           >
             {displayGraph.nodes.length === 0 ? (
-              <div className="flex h-full flex-col items-center justify-center gap-2 px-4 text-center text-sm text-slate-500">
+              <div className="flex h-full flex-col items-center justify-center gap-2 px-4 text-center text-sm text-ds-subtle">
               <p>Không có dữ liệu để hiển thị.</p>
                 {viewMode === 'focus' ? (
                   <p className="text-xs">Thử đổi nhóm kiến thức hoặc chọn điểm trung tâm khác.</p>
@@ -754,19 +754,19 @@ export default function KnowledgeStarMap() {
             )}
           </div>
 
-          <aside className="flex max-h-[min(72vh,720px)] min-h-[280px] flex-col rounded-2xl border border-white/10 bg-[#060d18]/95 p-4 backdrop-blur-sm lg:min-h-[400px]">
+          <aside className="flex max-h-[min(72vh,720px)] min-h-[280px] flex-col rounded-2xl border border-ds-border bg-ds-surface/95 p-4 backdrop-blur-sm lg:min-h-[400px]">
             {!selectedConcept ? (
-              <p className="text-sm text-slate-500">Chọn một điểm để xem kiến thức cần học trước và kiến thức mở rộng.</p>
+              <p className="text-sm text-ds-subtle">Chọn một điểm để xem kiến thức cần học trước và kiến thức mở rộng.</p>
             ) : (
               <>
-                <div className="border-b border-white/10 pb-3">
-                  <p className="text-[10px] uppercase tracking-wide text-slate-500">Điểm kiến thức</p>
+                <div className="border-b border-ds-border pb-3">
+                  <p className="text-[10px] uppercase tracking-wide text-ds-subtle">Điểm kiến thức</p>
                   <h2 className="mt-1 text-base font-semibold leading-snug text-white">
                     {selectedConcept.title || selectedConcept.id}
                   </h2>
-                  <p className="mt-1 font-mono text-[11px] text-slate-500">{selectedConcept.id}</p>
+                  <p className="mt-1 font-mono text-[11px] text-ds-subtle">{selectedConcept.id}</p>
                   <div className="mt-2 flex flex-wrap gap-1.5 text-[10px]">
-                    <span className="rounded border border-white/15 bg-white/5 px-2 py-0.5 text-slate-400">
+                    <span className="rounded border border-ds-border bg-white/5 px-2 py-0.5 text-ds-muted">
                       {selectedConcept.domain || '—'}
                       {selectedConcept.subdomain ? ` / ${selectedConcept.subdomain}` : ''}
                     </span>
@@ -775,9 +775,9 @@ export default function KnowledgeStarMap() {
                         Đã học qua
                       </span>
                     ) : (
-                      <span className="rounded border border-white/10 px-2 py-0.5 text-slate-500">Chưa học</span>
+                      <span className="rounded border border-ds-border px-2 py-0.5 text-ds-subtle">Chưa học</span>
                     )}
-                    <span className="rounded border border-white/10 bg-white/5 px-2 py-0.5 text-slate-300">
+                    <span className="rounded border border-ds-border bg-white/5 px-2 py-0.5 text-ds-muted">
                       {selectedConcept.difficulty_level === 0
                         ? 'Beginner'
                         : selectedConcept.difficulty_level === 2
@@ -786,7 +786,7 @@ export default function KnowledgeStarMap() {
                     </span>
                   </div>
                   {selectedConcept.short_description ? (
-                    <p className="mt-3 text-xs leading-relaxed text-slate-400">{selectedConcept.short_description}</p>
+                    <p className="mt-3 text-xs leading-relaxed text-ds-muted">{selectedConcept.short_description}</p>
                   ) : null}
                 </div>
 
@@ -795,9 +795,9 @@ export default function KnowledgeStarMap() {
                     <h3 className="text-[11px] font-medium uppercase tracking-wide text-cyan-200/90">
                       Học trước ({prereqConcepts.length})
                     </h3>
-                    <p className="mt-1 text-[11px] text-slate-500">Những kiến thức nên học trước điểm hiện tại.</p>
+                    <p className="mt-1 text-[11px] text-ds-subtle">Những kiến thức nên học trước điểm hiện tại.</p>
                     {prereqConcepts.length === 0 ? (
-                      <p className="mt-2 text-xs text-slate-500">Không có kiến thức tiền đề trực tiếp.</p>
+                      <p className="mt-2 text-xs text-ds-subtle">Không có kiến thức tiền đề trực tiếp.</p>
                     ) : (
                       <ul className="mt-2 space-y-1">
                         {prereqConcepts.map((c) => (
@@ -805,10 +805,10 @@ export default function KnowledgeStarMap() {
                             <button
                               type="button"
                               onClick={() => jumpToConcept(c)}
-                              className="w-full rounded-lg border border-white/10 bg-black/25 px-2.5 py-2 text-left text-xs text-slate-200 hover:border-cyan-500/35 hover:bg-cyan-950/30"
+                              className="w-full rounded-lg border border-ds-border bg-ds-surface/60 px-2.5 py-2 text-left text-xs text-slate-200 hover:border-cyan-500/35 hover:bg-ds-accent/10"
                             >
                               <span className="font-medium text-slate-100">{c.title || c.id}</span>
-                              <span className="mt-0.5 block font-mono text-[10px] text-slate-500">{c.id}</span>
+                              <span className="mt-0.5 block font-mono text-[10px] text-ds-subtle">{c.id}</span>
                             </button>
                           </li>
                         ))}
@@ -820,9 +820,9 @@ export default function KnowledgeStarMap() {
                     <h3 className="text-[11px] font-medium uppercase tracking-wide text-violet-200/90">
                       Làm nền cho ({dependentConcepts.length})
                     </h3>
-                    <p className="mt-1 text-[11px] text-slate-500">Ưu tiên hiển thị concept bạn đã đủ điều kiện học trước.</p>
+                    <p className="mt-1 text-[11px] text-ds-subtle">Ưu tiên hiển thị concept bạn đã đủ điều kiện học trước.</p>
                     {dependentConcepts.length === 0 ? (
-                      <p className="mt-2 text-xs text-slate-500">Chưa có kiến thức phụ thuộc trực tiếp.</p>
+                      <p className="mt-2 text-xs text-ds-subtle">Chưa có kiến thức phụ thuộc trực tiếp.</p>
                     ) : (
                       <ul className="mt-2 space-y-1">
                         {visibleDependentConcepts.map((c) => {
@@ -832,7 +832,7 @@ export default function KnowledgeStarMap() {
                             <button
                               type="button"
                               onClick={() => jumpToConcept(c)}
-                              className="w-full rounded-lg border border-white/10 bg-black/25 px-2.5 py-2 text-left text-xs text-slate-200 hover:border-violet-400/35 hover:bg-violet-950/25"
+                              className="w-full rounded-lg border border-ds-border bg-ds-surface/60 px-2.5 py-2 text-left text-xs text-slate-200 hover:border-violet-400/35 hover:bg-violet-950/25"
                             >
                               <span className="font-medium text-slate-100">
                                 {c.title || c.id}{' '}
@@ -842,7 +842,7 @@ export default function KnowledgeStarMap() {
                                   </span>
                                 ) : null}
                               </span>
-                              <span className="mt-0.5 block font-mono text-[10px] text-slate-500">{c.id}</span>
+                              <span className="mt-0.5 block font-mono text-[10px] text-ds-subtle">{c.id}</span>
                             </button>
                           </li>
                           )
@@ -864,7 +864,7 @@ export default function KnowledgeStarMap() {
                     <button
                       type="button"
                       onClick={() => jumpToConcept(selectedConcept)}
-                      className="w-full rounded-lg border border-cyan-500/40 bg-cyan-600/25 py-2.5 text-xs font-medium text-cyan-100 hover:bg-cyan-600/35"
+                      className="w-full rounded-lg border border-cyan-500/40 bg-cyan-600/25 py-2.5 text-xs font-medium text-ds-text hover:bg-cyan-600/35"
                     >
                       Thu gọn quanh điểm này
                     </button>
@@ -875,7 +875,7 @@ export default function KnowledgeStarMap() {
           </aside>
         </div>
 
-        <div className="mt-4 flex flex-wrap gap-3 text-[11px] text-slate-500">
+        <div className="mt-4 flex flex-wrap gap-3 text-[11px] text-ds-subtle">
           {domains.map((d) => {
             const { bright } = domainColorPair(d)
             return (

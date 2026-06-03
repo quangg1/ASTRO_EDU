@@ -174,7 +174,7 @@ export function OnboardingLaunchOverlay({ intent, gemsEarned, apiReady, onComple
       />
 
       <div className="absolute inset-x-0 bottom-0 z-10 flex flex-col items-center text-center px-6 pb-10 sm:pb-14 pt-24">
-        <p className="font-[JetBrains_Mono,monospace] text-[11px] uppercase tracking-[0.22em] text-[#7ee7ff]/80 mb-4">
+        <p className="font-[JetBrains_Mono,monospace] text-[11px] uppercase tracking-[0.22em] text-ds-accent/80 mb-4">
           // {APP_DISPLAY_NAME.toLowerCase()} · khởi hành
         </p>
 
@@ -186,7 +186,7 @@ export function OnboardingLaunchOverlay({ intent, gemsEarned, apiReady, onComple
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.35 }}
-              className="font-[Space_Grotesk,sans-serif] text-xl sm:text-2xl text-[#eaf6ff] max-w-md"
+              className="font-[Space_Grotesk,sans-serif] text-xl sm:text-2xl text-ds-text max-w-md"
             >
               {lines[lineIndex]}
             </motion.p>
@@ -197,9 +197,9 @@ export function OnboardingLaunchOverlay({ intent, gemsEarned, apiReady, onComple
               animate={{ opacity: 1, y: 0 }}
               className="space-y-2"
             >
-              <p className="font-[Space_Grotesk,sans-serif] text-xl sm:text-2xl text-[#7ee7ff]">{doneLine}</p>
+              <p className="font-[Space_Grotesk,sans-serif] text-xl sm:text-2xl text-ds-accent">{doneLine}</p>
               {gemsEarned > 0 ? (
-                <p className="font-[JetBrains_Mono,monospace] text-sm text-[#f5a524]">
+                <p className="font-[JetBrains_Mono,monospace] text-sm text-ds-amber">
                   +{gemsEarned} GEM · Đáp xuống an toàn!
                 </p>
               ) : null}

@@ -30,7 +30,7 @@ const chamfer = (cut = 14) => ({
 })
 
 function Brackets({
-  c = '#7ee7ff',
+  c = 'var(--color-accent)',
   s = 14,
   o = 7,
 }: { c?: string; s?: number; o?: number }) {
@@ -57,7 +57,7 @@ function HudPanel({
   className,
   style: extra,
   cut = 18,
-  accent = '#7ee7ff',
+  accent = 'var(--color-accent)',
 }: {
   children: React.ReactNode
   className?: string
@@ -65,23 +65,22 @@ function HudPanel({
   cut?: number
   accent?: string
 }) {
-  const borderColor = accent === '#f5a524'
+  const borderColor = accent === 'var(--color-brand-amber)'
     ? 'rgba(245,165,36,0.28)'
     : accent === '#b76dff'
       ? 'rgba(183,109,255,0.28)'
-      : 'rgba(126,231,255,0.18)'
-  const glow = accent === '#f5a524'
+      : 'var(--color-accent-soft)'
+  const glow = accent === 'var(--color-brand-amber)'
     ? 'rgba(245,165,36,0.05)'
     : accent === '#b76dff'
       ? 'rgba(183,109,255,0.05)'
       : 'rgba(126,231,255,0.04)'
   return (
     <div
-      className={`relative${className ? ' ' + className : ''}`}
+      className={`relative cosmo-dark-panel rounded-2xl${className ? ` ${className}` : ''}`}
       style={{
-        background: 'rgba(6,9,26,0.92)',
         border: `1px solid ${borderColor}`,
-        boxShadow: `inset 0 0 28px ${glow}, 0 4px 32px rgba(0,0,0,0.45)`,
+        boxShadow: `inset 0 0 28px ${glow}, 0 12px 36px rgba(0,0,0,0.35)`,
         ...chamfer(cut),
         ...extra,
       }}
@@ -166,7 +165,7 @@ export default function MyCoursesPage() {
     return (
       <div
         className="min-h-screen flex items-center justify-center"
-        style={{ background: '#03060f', fontFamily: 'JetBrains Mono, monospace', color: '#5c6886', fontSize: 13 }}
+        style={{ background: 'var(--color-bg-base)', fontFamily: 'JetBrains Mono, monospace', color: 'var(--color-text-subtle)', fontSize: 13 }}
       >
         // syncing...
       </div>
@@ -181,25 +180,13 @@ export default function MyCoursesPage() {
 
   return (
     <div
-      className="min-h-screen"
+      className="w-full"
       style={{
-        background: '#03060f',
         fontFamily: 'Space Grotesk, sans-serif',
-        color: '#eaf6ff',
+        color: 'var(--color-text-primary)',
       }}
     >
-      {/* atmosphere layers */}
-      <div
-        style={{
-          position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0,
-          backgroundImage: `
-            radial-gradient(ellipse 80% 50% at 10% 90%, rgba(183,109,255,0.04) 0%, transparent 60%),
-            radial-gradient(ellipse 60% 40% at 90% 10%, rgba(126,231,255,0.04) 0%, transparent 60%)
-          `,
-        }}
-      />
-
-      <main className="relative z-10 pt-20 pb-16 px-4 sm:px-8" style={{ maxWidth: 1280, margin: '0 auto' }}>
+      <div className="relative z-10 w-full max-w-[1280px] mx-auto">
 
         {/* ① Page head */}
         <header
@@ -229,13 +216,13 @@ export default function MyCoursesPage() {
                 fontWeight: 500,
                 letterSpacing: '-0.03em',
                 lineHeight: 1,
-                color: '#eaf6ff',
+                color: 'var(--color-text-primary)',
               }}
             >
               Khóa học{' '}
-              <em style={{ fontStyle: 'italic', fontWeight: 300, color: '#f5a524' }}>của tôi</em>
+              <em style={{ fontStyle: 'italic', fontWeight: 300, color: 'var(--color-brand-amber)' }}>của tôi</em>
             </h1>
-            <p style={{ marginTop: 10, fontSize: 14, color: '#9aa8c4', maxWidth: 520 }}>
+            <p style={{ marginTop: 10, fontSize: 14, color: 'var(--color-text-muted)', maxWidth: 520 }}>
               Lộ trình học, tiến độ module và các khóa đã ghi danh — đồng bộ theo tài khoản, cập nhật theo thời gian thực.
             </p>
           </div>
@@ -244,7 +231,7 @@ export default function MyCoursesPage() {
               style={{
                 fontFamily: 'JetBrains Mono, monospace',
                 fontSize: 13,
-                color: '#7ee7ff',
+                color: 'var(--color-accent)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'flex-end',
@@ -265,11 +252,11 @@ export default function MyCoursesPage() {
               style={{
                 fontFamily: 'JetBrains Mono, monospace',
                 fontSize: 11,
-                color: '#5c6886',
+                color: 'var(--color-text-subtle)',
                 marginTop: 4,
               }}
             >
-              PHIÊN <span style={{ color: '#7ee7ff' }}>#A-7321</span>
+              PHIÊN <span style={{ color: 'var(--color-accent)' }}>#A-7321</span>
             </p>
           </div>
         </header>
@@ -324,14 +311,14 @@ export default function MyCoursesPage() {
                       fontSize: 'clamp(20px,2.5vw,26px)',
                       fontWeight: 500,
                       letterSpacing: '-0.025em',
-                      color: '#eaf6ff',
+                      color: 'var(--color-text-primary)',
                       lineHeight: 1.1,
                     }}
                   >
                     Cosmo Learn —{' '}
-                    <em style={{ fontStyle: 'italic', fontWeight: 300, color: '#f5a524' }}>Lộ trình</em>
+                    <em style={{ fontStyle: 'italic', fontWeight: 300, color: 'var(--color-brand-amber)' }}>Lộ trình</em>
                   </h2>
-                  <p style={{ marginTop: 6, fontSize: 13, color: '#9aa8c4' }}>
+                  <p style={{ marginTop: 6, fontSize: 13, color: 'var(--color-text-muted)' }}>
                     Học theo module: thiên văn, Trái Đất, Hệ Mặt Trời… Tiến độ lưu theo tài khoản.
                   </p>
                 </div>
@@ -354,7 +341,7 @@ export default function MyCoursesPage() {
                       fontSize: 9,
                       letterSpacing: '0.15em',
                       textTransform: 'uppercase',
-                      color: '#5c6886',
+                      color: 'var(--color-text-subtle)',
                       marginBottom: 4,
                     }}
                   >
@@ -365,14 +352,14 @@ export default function MyCoursesPage() {
                       fontFamily: 'JetBrains Mono, monospace',
                       fontSize: 22,
                       fontWeight: 400,
-                      background: 'linear-gradient(180deg,#ffd27a 0%,#f5a524 100%)',
+                      background: 'linear-gradient(180deg,#ffd27a 0%,var(--color-brand-amber) 100%)',
                       WebkitBackgroundClip: 'text',
                       WebkitTextFillColor: 'transparent',
                       backgroundClip: 'text',
                     }}
                   >
                     {lpSnapshot.modulesDone}{' '}
-                    <span style={{ fontSize: 14, color: '#5c6886', WebkitTextFillColor: '#5c6886' }}>
+                    <span style={{ fontSize: 14, color: 'var(--color-text-subtle)', WebkitTextFillColor: 'var(--color-text-subtle)' }}>
                       / {lpSnapshot.modulesTotal}
                     </span>
                   </p>
@@ -406,7 +393,7 @@ export default function MyCoursesPage() {
                   style={{
                     fontFamily: 'JetBrains Mono, monospace',
                     fontSize: 10,
-                    color: '#5c6886',
+                    color: 'var(--color-text-subtle)',
                     letterSpacing: '0.1em',
                   }}
                 >
@@ -416,7 +403,7 @@ export default function MyCoursesPage() {
                   style={{
                     fontFamily: 'JetBrains Mono, monospace',
                     fontSize: 10,
-                    color: '#9aa8c4',
+                    color: 'var(--color-text-muted)',
                   }}
                 >
                   1 / 78 bài
@@ -435,7 +422,7 @@ export default function MyCoursesPage() {
                   style={{
                     height: '100%',
                     width: `${lpSnapshot.pathPct}%`,
-                    background: 'linear-gradient(90deg,#b76dff,#7ee7ff)',
+                    background: 'linear-gradient(90deg,#b76dff,var(--color-accent))',
                     boxShadow: '0 0 8px rgba(183,109,255,0.6)',
                     transition: 'width 0.5s ease',
                     ...chamfer(3),
@@ -455,7 +442,7 @@ export default function MyCoursesPage() {
                     top: 32,
                     bottom: 40,
                     width: 1,
-                    background: 'linear-gradient(180deg,rgba(183,109,255,0.5) 0%,rgba(126,231,255,0.15) 100%)',
+                    background: 'linear-gradient(180deg,rgba(183,109,255,0.5) 0%,var(--color-accent-soft) 100%)',
                   }}
                 />
 
@@ -467,9 +454,9 @@ export default function MyCoursesPage() {
                       style={{
                         position: 'absolute', left: -8, top: 20,
                         width: 12, height: 12, borderRadius: '50%',
-                        background: '#7ee7ff',
-                        border: '2px solid rgba(6,9,26,0.9)',
-                        boxShadow: '0 0 8px #7ee7ff',
+                        background: 'var(--color-accent)',
+                        border: '2px solid var(--color-panel-solid)',
+                        boxShadow: '0 0 8px var(--color-accent)',
                       }}
                     />
                     <div
@@ -486,12 +473,12 @@ export default function MyCoursesPage() {
                         style={{
                           position: 'absolute', top: 14, right: 16,
                           padding: '4px 10px',
-                          border: '1px solid rgba(126,231,255,0.5)',
+                          border: '1px solid var(--color-accent-strong)',
                           background: 'rgba(126,231,255,0.1)',
                           fontFamily: 'JetBrains Mono, monospace',
                           fontSize: 9,
                           letterSpacing: '0.15em',
-                          color: '#7ee7ff',
+                          color: 'var(--color-accent)',
                           display: 'flex', alignItems: 'center', gap: 5,
                           ...chamfer(6),
                         }}
@@ -499,8 +486,8 @@ export default function MyCoursesPage() {
                         <span
                           style={{
                             width: 5, height: 5, borderRadius: '50%',
-                            background: '#7ee7ff',
-                            boxShadow: '0 0 5px #7ee7ff',
+                            background: 'var(--color-accent)',
+                            boxShadow: '0 0 5px var(--color-accent)',
                           }}
                         />
                         ĐANG HỌC
@@ -511,17 +498,17 @@ export default function MyCoursesPage() {
                           fontFamily: 'JetBrains Mono, monospace',
                           fontSize: 9,
                           letterSpacing: '0.15em',
-                          color: '#5c6886',
+                          color: 'var(--color-text-subtle)',
                           textTransform: 'uppercase',
                           marginBottom: 6,
                         }}
                       >
                         {partLabel}
                       </p>
-                      <h3 style={{ fontSize: 16, fontWeight: 600, color: '#eaf6ff', marginBottom: 4 }}>
+                      <h3 style={{ fontSize: 16, fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: 4 }}>
                         {currentModule.titleVi}
                       </h3>
-                      <p style={{ fontSize: 13, color: '#9aa8c4', marginBottom: 12 }}>
+                      <p style={{ fontSize: 13, color: 'var(--color-text-muted)', marginBottom: 12 }}>
                         {currentModule.goalVi}
                       </p>
 
@@ -551,7 +538,7 @@ export default function MyCoursesPage() {
                             fontSize: 9,
                             letterSpacing: '0.12em',
                             textTransform: 'uppercase',
-                            color: '#9aa8c4',
+                            color: 'var(--color-text-muted)',
                             ...chamfer(5),
                           }}
                         >
@@ -565,7 +552,7 @@ export default function MyCoursesPage() {
                           style={{
                             fontFamily: 'JetBrains Mono, monospace',
                             fontSize: 10,
-                            color: '#5c6886',
+                            color: 'var(--color-text-subtle)',
                             letterSpacing: '0.12em',
                             textTransform: 'uppercase',
                           }}
@@ -576,7 +563,7 @@ export default function MyCoursesPage() {
                           style={{
                             fontFamily: 'JetBrains Mono, monospace',
                             fontSize: 10,
-                            color: '#7ee7ff',
+                            color: 'var(--color-accent)',
                           }}
                         >
                           {modulePct}%
@@ -586,7 +573,7 @@ export default function MyCoursesPage() {
                         style={{
                           height: 5,
                           background: 'rgba(126,231,255,0.08)',
-                          border: '1px solid rgba(126,231,255,0.12)',
+                          border: '1px solid var(--color-border)',
                           overflow: 'hidden',
                           marginBottom: 10,
                           ...chamfer(2),
@@ -596,7 +583,7 @@ export default function MyCoursesPage() {
                           style={{
                             height: '100%',
                             width: `${modulePct}%`,
-                            background: 'linear-gradient(90deg,#7ee7ff,#4dd2ff)',
+                            background: 'linear-gradient(90deg,var(--color-accent),#4dd2ff)',
                             boxShadow: '0 0 6px rgba(126,231,255,0.6)',
                             transition: 'width 0.5s ease',
                             ...chamfer(2),
@@ -608,7 +595,7 @@ export default function MyCoursesPage() {
                         style={{
                           fontFamily: 'JetBrains Mono, monospace',
                           fontSize: 10,
-                          color: '#5c6886',
+                          color: 'var(--color-text-subtle)',
                           marginBottom: 16,
                           overflow: 'hidden',
                           textOverflow: 'ellipsis',
@@ -625,9 +612,9 @@ export default function MyCoursesPage() {
                           alignItems: 'center',
                           gap: 8,
                           padding: '9px 20px',
-                          border: '1px solid rgba(126,231,255,0.5)',
+                          border: '1px solid var(--color-accent-strong)',
                           background: 'rgba(126,231,255,0.08)',
-                          color: '#7ee7ff',
+                          color: 'var(--color-accent)',
                           fontSize: 12,
                           fontFamily: 'JetBrains Mono, monospace',
                           letterSpacing: '0.1em',
@@ -648,19 +635,19 @@ export default function MyCoursesPage() {
                         position: 'absolute', left: -8, top: 20,
                         width: 12, height: 12, borderRadius: '50%',
                         background: '#b76dff',
-                        border: '2px solid rgba(6,9,26,0.9)',
+                        border: '2px solid var(--color-panel-solid)',
                         boxShadow: '0 0 8px #b76dff',
                       }}
                     />
                     <div
                       style={{
-                        border: '1px dashed rgba(126,231,255,0.15)',
+                        border: '1px dashed var(--color-accent-soft)',
                         background: 'rgba(126,231,255,0.02)',
                         padding: '16px 20px',
                         ...chamfer(12),
                       }}
                     >
-                      <p style={{ fontSize: 13, color: '#5c6886', marginBottom: 10 }}>
+                      <p style={{ fontSize: 13, color: 'var(--color-text-subtle)', marginBottom: 10 }}>
                         Hoàn thành ít nhất một bài trong Learning Path để hiển thị module đang học.
                       </p>
                       <Link
@@ -668,7 +655,7 @@ export default function MyCoursesPage() {
                         style={{
                           fontFamily: 'JetBrains Mono, monospace',
                           fontSize: 11,
-                          color: '#7ee7ff',
+                          color: 'var(--color-accent)',
                           textDecoration: 'none',
                           letterSpacing: '0.1em',
                         }}
@@ -719,25 +706,25 @@ export default function MyCoursesPage() {
                               fontFamily: 'JetBrains Mono, monospace',
                               fontSize: 10,
                               letterSpacing: '0.15em',
-                              color: '#5c6886',
+                              color: 'var(--color-text-subtle)',
                               textTransform: 'uppercase',
                               flexShrink: 0,
                             }}
                           >
                             PART {partNo}
                           </span>
-                          <span style={{ fontSize: 14, color: '#9aa8c4', flex: 1 }}>{m.titleVi}</span>
+                          <span style={{ fontSize: 14, color: 'var(--color-text-muted)', flex: 1 }}>{m.titleVi}</span>
                           <span
                             style={{
                               fontFamily: 'JetBrains Mono, monospace',
                               fontSize: 10,
-                              color: '#5c6886',
+                              color: 'var(--color-text-subtle)',
                               flexShrink: 0,
                             }}
                           >
                             {lessonCount} bài học
                           </span>
-                          <Lock size={13} style={{ color: '#5c6886', flexShrink: 0 }} strokeWidth={1.5} />
+                          <Lock size={13} style={{ color: 'var(--color-text-subtle)', flexShrink: 0 }} strokeWidth={1.5} />
                         </div>
                       </div>
                     )
@@ -766,7 +753,7 @@ export default function MyCoursesPage() {
                   fontSize: 10,
                   letterSpacing: '0.18em',
                   textTransform: 'uppercase',
-                  color: '#5c6886',
+                  color: 'var(--color-text-subtle)',
                   display: 'flex',
                   alignItems: 'center',
                   gap: 8,
@@ -781,11 +768,11 @@ export default function MyCoursesPage() {
                   fontSize: 'clamp(22px,3vw,32px)',
                   fontWeight: 500,
                   letterSpacing: '-0.025em',
-                  color: '#eaf6ff',
+                  color: 'var(--color-text-primary)',
                 }}
               >
                 Khóa{' '}
-                <em style={{ fontStyle: 'italic', fontWeight: 300, color: '#f5a524' }}>đã ghi danh</em>
+                <em style={{ fontStyle: 'italic', fontWeight: 300, color: 'var(--color-brand-amber)' }}>đã ghi danh</em>
               </h2>
             </div>
             {!loading && (
@@ -793,15 +780,15 @@ export default function MyCoursesPage() {
                 style={{
                   fontFamily: 'JetBrains Mono, monospace',
                   fontSize: 10,
-                  color: '#5c6886',
+                  color: 'var(--color-text-subtle)',
                   letterSpacing: '0.12em',
                   textTransform: 'uppercase',
                 }}
               >
                 total{' '}
-                <span style={{ color: '#9aa8c4' }}>{courses.length}</span>
+                <span style={{ color: 'var(--color-text-muted)' }}>{courses.length}</span>
                 {' · '}in progress{' '}
-                <span style={{ color: '#7ee7ff' }}>{courses.filter((c) => c.percentComplete > 0 && c.percentComplete < 100).length}</span>
+                <span style={{ color: 'var(--color-accent)' }}>{courses.filter((c) => c.percentComplete > 0 && c.percentComplete < 100).length}</span>
               </p>
             )}
           </div>
@@ -810,7 +797,7 @@ export default function MyCoursesPage() {
             <SkeletonList count={3} />
           ) : courses.length === 0 ? (
             <HudPanel style={{ padding: 40, textAlign: 'center' }}>
-              <p style={{ fontSize: 13, color: '#5c6886', marginBottom: 16 }}>
+              <p style={{ fontSize: 13, color: 'var(--color-text-subtle)', marginBottom: 16 }}>
                 Bạn chưa ghi danh khóa học trả phí nào.
               </p>
               <Link
@@ -821,7 +808,7 @@ export default function MyCoursesPage() {
                   padding: '9px 20px',
                   border: '1px solid rgba(126,231,255,0.4)',
                   background: 'rgba(126,231,255,0.08)',
-                  color: '#7ee7ff',
+                  color: 'var(--color-accent)',
                   fontSize: 12,
                   fontFamily: 'JetBrains Mono, monospace',
                   letterSpacing: '0.1em',
@@ -855,9 +842,9 @@ export default function MyCoursesPage() {
                       <div
                         style={{
                           width: 52, height: 52, flexShrink: 0,
-                          border: '1.5px solid rgba(126,231,255,0.5)',
-                          background: 'linear-gradient(135deg,rgba(126,231,255,0.15) 0%,rgba(77,210,255,0.08) 100%)',
-                          color: '#7ee7ff',
+                          border: '1.5px solid var(--color-accent-strong)',
+                          background: 'linear-gradient(135deg,var(--color-accent-soft) 0%,rgba(77,210,255,0.08) 100%)',
+                          color: 'var(--color-accent)',
                           fontSize: 20, fontWeight: 700,
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
                           boxShadow: '0 0 14px rgba(126,231,255,0.2)',
@@ -873,20 +860,20 @@ export default function MyCoursesPage() {
                             fontFamily: 'JetBrains Mono, monospace',
                             fontSize: 9,
                             letterSpacing: '0.15em',
-                            color: '#5c6886',
+                            color: 'var(--color-text-subtle)',
                             textTransform: 'uppercase',
                             marginBottom: 4,
                           }}
                         >
                           // galaxy.{c.slug}
                         </p>
-                        <h3 style={{ fontSize: 15, fontWeight: 600, color: '#eaf6ff', marginBottom: 4 }}>
+                        <h3 style={{ fontSize: 15, fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: 4 }}>
                           {c.title}
                         </h3>
                         <p
                           style={{
                             fontSize: 12,
-                            color: '#9aa8c4',
+                            color: 'var(--color-text-muted)',
                             marginBottom: 14,
                             overflow: 'hidden',
                             display: '-webkit-box',
@@ -910,7 +897,7 @@ export default function MyCoursesPage() {
                             style={{
                               fontFamily: 'JetBrains Mono, monospace',
                               fontSize: 10,
-                              color: '#5c6886',
+                              color: 'var(--color-text-subtle)',
                               textTransform: 'uppercase',
                               letterSpacing: '0.1em',
                             }}
@@ -920,8 +907,8 @@ export default function MyCoursesPage() {
                           <div
                             style={{
                               width: 52, height: 44, flexShrink: 0,
-                              border: '1px solid rgba(126,231,255,0.2)',
-                              background: 'rgba(126,231,255,0.05)',
+                              border: '1px solid var(--color-border)',
+                              background: 'var(--color-accent-soft)',
                               display: 'flex', alignItems: 'center', justifyContent: 'center',
                               ...chamfer(8),
                             }}
@@ -931,7 +918,7 @@ export default function MyCoursesPage() {
                                 fontFamily: 'JetBrains Mono, monospace',
                                 fontSize: 15,
                                 fontWeight: 600,
-                                color: '#7ee7ff',
+                                color: 'var(--color-accent)',
                               }}
                             >
                               {c.percentComplete}%
@@ -952,8 +939,8 @@ export default function MyCoursesPage() {
                             style={{
                               height: '100%',
                               width: `${c.percentComplete}%`,
-                              background: 'linear-gradient(90deg,#7ee7ff,#4dd2ff)',
-                              boxShadow: '0 0 6px rgba(126,231,255,0.5)',
+                              background: 'linear-gradient(90deg,var(--color-accent),#4dd2ff)',
+                              boxShadow: '0 0 6px var(--color-accent-strong)',
                               transition: 'width 0.5s ease',
                               ...chamfer(2),
                             }}
@@ -987,7 +974,7 @@ export default function MyCoursesPage() {
                   fontSize: 10,
                   letterSpacing: '0.18em',
                   textTransform: 'uppercase',
-                  color: '#5c6886',
+                  color: 'var(--color-text-subtle)',
                   display: 'flex',
                   alignItems: 'center',
                   gap: 8,
@@ -1002,11 +989,11 @@ export default function MyCoursesPage() {
                   fontSize: 'clamp(22px,3vw,32px)',
                   fontWeight: 500,
                   letterSpacing: '-0.025em',
-                  color: '#eaf6ff',
+                  color: 'var(--color-text-primary)',
                 }}
               >
                 Lịch sử{' '}
-                <em style={{ fontStyle: 'italic', fontWeight: 300, color: '#f5a524' }}>thanh toán</em>
+                <em style={{ fontStyle: 'italic', fontWeight: 300, color: 'var(--color-brand-amber)' }}>thanh toán</em>
               </h2>
             </div>
             <Link
@@ -1015,7 +1002,7 @@ export default function MyCoursesPage() {
                 fontFamily: 'JetBrains Mono, monospace',
                 fontSize: 11,
                 letterSpacing: '0.1em',
-                color: '#f5a524',
+                color: 'var(--color-brand-amber)',
                 textDecoration: 'none',
               }}
             >
@@ -1027,9 +1014,9 @@ export default function MyCoursesPage() {
             <SkeletonList count={1} />
           ) : orders.length === 0 ? (
             <HudPanel style={{ padding: '20px 24px' }}>
-              <p style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 12, color: '#5c6886' }}>
+              <p style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 12, color: 'var(--color-text-subtle)' }}>
                 Chưa có đơn thanh toán.{' '}
-                <Link href="/courses" style={{ color: '#7ee7ff' }}>
+                <Link href="/courses" style={{ color: 'var(--color-accent)' }}>
                   Khám phá khóa học
                 </Link>
               </p>
@@ -1040,7 +1027,7 @@ export default function MyCoursesPage() {
                 style={{
                   fontFamily: 'JetBrains Mono, monospace',
                   fontSize: 10,
-                  color: '#5c6886',
+                  color: 'var(--color-text-subtle)',
                   marginBottom: 12,
                   letterSpacing: '0.1em',
                 }}
@@ -1061,10 +1048,10 @@ export default function MyCoursesPage() {
                       fontSize: 12,
                     }}
                   >
-                    <span style={{ color: '#9aa8c4', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    <span style={{ color: 'var(--color-text-muted)', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {o.courseSlug}
                     </span>
-                    <span style={{ color: '#f5a524', flexShrink: 0 }}>{amountStr(o)}</span>
+                    <span style={{ color: 'var(--color-brand-amber)', flexShrink: 0 }}>{amountStr(o)}</span>
                     <span style={{ color: '#6dffb0', flexShrink: 0, fontSize: 10 }}>
                       {orderStatusLabelVi(o.status)}
                     </span>
@@ -1072,9 +1059,9 @@ export default function MyCoursesPage() {
                 ))}
               </ul>
               {orders.length > 3 && (
-                <p style={{ marginTop: 12, fontSize: 11, color: '#5c6886' }}>
+                <p style={{ marginTop: 12, fontSize: 11, color: 'var(--color-text-subtle)' }}>
                   +{orders.length - 3} đơn khác —{' '}
-                  <Link href="/my-orders" style={{ color: '#f5a524' }}>
+                  <Link href="/my-orders" style={{ color: 'var(--color-brand-amber)' }}>
                     mở lịch sử đầy đủ
                   </Link>
                 </p>
@@ -1083,7 +1070,7 @@ export default function MyCoursesPage() {
           )}
         </section>
 
-      </main>
+      </div>
     </div>
   )
 }

@@ -23,7 +23,7 @@ type Props = {
 export function DiscussionPostList({ posts, user = null, onVoteChange, onLoginRequired }: Props) {
   if (!posts.length) {
     return (
-      <div className="rounded-xl border border-dashed border-white/20 bg-white/[0.03] p-8 text-center text-gray-400">
+      <div className="rounded-xl border border-dashed border-white/20 bg-white/[0.03] p-8 text-center text-ds-muted">
         Chưa có bài viết phù hợp.
       </div>
     )
@@ -36,7 +36,7 @@ export function DiscussionPostList({ posts, user = null, onVoteChange, onLoginRe
         return (
           <article
             key={p._id}
-            className="flex overflow-hidden rounded-xl border border-white/10 bg-white/[0.04] transition-colors hover:border-cyan-300/25"
+            className="flex overflow-hidden rounded-xl border border-ds-border bg-ds-surface/50 transition-colors hover:border-cyan-300/25"
           >
             <PostVoteRail
               postId={p._id}
@@ -56,7 +56,7 @@ export function DiscussionPostList({ posts, user = null, onVoteChange, onLoginRe
 
               <Link
                 href={`/community/post/${p._id}`}
-                className="block px-4 pb-2 pt-3 transition-colors hover:bg-white/[0.02]"
+                className="block px-4 pb-2 pt-3 transition-colors hover:bg-ds-surface/40"
               >
                 <div className="mb-1 flex flex-wrap items-start gap-2">
                   {p.isPinned && (
@@ -70,7 +70,7 @@ export function DiscussionPostList({ posts, user = null, onVoteChange, onLoginRe
                 <h3 className="font-medium leading-snug text-white">{p.title}</h3>
 
                 {excerpt ? (
-                  <p className="mt-1.5 line-clamp-2 text-sm text-gray-400">{excerpt}</p>
+                  <p className="mt-1.5 line-clamp-2 text-sm text-ds-muted">{excerpt}</p>
                 ) : null}
 
                 {p.tags && p.tags.length > 0 && (
@@ -87,7 +87,7 @@ export function DiscussionPostList({ posts, user = null, onVoteChange, onLoginRe
                 )}
               </Link>
 
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 pb-3 pt-1 text-xs text-gray-500">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 pb-3 pt-1 text-xs text-ds-subtle">
                 <UserProfileLink
                   userId={p.authorId}
                   displayName={p.authorName}
@@ -96,7 +96,7 @@ export function DiscussionPostList({ posts, user = null, onVoteChange, onLoginRe
                   learnerTier={p.authorLearnerTier}
                   size="sm"
                   showName
-                  nameClassName="text-gray-400 hover:text-slate-200"
+                  nameClassName="text-ds-muted hover:text-slate-200"
                 />
                 <span className="text-gray-600" aria-hidden>
                   ·
@@ -105,7 +105,7 @@ export function DiscussionPostList({ posts, user = null, onVoteChange, onLoginRe
                 <span className="text-gray-600" aria-hidden>
                   ·
                 </span>
-                <span className="inline-flex items-center gap-1 text-gray-400">
+                <span className="inline-flex items-center gap-1 text-ds-muted">
                   <MessageSquare className="h-3.5 w-3.5" aria-hidden />
                   {p.commentCount} bình luận
                 </span>

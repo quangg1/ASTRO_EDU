@@ -41,7 +41,7 @@ export function CoursesSection({ courses, loading }: { courses: Course[]; loadin
           </div>
           <Link
             href="/courses"
-            className="hud-mono hud-mono-md inline-flex items-center gap-2 text-[color:var(--hud-plasma)] hover:text-white transition-colors self-start md:self-end"
+            className="hud-mono hud-mono-md inline-flex items-center gap-2 text-[color:var(--color-accent)] hover:text-white transition-colors self-start md:self-end"
           >
             Xem tất cả khóa học →
           </Link>
@@ -53,8 +53,7 @@ export function CoursesSection({ courses, loading }: { courses: Course[]; loadin
             {[1, 2, 3].map((i) => (
               <div
                 key={i}
-                className="hud-chamfer-md h-96 animate-pulse"
-                style={{ background: 'rgba(6,9,26,0.6)', border: '1px solid rgba(126,231,255,0.12)' }}
+                className="cosmo-dark-panel rounded-2xl h-96 animate-pulse"
               />
             ))}
           </div>
@@ -76,11 +75,7 @@ export function CoursesSection({ courses, loading }: { courses: Course[]; loadin
                   <motion.div
                     variants={item}
                     whileHover={{ y: -4 }}
-                    className="hud-chamfer-md group relative cursor-pointer transition-all duration-400 overflow-hidden h-full flex flex-col"
-                    style={{
-                      background: 'rgba(6,9,26,0.7)',
-                      border: '1px solid rgba(126,231,255,0.18)',
-                    }}
+                    className="cosmo-dark-panel rounded-2xl group relative cursor-pointer transition-all duration-400 overflow-hidden h-full flex flex-col hover:border-ds-accent/40"
                   >
                     {/* Cover 16:10 */}
                     <div className="relative overflow-hidden" style={{ aspectRatio: '16 / 10' }}>
@@ -93,7 +88,7 @@ export function CoursesSection({ courses, loading }: { courses: Course[]; loadin
                           sizes="(max-width: 768px) 100vw, 33vw"
                         />
                       ) : (
-                        <div className="absolute inset-0 bg-gradient-to-br from-[#0a1024] to-[#03060f] flex items-center justify-center text-5xl opacity-60">
+                        <div className="absolute inset-0 bg-gradient-to-br from-ds-elevated to-[var(--color-bg-base)] flex items-center justify-center text-5xl opacity-60">
                           🌌
                         </div>
                       )}
@@ -102,25 +97,25 @@ export function CoursesSection({ courses, loading }: { courses: Course[]; loadin
                         className="pointer-events-none absolute inset-0 opacity-30"
                         style={{
                           backgroundImage:
-                            'linear-gradient(rgba(126,231,255,0.15) 1px, transparent 1px), linear-gradient(90deg, rgba(126,231,255,0.15) 1px, transparent 1px)',
+                            'linear-gradient(var(--color-accent-soft) 1px, transparent 1px), linear-gradient(90deg, var(--color-accent-soft) 1px, transparent 1px)',
                           backgroundSize: '24px 24px',
                           mixBlendMode: 'screen',
                         }}
                         aria-hidden
                       />
-                      <div className="absolute inset-0 bg-gradient-to-t from-[#03060f] via-transparent to-transparent" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-[var(--color-bg-base)] via-transparent to-transparent" />
                       {/* Badge */}
                       <span
-                        className="hud-mono hud-mono-sm hud-chamfer-sm absolute top-3 right-3 px-2.5 py-1"
+                        className="hud-mono hud-mono-sm cosmo-dark-panel rounded-xl absolute top-3 right-3 px-2.5 py-1"
                         style={{
-                          background: badgeIsLive ? 'rgba(255,92,212,0.18)' : 'rgba(126,231,255,0.14)',
+                          background: badgeIsLive ? 'rgba(255,92,212,0.18)' : 'var(--color-accent-soft)',
                           border: badgeIsLive
                             ? '1px solid rgba(255,92,212,0.5)'
                             : '1px solid rgba(126,231,255,0.4)',
-                          color: badgeIsLive ? 'var(--hud-magenta)' : 'var(--hud-plasma)',
+                          color: badgeIsLive ? 'var(--color-brand-highlight)' : 'var(--color-accent)',
                         }}
                       >
-                        {badgeIsLive && <span className="hud-pulse-dot mr-1.5" aria-hidden style={{ background: 'var(--hud-magenta)', boxShadow: '0 0 8px var(--hud-magenta)' }} />}
+                        {badgeIsLive && <span className="hud-pulse-dot mr-1.5" aria-hidden style={{ background: 'var(--color-brand-highlight)', boxShadow: '0 0 8px var(--color-brand-highlight)' }} />}
                         {badge}
                       </span>
                     </div>
@@ -136,12 +131,12 @@ export function CoursesSection({ courses, loading }: { courses: Course[]; loadin
 
                       {/* Rating */}
                       <div className="flex items-center gap-2 mb-4 mt-auto">
-                        <span className="hud-mono hud-mono-md text-[color:var(--hud-amber)] font-semibold">4.9</span>
+                        <span className="hud-mono hud-mono-md text-[color:var(--color-brand-amber)] font-semibold">4.9</span>
                         <div className="flex gap-0.5">
                           {[...Array(5)].map((_, j) => (
                             <Star
                               key={j}
-                              className="h-3 w-3 fill-[color:var(--hud-amber)] text-[color:var(--hud-amber)]"
+                              className="h-3 w-3 fill-[color:var(--color-brand-amber)] text-[color:var(--color-brand-amber)]"
                             />
                           ))}
                         </div>
@@ -154,13 +149,13 @@ export function CoursesSection({ courses, loading }: { courses: Course[]; loadin
                       <div className="flex items-center justify-between pt-3" style={{ borderTop: '1px solid rgba(126,231,255,0.1)' }}>
                         <span className="hud-mono hud-mono-sm text-white/45">{course.level}</span>
                         {course.isPaid && (course.price ?? 0) > 0 ? (
-                          <span className="font-heading font-bold text-[color:var(--hud-amber)] text-base">
+                          <span className="font-heading font-bold text-[color:var(--color-brand-amber)] text-base">
                             {course.currency === 'USD'
                               ? `$${course.price}`
                               : `${(course.price ?? 0).toLocaleString('vi-VN')} ₫`}
                           </span>
                         ) : (
-                          <span className="font-heading font-bold text-[color:var(--hud-amber)] text-base">
+                          <span className="font-heading font-bold text-[color:var(--color-brand-amber)] text-base">
                             Miễn phí
                           </span>
                         )}

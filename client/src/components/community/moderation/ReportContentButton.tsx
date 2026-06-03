@@ -33,7 +33,7 @@ export function ReportContentButton({ targetType, targetId, className = '' }: Pr
   }
 
   if (done) {
-    return <span className={`text-xs text-slate-500 ${className}`}>Đã gửi báo cáo — cảm ơn bạn</span>
+    return <span className={`text-xs text-ds-subtle ${className}`}>Đã gửi báo cáo — cảm ơn bạn</span>
   }
 
   return (
@@ -41,7 +41,7 @@ export function ReportContentButton({ targetType, targetId, className = '' }: Pr
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="text-xs text-slate-400 hover:text-amber-200 underline"
+        className="text-xs text-ds-muted hover:text-amber-200 underline"
       >
         Báo cáo vi phạm
       </button>
@@ -51,7 +51,7 @@ export function ReportContentButton({ targetType, targetId, className = '' }: Pr
           <select
             value={reason}
             onChange={(e) => setReason(e.target.value as ReportReason)}
-            className="w-full rounded-lg bg-black/40 border border-white/15 px-3 py-2 text-sm text-white"
+            className="w-full rounded-lg bg-ds-elevated/80 border border-ds-border px-3 py-2 text-sm text-white"
           >
             {(Object.keys(REPORT_REASON_LABELS) as ReportReason[]).map((k) => (
               <option key={k} value={k}>
@@ -64,10 +64,10 @@ export function ReportContentButton({ targetType, targetId, className = '' }: Pr
             onChange={(e) => setDetails(e.target.value)}
             placeholder="Mô tả thêm (tùy chọn)"
             rows={2}
-            className="w-full rounded-lg bg-black/40 border border-white/15 px-3 py-2 text-sm text-white resize-y"
+            className="w-full rounded-lg bg-ds-elevated/80 border border-ds-border px-3 py-2 text-sm text-white resize-y"
           />
           <div className="flex justify-end gap-2">
-            <button type="button" onClick={() => setOpen(false)} className="px-3 py-1.5 text-sm text-slate-400">
+            <button type="button" onClick={() => setOpen(false)} className="px-3 py-1.5 text-sm text-ds-muted">
               Hủy
             </button>
             <button

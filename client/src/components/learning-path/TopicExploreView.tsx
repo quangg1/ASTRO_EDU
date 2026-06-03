@@ -97,7 +97,7 @@ export function TopicExploreView({ slug }: Props) {
             <div className="flex flex-wrap gap-3 mt-3">
               <Link
                 href={`/tutorial/${grouped[0].module.id}/${firstNode.node.id}?from=onboarding&depth=${landing.depth}`}
-                className="text-xs font-medium text-cyan-300 hover:text-white"
+                className="text-xs font-medium text-ds-accent hover:text-white"
               >
                 Mở node →
               </Link>
@@ -166,7 +166,7 @@ export function TopicExploreView({ slug }: Props) {
                     <li key={node.id}>
                       <Link
                         href={`/tutorial/${mod.id}/${node.id}${landing.fromOnboarding ? `?from=onboarding&depth=${landing.depth}` : ''}`}
-                        className="flex items-center justify-between gap-4 px-5 py-4 hover:bg-white/[0.04] transition-colors group"
+                        className="flex items-center justify-between gap-4 px-5 py-4 hover:bg-ds-surface/50 transition-colors group"
                         style={{
                           background:
                             landing.fromOnboarding && sectionIdx === 0 && nodeIdx === 0

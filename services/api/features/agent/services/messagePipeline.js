@@ -2,7 +2,7 @@ const { randomUUID } = require('crypto');
 const {
   stepResolveGuestSession,
   stepEntitlement,
-  stepRateLimit,
+  stepInitQuota,
   stepBuildContext,
   authorizeToolCalls,
   stepPersistSession,
@@ -15,9 +15,28 @@ const {
   callAiChatStream,
   loadCourseForTools,
 } = require('./pipelineSteps');
+const { trimMessagesForBudget, buildContextBudgetMeta } = require('./contextBudget');
+const { runReactAgentTurn } = require('./reactLoop');
+const { extractLessonSearchQuery } = require('./lessonSearchIntent');
+const { isToolAllowedForTier } = require('../lib/toolSchema');
+
+const ASSISTANT_LEAK_RE = /<\/?\s*assistant\s*>|<\|[^|>]{1,40}\|>/gi;
+const MAX_USER_MESSAGE_CHARS = Math.max(
+  500,
+  parseInt(process.env.AGENT_MAX_USER_MESSAGE_CHARS || '6000', 10) || 6000,
+);
+
+function sanitizeAssistantContent(text) {
+  return String(text || '')
+    .replace(ASSISTANT_LEAK_RE, '')
+    .trim();
+}
 const { getCachedContext } = require('./contextCache');
 const { assertAgentNotQuizLocked } = require('../lib/agentQuizLock');
 const { AppError } = require('../../../shared/errors');
+
+const STREAM_WORDS_PER_CHUNK = 3;
+const STREAM_CHUNK_DELAY_MS = 18;
 
 function wantsStream(req) {
   const q = req.query?.stream;
@@ -36,10 +55,6 @@ function flushSse(res) {
   if (typeof res.flush === 'function') res.flush();
 }
 
-/** Smaller chunks + short pause so the browser can paint between SSE events (LLM itself is non-streaming). */
-const STREAM_WORDS_PER_CHUNK = 3;
-const STREAM_CHUNK_DELAY_MS = 18;
-
 async function writeTokenStream(res, text) {
   for (const chunk of chunkTextForStream(text, STREAM_WORDS_PER_CHUNK)) {
     writeSse(res, 'token', { content: chunk });
@@ -50,8 +65,11 @@ async function writeTokenStream(res, text) {
   }
 }
 
+function logTurnMetrics(base, extra) {
+  logAgentMetrics({ ...base, ...extra });
+}
+
 /**
- * Phase 0 orchestrator — Node Option B (§3.7).
  * @param {import('express').Request} req
  * @param {import('express').Response} res
  */
@@ -83,10 +101,34 @@ async function runMessagePipeline(req, res) {
     throw lockErr;
   }
 
+  const lastUser = [...messages].reverse().find((m) => m && m.role === 'user');
+  const lastUserText =
+    typeof lastUser?.content === 'string'
+      ? lastUser.content
+      : Array.isArray(lastUser?.content)
+        ? lastUser.content
+            .filter((p) => p && p.type === 'text')
+            .map((p) => p.text || '')
+            .join(' ')
+        : '';
+  if (lastUserText.length > MAX_USER_MESSAGE_CHARS) {
+    const err = new AppError(
+      400,
+      'MESSAGE_TOO_LONG',
+      `Tin nhắn quá dài (tối đa ${MAX_USER_MESSAGE_CHARS} ký tự). Chia nhỏ câu hỏi để trợ lý trả lời ổn định hơn.`,
+    );
+    if (stream) {
+      res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+      writeSse(res, 'error', { error: err.message, code: err.code });
+      return res.end();
+    }
+    return res.status(err.status).json({ success: false, code: err.code, error: err.message });
+  }
+
   const guestSessionId = await stepResolveGuestSession(req);
   const { tier, courseSlug, courseId } = await stepEntitlement(req, sessionContext);
   const effectiveTier = tier === 'trial_expired' ? 'lp_free' : tier;
-  const quota = stepRateLimit(tier, req.userId, guestSessionId);
+  const quotaMeter = await stepInitQuota(tier, req.userId, guestSessionId);
 
   if (!sessionId) sessionId = randomUUID();
 
@@ -103,7 +145,17 @@ async function runMessagePipeline(req, res) {
     courseSlug || (typeof sessionContext?.courseSlug === 'string' ? sessionContext.courseSlug : null),
   );
 
-  const aiMapping = mapContextForAi(effectiveTier, agentContext, sessionContext, coursePayload);
+  const trimResult = trimMessagesForBudget(messages);
+  const contextBudget = buildContextBudgetMeta(trimResult);
+
+  const aiMapping = mapContextForAi(
+    effectiveTier,
+    agentContext,
+    sessionContext,
+    coursePayload,
+    contextBudget,
+    learnerSnapshot,
+  );
   const allowedTools = toolsForTier(effectiveTier);
 
   const ragLessonId =
@@ -112,8 +164,8 @@ async function runMessagePipeline(req, res) {
     agentContext?.lessonId ||
     null;
 
-  const aiBody = {
-    messages,
+  const aiBodyBase = {
+    messages: trimResult.messages,
     context: aiMapping.context,
     course: aiMapping.course,
     learning_path: aiMapping.learning_path,
@@ -129,7 +181,8 @@ async function runMessagePipeline(req, res) {
     sessionId,
     tier: effectiveTier,
     trialExpired: tier === 'trial_expired',
-    quotaRemaining: quota.remaining,
+    quotaRemaining: quotaMeter.getRemaining(),
+    quotaTurnUsed: quotaMeter.getTurnConsumed(),
     allowedTools,
     guestSessionId: tier === 'guest' ? guestSessionId : undefined,
   };
@@ -145,36 +198,103 @@ async function runMessagePipeline(req, res) {
   }
 
   const tBeforeAi = Date.now();
-  let streamedToClient = false;
   let firstTokenAt = null;
 
-  const aiResult = stream
-    ? await callAiChatStream(aiBody, {
-        onToken: (delta) => {
-          if (!firstTokenAt) {
-            firstTokenAt = Date.now();
-            writeSse(res, 'status', { phase: 'streaming' });
-            flushSse(res);
-          }
-          streamedToClient = true;
-          writeSse(res, 'token', { content: delta });
-          flushSse(res);
-          if (res.socket) res.socket.setNoDelay(true);
-        },
-      })
-    : await callAiChat(aiBody);
-  const tAfterAi = Date.now();
+  const trimmedLastUser = [...trimResult.messages].reverse().find((m) => m && m.role === 'user');
+  const userMessage =
+    typeof trimmedLastUser?.content === 'string'
+      ? trimmedLastUser.content
+      : Array.isArray(trimmedLastUser?.content)
+        ? trimmedLastUser.content
+            .filter((p) => p && p.type === 'text')
+            .map((p) => p.text || '')
+            .join(' ')
+        : '';
 
-  if (aiResult.error) {
+  const toolCtx = {
+    tier: effectiveTier,
+    userId: req.userId,
+    userMessage,
+    lessonId: ragLessonId,
+    heavyOpsThisTurn: new Set(),
+    quotaMeter,
+    courseId: courseId || coursePayload?.courseId,
+    courseSlug: courseSlug || coursePayload?.courseSlug,
+    courseLessons: coursePayload?.lessons,
+  };
+
+  let bootstrapToolTurn = null;
+  const autoSearchQ = extractLessonSearchQuery(userMessage);
+  if (
+    autoSearchQ &&
+    isToolAllowedForTier('search_learning_content', effectiveTier)
+  ) {
+    try {
+      const autoCalls = [
+        {
+          id: `auto_search_${Date.now()}`,
+          name: 'search_learning_content',
+          arguments: { q: autoSearchQ },
+        },
+      ];
+      const { tool_results: autoResults } = await authorizeToolCalls(autoCalls, toolCtx);
+      if (autoResults?.[0]?.ok) {
+        bootstrapToolTurn = { toolCalls: autoCalls, toolResults: autoResults };
+      }
+    } catch (e) {
+      console.warn('[agent] auto search_learning_content failed:', e.message);
+    }
+  }
+
+  const turn = await runReactAgentTurn({
+    aiBodyBase,
+    stream,
+    callAiChat,
+    callAiChatStream,
+    authorizeToolCalls,
+    toolCtx,
+    quotaMeter,
+    bootstrapToolTurn,
+    onToken: (delta) => {
+      if (!firstTokenAt) {
+        firstTokenAt = Date.now();
+        if (stream) {
+          writeSse(res, 'status', { phase: 'streaming' });
+          flushSse(res);
+        }
+      }
+      if (stream) {
+        writeSse(res, 'token', { content: delta });
+        flushSse(res);
+        if (res.socket) res.socket.setNoDelay(true);
+      }
+    },
+    onStatus: (phase) => {
+      if (stream) {
+        writeSse(res, 'status', { phase });
+        flushSse(res);
+      }
+    },
+  });
+
+  const tAfterAi = Date.now();
+  const tFirstToken = firstTokenAt ?? tAfterAi;
+  const tRagMs = turn.rag_ms ?? null;
+  const tLlmTtftMs = firstTokenAt ? firstTokenAt - tBeforeAi : null;
+
+  if (turn.error) {
     const fallback = buildFallbackResponse(sessionContext);
-    logAgentMetrics({
-      sessionId,
-      tier: effectiveTier,
-      t_prefetch_hit: prefetchHit,
-      t_total_ms: Date.now() - t0,
-      fallback: true,
-      error: aiResult.error,
-    });
+    logTurnMetrics(
+      {
+        sessionId,
+        tier: effectiveTier,
+        t_prefetch_hit: prefetchHit,
+        t_total_ms: Date.now() - t0,
+        fallback: true,
+        error: turn.error,
+      },
+      { history_dropped: contextBudget.history_dropped },
+    );
     if (stream) {
       await writeTokenStream(res, fallback.message.content);
       writeSse(res, 'fallback', { chips: fallback.chips });
@@ -185,28 +305,9 @@ async function runMessagePipeline(req, res) {
     return res.json({ success: true, session: sessionMeta, ...fallback });
   }
 
-  const rawToolCalls = Array.isArray(aiResult.tool_calls) ? aiResult.tool_calls : [];
-  const lastUser = [...messages].reverse().find((m) => m && m.role === 'user');
-  const userMessage =
-    typeof lastUser?.content === 'string'
-      ? lastUser.content
-      : Array.isArray(lastUser?.content)
-        ? lastUser.content
-            .filter((p) => p && p.type === 'text')
-            .map((p) => p.text || '')
-            .join(' ')
-        : '';
-  const { tool_results } = await authorizeToolCalls(rawToolCalls, {
-    tier: effectiveTier,
-    userId: req.userId,
-    userMessage,
-    courseId: courseId || coursePayload?.courseId,
-    courseSlug: courseSlug || coursePayload?.courseSlug,
-    courseLessons: coursePayload?.lessons,
-  });
-
-  const content = aiResult.message?.content ?? '';
-  const tFirstToken = firstTokenAt ?? Date.now();
+  const content = sanitizeAssistantContent(turn.message?.content ?? '');
+  const rawToolCalls = turn.tool_calls || [];
+  const tool_results = turn.tool_results || [];
 
   await stepPersistSession(req.userId, sessionId, sessionMeta, agentContext, {
     sessionContext,
@@ -215,31 +316,45 @@ async function runMessagePipeline(req, res) {
     hasImage: Boolean(body.image_base64),
   });
 
-  logAgentMetrics({
-    sessionId,
-    tier: effectiveTier,
-    t_prefetch_hit: prefetchHit,
-    t_rag_ms: aiResult.rag_ms ?? null,
-    t_ai_ms: tAfterAi - tBeforeAi,
-    t_first_token_ms: tFirstToken - t0,
-    t_total_ms: Date.now() - t0,
-    tool_count: rawToolCalls.length,
-  });
-
-  if (stream) {
-    if (!streamedToClient && content) {
-      await writeTokenStream(res, content);
-    }
-    logAgentMetrics({
+  logTurnMetrics(
+    {
       sessionId,
       tier: effectiveTier,
+      t_prefetch_hit: prefetchHit,
+      t_setup_ms: tBeforeAi - t0,
+      t_rag_ms: tRagMs,
+      t_llm_ttft_ms: tLlmTtftMs,
+      t_ai_ms: tAfterAi - tBeforeAi,
       t_first_token_ms: tFirstToken - t0,
-      t_stream_proxy: streamedToClient,
-      stream: true,
-    });
+      t_total_ms: Date.now() - t0,
+      tool_count: rawToolCalls.length,
+      react_steps: turn.react_steps,
+      tools_ok: turn.tools_ok,
+      tools_fail: turn.tools_fail,
+      prompt_tokens: turn.usage?.prompt_tokens ?? null,
+      completion_tokens: turn.usage?.completion_tokens ?? null,
+      history_tokens_est: contextBudget.estimated_history_tokens,
+      history_dropped: contextBudget.history_dropped,
+      stream_proxy: turn.streamedToClient,
+      llm_provider: turn.llm_provider ?? null,
+    },
+    {},
+  );
+
+  sessionMeta.quotaRemaining = quotaMeter.getRemaining();
+  sessionMeta.quotaTurnUsed = quotaMeter.getTurnConsumed();
+
+  if (stream) {
+    if (!turn.streamedToClient && content) {
+      await writeTokenStream(res, content);
+    }
     if (rawToolCalls.length) writeSse(res, 'tool_calls', { tool_calls: rawToolCalls });
     if (tool_results.length) writeSse(res, 'tool_results', { tool_results });
-    writeSse(res, 'done', { ok: true });
+    writeSse(res, 'done', {
+      ok: true,
+      quotaRemaining: sessionMeta.quotaRemaining,
+      quotaTurnUsed: sessionMeta.quotaTurnUsed,
+    });
     flushSse(res);
     return res.end();
   }

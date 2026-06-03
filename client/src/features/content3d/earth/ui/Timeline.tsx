@@ -14,7 +14,7 @@ export function Timeline() {
   return (
     <aside className="pointer-events-auto fixed left-3 top-[5.75rem] z-30 flex w-[min(18rem,calc(100vw-6.5rem))] max-w-[18rem] min-w-0 max-h-[min(68vh,34rem)] flex-col overflow-hidden rounded-xl border border-cyan-400/30 bg-black/55 shadow-[0_8px_32px_rgba(0,0,0,0.45)] backdrop-blur-md">
       <div className="shrink-0 border-b border-cyan-400/30 p-3">
-          <div className="flex text-xs text-gray-400 font-medium">
+          <div className="flex text-xs text-ds-muted font-medium">
             <span className="w-12">EON</span>
             <span className="w-16">ERA</span>
             <span className="flex-1">PERIOD</span>
@@ -42,7 +42,7 @@ export function Timeline() {
                   <div className="text-sm font-medium text-white truncate">
                     {stage.name}
                   </div>
-                  <div className="text-xs text-gray-400">
+                  <div className="text-xs text-ds-muted">
                     {stage.eon}
                     {stage.era && ` | ${stage.era}`}
                   </div>

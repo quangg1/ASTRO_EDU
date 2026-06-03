@@ -40,7 +40,7 @@ function ToolBtn({
       }}
       title={title}
       className={`h-8 min-w-8 px-1.5 flex items-center justify-center rounded-md text-sm transition-colors disabled:opacity-40 ${
-        active ? 'bg-cyan-600/80 text-white' : 'text-slate-300 hover:bg-white/10 hover:text-white'
+        active ? 'bg-ds-accent text-white' : 'text-ds-muted hover:bg-white/10 hover:text-white'
       }`}
     >
       {children}
@@ -128,12 +128,12 @@ export function CommentRichEditor({ value, onChange, placeholder, disabled }: Pr
   )
 
   if (!editor) {
-    return <div className="min-h-[100px] rounded-xl border border-white/15 bg-black/30 animate-pulse" />
+    return <div className="min-h-[100px] rounded-xl border border-ds-border bg-ds-surface/70 animate-pulse" />
   }
 
   return (
-    <div className="relative rounded-xl border border-white/15 bg-black/30 overflow-hidden">
-      <div className="flex flex-wrap items-center gap-0.5 px-2 py-1.5 border-b border-white/10 bg-white/[0.04]">
+    <div className="relative rounded-xl border border-ds-border bg-ds-surface/70 overflow-hidden">
+      <div className="flex flex-wrap items-center gap-0.5 px-2 py-1.5 border-b border-ds-border bg-ds-surface/50">
         <ToolBtn
           active={editor.isActive('bold')}
           onClick={() => editor.chain().focus().toggleBold().run()}
@@ -176,10 +176,10 @@ export function CommentRichEditor({ value, onChange, placeholder, disabled }: Pr
       </div>
 
       {emojiOpen && (
-        <div className="absolute left-2 top-11 z-20 w-[min(100%,320px)] rounded-xl border border-white/15 bg-[#0c1424] shadow-xl p-2 max-h-48 overflow-y-auto">
+        <div className="absolute left-2 top-11 z-20 w-[min(100%,320px)] rounded-xl border border-ds-border bg-ds-elevated shadow-xl p-2 max-h-48 overflow-y-auto">
           {COMMENT_EMOJI_GROUPS.map((g) => (
             <div key={g.label} className="mb-2 last:mb-0">
-              <p className="text-[10px] uppercase tracking-wide text-slate-500 px-1 mb-1">{g.label}</p>
+              <p className="text-[10px] uppercase tracking-wide text-ds-subtle px-1 mb-1">{g.label}</p>
               <div className="flex flex-wrap gap-0.5">
                 {g.emojis.map((em) => (
                   <button

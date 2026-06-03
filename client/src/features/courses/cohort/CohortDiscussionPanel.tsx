@@ -40,7 +40,7 @@ export function CohortDiscussionPanel({
   return (
     <div className="rounded-2xl border border-ds-border/80 bg-gradient-to-b from-cyan-950/20 to-ds-overlay p-8 text-center space-y-4">
       <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-cyan-500/10 border border-cyan-500/30">
-        <MessageCircle className="w-7 h-7 text-cyan-300" aria-hidden />
+        <MessageCircle className="w-7 h-7 text-ds-accent" aria-hidden />
       </div>
       <div>
         <h2 className="text-lg font-semibold text-white">{title || 'Thảo luận lớp'}</h2>
@@ -49,7 +49,7 @@ export function CohortDiscussionPanel({
         </p>
       </div>
       <Link href={`/community/${forumSlug}`}>
-        <Button type="button" className="bg-cyan-600 text-white hover:bg-cyan-500">
+        <Button type="button" className="bg-cyan-600 text-white hover:opacity-90">
           Vào thảo luận
         </Button>
       </Link>

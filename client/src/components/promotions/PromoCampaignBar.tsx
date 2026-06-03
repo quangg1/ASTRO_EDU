@@ -58,7 +58,7 @@ export function PromoCampaignBar() {
               · Mã <span className="font-mono text-cyan-200/90">{campaign.code}</span>
             </span>
           </p>
-          <p className="text-[10px] sm:text-xs text-slate-400 truncate sm:whitespace-normal sm:line-clamp-1">
+          <p className="text-[10px] sm:text-xs text-ds-muted truncate sm:whitespace-normal sm:line-clamp-1">
             {campaign.bannerBodyVi}
             {campaign.appliesToAll && campaign.courses.length === 0
               ? ' · Áp dụng các khóa trả phí'
@@ -82,7 +82,7 @@ export function PromoCampaignBar() {
             dismissPromo(campaign.code)
             setCampaign(null)
           }}
-          className="shrink-0 p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10"
+          className="shrink-0 p-1.5 rounded-lg text-ds-muted hover:text-white hover:bg-white/10"
           aria-label="Ẩn thông báo ưu đãi"
         >
           <X className="h-4 w-4" />

@@ -26,7 +26,7 @@ import { Button, Select } from '@/design-system'
 
 export default function AdminOrdersPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-black pt-24 text-center text-slate-500">Đang tải…</div>}>
+    <Suspense fallback={<div className="min-h-screen bg-ds-base text-ds-text pt-24 text-center text-slate-500">Đang tải…</div>}>
       <AdminOrdersPageInner />
     </Suspense>
   )

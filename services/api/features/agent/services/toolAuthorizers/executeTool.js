@@ -5,6 +5,8 @@ const { getLearningPathLessonIndex } = require('./lpCurriculum');
 const { assertShowcaseEntityAccess } = require('./showcaseAccess');
 const { resolveShowcaseTarget, loadShowcaseCatalog, inferPlanetFocusFromMessage } = require('../showcaseNavigationService');
 const { searchCommunityThreadsForAgent } = require('../agentContextEnrichment');
+const { searchLearningContentForAgent } = require('../contentSearchService');
+const { generateConceptQuizForAgent } = require('../conceptQuizService');
 
 const STAGE_MIN = -2000;
 const STAGE_MAX = 4600;
@@ -28,6 +30,8 @@ async function executeAuthorizedTool({
   courseSlug,
   courseLessons,
   userMessage,
+  lessonId: ctxLessonId,
+  heavyOpsThisTurn,
 }) {
   const name = resolveToolName(toolName);
 
@@ -271,21 +275,97 @@ async function executeAuthorizedTool({
     };
   }
 
+  if (name === 'generate_concept_quiz') {
+    if (!userId) {
+      return { ok: false, code: 'auth_required', suggestion: 'Đăng nhập để làm quiz concept.' };
+    }
+    try {
+      const conceptId = typeof args?.concept_id === 'string' ? args.concept_id.trim() : '';
+      const lessonId =
+        typeof args?.lesson_id === 'string'
+          ? args.lesson_id.trim()
+          : ctxLessonId
+            ? String(ctxLessonId).trim()
+            : '';
+      const q = typeof args?.q === 'string' ? args.q.trim() : '';
+      const payload = await generateConceptQuizForAgent(
+        userId,
+        tier,
+        { conceptId: conceptId || undefined, lessonId: lessonId || undefined, q: q || undefined },
+        heavyOpsThisTurn,
+      );
+      return {
+        ok: true,
+        clientAction: {
+          type: 'generate_concept_quiz',
+          quizSessionId: payload.quizSessionId,
+          conceptId: payload.conceptId,
+          conceptTitle: payload.conceptTitle,
+          lessonId: payload.lessonId,
+          questions: payload.questions,
+        },
+      };
+    } catch (e) {
+      return {
+        ok: false,
+        code: e.code || 'concept_quiz_failed',
+        suggestion: e.message || 'Không tạo được quiz concept.',
+      };
+    }
+  }
+
+  if (name === 'search_learning_content') {
+    const q = typeof args?.q === 'string' ? args.q.trim() : '';
+    if (q.length < 2) {
+      return {
+        ok: false,
+        code: 'invalid_args',
+        suggestion: 'Cần từ khóa q (ít nhất 2 ký tự) để tìm bài LP hoặc thảo luận.',
+      };
+    }
+    let scopes = args?.scopes;
+    if (!Array.isArray(scopes) || !scopes.length) {
+      scopes = ['lp', 'community'];
+    }
+    const result = await searchLearningContentForAgent({
+      q,
+      scopes,
+      limitPerScope: Math.min(5, Number(args?.limit) || 3),
+    });
+    if (!result.lpLessons.length && !result.communityThreads.length) {
+      return {
+        ok: false,
+        code: 'no_results',
+        suggestion: 'Không tìm thấy bài lộ trình hoặc thảo luận phù hợp — thử từ khóa khác.',
+      };
+    }
+    return {
+      ok: true,
+      clientAction: {
+        type: 'search_learning_content',
+        lpLessons: result.lpLessons,
+        communityThreads: result.communityThreads,
+      },
+    };
+  }
+
   if (name === 'suggest_community_thread') {
+    const q = typeof args?.q === 'string' ? args.q.trim() : '';
     const lessonId = typeof args?.lesson_id === 'string' ? args.lesson_id.trim() : '';
     const lessonSlug = typeof args?.lesson_slug === 'string' ? args.lesson_slug.trim() : '';
     const slug =
       typeof args?.course_slug === 'string'
         ? args.course_slug.trim()
         : courseSlug || '';
-    if (!lessonId && !lessonSlug && !slug) {
+    if (!q && !lessonId && !lessonSlug && !slug) {
       return {
         ok: false,
         code: 'invalid_args',
-        suggestion: 'Cần lesson_id, lesson_slug hoặc course_slug để tìm thảo luận.',
+        suggestion: 'Cần q, lesson_id, lesson_slug hoặc course_slug để tìm thảo luận.',
       };
     }
     const threads = await searchCommunityThreadsForAgent({
+      q: q || undefined,
       lessonId: lessonId || undefined,
       lessonSlug: lessonSlug || undefined,
       courseSlug: slug || undefined,

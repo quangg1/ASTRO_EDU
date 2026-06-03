@@ -51,30 +51,29 @@ export default function MessagesInboxPage() {
   })
 
   return (
-    <div className="min-h-screen bg-black">
-      <main className="pt-20 px-4 pb-16 max-w-2xl mx-auto">
+    <div className="relative z-10 px-4 pb-16 max-w-2xl mx-auto pt-2">
         <div className="flex items-center justify-between gap-4 mb-8">
           <div>
-            <p className="text-[10px] uppercase tracking-[0.2em] text-cyan-400/80 font-mono">
+            <p className="text-[10px] uppercase tracking-[0.2em] text-ds-accent/80 font-mono">
               Tin nhắn
             </p>
-            <h1 className="text-2xl font-bold text-white mt-1">Hộp thư</h1>
+            <h1 className="text-2xl font-bold text-ds-text mt-1">Hộp thư</h1>
           </div>
           <Link
             href="/community"
-            className="text-sm text-slate-400 hover:text-cyan-300"
+            className="text-sm text-ds-muted hover:text-ds-text"
           >
             Cộng đồng →
           </Link>
         </div>
 
         {loading ? (
-          <p className="text-sm text-slate-500">Đang tải…</p>
+          <p className="text-sm text-ds-subtle">Đang tải…</p>
         ) : items.length === 0 ? (
-          <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-10 text-center">
-            <MessageCircle className="h-10 w-10 text-cyan-500/40 mx-auto mb-3" aria-hidden />
-            <p className="text-slate-300">Chưa có cuộc trò chuyện nào.</p>
-            <p className="text-sm text-slate-500 mt-2">
+          <div className="cosmo-dark-panel rounded-2xl p-10 text-center">
+            <MessageCircle className="h-10 w-10 text-ds-accent/40 mx-auto mb-3" aria-hidden />
+            <p className="text-ds-muted">Chưa có cuộc trò chuyện nào.</p>
+            <p className="text-sm text-ds-subtle mt-2">
               Vào hồ sơ bạn bè trong cộng đồng và bấm &quot;Nhắn tin&quot;.
             </p>
           </div>
@@ -84,7 +83,7 @@ export default function MessagesInboxPage() {
               <li key={c.id}>
                 <Link
                   href={`/messages/${encodeURIComponent(c.id)}`}
-                  className="flex items-center gap-3 rounded-xl border border-white/10 bg-[#0c0a14]/80 px-4 py-3 hover:border-cyan-500/25 hover:bg-cyan-500/[0.04] transition"
+                  className="cosmo-dark-panel flex items-center gap-3 rounded-xl px-4 py-3 hover:border-ds-accent/30 transition"
                 >
                   <AvatarWithDecoration
                     avatarUrl={c.otherUser.avatar}
@@ -97,16 +96,16 @@ export default function MessagesInboxPage() {
                       <span className="font-medium text-white truncate">
                         {c.otherUser.displayName}
                       </span>
-                      <span className="text-[10px] text-slate-500 shrink-0">
+                      <span className="text-[10px] text-ds-subtle shrink-0">
                         {formatTime(c.lastMessageAt)}
                       </span>
                     </div>
-                    <p className="text-sm text-slate-400 truncate mt-0.5">
+                    <p className="text-sm text-ds-muted truncate mt-0.5">
                       {c.lastMessagePreview || '—'}
                     </p>
                   </div>
                   {c.unreadCount > 0 ? (
-                    <span className="shrink-0 min-w-[1.25rem] h-5 px-1.5 rounded-full bg-cyan-500 text-[10px] font-bold text-black flex items-center justify-center">
+                    <span className="shrink-0 min-w-[1.25rem] h-5 px-1.5 rounded-full bg-ds-accent text-[10px] font-bold text-ds-base flex items-center justify-center">
                       {c.unreadCount > 9 ? '9+' : c.unreadCount}
                     </span>
                   ) : null}
@@ -115,7 +114,6 @@ export default function MessagesInboxPage() {
             ))}
           </ul>
         )}
-      </main>
     </div>
   )
 }

@@ -172,7 +172,7 @@ export default function AdminPage() {
   }, [user, analyticsRange])
 
   if (!checked || !user) {
-    return <div className="min-h-screen bg-black pt-20 px-4 text-gray-400">Đang kiểm tra phiên đăng nhập...</div>
+    return <div className="min-h-screen bg-ds-base text-ds-text pt-20 px-4 text-gray-400">Đang kiểm tra phiên đăng nhập...</div>
   }
 
   if (!canAccessAdminPath(user, '/admin')) {
@@ -340,7 +340,7 @@ export default function AdminPage() {
           </Link>
         </div>
 
-        <section className="rounded-2xl border border-white/10 bg-[#0a0f17] overflow-hidden mb-8">
+        <section className="rounded-2xl border border-white/10 bg-ds-base overflow-hidden mb-8">
           <div className="px-4 py-3 border-b border-white/10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div className="flex flex-wrap items-center gap-2 min-w-0">
               <h2 className="font-semibold text-white mr-2 shrink-0">Phân tích dữ liệu</h2>
@@ -785,13 +785,13 @@ export default function AdminPage() {
         <div className="flex flex-wrap gap-3 mb-8">
           <Link
             href="/admin/users"
-            className="rounded-xl border border-white/10 bg-[#0a0f17] px-4 py-3 text-sm text-cyan-300 hover:border-cyan-500/40 transition-colors"
+            className="rounded-xl border border-white/10 bg-ds-base px-4 py-3 text-sm text-cyan-300 hover:border-cyan-500/40 transition-colors"
           >
             Quản lý người dùng →
           </Link>
           <Link
             href="/admin/orders"
-            className="rounded-xl border border-white/10 bg-[#0a0f17] px-4 py-3 text-sm text-cyan-300 hover:border-cyan-500/40 transition-colors"
+            className="rounded-xl border border-white/10 bg-ds-base px-4 py-3 text-sm text-cyan-300 hover:border-cyan-500/40 transition-colors"
           >
             Quản lý đơn hàng →
           </Link>

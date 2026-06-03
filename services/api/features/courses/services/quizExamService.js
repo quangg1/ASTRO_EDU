@@ -110,25 +110,6 @@ async function assertCohortAccess({ cohortId, userId, roles }) {
   return en;
 }
 
-/** @deprecated Prefer assertQuizDeliveryAccess — kept for callers passing cohortId only */
-async function assertQuizWindow({
-  course,
-  lesson,
-  cohortId,
-  CohortActivitySchedule,
-  userId,
-  userRole,
-}) {
-  return assertQuizDeliveryAccess({
-    course,
-    lesson,
-    cohortId,
-    userId,
-    userRole,
-    CohortActivitySchedule,
-  });
-}
-
 function countFinishedAttempts(attempts) {
   return attempts.filter((a) => a.status === 'submitted' || a.status === 'timed_out').length;
 }
@@ -189,7 +170,6 @@ module.exports = {
   assertCatalogAccess,
   assertCohortAccess,
   assertAttemptMatchesRoute,
-  assertQuizWindow,
   assertQuizDeliveryAccess,
   countFinishedAttempts,
   gradeAnswers,

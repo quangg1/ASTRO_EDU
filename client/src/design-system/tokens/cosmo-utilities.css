@@ -1,0 +1,75 @@
+/**
+ * App-wide utilities — dùng khi chưa migrate hết sang Tailwind ds-*.
+ * Plain CSS (no @layer): file is @import'd from globals.css.
+ */
+
+.cosmo-page {
+  min-height: 100vh;
+  background: var(--color-bg-base);
+  color: var(--color-text-primary);
+}
+
+.cosmo-panel {
+  background: var(--color-bg-surface);
+  border-color: var(--color-border);
+}
+
+.cosmo-glass {
+  background: color-mix(in srgb, var(--color-bg-surface) 88%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.cosmo-input-surface {
+  background: color-mix(in srgb, var(--color-bg-base) 55%, transparent);
+  border-color: var(--color-border);
+}
+
+.cosmo-input-surface:focus-within {
+  border-color: var(--color-accent);
+}
+
+.cosmo-glow-highlight {
+  background: radial-gradient(
+    ellipse 50% 40% at 85% 12%,
+    var(--color-brand-highlight-soft),
+    transparent 72%
+  );
+}
+
+/** Panel tối — dashboard, community, catalog (mặc định consumer UI) */
+.cosmo-dark-panel {
+  background: linear-gradient(168deg, var(--color-bg-elevated) 0%, var(--color-bg-surface) 100%);
+  border: 1px solid var(--color-border);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.35);
+  color: var(--color-text-primary);
+}
+
+.cosmo-dark-panel-amber {
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--color-brand-amber) 10%, var(--color-bg-elevated)) 0%,
+    var(--color-bg-surface) 100%
+  );
+  border-color: color-mix(in srgb, var(--color-brand-amber) 28%, var(--color-border));
+}
+
+.cosmo-dark-panel-muted {
+  color: var(--color-text-muted);
+}
+
+/**
+ * Panel sáng — CHỈ Space mission cards (/tutorial hub), onboarding select.
+ * Phải dùng --color-text-on-card / --color-text-muted-on-card.
+ */
+.cosmo-light-panel {
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-bg-card-border);
+  box-shadow: var(--color-shadow-card);
+  color: var(--color-text-on-card);
+}
+
+.cosmo-light-panel .cosmo-light-panel-muted,
+.cosmo-light-panel-muted {
+  color: var(--color-text-muted-on-card);
+}

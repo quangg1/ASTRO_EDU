@@ -19,11 +19,11 @@ export function LearningComposeBanner({ context }: Props) {
         {isLesson ? 'Hỏi trong bài học' : 'Hỏi về khóa học'}
       </p>
       <p className="mt-1 text-sm text-white font-medium leading-snug">{title}</p>
-      <p className="mt-1 text-xs text-slate-400">
+      <p className="mt-1 text-xs text-ds-muted">
         Câu hỏi sẽ được gắn với {context.pathSource === 'learning-path' ? 'bài trên lộ trình' : 'khóa học'} để cộng đồng và giáo viên dễ theo dõi.
       </p>
       {backHref && (
-        <Link href={backHref} className="mt-2 inline-block text-xs text-cyan-300 hover:text-cyan-200 underline">
+        <Link href={backHref} className="mt-2 inline-block text-xs text-ds-accent hover:text-cyan-200 underline">
           ← Quay lại bài học
         </Link>
       )}

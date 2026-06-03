@@ -38,7 +38,7 @@ design-system/
    ```
 
 4. **Add new tokens to `semantic.css`, not surfaces.** A surface only overrides existing tokens. If you find yourself adding a new variable in a surface, lift it into `semantic.css` first with a sensible default.
-5. **Cosmic landing palette stays separate.** The `--cosmic-*` HSL variables in `app/globals.css` belong to the marketing surface and are not part of this design system. Do not mix the two — product surfaces use only `ds-*` utilities.
+5. **Cosmo v2 palette is global.** `semantic.css` is imported from `app/globals.css` for the whole app. Space (`--sp-*`), HUD (`--hud-*`), and cosmic HSL are aliases — see [`docs/design/cosmo-palette-map.md`](../../docs/design/cosmo-palette-map.md).
 
 ## Available tokens (cheat sheet)
 
@@ -48,6 +48,10 @@ design-system/
 | Surface bg     | `--color-bg-surface`                                        | `ds-surface`                                    |
 | Elevated bg    | `--color-bg-elevated`                                       | `ds-elevated`                                   |
 | Glass overlay  | `--color-bg-overlay`                                        | `ds-overlay`                                    |
+| Light card     | `--color-bg-card` / `-elevated`                             | `ds-card` / `ds-card-elevated`                  |
+| Text on card   | `--color-text-on-card` / `-muted-on-card`                   | `ds-on-card` / `ds-on-card-muted`               |
+| Brand amber    | `--color-brand-amber`                                       | `ds-amber`                                      |
+| Marketing ring | `--color-brand-highlight`                                   | `ds-highlight`                                  |
 | Border         | `--color-border` / `--color-border-strong`                  | `ds-border` / `ds-border-strong`                |
 | Text           | `--color-text-primary` / `--color-text-muted` / `--subtle`  | `ds-text` / `ds-muted` / `ds-subtle`            |
 | Accent         | `--color-accent` / `-soft` / `-strong` / `-fg`              | `ds-accent` / `-soft` / `-strong` / `-fg`       |

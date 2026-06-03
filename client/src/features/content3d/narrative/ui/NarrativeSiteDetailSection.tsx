@@ -93,13 +93,13 @@ export function NarrativeSiteDetailSection({ site, beat, onClose }: Props) {
         <button
           type="button"
           onClick={() => setStageOpen((o) => !o)}
-          className="flex w-full items-center justify-between gap-2 rounded-lg border border-white/12 bg-black/20 px-3 py-2.5 text-left hover:bg-white/[0.04]"
+          className="flex w-full items-center justify-between gap-2 rounded-lg border border-ds-border bg-ds-surface/50 px-3 py-2.5 text-left hover:bg-ds-surface/50"
           aria-expanded={stageOpen}
         >
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-300">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-ds-muted">
             Bối cảnh thời kỳ {stageOpen ? '▾' : '▸'}
           </span>
-          <span className="truncate text-[11px] text-slate-400">
+          <span className="truncate text-[11px] text-ds-muted">
             {beat.icon} {beat.name}
           </span>
         </button>
@@ -110,13 +110,13 @@ export function NarrativeSiteDetailSection({ site, beat, onClose }: Props) {
             style={{ borderColor: `${accent}44`, backgroundColor: `${accent}0c` }}
           >
             <div>
-              <p className="text-[10px] uppercase tracking-wider text-slate-500">Đang xem trên timeline</p>
+              <p className="text-[10px] uppercase tracking-wider text-ds-subtle">Đang xem trên timeline</p>
               <h3 className="mt-0.5 text-base font-semibold text-white">
                 {beat.icon} {beat.name}
               </h3>
-              <p className="text-[11px] text-slate-400">{beat.ageLabelVi}</p>
+              <p className="text-[11px] text-ds-muted">{beat.ageLabelVi}</p>
             </div>
-            <p className="text-[12px] leading-snug text-slate-300">{compactPressureLine(beat)}</p>
+            <p className="text-[12px] leading-snug text-ds-muted">{compactPressureLine(beat)}</p>
             <div className="flex flex-wrap gap-2">
               <MiniBadge label="Núi lửa" value={VOL_VI[beat.environment.volcanism]} accent={accent} />
               <MiniBadge label="Nước lỏng" value={WATER_VI[beat.environment.liquidWater]} accent={accent} />
@@ -131,10 +131,10 @@ export function NarrativeSiteDetailSection({ site, beat, onClose }: Props) {
           </div>
         ) : (
           <div
-            className="mt-2 flex flex-wrap gap-2 rounded-lg border border-white/10 bg-black/15 px-3 py-2.5"
+            className="mt-2 flex flex-wrap gap-2 rounded-lg border border-ds-border bg-black/15 px-3 py-2.5"
             style={{ borderColor: `${accent}33` }}
           >
-            <span className="w-full text-[10px] text-slate-500">
+            <span className="w-full text-[10px] text-ds-subtle">
               {beat.icon} {beat.name}
             </span>
             <MiniBadge label="Áp đại diện" value={pressureShort(beat)} accent={accent} />
@@ -142,7 +142,7 @@ export function NarrativeSiteDetailSection({ site, beat, onClose }: Props) {
           </div>
         )}
 
-        <p className="mt-3 text-[10px] leading-snug text-slate-500">
+        <p className="mt-3 text-[10px] leading-snug text-ds-subtle">
           Địa điểm này được xem trong bối cảnh thời kỳ bạn đang chọn trên timeline — không phải hai báo cáo tách rời.
         </p>
       </div>
@@ -158,7 +158,7 @@ function SiteHeader({ site, onClose }: { site: NarrativeSite; onClose: () => voi
           {site.nameVi}
         </h2>
         {site.nameEn !== site.nameVi ? (
-          <p className="mt-0.5 text-[10px] italic text-slate-500">{site.nameEn}</p>
+          <p className="mt-0.5 text-[10px] italic text-ds-subtle">{site.nameEn}</p>
         ) : null}
       </div>
       <button
@@ -179,7 +179,7 @@ function MiniBadge({ label, value, accent }: { label: string; value: string; acc
       className="rounded-lg border px-2 py-1 text-[10px]"
       style={{ borderColor: `${accent}55`, backgroundColor: `${accent}14` }}
     >
-      <div className="text-[8px] uppercase tracking-wide text-slate-400">{label}</div>
+      <div className="text-[8px] uppercase tracking-wide text-ds-muted">{label}</div>
       <div className="font-medium text-ds-text">{value}</div>
     </div>
   )

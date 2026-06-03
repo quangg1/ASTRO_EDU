@@ -153,7 +153,7 @@ export function VideoWithTranscriptPanel({ videoUrl, title, transcript, classNam
       Video not supported.
     </video>
   ) : (
-    <div className="aspect-video w-full flex items-center justify-center bg-black/40 text-sm text-ds-subtle">
+    <div className="aspect-video w-full flex items-center justify-center bg-ds-elevated/80 text-sm text-ds-subtle">
       <a href={resolvedUrl} target="_blank" rel="noreferrer" className="text-ds-accent hover:underline">
         Mở video
       </a>
@@ -167,11 +167,11 @@ export function VideoWithTranscriptPanel({ videoUrl, title, transcript, classNam
   const langLabel = LANGUAGE_LABEL[normalizedTranscript?.language || 'vi'] || normalizedTranscript?.language || 'Transcript'
 
   return (
-    <div className={`relative border border-ds-border rounded-xl overflow-hidden bg-[#08111f] ${className}`}>
+    <div className={`relative border border-ds-border rounded-xl overflow-hidden bg-ds-surface ${className}`}>
       <div className="lg:pr-[min(100%,380px)]">{videoNode}</div>
 
       <aside
-        className={`flex h-[min(420px,70vh)] flex-col overflow-hidden border-t lg:border-t-0 lg:border-l border-ds-border bg-[#0a1220]
+        className={`flex h-[min(420px,70vh)] flex-col overflow-hidden border-t lg:border-t-0 lg:border-l border-ds-border bg-ds-surface
           lg:absolute lg:inset-y-0 lg:right-0 lg:h-auto lg:w-[min(100%,380px)]`}
       >
         <div className="flex shrink-0 items-center justify-between gap-2 border-b border-ds-border px-4 py-3">
@@ -202,7 +202,7 @@ export function VideoWithTranscriptPanel({ videoUrl, title, transcript, classNam
                   active ? 'bg-cyan-500/15 ring-1 ring-cyan-400/40' : 'hover:bg-white/5'
                 }`}
               >
-                <p className={`text-xs font-mono tabular-nums mb-1.5 ${active ? 'text-cyan-300' : 'text-ds-subtle'}`}>
+                <p className={`text-xs font-mono tabular-nums mb-1.5 ${active ? 'text-ds-accent' : 'text-ds-subtle'}`}>
                   {formatCueTime(cue.startSeconds)}
                 </p>
                 <p className={`text-sm leading-relaxed whitespace-pre-wrap ${active ? 'text-white' : 'text-gray-300'}`}>

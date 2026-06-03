@@ -33,6 +33,7 @@ export {
   postDepthPreference,
   fetchAgentSessions,
   fetchAgentSessionDetail,
+  postAgentMessageFeedback,
   getAgentApiBase,
 } from './api/agentApi'
 export {

@@ -2,10 +2,11 @@ const UserProgress = require('../../learning-path/models/UserProgress');
 const LearnerAgentProfile = require('../models/LearnerAgentProfile');
 const { getCachedContext } = require('./contextCache');
 const { getLearningPathLessonIndex } = require('./toolAuthorizers/lpCurriculum');
-const { detectWeakLessons } = require('./struggleDetector');
 const { buildNarrativeContext } = require('./narrativeContextService');
-const { getSpacedReviewDue } = require('./spacedReviewService');
-const { evaluateDepthSuggestion } = require('./depthAdaptationService');
+const {
+  getAgentLearningContext,
+  getLearnerSnapshot: getEngineLearnerSnapshot,
+} = require('../../learning-state/services/learningStateEngine');
 const {
   enrichAgentContextExtras,
   buildCohortContext,
@@ -18,6 +19,7 @@ const {
 const { buildShowcaseAgentContext } = require('./showcaseNavigationService');
 const UserReward = require('../../rewards/models/UserReward');
 const { getWalletLearnerMeta } = require('../../rewards/services/learnerTierService');
+const LearnerProfile = require('../../users/models/LearnerProfile');
 
 /**
  * @param {string|null|undefined} userId
@@ -30,6 +32,7 @@ async function buildAgentContext(userId, sessionContext, learnerSnapshot, userRo
   if (cached) return cached;
 
   const clientSnapshot = learnerSnapshot && typeof learnerSnapshot === 'object' ? learnerSnapshot : {};
+  const snapshotPreferred = clientSnapshot.preferredDepth;
 
   let progress = null;
   if (userId) {
@@ -92,10 +95,19 @@ async function buildAgentContext(userId, sessionContext, learnerSnapshot, userRo
     }
   }
 
-  let weakLessons = Array.isArray(clientSnapshot.weakLessons) ? clientSnapshot.weakLessons : [];
-  if (!weakLessons.length && userId) {
-    weakLessons = await detectWeakLessons(userId, { lessonId: lessonId || undefined });
+  let learningCtx = null;
+  if (userId) {
+    learningCtx = await getAgentLearningContext(userId, {
+      lessonId,
+      depth: sessionContext?.depth,
+      currentLesson: currentLesson
+        ? { conceptIds: currentLesson.conceptIds }
+        : null,
+    });
   }
+  let weakLessons = Array.isArray(clientSnapshot.weakLessons)
+    ? clientSnapshot.weakLessons
+    : learningCtx?.weakLessons || [];
 
   const surface = sessionContext?.surface ?? 'general';
   const exploreNarrative =
@@ -110,19 +122,8 @@ async function buildAgentContext(userId, sessionContext, learnerSnapshot, userRo
     exploreShowcase ? buildShowcaseAgentContext(sessionContext || {}) : Promise.resolve(null),
   ]);
 
-  let spacedReviewDue = { dueLessons: [], totalDue: 0 };
-  let depthSuggestion = null;
-  if (userId) {
-    const [spaced, depth] = await Promise.all([
-      getSpacedReviewDue(userId, { limit: 5 }),
-      evaluateDepthSuggestion(userId, {
-        lessonId: lessonId || undefined,
-        currentDepth: sessionContext?.depth,
-      }),
-    ]);
-    spacedReviewDue = spaced;
-    depthSuggestion = depth;
-  }
+  const spacedReviewDue = learningCtx?.spacedReviewDue ?? { dueLessons: [], totalDue: 0 };
+  const depthSuggestion = learningCtx?.depthSuggestion ?? null;
 
   const built = {
     surface,
@@ -151,15 +152,44 @@ async function buildAgentContext(userId, sessionContext, learnerSnapshot, userRo
       recentLessonIds,
     },
     weakLessons,
-    misconceptions: [],
+    misconceptions: learningCtx?.misconceptions ?? [],
+    lessonLearningState: learningCtx?.lessonState ?? null,
+    conceptLearningStates: learningCtx?.conceptStates ?? [],
+    tutoringStyle: 'balanced',
+    learnerInterests: [],
+    preferredDepth:
+      snapshotPreferred === 'beginner' ||
+      snapshotPreferred === 'explorer' ||
+      snapshotPreferred === 'researcher'
+        ? snapshotPreferred
+        : null,
   };
 
   if (userId) {
-    const profile = await LearnerAgentProfile.findOne({ userId })
-      .select('misconceptions')
-      .lean();
-    if (profile?.misconceptions?.length) {
+    const [profile, learnerProfile] = await Promise.all([
+      LearnerAgentProfile.findOne({ userId })
+        .select('misconceptions proceduralMemory depthPrefs')
+        .lean(),
+      LearnerProfile.findOne({ userId }).select('interests').lean(),
+    ]);
+    if (Array.isArray(learnerProfile?.interests) && learnerProfile.interests.length) {
+      built.learnerInterests = learnerProfile.interests
+        .map((x) => String(x || '').trim())
+        .filter(Boolean)
+        .slice(0, 8);
+    }
+    if (!built.misconceptions?.length && profile?.misconceptions?.length) {
       built.misconceptions = profile.misconceptions.slice(-12);
+    }
+    const pref = profile?.depthPrefs?.preferredDepth;
+    if (pref === 'beginner' || pref === 'explorer' || pref === 'researcher') {
+      built.preferredDepth = pref;
+    }
+    const style = profile?.proceduralMemory?.tutoringStyle;
+    if (style === 'hint_first' || style === 'explain_first' || style === 'balanced') {
+      built.tutoringStyle = style;
+    } else {
+      built.tutoringStyle = 'balanced';
     }
   }
 
@@ -182,16 +212,14 @@ async function buildLearnerSnapshot(userId) {
       spacedReviewDue: { dueLessons: [], totalDue: 0 },
     };
   }
-  const [progress, weakLessons, profile, spacedReviewDue, depthSuggestion, economy, activeCohort] =
-    await Promise.all([
-      UserProgress.findOne({ userId }).lean(),
-      detectWeakLessons(userId),
-      LearnerAgentProfile.findOne({ userId }).select('misconceptions depthPrefs').lean(),
-      getSpacedReviewDue(userId, { limit: 3 }),
-      evaluateDepthSuggestion(userId, {}),
-      buildLearnerEconomyCtx(userId, {}),
-      buildCohortContext(userId, {}),
-    ]);
+  const [engineSnap, economy, activeCohort] = await Promise.all([
+    getEngineLearnerSnapshot(userId),
+    buildLearnerEconomyCtx(userId, {}),
+    buildCohortContext(userId, {}),
+  ]);
+  const weakLessons = engineSnap.weakLessons;
+  const spacedReviewDue = engineSnap.spacedReviewDue;
+  const depthSuggestion = engineSnap.depthSuggestion;
 
   let learnerTier = null;
   let gemBalance = economy?.gemBalance ?? 0;
@@ -209,16 +237,15 @@ async function buildLearnerSnapshot(userId) {
   }
 
   return {
-    completedLessonCount: progress?.learningPathCompletedLessonIds?.length ?? 0,
-    masteredLessonCount: progress?.learningPathMasteredLessonIds?.length ?? 0,
-    recentLessonIds: progress?.learningPathLastLessonId
-      ? [progress.learningPathLastLessonId]
-      : [],
+    completedLessonCount: engineSnap.completedLessonCount,
+    masteredLessonCount: engineSnap.masteredLessonCount,
+    recentLessonIds: engineSnap.recentLessonIds,
     weakLessons,
-    misconceptions: profile?.misconceptions?.slice(-12) ?? [],
-    preferredDepth: profile?.depthPrefs?.preferredDepth ?? null,
+    misconceptions: engineSnap.misconceptions ?? [],
+    preferredDepth: engineSnap.preferredDepth ?? null,
     spacedReviewDue,
     depthSuggestion,
+    learningStates: engineSnap.learningStates,
     gemBalance,
     learnerTier,
     nearbyUnlocks: economy?.nearbyUnlocks ?? [],
@@ -229,7 +256,11 @@ async function buildLearnerSnapshot(userId) {
           upcomingDeadlineCount: activeCohort.upcomingDeadlines?.length ?? 0,
         }
       : null,
-    coachChips: await buildSnapshotChips(weakLessons, progress, spacedReviewDue),
+    coachChips: await buildSnapshotChips(
+      weakLessons,
+      { learningPathLastLessonId: engineSnap.recentLessonIds?.[0] },
+      spacedReviewDue,
+    ),
   };
 }
 

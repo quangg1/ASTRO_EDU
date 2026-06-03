@@ -30,7 +30,7 @@ export function DecorationOverlayThumb({
       className={`relative aspect-square rounded-xl border transition focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/60 ${
         selected
           ? 'border-violet-400/70 bg-violet-500/15 ring-1 ring-violet-400/50'
-          : 'border-white/10 bg-[#12101a] hover:border-white/25 hover:bg-[#18151f]'
+          : 'border-ds-border bg-ds-elevated hover:border-white/25 hover:bg-[#18151f]'
       } ${className}`}
     >
       <div className="absolute inset-2 flex items-center justify-center">

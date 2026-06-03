@@ -139,6 +139,14 @@ router.post('/:slug/posts', authMiddleware, async (req, res) => {
       console.error('Community post gem reward error:', gemErr);
     }
 
+    const postObj = post.toObject ? post.toObject() : post;
+    setImmediate(() => {
+      const { appendCommunityPostChunk } = require('../../agent/services/ragIndexService');
+      appendCommunityPostChunk(postObj).catch((e) => {
+        console.warn('[ragIndex] post create index:', e.message);
+      });
+    });
+
     res.status(201).json({ success: true, data: enriched, gemReward });
   } catch (err) {
     console.error('Create post error:', err);

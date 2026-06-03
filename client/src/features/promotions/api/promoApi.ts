@@ -3,7 +3,17 @@ import { getApiPathBase } from '@/lib/apiConfig'
 import { forUserFacingError } from '@/lib/sanitizeUserError'
 import { userMessages } from '@/lib/userMessages'
 
-const BASE = getApiPathBase()
+function apiBase(): string {
+  return getApiPathBase()
+}
+
+async function promoFetch(path: string, init?: RequestInit): Promise<Response | null> {
+  try {
+    return await fetch(`${apiBase()}${path}`, { cache: 'no-store', ...init })
+  } catch {
+    return null
+  }
+}
 
 function authHeaders(): HeadersInit {
   const token = getToken()
@@ -42,17 +52,17 @@ export interface ActivePromoCampaign extends CoursePromoBanner {
 }
 
 export async function fetchActivePromotions(limit = 5): Promise<ActivePromoCampaign[]> {
-  const res = await fetch(`${BASE}/promotions/active?limit=${limit}`, { cache: 'no-store' })
-  const data = await res.json()
+  const res = await promoFetch(`/promotions/active?limit=${limit}`)
+  if (!res?.ok) return []
+  const data = await res.json().catch(() => null)
   if (data?.success && Array.isArray(data.data)) return data.data as ActivePromoCampaign[]
   return []
 }
 
 export async function fetchCoursePromoBanner(courseId: string): Promise<CoursePromoBanner | null> {
-  const res = await fetch(`${BASE}/promotions/course/${encodeURIComponent(courseId)}/banner`, {
-    cache: 'no-store',
-  })
-  const data = await res.json()
+  const res = await promoFetch(`/promotions/course/${encodeURIComponent(courseId)}/banner`)
+  if (!res?.ok) return null
+  const data = await res.json().catch(() => null)
   if (data?.success && data.data) return data.data as CoursePromoBanner
   return null
 }
@@ -72,12 +82,15 @@ export async function validatePromoCode(params: {
   courseId: string
   code: string
 }): Promise<{ success: true; data: ValidatedPromo } | { success: false; error: string; code?: string }> {
-  const res = await fetch(`${BASE}/promotions/validate`, {
+  const res = await promoFetch(`/promotions/validate`, {
     method: 'POST',
     headers: authHeaders(),
     body: JSON.stringify({ courseId: params.courseId, code: params.code }),
   })
-  const data = await res.json()
+  if (!res) {
+    return { success: false, error: userMessages.loadDataFailed }
+  }
+  const data = await res.json().catch(() => ({}))
   if (data?.success && data.data) {
     return { success: true, data: data.data as ValidatedPromo }
   }

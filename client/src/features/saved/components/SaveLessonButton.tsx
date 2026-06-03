@@ -51,7 +51,7 @@ export function SaveLessonButton({ className = '', variant = 'pill', ...payload 
         style={{
           borderColor: saved ? 'rgba(244,114,182,0.45)' : 'rgba(255,255,255,0.12)',
           background: saved ? 'rgba(244,114,182,0.12)' : 'rgba(255,255,255,0.04)',
-          color: saved ? '#fda4af' : '#9aa8c4',
+          color: saved ? '#fda4af' : 'var(--color-text-muted)',
         }}
       >
         <Heart size={16} fill={saved ? 'currentColor' : 'none'} />

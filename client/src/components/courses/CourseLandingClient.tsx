@@ -214,7 +214,7 @@ export function CourseLandingClient({
     return (
       <div className="min-h-screen bg-ds-base pt-24 px-4 max-w-md mx-auto text-center space-y-3">
         <p className="text-ds-text text-sm">{loadError || 'Không tìm thấy khóa học'}</p>
-        <Link href="/studio" className="text-sm text-ds-accent hover:text-cyan-100">
+        <Link href="/studio" className="text-sm text-ds-accent hover:text-ds-text">
           ← Quay lại Studio
         </Link>
       </div>
@@ -267,7 +267,7 @@ export function CourseLandingClient({
       )}
       {ownedFlash && !enrolledFlash && (
         <div className="pt-14 px-4">
-          <div className="max-w-3xl mx-auto rounded-xl border border-cyan-500/30 bg-cyan-500/10 px-4 py-3 text-sm text-cyan-100">
+          <div className="max-w-3xl mx-auto rounded-xl border border-cyan-500/30 bg-cyan-500/10 px-4 py-3 text-sm text-ds-text">
             Bạn đã có quyền truy cập khóa học này — không cần mua lại gói tự học. Muốn học theo lớp có GV,
             chọn lớp ở mục bên dưới.
           </div>
@@ -281,7 +281,7 @@ export function CourseLandingClient({
         </div>
       )}
       <main className={`px-4 pb-16 max-w-3xl mx-auto ${enrolledFlash ? 'pt-4' : course.editorPreview || course.published === false ? 'pt-4' : 'pt-20'}`}>
-        <Link href="/courses" className="text-sm text-ds-accent hover:text-cyan-100 mb-6 inline-block">
+        <Link href="/courses" className="text-sm text-ds-accent hover:text-ds-text mb-6 inline-block">
           ← Danh sách khóa học
         </Link>
 
@@ -329,7 +329,7 @@ export function CourseLandingClient({
               {hasLearnerAccess && learnHref && (
                 <Link
                   href={learnHref}
-                  className="inline-flex items-center justify-center px-5 py-2.5 rounded-xl bg-cyan-600 text-white text-sm font-medium hover:bg-cyan-500 transition-colors"
+                  className="inline-flex items-center justify-center px-5 py-2.5 rounded-xl bg-cyan-600 text-white text-sm font-medium hover:opacity-90 transition-colors"
                 >
                   {course.deliveryContext?.mode === 'editor' && !course.enrollment
                     ? 'Vào học (giảng viên)'
@@ -340,7 +340,7 @@ export function CourseLandingClient({
                 <button
                   type="button"
                   onClick={handleBuyNow}
-                  className="inline-flex items-center justify-center px-5 py-2.5 rounded-xl bg-cyan-600 text-white text-sm font-medium hover:bg-cyan-500 transition-colors"
+                  className="inline-flex items-center justify-center px-5 py-2.5 rounded-xl bg-cyan-600 text-white text-sm font-medium hover:opacity-90 transition-colors"
                 >
                   Mua ngay · {priceLabel}
                 </button>
@@ -389,7 +389,7 @@ export function CourseLandingClient({
             <button
               type="button"
               onClick={handleBuyNow}
-              className="shrink-0 px-6 py-3 rounded-xl bg-cyan-600 text-white text-sm font-medium hover:bg-cyan-500 transition-colors"
+              className="shrink-0 px-6 py-3 rounded-xl bg-cyan-600 text-white text-sm font-medium hover:opacity-90 transition-colors"
             >
               Mua ngay
             </button>
@@ -417,8 +417,8 @@ export function CourseLandingClient({
           <p className="text-xs text-ds-subtle mb-5">Xem trước cấu trúc bài học trước khi ghi danh.</p>
           <div className="space-y-4">
             {groups.map((g) => (
-              <div key={g.key} className="rounded-xl border border-white/5 bg-black/20 overflow-hidden">
-                <div className="px-4 py-2 border-b border-white/5 bg-white/[0.02]">
+              <div key={g.key} className="rounded-xl border border-white/5 bg-ds-surface/50 overflow-hidden">
+                <div className="px-4 py-2 border-b border-white/5 bg-ds-surface/40">
                   <p className="text-[10px] text-cyan-500/80 font-semibold uppercase tracking-wider">Module {g.index + 1}</p>
                   <p className="text-sm text-white font-medium">{g.label}</p>
                   <ModuleMaterialsList materials={g.materials} />
@@ -456,7 +456,7 @@ export function CourseLandingClient({
                         {learnHref && (
                           <Link
                             href={`/courses/${slug}/learn/${encodeURIComponent(lesson.slug)}`}
-                            className="text-[11px] text-ds-accent hover:text-cyan-100 shrink-0"
+                            className="text-[11px] text-ds-accent hover:text-ds-text shrink-0"
                           >
                             Mở →
                           </Link>

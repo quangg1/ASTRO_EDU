@@ -21,7 +21,7 @@ export function HeroSection() {
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.15, duration: 0.6 }}
-            className="hud-mono hud-mono-md hud-chamfer-sm inline-flex items-center gap-2 px-3.5 py-2 mb-6 text-[color:var(--hud-plasma)]"
+            className="hud-mono hud-mono-md cosmo-dark-panel rounded-xl inline-flex items-center gap-2 px-3.5 py-2 mb-6 text-[color:var(--color-accent)]"
             style={{
               background: 'rgba(126,231,255,0.06)',
               border: '1px solid rgba(126,231,255,0.25)',
@@ -55,14 +55,14 @@ export function HeroSection() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.55, duration: 0.6 }}
-            className="hud-mono hud-mono-sm flex flex-wrap items-center justify-center lg:justify-start gap-x-4 gap-y-1 mb-6 text-[color:var(--hud-ink-2)]"
+            className="hud-mono hud-mono-sm flex flex-wrap items-center justify-center lg:justify-start gap-x-4 gap-y-1 mb-6 text-[color:var(--color-text-muted)]"
           >
             <span>MISSION COS-LRN/04</span>
-            <span aria-hidden className="text-[color:var(--hud-plasma)]/40">·</span>
-            <span className="text-[color:var(--hud-plasma)] tabular-nums">
+            <span aria-hidden className="text-[color:var(--color-accent)]/40">·</span>
+            <span className="text-[color:var(--color-accent)] tabular-nums">
               {localTime} {zoneLabel}
             </span>
-            <span aria-hidden className="text-[color:var(--hud-plasma)]/40">·</span>
+            <span aria-hidden className="text-[color:var(--color-accent)]/40">·</span>
             <span className="inline-flex items-center gap-1.5">
               STATUS <span className="hud-status-dot-cyan" aria-hidden /> ONLINE
             </span>
@@ -77,13 +77,13 @@ export function HeroSection() {
           >
             <Link
               href="/search"
-              className="hud-chamfer-md flex items-center gap-3 w-full px-5 py-4 text-left text-sm text-white/45 transition-all"
+              className="cosmo-dark-panel rounded-2xl flex items-center gap-3 w-full px-5 py-4 text-left text-sm text-white/45 transition-all"
               style={{
-                background: 'rgba(6,9,26,0.7)',
+                background: 'var(--color-panel-muted)',
                 border: '2px solid rgba(126,231,255,0.2)',
               }}
             >
-              <Search className="w-4 h-4 text-[color:var(--hud-plasma)]/70 shrink-0" aria-hidden />
+              <Search className="w-4 h-4 text-[color:var(--color-accent)]/70 shrink-0" aria-hidden />
               <span className="truncate flex-1">Tìm khóa học, chủ đề, hoặc bài trong lộ trình…</span>
             </Link>
           </motion.div>
@@ -103,7 +103,7 @@ export function HeroSection() {
               <Link
                 key={chip.href}
                 href={chip.href}
-                className="hud-chamfer-sm inline-flex items-center px-3.5 py-1.5 text-xs text-white/70 transition-all hover:text-white"
+                className="cosmo-dark-panel rounded-xl inline-flex items-center px-3.5 py-1.5 text-xs text-white/70 transition-all hover:text-white"
                 style={{
                   background: 'rgba(126,231,255,0.04)',
                   border: '2px solid rgba(126,231,255,0.16)',
@@ -123,9 +123,9 @@ export function HeroSection() {
           >
             <Link
               href="/courses"
-              className="hud-chamfer group inline-flex items-center justify-center gap-2 px-7 py-4 text-sm font-semibold transition-all"
+              className="cosmo-dark-panel rounded-2xl group inline-flex items-center justify-center gap-2 px-7 py-4 text-sm font-semibold transition-all"
               style={{
-                background: 'var(--hud-amber)',
+                background: 'var(--color-brand-amber)',
                 color: '#1a0e00',
                 boxShadow: '0 0 24px rgba(245,165,36,0.35)',
               }}
@@ -135,13 +135,13 @@ export function HeroSection() {
             </Link>
             <Link
               href="/explore"
-              className="hud-chamfer group inline-flex items-center justify-center gap-3 px-7 py-4 text-sm font-semibold text-white transition-all"
+              className="cosmo-dark-panel rounded-2xl group inline-flex items-center justify-center gap-3 px-7 py-4 text-sm font-semibold text-white transition-all"
               style={{
                 background: 'rgba(126,231,255,0.06)',
                 border: '2px solid rgba(126,231,255,0.3)',
               }}
             >
-              <Play className="h-4 w-4 text-[color:var(--hud-plasma)]" />
+              <Play className="h-4 w-4 text-[color:var(--color-accent)]" />
               Trải nghiệm 3D
             </Link>
           </motion.div>
@@ -159,7 +159,7 @@ export function HeroSection() {
               { value: '120+', label: 'giảng viên' },
             ].map((item) => (
               <div key={item.label} className="flex items-baseline gap-2">
-                <div className="font-heading font-bold text-[color:var(--hud-amber)] text-lg leading-none">
+                <div className="font-heading font-bold text-[color:var(--color-brand-amber)] text-lg leading-none">
                   {item.value}
                 </div>
                 <div className="hud-mono hud-mono-sm text-white/45">{item.label}</div>

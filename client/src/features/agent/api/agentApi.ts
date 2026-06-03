@@ -1,5 +1,6 @@
 import { getApiPathBase } from '@/lib/apiConfig'
 import { getToken } from '@/features/auth/public'
+import type { RecallQuizDeliveryQuestion } from '@/features/learning-path/public'
 import type {
   AgentMessageResponse,
   AgentSessionDetail,
@@ -348,6 +349,105 @@ export async function fetchAgentSessions(limit = 20): Promise<AgentSessionSummar
   if (!res?.ok) return []
   const data = (await res.json().catch(() => ({}))) as { sessions?: AgentSessionSummary[] }
   return Array.isArray(data.sessions) ? data.sessions : []
+}
+
+export async function postAgentMessageFeedback(body: {
+  sessionId?: string
+  messageId?: string
+  rating: 1 | -1
+  comment?: string
+  surface?: string
+  lessonId?: string
+}): Promise<boolean> {
+  const token = getToken()
+  if (!token) return false
+  const res = await fetch(`${getAgentApiBase()}/feedback`, {
+    method: 'POST',
+    headers: agentHeaders(false),
+    body: JSON.stringify(body),
+  }).catch(() => null)
+  const data = await res?.json().catch(() => ({}))
+  return Boolean(res?.ok && data?.success)
+}
+
+export type ConceptQuizSubmitResult = {
+  passed: boolean
+  score: number
+  correctCount: number
+  total: number
+  perQuestion: Array<{
+    questionId: string
+    correct: boolean
+    correctIndex: number
+    explanation: string | null
+  }>
+  conceptId: string
+  conceptTitle: string
+  lessonId?: string | null
+}
+
+export type ConceptQuizStartPayload = {
+  quizSessionId: string
+  conceptId: string
+  conceptTitle: string
+  lessonId?: string | null
+  questions: RecallQuizDeliveryQuestion[]
+}
+
+export async function startConceptQuiz(
+  conceptId: string,
+  lessonId?: string | null,
+): Promise<{ ok: boolean; data?: ConceptQuizStartPayload; error?: string; code?: string }> {
+  const token = getToken()
+  if (!token) {
+    return { ok: false, error: 'Đăng nhập để làm quiz concept', code: 'AUTH_REQUIRED' }
+  }
+  try {
+    const res = await fetch(`${getAgentApiBase()}/concept-quiz/start`, {
+      method: 'POST',
+      headers: agentHeaders(false),
+      body: JSON.stringify({ conceptId, lessonId: lessonId || undefined }),
+    })
+    const data = await res.json().catch(() => ({}))
+    if (data.success && data.data?.quizSessionId && data.data?.questions?.length >= 3) {
+      return { ok: true, data: data.data as ConceptQuizStartPayload }
+    }
+    return {
+      ok: false,
+      error: data.error || 'Không tạo được quiz',
+      code: data.code,
+    }
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : 'Network error' }
+  }
+}
+
+export async function submitConceptQuiz(
+  quizSessionId: string,
+  answers: Record<string, number>,
+): Promise<{ ok: boolean; data?: ConceptQuizSubmitResult; error?: string; code?: string }> {
+  const token = getToken()
+  if (!token) {
+    return { ok: false, error: 'Đăng nhập để nộp quiz', code: 'AUTH_REQUIRED' }
+  }
+  try {
+    const res = await fetch(`${getAgentApiBase()}/concept-quiz/submit`, {
+      method: 'POST',
+      headers: agentHeaders(false),
+      body: JSON.stringify({ quizSessionId, answers }),
+    })
+    const data = await res.json().catch(() => ({}))
+    if (data.success && data.data) {
+      return { ok: true, data: data.data as ConceptQuizSubmitResult }
+    }
+    return {
+      ok: false,
+      error: data.error || 'Nộp bài thất bại',
+      code: data.code,
+    }
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : 'Network error' }
+  }
 }
 
 export async function fetchAgentSessionDetail(

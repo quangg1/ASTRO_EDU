@@ -8,7 +8,7 @@ export default function ExplorePage() {
   return (
     <Suspense
       fallback={
-        <main className="min-h-screen bg-black pt-20">
+        <main className="min-h-screen bg-ds-base text-ds-text pt-20">
           <Loading />
         </main>
       }

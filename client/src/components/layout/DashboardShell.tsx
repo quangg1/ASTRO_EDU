@@ -11,12 +11,13 @@ import { useAuthStore } from '@/features/auth/public'
 import { useEquippedDecoration } from '@/features/rewards/hooks/useEquippedDecoration'
 import { AvatarWithDecoration } from '@/components/profile/AvatarWithDecoration'
 import { canModerate } from '@/lib/roles'
+import { CosmoPageBackdrop } from '@/components/layout/CosmoPageBackdrop'
 
 const chamfer = (cut = 14) => ({
   clipPath: `polygon(${cut}px 0,100% 0,100% calc(100% - ${cut}px),calc(100% - ${cut}px) 100%,0 100%,0 ${cut}px)`,
 })
 
-function Brackets({ c = '#7ee7ff', s = 12, o = 5 }: { c?: string; s?: number; o?: number }) {
+function Brackets({ c = 'var(--color-accent)', s = 12, o = 5 }: { c?: string; s?: number; o?: number }) {
   const b = (ex: React.CSSProperties) => ({
     position: 'absolute' as const,
     width: s,
@@ -46,7 +47,7 @@ type NavItem = { href: string; label: string; icon: React.ElementType; badge?: s
 function NavSection({ title, items, pathname }: { title: string; items: NavItem[]; pathname: string }) {
   return (
     <div>
-      <p className="dash-mono px-3 mb-1.5 text-[10px] uppercase" style={{ letterSpacing: '0.22em', color: '#8a9bb8' }}>
+      <p className="dash-mono px-3 mb-1.5 text-[10px] uppercase text-ds-subtle" style={{ letterSpacing: '0.22em' }}>
         {title}
       </p>
       <ul className="space-y-0.5">
@@ -61,8 +62,8 @@ function NavSection({ title, items, pathname }: { title: string; items: NavItem[
                   style={{
                     left: -2, top: '50%', transform: 'translateY(-50%)',
                     width: 4, height: 18,
-                    background: '#f5a524',
-                    boxShadow: '0 0 8px #f5a524, 0 0 16px rgba(245,165,36,0.4)',
+                    background: 'var(--color-brand-amber)',
+                    boxShadow: '0 0 8px var(--color-brand-amber), 0 0 16px rgba(245,165,36,0.4)',
                     borderRadius: 2,
                   }}
                 />
@@ -79,7 +80,7 @@ function NavSection({ title, items, pathname }: { title: string; items: NavItem[
                         boxShadow: 'inset 0 0 12px rgba(245,165,36,0.08)',
                         ...chamfer(8),
                       }
-                    : { border: '1px solid transparent', color: '#9aa8c4', ...chamfer(8) }),
+                    : { border: '1px solid transparent', color: 'var(--color-text-muted)', ...chamfer(8) }),
                 }}
               >
                 <span className="flex items-center gap-2">
@@ -133,58 +134,24 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 
   return (
     <>
-      <div className="min-h-screen pt-14 flex dash-font" style={{ background: '#03060f', color: '#eaf6ff' }}>
+      <div className="min-h-screen pt-14 flex dash-font" style={{ background: 'var(--color-bg-base)', color: 'var(--color-text-primary)' }}>
 
-        {/* Background layers */}
-        <div className="fixed inset-0 pointer-events-none" style={{ zIndex: 0 }}>
-          <div
-            className="absolute inset-0"
-            style={{
-              backgroundImage: `linear-gradient(rgba(126,231,255,0.022) 1px,transparent 1px),linear-gradient(90deg,rgba(126,231,255,0.022) 1px,transparent 1px)`,
-              backgroundSize: '80px 80px',
-              maskImage: 'radial-gradient(ellipse 80% 80% at 50% 50%,black 30%,transparent 100%)',
-            }}
-          />
-          <div
-            className="absolute left-0 right-0 h-[6px] dash-scanline"
-            style={{ background: 'linear-gradient(transparent,rgba(126,231,255,0.04),transparent)', top: 0 }}
-          />
-          <div className="absolute top-0 left-0" style={{ width: '40vw', height: '40vh', background: 'radial-gradient(ellipse,rgba(245,165,36,0.025) 0%,transparent 70%)' }} />
-          <div className="absolute bottom-0 right-0" style={{ width: '40vw', height: '40vh', background: 'radial-gradient(ellipse,rgba(126,231,255,0.025) 0%,transparent 70%)' }} />
-          <div
-            className="dash-mono hidden xl:block absolute select-none"
-            style={{ color: '#1a2235', fontSize: 10, left: 6, top: '50%', transform: 'rotate(-90deg) translateX(-50%)', transformOrigin: 'left center', whiteSpace: 'nowrap', pointerEvents: 'none' }}
-          >
-            CosmoLearn · v2.6 · Hanoi observatory link
-          </div>
-          <div
-            className="dash-mono hidden xl:block absolute select-none"
-            style={{ color: '#1a2235', fontSize: 10, right: 6, top: '50%', transform: 'rotate(90deg) translateX(50%)', transformOrigin: 'right center', whiteSpace: 'nowrap', pointerEvents: 'none' }}
-          >
-            Lat 21.0285° N — Lon 105.8542° E — Alt 12m
-          </div>
-        </div>
+        <CosmoPageBackdrop />
 
         {/* Sidebar */}
         <aside
           className="hidden md:flex w-[280px] shrink-0 flex-col fixed left-0 top-14 bottom-0 z-30 backdrop-blur-md"
           style={{
-            background: 'linear-gradient(180deg,rgba(6,9,26,0.98) 0%,rgba(3,6,15,0.98) 100%)',
-            borderRight: '1px solid rgba(126,231,255,0.14)',
-            boxShadow: '1px 0 24px rgba(126,231,255,0.04)',
+            background: 'color-mix(in srgb, var(--color-bg-surface) 94%, transparent)',
+            borderRight: '1px solid var(--color-border)',
+            boxShadow: '4px 0 32px rgba(0,0,0,0.25)',
           }}
         >
           {/* Profile card */}
           <div
-            className="relative mx-3 mt-4 mb-2 p-4"
-            style={{
-              background: 'rgba(10,16,36,0.8)',
-              border: '1px solid rgba(126,231,255,0.18)',
-              boxShadow: 'inset 0 0 20px rgba(126,231,255,0.04)',
-              ...chamfer(12),
-            }}
+            className="relative cosmo-dark-panel rounded-xl mx-3 mt-4 mb-2 p-4"
           >
-            <Brackets c="#7ee7ff" s={10} o={5} />
+            <Brackets c="var(--color-accent)" s={10} o={5} />
             <div className="flex items-center gap-3">
               <AvatarWithDecoration
                 avatarUrl={user?.avatar}
@@ -194,10 +161,10 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                 size="md"
               />
               <div className="min-w-0">
-                <p className="text-sm font-semibold truncate" style={{ color: '#eaf6ff' }}>
+                <p className="text-sm font-semibold truncate text-ds-text">
                   {user?.displayName || 'Khách'}
                 </p>
-                <p className="dash-mono text-[11px] truncate" style={{ color: '#5c6886' }}>
+                <p className="dash-mono text-[11px] truncate cosmo-dark-panel-muted">
                   {user?.email ?? 'Đăng nhập để đồng bộ'}
                 </p>
               </div>
@@ -212,20 +179,20 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 
             {user?.role === 'student' && (
               <div>
-                <p className="dash-mono px-3 mb-1.5 text-[10px] uppercase" style={{ letterSpacing: '0.22em', color: '#8a9bb8' }}>
+                <p className="dash-mono px-3 mb-1.5 text-[10px] uppercase text-ds-subtle" style={{ letterSpacing: '0.22em' }}>
                   Trở thành giảng viên
                 </p>
                 <ul>
                   <li className="relative">
                     {navIsActive('/apply-teacher', pathname) && (
-                      <span className="absolute" style={{ left: -2, top: '50%', transform: 'translateY(-50%)', width: 4, height: 18, background: '#f5a524', boxShadow: '0 0 8px #f5a524', borderRadius: 2 }} />
+                      <span className="absolute" style={{ left: -2, top: '50%', transform: 'translateY(-50%)', width: 4, height: 18, background: 'var(--color-brand-amber)', boxShadow: '0 0 8px var(--color-brand-amber)', borderRadius: 2 }} />
                     )}
                     <Link
                       href="/apply-teacher"
                       className="dash-nav-item flex items-center gap-2 px-3 py-2 text-[13.5px] transition-all"
                       style={navIsActive('/apply-teacher', pathname)
                         ? { background: 'linear-gradient(90deg,rgba(245,165,36,0.18) 0%,rgba(245,165,36,0.04) 100%)', border: '1px solid rgba(245,165,36,0.45)', color: '#ffd27a', ...chamfer(8) }
-                        : { border: '1px solid transparent', color: '#9aa8c4', ...chamfer(8) }}
+                        : { border: '1px solid transparent', color: 'var(--color-text-muted)', ...chamfer(8) }}
                     >
                       <UserPlus size={14} strokeWidth={1.6} />
                       Xin quyền giảng viên
@@ -266,7 +233,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           {/* Footer */}
           <div
             className="dash-mono p-3 text-[10px] flex items-center gap-2"
-            style={{ borderTop: '1px dashed rgba(126,231,255,0.1)', color: '#5c6886' }}
+            style={{ borderTop: '1px dashed rgba(126,231,255,0.1)', color: 'var(--color-text-subtle)' }}
           >
             <span className="inline-block w-1.5 h-1.5 rounded-full" style={{ background: '#6dffb0', boxShadow: '0 0 4px #6dffb0' }} />
             Cosmo Learn

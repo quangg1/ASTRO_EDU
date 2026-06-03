@@ -26,7 +26,7 @@ const chamfer = (cut = 18) => ({
   clipPath: `polygon(${cut}px 0,100% 0,100% calc(100% - ${cut}px),calc(100% - ${cut}px) 100%,0 100%,0 ${cut}px)`,
 })
 
-function Brackets({ c = '#7ee7ff', s = 14, o = 6 }: { c?: string; s?: number; o?: number }) {
+function Brackets({ c = 'var(--color-accent)', s = 14, o = 6 }: { c?: string; s?: number; o?: number }) {
   const b = (ex: React.CSSProperties) => ({
     position: 'absolute' as const, width: s, height: s, opacity: 0.85,
     pointerEvents: 'none' as const, ...ex,
@@ -49,25 +49,13 @@ function HudPanel({
   className?: string
   style?: React.CSSProperties
 }) {
-  const accent = amber ? '#f5a524' : '#7ee7ff'
-  const borderColor = amber ? 'rgba(245,165,36,0.35)' : 'rgba(126,231,255,0.2)'
-  const bg = amber
-    ? 'linear-gradient(135deg,rgba(18,10,2,0.97) 0%,rgba(24,14,3,0.95) 100%)'
-    : 'rgba(6,9,26,0.92)'
-  const glow = amber ? 'rgba(245,165,36,0.06)' : 'rgba(126,231,255,0.04)'
+  const accent = amber ? 'var(--color-brand-amber)' : 'var(--color-accent)'
   return (
     <div
-      className={`relative${className ? ' ' + className : ''}`}
-      style={{
-        background: bg,
-        border: `1px solid ${borderColor}`,
-        boxShadow: `inset 0 0 24px ${glow}, 0 4px 32px rgba(0,0,0,0.4)`,
-        transition: 'box-shadow 0.2s',
-        ...chamfer(18),
-        ...extraStyle,
-      }}
+      className={`relative cosmo-dark-panel rounded-2xl${amber ? ' cosmo-dark-panel-amber' : ''}${className ? ` ${className}` : ''}`}
+      style={{ transition: 'box-shadow 0.2s', ...extraStyle }}
     >
-      <Brackets c={accent} />
+      <Brackets c={accent} s={12} o={6} />
       {children}
     </div>
   )
@@ -151,8 +139,8 @@ export default function DashboardOverviewPage() {
   if (!checked && loading) {
     return (
       <div
-        className="relative p-6 text-sm"
-        style={{ ...chamfer(14), border: '1px solid rgba(126,231,255,0.15)', background: 'rgba(6,9,26,0.9)', color: '#9aa8c4' }}
+        className="cosmo-dark-panel rounded-xl border border-ds-border p-6 text-sm"
+        style={{ color: 'var(--color-text-muted)' }}
       >
         Đang đồng bộ thông tin học tập...
       </div>
@@ -173,21 +161,21 @@ export default function DashboardOverviewPage() {
           </p>
           <h1
             className="dash-font font-medium leading-none"
-            style={{ fontSize: 'clamp(40px,4vw,56px)', letterSpacing: '-0.03em', color: '#eaf6ff' }}
+            style={{ fontSize: 'clamp(40px,4vw,56px)', letterSpacing: '-0.03em', color: 'var(--color-text-primary)' }}
           >
-            Tổng <em style={{ fontStyle: 'italic', fontWeight: 300, color: '#f5a524' }}>quan</em>
+            Tổng <em style={{ fontStyle: 'italic', fontWeight: 300, color: 'var(--color-brand-amber)' }}>quan</em>
           </h1>
-          <p className="mt-2 text-sm" style={{ color: '#9aa8c4' }}>
+          <p className="mt-2 text-sm" style={{ color: 'var(--color-text-muted)' }}>
             Theo dõi tiến độ và tiếp tục hành trình học của bạn.
           </p>
         </div>
         <div className="text-right" style={{ alignSelf: 'flex-start', paddingTop: 4 }}>
-          <p className="dash-mono text-sm flex items-center justify-end gap-2" style={{ color: '#7ee7ff' }}>
+          <p className="dash-mono text-sm flex items-center justify-end gap-2" style={{ color: 'var(--color-accent)' }}>
             <span className="inline-block w-1.5 h-1.5 rounded-full" style={{ background: '#6dffb0', boxShadow: '0 0 5px #6dffb0' }} />
             {zoneLabel} {localTime}
           </p>
-          <p className="dash-mono text-[11px] mt-0.5" style={{ color: '#5c6886' }}>
-            PHIÊN <span style={{ color: '#7ee7ff' }}>#A-7321</span>
+          <p className="dash-mono text-[11px] mt-0.5" style={{ color: 'var(--color-text-subtle)' }}>
+            PHIÊN <span style={{ color: 'var(--color-accent)' }}>#A-7321</span>
           </p>
         </div>
       </header>
@@ -202,7 +190,7 @@ export default function DashboardOverviewPage() {
 
         {/* Card 1 — Cấp độ */}
         <HudPanel style={{ padding: 20 }}>
-          <p className="dash-mono text-[10px] uppercase mb-4" style={{ color: '#7ee7ff', letterSpacing: '0.18em' }}>
+          <p className="dash-mono text-[10px] uppercase mb-4" style={{ color: 'var(--color-accent)', letterSpacing: '0.18em' }}>
             // cấp độ
           </p>
           <div className="flex items-center gap-3 mb-5">
@@ -215,22 +203,22 @@ export default function DashboardOverviewPage() {
                 ...chamfer(10),
               }}
             >
-              <Star size={22} style={{ color: '#f5a524' }} strokeWidth={1.6} />
+              <Star size={22} style={{ color: 'var(--color-brand-amber)' }} strokeWidth={1.6} />
             </div>
             <div>
-              <p className="text-[22px] font-semibold leading-tight" style={{ color: '#eaf6ff' }}>
+              <p className="text-[22px] font-semibold leading-tight" style={{ color: 'var(--color-text-primary)' }}>
                 {tierCurrent?.nameVi || 'Mầm non'}
               </p>
-              <p className="dash-mono text-[10px] mt-0.5" style={{ color: '#5c6886' }}>
+              <p className="dash-mono text-[10px] mt-0.5" style={{ color: 'var(--color-text-subtle)' }}>
                 {tierCurrent ? `Đã kiếm ${tierProgress?.gemsEarned ?? 0} gem` : 'Học tập & khám phá'}
               </p>
             </div>
           </div>
           <div className="flex justify-between mb-1.5">
-            <span className="dash-mono text-[10px]" style={{ color: '#5c6886' }}>
+            <span className="dash-mono text-[10px]" style={{ color: 'var(--color-text-subtle)' }}>
               {tierCurrent ? `${tierCurrent.minGemsEarned} Gem` : '0 Gem'}
             </span>
-            <span className="dash-mono text-[10px]" style={{ color: '#5c6886' }}>
+            <span className="dash-mono text-[10px]" style={{ color: 'var(--color-text-subtle)' }}>
               {tierNext ? `${tierNext.minGemsEarned} Gem` : 'MAX'}
             </span>
           </div>
@@ -242,7 +230,7 @@ export default function DashboardOverviewPage() {
               style={{
                 position: 'absolute', left: 0, top: 0, bottom: 0,
                 width: `${gemProgressPct}%`,
-                background: 'linear-gradient(90deg,#f5a524,#ffd27a)',
+                background: 'linear-gradient(90deg,var(--color-brand-amber),#ffd27a)',
                 boxShadow: '0 0 8px rgba(245,165,36,0.7)',
                 ...chamfer(3),
               }}
@@ -254,15 +242,15 @@ export default function DashboardOverviewPage() {
                   transform: 'translate(-50%,-50%)',
                   width: 8, height: 8, borderRadius: '50%',
                   background: '#fff',
-                  boxShadow: '0 0 6px #fff, 0 0 12px #f5a524',
+                  boxShadow: '0 0 6px #fff, 0 0 12px var(--color-brand-amber)',
                 }}
               />
             )}
           </div>
-          <p className="text-xs mt-2" style={{ color: '#9aa8c4' }}>
+          <p className="text-xs mt-2" style={{ color: 'var(--color-text-muted)' }}>
             {tierNext ? (
               <>
-                <span className="font-semibold" style={{ color: '#f5a524' }}>{gemToNext} Gem</span>
+                <span className="font-semibold" style={{ color: 'var(--color-brand-amber)' }}>{gemToNext} Gem</span>
                 {' '}đến cấp độ tiếp theo
               </>
             ) : (
@@ -273,7 +261,7 @@ export default function DashboardOverviewPage() {
 
         {/* Card 2 — Chuỗi ngày (amber variant) */}
         <HudPanel amber style={{ padding: 20 }}>
-          <p className="dash-mono text-[10px] uppercase mb-4" style={{ color: '#f5a524', letterSpacing: '0.18em' }}>
+          <p className="dash-mono text-[10px] uppercase mb-4" style={{ color: 'var(--color-brand-amber)', letterSpacing: '0.18em' }}>
             // chuỗi ngày hiện tại
           </p>
           <div className="flex items-center gap-4">
@@ -286,14 +274,14 @@ export default function DashboardOverviewPage() {
                 ...chamfer(12),
               }}
             >
-              <Flame size={32} style={{ color: '#f5a524' }} strokeWidth={1.5} />
+              <Flame size={32} style={{ color: 'var(--color-brand-amber)' }} strokeWidth={1.5} />
             </div>
             <div>
               <p
                 className="dash-font font-normal leading-none"
                 style={{
                   fontSize: 64,
-                  background: 'linear-gradient(180deg,#ffd27a 0%,#f5a524 60%,rgba(245,165,36,0.3) 100%)',
+                  background: 'linear-gradient(180deg,#ffd27a 0%,var(--color-brand-amber) 60%,rgba(245,165,36,0.3) 100%)',
                   WebkitBackgroundClip: 'text',
                   WebkitTextFillColor: 'transparent',
                   backgroundClip: 'text',
@@ -301,7 +289,7 @@ export default function DashboardOverviewPage() {
               >
                 1
               </p>
-              <p className="dash-mono text-[11px] uppercase mt-1" style={{ color: '#f5a524', letterSpacing: '0.15em' }}>
+              <p className="dash-mono text-[11px] uppercase mt-1" style={{ color: 'var(--color-brand-amber)', letterSpacing: '0.15em' }}>
                 // ngày
               </p>
             </div>
@@ -310,14 +298,14 @@ export default function DashboardOverviewPage() {
             className="flex items-center justify-between mt-4 pt-3"
             style={{ borderTop: '1px dashed rgba(245,165,36,0.2)' }}
           >
-            <span className="dash-mono text-[10px]" style={{ color: '#5c6886' }}>Chuỗi dài nhất</span>
-            <span className="dash-mono text-[11px] font-medium" style={{ color: '#f5a524' }}>1 ngày</span>
+            <span className="dash-mono text-[10px]" style={{ color: 'var(--color-text-subtle)' }}>Chuỗi dài nhất</span>
+            <span className="dash-mono text-[11px] font-medium" style={{ color: 'var(--color-brand-amber)' }}>1 ngày</span>
           </div>
         </HudPanel>
 
         {/* Card 3 — Điểm cộng đồng / Gem */}
         <HudPanel style={{ padding: 20 }} className="sm:col-span-2 lg:col-span-1">
-          <p className="dash-mono text-[10px] uppercase mb-4" style={{ color: '#7ee7ff', letterSpacing: '0.18em' }}>
+          <p className="dash-mono text-[10px] uppercase mb-4" style={{ color: 'var(--color-accent)', letterSpacing: '0.18em' }}>
             // điểm & phần thưởng
           </p>
           <div className="grid grid-cols-2 gap-4 mb-4">
@@ -329,7 +317,7 @@ export default function DashboardOverviewPage() {
               <p
                 className="dash-font text-5xl font-normal leading-none"
                 style={{
-                  background: 'linear-gradient(180deg,#ffd27a 0%,#f5a524 100%)',
+                  background: 'linear-gradient(180deg,#ffd27a 0%,var(--color-brand-amber) 100%)',
                   WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
                 }}
               >
@@ -338,13 +326,13 @@ export default function DashboardOverviewPage() {
             </div>
             <div>
               <p className="dash-mono text-[10px] uppercase mb-1 flex items-center gap-1.5" style={{ color: '#8a9bb8', letterSpacing: '0.12em' }}>
-                <Gem size={10} strokeWidth={1.6} style={{ color: '#7ee7ff' }} />
+                <Gem size={10} strokeWidth={1.6} style={{ color: 'var(--color-accent)' }} />
                 gem
               </p>
               <p
                 className="dash-font text-5xl font-normal leading-none"
                 style={{
-                  background: 'linear-gradient(180deg,#ffd27a 0%,#f5a524 100%)',
+                  background: 'linear-gradient(180deg,#ffd27a 0%,var(--color-brand-amber) 100%)',
                   WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
                 }}
               >
@@ -366,7 +354,7 @@ export default function DashboardOverviewPage() {
                   padding: '6px 12px',
                   border: '1px solid rgba(126,231,255,0.25)',
                   background: 'rgba(126,231,255,0.06)',
-                  color: '#9aa8c4',
+                  color: 'var(--color-text-muted)',
                   fontFamily: 'JetBrains Mono, monospace',
                   ...chamfer(8),
                 }}
@@ -378,10 +366,10 @@ export default function DashboardOverviewPage() {
           </div>
           <p
             className="dash-mono text-[10px] pt-3"
-            style={{ borderTop: '1px dashed rgba(126,231,255,0.1)', color: '#5c6886' }}
+            style={{ borderTop: '1px dashed rgba(126,231,255,0.1)', color: 'var(--color-text-subtle)' }}
           >
             // Mốc Solar đã hoàn thành:{' '}
-            <span style={{ color: '#7ee7ff' }}>{solarDoneCount}</span>
+            <span style={{ color: 'var(--color-accent)' }}>{solarDoneCount}</span>
           </p>
         </HudPanel>
       </section>
@@ -397,14 +385,14 @@ export default function DashboardOverviewPage() {
                 className="flex items-center justify-center"
                 style={{ width: 30, height: 30, border: '1px solid rgba(126,231,255,0.3)', ...chamfer(6) }}
               >
-                <BookOpen size={14} strokeWidth={1.6} style={{ color: '#7ee7ff' }} />
+                <BookOpen size={14} strokeWidth={1.6} style={{ color: 'var(--color-accent)' }} />
               </div>
-              <h2 className="text-sm font-semibold" style={{ color: '#eaf6ff' }}>Khóa học của tôi</h2>
+              <h2 className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>Khóa học của tôi</h2>
             </div>
             <Link
               href="/my-courses"
               className="dash-mono text-[10px] uppercase flex items-center gap-0.5 transition-colors"
-              style={{ color: '#7ee7ff', letterSpacing: '0.12em', textDecoration: 'underline', textDecorationColor: 'rgba(126,231,255,0.3)' }}
+              style={{ color: 'var(--color-accent)', letterSpacing: '0.12em', textDecoration: 'underline', textDecorationColor: 'rgba(126,231,255,0.3)' }}
             >
               Xem tất cả <ChevronRight size={11} />
             </Link>
@@ -415,8 +403,8 @@ export default function DashboardOverviewPage() {
               href={`/tutorial/${currentLearningPathModule.module.id}`}
               className="block transition-all"
               style={{
-                border: '1px solid rgba(126,231,255,0.2)',
-                background: 'rgba(10,16,36,0.6)',
+                border: '1px solid var(--color-border)',
+                background: 'var(--color-panel-muted)',
                 padding: 16,
                 ...chamfer(12),
               }}
@@ -427,27 +415,27 @@ export default function DashboardOverviewPage() {
                   style={{
                     width: 48, height: 48,
                     border: '1.5px solid rgba(126,231,255,0.4)',
-                    background: 'linear-gradient(135deg,rgba(126,231,255,0.15) 0%,rgba(77,210,255,0.08) 100%)',
-                    color: '#7ee7ff',
-                    boxShadow: '0 0 12px rgba(126,231,255,0.15)',
+                    background: 'linear-gradient(135deg,var(--color-accent-soft) 0%,rgba(77,210,255,0.08) 100%)',
+                    color: 'var(--color-accent)',
+                    boxShadow: '0 0 12px var(--color-accent-soft)',
                     ...chamfer(8),
                   }}
                 >
                   {pathTitle.slice(0, 1).toUpperCase()}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="font-semibold truncate" style={{ color: '#eaf6ff' }}>{pathTitle}</p>
-                  <p className="text-sm truncate mt-0.5" style={{ color: '#9aa8c4' }}>{pathSubtitle}</p>
+                  <p className="font-semibold truncate" style={{ color: 'var(--color-text-primary)' }}>{pathTitle}</p>
+                  <p className="text-sm truncate mt-0.5" style={{ color: 'var(--color-text-muted)' }}>{pathSubtitle}</p>
                   <div className="mt-3">
                     <div className="flex justify-between mb-1.5">
-                      <span className="dash-mono text-[10px] uppercase" style={{ color: '#5c6886', letterSpacing: '0.1em' }}>Tiến độ</span>
-                      <span className="dash-mono text-[10px]" style={{ color: '#7ee7ff' }}>{currentModulePct}%</span>
+                      <span className="dash-mono text-[10px] uppercase" style={{ color: 'var(--color-text-subtle)', letterSpacing: '0.1em' }}>Tiến độ</span>
+                      <span className="dash-mono text-[10px]" style={{ color: 'var(--color-accent)' }}>{currentModulePct}%</span>
                     </div>
-                    <div style={{ height: 4, background: 'rgba(126,231,255,0.08)', border: '1px solid rgba(126,231,255,0.12)', ...chamfer(2) }}>
+                    <div style={{ height: 4, background: 'rgba(126,231,255,0.08)', border: '1px solid var(--color-border)', ...chamfer(2) }}>
                       <div
                         style={{
                           height: '100%', width: `${currentModulePct}%`,
-                          background: 'linear-gradient(90deg,#7ee7ff,#4dd2ff)',
+                          background: 'linear-gradient(90deg,var(--color-accent),#4dd2ff)',
                           boxShadow: '0 0 6px rgba(126,231,255,0.6)',
                           transition: 'width 0.5s ease',
                           ...chamfer(2),
@@ -461,12 +449,12 @@ export default function DashboardOverviewPage() {
           ) : (
             <div
               className="p-6 text-center"
-              style={{ border: '1px dashed rgba(126,231,255,0.15)', background: 'rgba(126,231,255,0.02)', ...chamfer(10) }}
+              style={{ border: '1px dashed var(--color-accent-soft)', background: 'rgba(126,231,255,0.02)', ...chamfer(10) }}
             >
-              <p className="text-sm mb-3" style={{ color: '#5c6886' }}>
+              <p className="text-sm mb-3" style={{ color: 'var(--color-text-subtle)' }}>
                 {userId ? 'Hoàn thành một bài trong lộ trình học để thấy tiến độ tại đây.' : 'Đăng nhập để đồng bộ tiến độ.'}
               </p>
-              <Link href="/tutorial" className="text-sm" style={{ color: '#7ee7ff' }}>
+              <Link href="/tutorial" className="text-sm" style={{ color: 'var(--color-accent)' }}>
                 Mở Lộ trình →
               </Link>
             </div>
@@ -482,7 +470,7 @@ export default function DashboardOverviewPage() {
             >
               <TrendingUp size={14} strokeWidth={1.6} style={{ color: '#6dffb0' }} />
             </div>
-            <h2 className="text-sm font-semibold" style={{ color: '#eaf6ff' }}>Hoạt động gần đây</h2>
+            <h2 className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>Hoạt động gần đây</h2>
           </div>
           <ul className="space-y-3">
             {learningPathDoneCount > 0 ? (
@@ -497,22 +485,22 @@ export default function DashboardOverviewPage() {
                   <CheckCircle2 size={13} strokeWidth={2} style={{ color: '#6dffb0' }} />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm" style={{ color: '#eaf6ff' }}>
+                  <p className="text-sm" style={{ color: 'var(--color-text-primary)' }}>
                     Lộ trình học — {learningPathDoneCount} bài đã hoàn thành
                   </p>
-                  <p className="dash-mono text-[10px] mt-0.5" style={{ color: '#5c6886' }}>
+                  <p className="dash-mono text-[10px] mt-0.5" style={{ color: 'var(--color-text-subtle)' }}>
                     // {learningPathPct}% tổng lộ trình
                   </p>
                 </div>
                 <span
                   className="dash-mono text-[11px] font-medium shrink-0"
-                  style={{ color: '#f5a524', textShadow: '0 0 8px rgba(245,165,36,0.5)' }}
+                  style={{ color: 'var(--color-brand-amber)', textShadow: '0 0 8px rgba(245,165,36,0.5)' }}
                 >
                   +{learningPathDoneCount * 10} XP
                 </span>
               </li>
             ) : (
-              <li className="text-sm" style={{ color: '#5c6886' }}>
+              <li className="text-sm" style={{ color: 'var(--color-text-subtle)' }}>
                 Chưa có hoạt động. Bắt đầu từ Lộ trình hoặc khóa học.
               </li>
             )}
@@ -525,10 +513,10 @@ export default function DashboardOverviewPage() {
                   className="shrink-0 flex items-center justify-center mt-0.5"
                   style={{ width: 24, height: 24, borderRadius: '50%', border: '1.5px solid rgba(245,165,36,0.5)', background: 'rgba(245,165,36,0.1)', boxShadow: '0 0 8px rgba(245,165,36,0.2)' }}
                 >
-                  <CheckCircle2 size={13} strokeWidth={2} style={{ color: '#f5a524' }} />
+                  <CheckCircle2 size={13} strokeWidth={2} style={{ color: 'var(--color-brand-amber)' }} />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm" style={{ color: '#eaf6ff' }}>
+                  <p className="text-sm" style={{ color: 'var(--color-text-primary)' }}>
                     Khám phá — {solarDoneCount} mốc hành trình
                   </p>
                 </div>

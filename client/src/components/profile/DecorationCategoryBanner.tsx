@@ -30,7 +30,7 @@ export function DecorationCategoryBanner({
 
   return (
     <div
-      className={`relative w-full overflow-hidden rounded-2xl border border-white/10 ${
+      className={`relative w-full overflow-hidden rounded-2xl border border-ds-border ${
         tall ? 'min-h-[120px] sm:min-h-[152px]' : 'min-h-[96px]'
       } ${className}`}
     >
@@ -69,7 +69,7 @@ export function DecorationCategoryBanner({
           </p>
         ) : null}
         {!src ? (
-          <p className="text-[11px] text-slate-500 mt-2">Chưa có ảnh banner nhóm — quản trị có thể tải lên.</p>
+          <p className="text-[11px] text-ds-subtle mt-2">Chưa có ảnh banner nhóm — quản trị có thể tải lên.</p>
         ) : null}
       </div>
     </div>

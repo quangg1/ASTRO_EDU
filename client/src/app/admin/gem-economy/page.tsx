@@ -191,7 +191,7 @@ export default function AdminGemEconomyPage() {
 
   if (!checked || !user) {
     return (
-      <div className="min-h-screen bg-black pt-20 px-4 text-gray-400 flex items-center gap-2">
+      <div className="min-h-screen bg-ds-base text-ds-text pt-20 px-4 text-gray-400 flex items-center gap-2">
         <Spinner /> Đang kiểm tra phiên…
       </div>
     )
@@ -200,7 +200,7 @@ export default function AdminGemEconomyPage() {
   if (!canAccessAdminPath(user, '/admin/gem-economy')) return null
 
   return (
-    <div className="min-h-screen bg-black pt-16 px-4 pb-16">
+    <div className="min-h-screen bg-ds-base text-ds-text pt-16 px-4 pb-16">
       <main className="max-w-5xl mx-auto">
         <PageHeader
           title="Kinh tế Gem"

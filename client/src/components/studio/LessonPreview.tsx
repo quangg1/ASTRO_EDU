@@ -285,11 +285,11 @@ export default function LessonPreview({ lesson, conceptAnchors, concepts }: Less
   return (
     <div className="space-y-5">
       {/* Header */}
-      <div className="rounded-2xl overflow-hidden border border-ds-border bg-gradient-to-br from-[#0a1628] to-[#0a0f17]">
+      <div className="rounded-2xl overflow-hidden border border-ds-border bg-gradient-to-br from-[#0a1628] to-[var(--color-bg-base)]">
         {lesson.coverImage && (
           <div className="relative w-full h-44">
             <img src={lesson.coverImage} alt="" className="w-full h-full object-cover opacity-70" />
-            <div className="absolute inset-0 bg-gradient-to-t from-[#0a0f17] via-transparent to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-t from-[var(--color-bg-base)] via-transparent to-transparent" />
           </div>
         )}
         <div className={`p-5 ${lesson.coverImage ? '-mt-12 relative' : ''}`}>

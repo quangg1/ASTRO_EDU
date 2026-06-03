@@ -29,7 +29,7 @@ import { readRouteCache, writeRouteCache } from '@/lib/clientRouteCache'
 const RichTextEditor = dynamic(() => import('@/components/studio/RichTextEditor'), {
   ssr: false,
   loading: () => (
-    <div className="min-h-[180px] rounded-xl border border-white/15 bg-black/30 animate-pulse" aria-hidden />
+    <div className="min-h-[180px] rounded-xl border border-ds-border bg-ds-surface/70 animate-pulse" aria-hidden />
   ),
 })
 
@@ -154,7 +154,7 @@ export function DiscussionForumView({ forum, slug, user }: Props) {
 
   return (
     <>
-      <div className="mb-6 rounded-2xl border border-white/10 bg-[#08111f]/70 p-5 md:p-6">
+      <div className="cosmo-dark-panel mb-6 rounded-2xl p-5 md:p-6">
         <div className="flex items-start justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-white flex items-center gap-2 md:text-3xl">
@@ -163,21 +163,21 @@ export function DiscussionForumView({ forum, slug, user }: Props) {
               </span>
               {forum.title}
             </h1>
-            <p className="text-gray-400 mt-2 max-w-2xl leading-relaxed">{forum.description}</p>
-            <p className="text-xs text-gray-500 mt-3">{total} bài · Dùng #hashtag trong bài để gắn chủ đề</p>
+            <p className="text-ds-muted mt-2 max-w-2xl leading-relaxed">{forum.description}</p>
+            <p className="text-xs text-ds-subtle mt-3">{total} bài · Dùng #hashtag trong bài để gắn chủ đề</p>
           </div>
           {user && (
             <button
               type="button"
               onClick={() => setShowNewPost(!showNewPost)}
-              className="px-4 py-2 rounded-xl bg-cyan-600 text-white text-sm font-medium hover:bg-cyan-500"
+              className="px-4 py-2 rounded-xl bg-cyan-600 text-white text-sm font-medium hover:opacity-90"
             >
               {showNewPost ? 'Đóng' : composeContext ? 'Đặt câu hỏi' : 'Tạo bài viết'}
             </button>
           )}
         </div>
 
-        <div className="mt-5 space-y-4 border-t border-white/10 pt-4">
+        <div className="mt-5 space-y-4 border-t border-ds-border pt-4">
           <CommunitySearchBar
             global={false}
             scope="discussion"
@@ -196,7 +196,7 @@ export function DiscussionForumView({ forum, slug, user }: Props) {
       {composeContext && contextFilterActive && !showNewPost && (
         <p className="mb-4 text-sm text-violet-200/90 rounded-xl border border-violet-500/25 bg-violet-500/10 px-4 py-2.5">
           Đang hiển thị câu hỏi liên quan tới bài học này.{' '}
-          <Link href={`/community/${slug}`} className="underline text-cyan-300">
+          <Link href={`/community/${slug}`} className="underline text-ds-accent">
             Xem tất cả trong {forum.title}
           </Link>
         </p>
@@ -212,14 +212,14 @@ export function DiscussionForumView({ forum, slug, user }: Props) {
       )}
 
       {showNewPost && user && (
-        <div className="mb-6 rounded-2xl border border-cyan-500/30 bg-[#060e1c]/90 p-5">
+        <div className="cosmo-dark-panel mb-6 rounded-2xl border border-ds-accent/30 p-5">
           <h2 className="text-white font-semibold mb-3">
             {composeContext ? 'Đặt câu hỏi học tập' : 'Tạo bài viết mới'}
           </h2>
           {composeContext && <LearningComposeBanner context={composeContext} />}
-          <p className="text-xs text-slate-500 mb-3">Gõ #tên-chủ-đề trong nội dung để thêm hashtag (vd. #sao-hỏa).</p>
+          <p className="text-xs text-ds-subtle mb-3">Gõ #tên-chủ-đề trong nội dung để thêm hashtag (vd. #sao-hỏa).</p>
           <div className="mb-3">
-            <label className="text-xs text-slate-400">Tiêu đề</label>
+            <label className="text-xs text-ds-muted">Tiêu đề</label>
             <input
               type="text"
               value={newTitle}
@@ -252,8 +252,8 @@ export function DiscussionForumView({ forum, slug, user }: Props) {
 
       {loading ? (
         <div className="space-y-3">
-          <div className="h-24 rounded-xl border border-white/10 bg-white/5 animate-pulse" />
-          <div className="h-24 rounded-xl border border-white/10 bg-white/5 animate-pulse" />
+          <div className="h-24 rounded-xl border border-ds-border bg-white/5 animate-pulse" />
+          <div className="h-24 rounded-xl border border-ds-border bg-white/5 animate-pulse" />
         </div>
       ) : (
         <DiscussionPostList

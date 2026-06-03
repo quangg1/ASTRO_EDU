@@ -76,7 +76,7 @@ export function Controls() {
           className={clsx(
             'w-10 h-10 rounded-full flex items-center justify-center transition-colors',
             currentStageIndex === 0
-              ? 'bg-gray-700 text-gray-500 cursor-not-allowed'
+              ? 'bg-gray-700 text-ds-subtle cursor-not-allowed'
               : 'text-white'
           )}
           style={currentStageIndex === 0 ? undefined : { backgroundColor: accent }}
@@ -118,18 +118,18 @@ export function Controls() {
             onChange={(e) => setStageIndex(parseInt(e.target.value))}
             className="w-32 accent-cyan-400"
           />
-          <span className="text-sm text-gray-400 w-16">
+          <span className="text-sm text-ds-muted w-16">
             {currentStageIndex + 1}/{totalStages}
           </span>
         </div>
 
         {/* Speed = khoảng cách ms giữa hai kỳ; 0 = đứng yên (không tự chuyển kỳ). */}
         <div className="flex items-center gap-2 px-4 border-l" style={{ borderColor: `${accent}55` }}>
-          <span className="text-sm text-gray-400 whitespace-nowrap">Tốc độ:</span>
+          <span className="text-sm text-ds-muted whitespace-nowrap">Tốc độ:</span>
           <select
             value={playSpeed}
             onChange={(e) => setPlaySpeed(Number(e.target.value))}
-            className="rounded border bg-black/40 px-2 py-1 text-sm text-white"
+            className="rounded border bg-ds-elevated/80 px-2 py-1 text-sm text-white"
             style={{ borderColor: `${accent}66` }}
           >
             <option value={0}>0x — đứng yên</option>
@@ -142,7 +142,7 @@ export function Controls() {
 
         <div className="flex items-center gap-1.5 border-l px-4" style={{ borderColor: `${accent}55` }}>
           <span
-            className="hidden max-w-[5.5rem] text-[9px] leading-tight text-gray-400 sm:inline"
+            className="hidden max-w-[5.5rem] text-[9px] leading-tight text-ds-muted sm:inline"
             title="Phím Space — tạm dừng / tiếp tục quay Trái Đất (khác tốc độ timeline)"
           >
             Space: {earthRotationPaused ? '▶ quay' : '⏸ dừng'}

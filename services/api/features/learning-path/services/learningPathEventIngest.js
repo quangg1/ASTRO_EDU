@@ -1,6 +1,7 @@
 const LearningPathEvent = require('../models/LearningPathEvent');
 const { normalizeLearningPathEvent } = require('../lib/normalizeLearningPathEvent');
 const { processLearnerSignalsForEvents } = require('./learnerSignalProcessor');
+const { bridgeLearningPathEvents } = require('../../learning-state/services/learningStateEngine');
 
 /**
  * Idempotent ingest — upsert on eventId; chỉ event mới trigger rewards/signals.
@@ -40,6 +41,11 @@ async function ingestLearningPathEvents(rawEvents, userId) {
 
   if (inserted.length > 0) {
     await processLearnerSignalsForEvents(inserted);
+    try {
+      await bridgeLearningPathEvents(inserted);
+    } catch (err) {
+      console.warn('[learning-state] bridge from LP events failed:', err.message);
+    }
   }
 
   return { normalized, inserted, rejections };

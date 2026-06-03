@@ -46,17 +46,8 @@ function searchLearningPath(query: string) {
 }
 
 // ── Design tokens ──────────────────────────────────────────────
-const CYAN = '#7ee7ff'
-const AMBER = '#f5a524'
-
-function pr(seed: number) { const x = Math.sin(seed + 1) * 10000; return x - Math.floor(x) }
-const STARS = Array.from({ length: 160 }, (_, i) => ({
-  x: pr(i * 7 + 1) * 100, y: pr(i * 7 + 2) * 100,
-  r: pr(i * 7 + 3) * 1.2 + 0.4,
-  o: pr(i * 7 + 4) * 0.55 + 0.18,
-  d: pr(i * 7 + 5) * 4 + 2.2,
-  c: pr(i * 7 + 6) > 0.9 ? CYAN : pr(i * 7 + 1) > 0.88 ? AMBER : '#ffffff',
-}))
+const CYAN = 'var(--color-accent)'
+const AMBER = 'var(--color-brand-amber)'
 
 function CornerBrackets({ color, size = 14, thickness = 1.5 }: { color: string; size?: number; thickness?: number }) {
   const base: React.CSSProperties = { position: 'absolute', width: size, height: size, pointerEvents: 'none' }
@@ -80,7 +71,7 @@ function highlight(text: string, q: string) {
   return (
     <>
       {text.slice(0, idx)}
-      <mark style={{ background: 'rgba(126,231,255,0.22)', color: '#7ee7ff', borderRadius: 2, padding: '0 2px', fontStyle: 'normal' }}>
+      <mark style={{ background: 'rgba(126,231,255,0.22)', color: 'var(--color-accent)', borderRadius: 2, padding: '0 2px', fontStyle: 'normal' }}>
         {text.slice(idx, idx + qLower.length)}
       </mark>
       {text.slice(idx + qLower.length)}
@@ -122,8 +113,8 @@ function SectionHeader({ num, label, count, accent, accentRgb }: {
         <span style={{ width: 5, height: 5, borderRadius: '50%', background: accent, display: 'inline-block', boxShadow: `0 0 5px ${accent}`, animation: 'srch-pulse 2.2s ease-in-out infinite' }} />
         {num} · {label}
       </div>
-      <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 11, color: '#5c6886', letterSpacing: '0.12em', whiteSpace: 'nowrap' as const, flexShrink: 0 }}>
-        / <b style={{ color: '#9aa8c4' }}>{count}</b> kết quả
+      <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 11, color: 'var(--color-text-subtle)', letterSpacing: '0.12em', whiteSpace: 'nowrap' as const, flexShrink: 0 }}>
+        / <b style={{ color: 'var(--color-text-muted)' }}>{count}</b> kết quả
       </span>
       <div style={{ flex: 1, height: 1, background: `linear-gradient(90deg,rgba(${accentRgb},0.22),transparent)` }} />
     </div>
@@ -166,7 +157,7 @@ export default function SearchPage() {
   const totalHits = courses.length + pathHits.length
 
   return (
-    <div style={{ minHeight: '100vh', background: '#03060f', position: 'relative', overflow: 'hidden', fontFamily: "'Space Grotesk', sans-serif" }}>
+    <div className="relative z-10 w-full overflow-hidden font-sans text-ds-text" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
 
       {/* ── Keyframes + hover CSS ── */}
       <style>{`
@@ -187,7 +178,7 @@ export default function SearchPage() {
         .srch-ibox { transition: border-color 0.2s ease, box-shadow 0.2s ease; }
         .srch-arrow { transition: background 0.2s ease, color 0.2s ease; }
         .srch-arrowicon { display: inline-block; transition: transform 0.2s ease; }
-        .srch-input:focus { border-color: rgba(126,231,255,0.55) !important; box-shadow: 0 0 0 1px rgba(126,231,255,0.15), 0 0 22px rgba(126,231,255,0.07) !important; outline: none; }
+        .srch-input:focus { border-color: rgba(126,231,255,0.55) !important; box-shadow: 0 0 0 1px var(--color-accent-soft), 0 0 22px rgba(126,231,255,0.07) !important; outline: none; }
 
         @media (max-width: 1100px) { .srch-edge { display: none !important; } }
         @media (max-width: 980px)  { .srch-hero { grid-template-columns: 1fr !important; } .srch-scope { min-height: 260px !important; } }
@@ -198,65 +189,14 @@ export default function SearchPage() {
         }
       `}</style>
 
-      {/* ── Starfield ── */}
-      <svg aria-hidden style={{ position: 'fixed', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 0 }}>
-        {STARS.map((s, i) => (
-          <circle key={i} cx={`${s.x}%`} cy={`${s.y}%`} r={s.r} fill={s.c} opacity={s.o}>
-            <animate attributeName="opacity" values={`${s.o.toFixed(2)};${(s.o * 0.18).toFixed(2)};${s.o.toFixed(2)}`} dur={`${s.d.toFixed(1)}s`} repeatCount="indefinite" />
-          </circle>
-        ))}
-      </svg>
-
-      {/* ── Grid overlay ── */}
-      <div aria-hidden style={{
-        position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0,
-        backgroundImage: 'linear-gradient(rgba(255,255,255,0.016) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.016) 1px,transparent 1px)',
-        backgroundSize: '80px 80px',
-        maskImage: 'radial-gradient(ellipse 80% 80% at 50% 50%,black 10%,transparent 100%)',
-        WebkitMaskImage: 'radial-gradient(ellipse 80% 80% at 50% 50%,black 10%,transparent 100%)',
-      }} />
-
-      {/* ── Scanline ── */}
-      <div aria-hidden style={{
-        position: 'fixed', left: 0, right: 0, top: 0, height: 2,
-        background: `linear-gradient(90deg,transparent,${CYAN},transparent)`,
-        boxShadow: `0 0 8px ${CYAN}`, opacity: 0.45,
-        animation: 'srch-scan 9s linear infinite',
-        pointerEvents: 'none', zIndex: 2,
-      }} />
-
-      {/* ── Ambient glow ── */}
-      <div aria-hidden style={{
-        position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0,
-        background: 'radial-gradient(ellipse 55% 35% at 6% 68%,rgba(245,165,36,0.05) 0%,transparent 60%),radial-gradient(ellipse 55% 35% at 94% 32%,rgba(126,231,255,0.06) 0%,transparent 60%)',
-      }} />
-
-      {/* ── Edge labels ── */}
-      <div className="srch-edge" style={{ position: 'fixed', left: 6, top: 0, bottom: 0, display: 'flex', alignItems: 'center', pointerEvents: 'none', zIndex: 2 }}>
-        <span style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', fontFamily: "'JetBrains Mono',monospace", fontSize: 10, letterSpacing: '0.14em', color: '#1e2d44', whiteSpace: 'nowrap', textTransform: 'uppercase' }}>
-          CosmoLearn · v2.6 · Catalog · Search
-        </span>
-      </div>
-      <div className="srch-edge" style={{ position: 'fixed', right: 6, top: 0, bottom: 0, display: 'flex', alignItems: 'center', pointerEvents: 'none', zIndex: 2 }}>
-        <span style={{ writingMode: 'vertical-rl', fontFamily: "'JetBrains Mono',monospace", fontSize: 10, letterSpacing: '0.14em', color: '#1e2d44', whiteSpace: 'nowrap', textTransform: 'uppercase' }}>
-          Lat 21.0285° N — Lon 105.8542° E — Alt 12m
-        </span>
-      </div>
-
       {/* ── Main ── */}
-      <main className="srch-shell" style={{ position: 'relative', zIndex: 10, paddingTop: 88, paddingBottom: 80, paddingLeft: 'clamp(24px,4vw,64px)', paddingRight: 'clamp(24px,4vw,64px)', maxWidth: 1180, margin: '0 auto' }}>
+      <main className="srch-shell" style={{ position: 'relative', zIndex: 10, paddingTop: 24, paddingBottom: 80, paddingLeft: 'clamp(24px,4vw,64px)', paddingRight: 'clamp(24px,4vw,64px)', maxWidth: 1180, margin: '0 auto' }}>
 
         {/* ── Hero: HUD frame + Scope ── */}
         <div className="srch-hero" style={{ display: 'grid', gridTemplateColumns: '1.25fr 0.75fr', gap: 28, marginBottom: 48, alignItems: 'start' }}>
 
           {/* Left — HUD frame */}
-          <div style={{
-            position: 'relative', padding: '30px 32px 28px',
-            background: 'rgba(6,9,26,0.80)',
-            border: '1px solid rgba(126,231,255,0.18)',
-            clipPath: 'polygon(18px 0%,100% 0%,100% calc(100% - 18px),calc(100% - 18px) 100%,0% 100%,0% 18px)',
-            boxShadow: 'inset 0 0 40px rgba(126,231,255,0.025)',
-          }}>
+          <div className="cosmo-dark-panel rounded-2xl relative" style={{ padding: '30px 32px 28px' }}>
             <CornerBrackets color={CYAN} size={16} thickness={1.5} />
 
             {/* Diagonal tab + eyebrow */}
@@ -265,8 +205,8 @@ export default function SearchPage() {
                 display: 'inline-flex', alignItems: 'center', gap: 8,
                 padding: '5px 22px 5px 14px',
                 clipPath: 'polygon(0 0, calc(100% - 14px) 0, 100% 100%, 0 100%)',
-                background: 'rgba(126,231,255,0.09)',
-                border: '1px solid rgba(126,231,255,0.35)',
+                background: 'var(--color-accent-soft)',
+                border: '1px solid var(--color-border-accent, var(--color-border))',
                 fontFamily: "'JetBrains Mono',monospace", fontSize: 10, letterSpacing: '0.2em', textTransform: 'uppercase',
                 color: CYAN, flexShrink: 0,
               }}>
@@ -296,7 +236,7 @@ export default function SearchPage() {
               <span>// scope · catalog</span>
               <span>· depth · all</span>
               <span>· <span style={{ color: '#6dffb0' }}>●</span> live</span>
-              {totalHits > 0 && <span style={{ color: '#9aa8c4' }}>· {totalHits} hits</span>}
+              {totalHits > 0 && <span style={{ color: 'var(--color-text-muted)' }}>· {totalHits} hits</span>}
             </div>
 
             {/* Search input */}
@@ -319,9 +259,9 @@ export default function SearchPage() {
                   width: '100%', boxSizing: 'border-box',
                   padding: '16px 52px 16px 48px',
                   background: 'rgba(3,6,15,0.6)',
-                  border: '1px solid rgba(126,231,255,0.2)',
+                  border: '1px solid var(--color-border)',
                   clipPath: 'polygon(14px 0%,100% 0%,100% calc(100% - 14px),calc(100% - 14px) 100%,0% 100%,0% 14px)',
-                  color: '#eaf6ff', fontSize: 16, fontFamily: "'Space Grotesk',sans-serif",
+                  color: 'var(--color-text-primary)', fontSize: 16, fontFamily: "'Space Grotesk',sans-serif",
                   transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
                 }}
               />
@@ -333,7 +273,7 @@ export default function SearchPage() {
                   onClick={() => setQ('')}
                   style={{
                     position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)',
-                    background: 'rgba(126,231,255,0.08)', border: '1px solid rgba(126,231,255,0.2)',
+                    background: 'rgba(126,231,255,0.08)', border: '1px solid var(--color-border)',
                     color: CYAN, width: 24, height: 24, borderRadius: '50%',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     cursor: 'pointer', fontSize: 14, fontFamily: 'monospace',
@@ -347,7 +287,7 @@ export default function SearchPage() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
               <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 10, letterSpacing: '0.14em', color: '#8a9bb8' }}>
                 {debouncedQ.trim()
-                  ? <span>Đang lọc theo từ khoá <span style={{ color: '#eaf6ff' }}>"{debouncedQ}"</span></span>
+                  ? <span>Đang lọc theo từ khoá <span style={{ color: 'var(--color-text-primary)' }}>"{debouncedQ}"</span></span>
                   : 'Nhập từ khoá để bắt đầu tìm kiếm'}
               </span>
               <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 10, letterSpacing: '0.14em', color: '#8a9bb8' }}>
@@ -359,8 +299,8 @@ export default function SearchPage() {
           {/* Right — Scope visualizer */}
           <div className="srch-scope" style={{
             position: 'relative',
-            background: 'rgba(6,9,26,0.65)',
-            border: '1px solid rgba(126,231,255,0.15)',
+            background: 'var(--color-panel-muted)',
+            border: '1px solid var(--color-accent-soft)',
             clipPath: 'polygon(18px 0%,100% 0%,100% calc(100% - 18px),calc(100% - 18px) 100%,0% 100%,0% 18px)',
             display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
             padding: '28px 20px 20px',
@@ -409,10 +349,10 @@ export default function SearchPage() {
               </circle>
 
               {/* Planet dots */}
-              <circle cx="121" cy="79" r="2.5" fill="#9aa8c4" opacity="0.7" />
+              <circle cx="121" cy="79" r="2.5" fill="var(--color-text-muted)" opacity="0.7" />
               <circle cx="143" cy="100" r="3" fill={CYAN} opacity="0.85" />
               <circle cx="58" cy="128" r="3.5" fill="#b48fff" opacity="0.65" />
-              <circle cx="100" cy="14" r="2" fill="#9aa8c4" opacity="0.45" />
+              <circle cx="100" cy="14" r="2" fill="var(--color-text-muted)" opacity="0.45" />
 
               {/* Highlighted dot — result position */}
               {debouncedQ.trim() && (
@@ -428,11 +368,11 @@ export default function SearchPage() {
               display: 'flex', alignItems: 'center', gap: 10,
               padding: '6px 14px',
               clipPath: 'polygon(8px 0%,100% 0%,calc(100% - 8px) 100%,0% 100%)',
-              background: 'rgba(6,9,26,0.7)',
-              border: '1px solid rgba(126,231,255,0.18)',
-              fontFamily: "'JetBrains Mono',monospace", fontSize: 10, letterSpacing: '0.14em', color: '#5c6886',
+              background: 'var(--color-panel-muted)',
+              border: '1px solid var(--color-border)',
+              fontFamily: "'JetBrains Mono',monospace", fontSize: 10, letterSpacing: '0.14em', color: 'var(--color-text-subtle)',
             }}>
-              <span style={{ color: '#9aa8c4' }}>{totalHits} hits</span>
+              <span style={{ color: 'var(--color-text-muted)' }}>{totalHits} hits</span>
               {debouncedQ.trim() && <><span style={{ color: '#3a4560' }}>·</span><span>q: "{debouncedQ}"</span></>}
               {courses.length > 0 && <><span style={{ color: '#3a4560' }}>·</span><span style={{ color: AMBER }}>{courses.length} course</span></>}
             </div>
@@ -441,7 +381,7 @@ export default function SearchPage() {
 
         {/* ── Results ── */}
         {loading && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '20px 0', fontFamily: "'JetBrains Mono',monospace", fontSize: 12, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#5c6886' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '20px 0', fontFamily: "'JetBrains Mono',monospace", fontSize: 12, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--color-text-subtle)' }}>
             <span style={{ width: 6, height: 6, borderRadius: '50%', background: CYAN, display: 'inline-block', animation: 'srch-pulse 1s ease-in-out infinite' }} />
             Đang tìm kiếm…
           </div>
@@ -463,7 +403,7 @@ export default function SearchPage() {
                           '--c-rgb': '245,165,36',
                           position: 'relative',
                           display: 'flex', alignItems: 'center',
-                          background: 'linear-gradient(135deg,rgba(245,165,36,0.04) 0%,rgba(6,9,26,0.82) 55%)',
+                          background: 'linear-gradient(135deg,rgba(245,165,36,0.04) 0%,var(--color-panel-glass) 55%)',
                           border: '1px solid rgba(245,165,36,0.15)',
                           clipPath: 'polygon(10px 0%,100% 0%,100% calc(100% - 10px),calc(100% - 10px) 100%,0% 100%,0% 10px)',
                           overflow: 'hidden',
@@ -496,10 +436,10 @@ export default function SearchPage() {
 
                         {/* Content */}
                         <div style={{ flex: 1, padding: '14px 16px', minWidth: 0 }}>
-                          <p style={{ margin: '0 0 5px', fontFamily: "'Space Grotesk',sans-serif", fontWeight: 600, fontSize: 17, color: '#eaf6ff', lineHeight: 1.3 }}>
+                          <p style={{ margin: '0 0 5px', fontFamily: "'Space Grotesk',sans-serif", fontWeight: 600, fontSize: 17, color: 'var(--color-text-primary)', lineHeight: 1.3 }}>
                             {highlightAmber(c.title, debouncedQ)}
                           </p>
-                          <p style={{ margin: '0 0 8px', fontFamily: "'Space Grotesk',sans-serif", fontSize: 13, color: '#9aa8c4', lineHeight: 1.5, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
+                          <p style={{ margin: '0 0 8px', fontFamily: "'Space Grotesk',sans-serif", fontSize: 13, color: 'var(--color-text-muted)', lineHeight: 1.5, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
                             {c.description}
                           </p>
                           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -514,8 +454,8 @@ export default function SearchPage() {
                             <span style={{
                               display: 'inline-flex', alignItems: 'center', padding: '3px 10px',
                               clipPath: 'polygon(4px 0%,100% 0%,calc(100% - 4px) 100%,0% 100%)',
-                              background: 'rgba(126,231,255,0.06)', border: '1px solid rgba(126,231,255,0.18)',
-                              fontFamily: "'JetBrains Mono',monospace", fontSize: 10, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#9aa8c4',
+                              background: 'rgba(126,231,255,0.06)', border: '1px solid var(--color-border)',
+                              fontFamily: "'JetBrains Mono',monospace", fontSize: 10, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--color-text-muted)',
                             }}>
                               {c.level}
                             </span>
@@ -523,7 +463,7 @@ export default function SearchPage() {
                               display: 'inline-flex', alignItems: 'center', padding: '3px 10px',
                               clipPath: 'polygon(4px 0%,100% 0%,calc(100% - 4px) 100%,0% 100%)',
                               background: 'rgba(245,165,36,0.06)', border: '1px solid rgba(245,165,36,0.16)',
-                              fontFamily: "'JetBrains Mono',monospace", fontSize: 10, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#5c6886',
+                              fontFamily: "'JetBrains Mono',monospace", fontSize: 10, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--color-text-subtle)',
                             }}>
                               // astronomy.observatory
                             </span>
@@ -562,8 +502,8 @@ export default function SearchPage() {
                           '--c-rgb': '126,231,255',
                           position: 'relative',
                           display: 'flex', alignItems: 'center',
-                          background: 'linear-gradient(135deg,rgba(126,231,255,0.04) 0%,rgba(6,9,26,0.82) 55%)',
-                          border: '1px solid rgba(126,231,255,0.14)',
+                          background: 'linear-gradient(135deg,rgba(126,231,255,0.04) 0%,var(--color-panel-glass) 55%)',
+                          border: '1px solid var(--color-border)',
                           clipPath: 'polygon(10px 0%,100% 0%,100% calc(100% - 10px),calc(100% - 10px) 100%,0% 100%,0% 10px)',
                           overflow: 'hidden',
                         } as React.CSSProperties}
@@ -595,19 +535,19 @@ export default function SearchPage() {
 
                         {/* Content */}
                         <div style={{ flex: 1, padding: '14px 16px', minWidth: 0 }}>
-                          <p style={{ margin: '0 0 5px', fontFamily: "'Space Grotesk',sans-serif", fontWeight: 600, fontSize: 17, color: '#eaf6ff', lineHeight: 1.3 }}>
+                          <p style={{ margin: '0 0 5px', fontFamily: "'Space Grotesk',sans-serif", fontWeight: 600, fontSize: 17, color: 'var(--color-text-primary)', lineHeight: 1.3 }}>
                             {highlight(h.title, debouncedQ)}
                           </p>
                           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
                             <span style={{
                               display: 'inline-flex', alignItems: 'center', padding: '3px 10px',
                               clipPath: 'polygon(4px 0%,100% 0%,calc(100% - 4px) 100%,0% 100%)',
-                              background: 'rgba(126,231,255,0.07)', border: '1px solid rgba(126,231,255,0.22)',
+                              background: 'rgba(126,231,255,0.07)', border: '1px solid var(--color-border)',
                               fontFamily: "'JetBrains Mono',monospace", fontSize: 10, letterSpacing: '0.14em', textTransform: 'uppercase', color: CYAN,
                             }}>
                               Lộ trình
                             </span>
-                            <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#5c6886' }}>
+                            <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--color-text-subtle)' }}>
                               · {h.subtitle}
                             </span>
                           </div>
@@ -637,12 +577,12 @@ export default function SearchPage() {
               <div style={{
                 padding: '40px 32px',
                 clipPath: 'polygon(14px 0%,100% 0%,100% calc(100% - 14px),calc(100% - 14px) 100%,0% 100%,0% 14px)',
-                background: 'rgba(6,9,26,0.5)',
-                border: '1px dashed rgba(126,231,255,0.14)',
+                background: 'var(--color-panel-muted)',
+                border: '1px dashed var(--color-accent-soft)',
                 textAlign: 'center',
               }}>
-                <p style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 12, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#5c6886', margin: 0 }}>
-                  // Không tìm thấy kết quả cho <span style={{ color: '#9aa8c4' }}>"{debouncedQ}"</span>
+                <p style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 12, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--color-text-subtle)', margin: 0 }}>
+                  // Không tìm thấy kết quả cho <span style={{ color: 'var(--color-text-muted)' }}>"{debouncedQ}"</span>
                 </p>
               </div>
             )}
@@ -652,8 +592,8 @@ export default function SearchPage() {
               <div style={{
                 padding: '11px 18px',
                 clipPath: 'polygon(10px 0%,100% 0%,100% calc(100% - 10px),calc(100% - 10px) 100%,0% 100%,0% 10px)',
-                background: 'rgba(6,9,26,0.45)',
-                border: '1px dashed rgba(126,231,255,0.15)',
+                background: 'var(--color-panel-muted)',
+                border: '1px dashed var(--color-accent-soft)',
                 display: 'flex', alignItems: 'center', gap: 14,
               }}>
                 <div style={{
@@ -662,7 +602,7 @@ export default function SearchPage() {
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   color: CYAN, fontFamily: "'JetBrains Mono',monospace", fontSize: 12, fontWeight: 700,
                 }}>i</div>
-                <div style={{ flex: 1, display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6, fontFamily: "'JetBrains Mono',monospace", fontSize: 10, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#9aa8c4' }}>
+                <div style={{ flex: 1, display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6, fontFamily: "'JetBrains Mono',monospace", fontSize: 10, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--color-text-muted)' }}>
                   <span style={{ padding: '2px 9px', border: '1px solid rgba(126,231,255,0.28)', clipPath: 'polygon(4px 0%,100% 0%,calc(100% - 4px) 100%,0% 100%)', color: CYAN }}>↵ Enter</span>
                   <span>mở bài đầu</span>
                   <span style={{ color: '#3a4560', margin: '0 2px' }}>—</span>

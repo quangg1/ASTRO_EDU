@@ -390,6 +390,12 @@ async function buildStudioAssistContext(sessionContext, userRole) {
  * @param {{ lessonId?: string, lessonSlug?: string, courseSlug?: string, limit?: number }} opts
  */
 async function searchCommunityThreadsForAgent(opts = {}) {
+  const q = typeof opts.q === 'string' ? opts.q.trim() : '';
+  if (q.length >= 2) {
+    const { searchCommunityByQueryForAgent } = require('./contentSearchService');
+    return searchCommunityByQueryForAgent({ q, limit: opts.limit });
+  }
+
   const limit = Math.min(5, Math.max(1, opts.limit || 3));
   const forums = await Forum.find().lean();
   const discussionIds = forums.filter((f) => !isNewsForum(f)).map((f) => f._id);

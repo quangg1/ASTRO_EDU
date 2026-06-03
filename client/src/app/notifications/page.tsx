@@ -56,14 +56,14 @@ export default function NotificationsPage() {
 
   if (!checked || !user) {
     return (
-      <main className="surface-edu min-h-screen flex items-center justify-center">
+      <main className="surface-edu relative z-10 flex min-h-[40vh] items-center justify-center">
         <p className="text-sm text-ds-muted">Đang chuyển hướng…</p>
       </main>
     )
   }
 
   return (
-    <main className="surface-edu min-h-screen px-4 pb-16 pt-20">
+    <main className="surface-edu relative z-10 px-4 pb-16 pt-2">
       <div className="max-w-2xl mx-auto">
         <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
           <h1 className="text-2xl font-bold text-ds-text">Thông báo</h1>
@@ -106,7 +106,7 @@ export default function NotificationsPage() {
                 {!n.readAt && (
                   <button
                     type="button"
-                    className="mt-2 text-xs text-ds-accent hover:text-cyan-100"
+                    className="mt-2 text-xs text-ds-accent hover:text-ds-text"
                     onClick={() => void onRead(n.id)}
                   >
                     Đánh dấu đã đọc

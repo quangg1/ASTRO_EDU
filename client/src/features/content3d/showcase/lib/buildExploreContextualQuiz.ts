@@ -3,6 +3,8 @@ import type { ShowcaseOrbitEntity } from '@/lib/showcaseEntities'
 import type { QuizQuestion } from '@/shared/types/quizQuestion'
 import { newQuizQuestionId, setMcqAnswer } from '@/shared/types/quizQuestion'
 import type { ResolvedNasaCatalogItem } from './mergeShowcaseCatalog'
+import type { SkyExploreTarget } from '@/features/explore/lib/exploreTargets'
+import { buildSkyConstellationContextualQuiz } from '@/features/explore/lib/buildSkyContextualQuiz'
 
 const GROUP_LABEL_VI: Record<ResolvedNasaCatalogItem['group'], string> = {
   planets_moons: 'Hành tinh · vệ tinh',
@@ -103,8 +105,24 @@ export function buildExploreContextualQuiz(args: {
   concepts: LearningConcept[]
   catalog: ResolvedNasaCatalogItem[]
   limit?: number
+  skyTarget?: SkyExploreTarget | null
+  skyPeerTargets?: SkyExploreTarget[]
 }): QuizQuestion[] {
-  const { entityId, item, orbit, concepts, catalog, limit = 2 } = args
+  const { entityId, item, orbit, concepts, catalog, limit = 2, skyTarget, skyPeerTargets } =
+    args
+
+  if (
+    skyTarget?.kind === 'constellation' &&
+    entityId.startsWith('constellation-western-')
+  ) {
+    return buildSkyConstellationContextualQuiz({
+      target: skyTarget,
+      peerTargets: skyPeerTargets ?? [],
+      concepts,
+      limit,
+    })
+  }
+
   const label = String(item?.displayName || item?.name || entityId).trim()
   if (!label) return []
 

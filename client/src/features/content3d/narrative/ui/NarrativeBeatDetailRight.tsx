@@ -34,7 +34,7 @@ export function NarrativeBeatDetailRight({ entityLabel }: { entityLabel: string 
       <button
         type="button"
         onClick={toggleInfoPanel}
-        className="w-full shrink-0 rounded-xl border border-white/15 bg-black/50 px-3 py-2 text-xs text-slate-200 backdrop-blur-md hover:border-white/30"
+        className="w-full shrink-0 rounded-xl border border-ds-border bg-black/50 px-3 py-2 text-xs text-slate-200 backdrop-blur-md hover:border-white/30"
       >
         ⓘ Mở chi tiết giai đoạn
       </button>
@@ -44,8 +44,8 @@ export function NarrativeBeatDetailRight({ entityLabel }: { entityLabel: string 
   if (site) {
     return (
       <DetailShell accent={accent}>
-        <div className="flex shrink-0 items-center justify-between border-b border-white/10 px-3 py-2">
-          <span className="text-[10px] uppercase tracking-wider text-slate-500">Địa điểm</span>
+        <div className="flex shrink-0 items-center justify-between border-b border-ds-border px-3 py-2">
+          <span className="text-[10px] uppercase tracking-wider text-ds-subtle">Địa điểm</span>
           <button
             type="button"
             onClick={() => setSelectedSiteId(null)}
@@ -74,7 +74,7 @@ export function NarrativeBeatDetailRight({ entityLabel }: { entityLabel: string 
       style={{ boxShadow: `inset -3px 0 0 ${accent}`, borderColor: `${accent}40` }}
     >
       <div
-        className="flex shrink-0 items-center justify-between border-b border-white/10 px-4 py-3"
+        className="flex shrink-0 items-center justify-between border-b border-ds-border px-4 py-3"
         style={{ ['--beat-accent' as string]: accent }}
       >
         <SectionTitle accent={accent}>Khí quyển & biến cố</SectionTitle>
@@ -89,7 +89,7 @@ export function NarrativeBeatDetailRight({ entityLabel }: { entityLabel: string 
       </div>
 
       <div className="min-h-0 flex-1 touch-pan-y overflow-y-auto overscroll-y-contain px-4 py-3 [scrollbar-gutter:stable]">
-        <p className="mb-3 text-[11px] leading-snug text-slate-400">{PRESSURE_BASIS_VI[beat.environment.surfacePressureBasis]}</p>
+        <p className="mb-3 text-[11px] leading-snug text-ds-muted">{PRESSURE_BASIS_VI[beat.environment.surfacePressureBasis]}</p>
         <StatRow label="Áp suất đại diện" value={formatPaVkPa(rep)} accent={accent} />
         {typeof lo === 'number' && typeof hi === 'number' && hi > lo ? (
           <StatRow
@@ -110,8 +110,8 @@ export function NarrativeBeatDetailRight({ entityLabel }: { entityLabel: string 
           </>
         )}
 
-        <p className="mt-2 text-[11px] leading-snug text-slate-500">{compactPressureLine(beat)}</p>
-        <p className="mt-2 border-t border-white/10 pt-2 text-[10px] leading-snug text-slate-600">
+        <p className="mt-2 text-[11px] leading-snug text-ds-subtle">{compactPressureLine(beat)}</p>
+        <p className="mt-2 border-t border-ds-border pt-2 text-[10px] leading-snug text-slate-600">
           MNBC Trái Đất: {EARTH_SEA_LEVEL_PRESSURE_PA.toLocaleString('vi-VN')} Pa · {beat.panel.pressureCitationVi}
         </p>
 
@@ -119,9 +119,9 @@ export function NarrativeBeatDetailRight({ entityLabel }: { entityLabel: string 
           <>
             <SectionTitle accent={accent}>Ghi chú môi trường</SectionTitle>
             {beat.panel.surfaceTempNoteVi ? (
-              <p className="text-[12px] leading-snug text-slate-300">{beat.panel.surfaceTempNoteVi}</p>
+              <p className="text-[12px] leading-snug text-ds-muted">{beat.panel.surfaceTempNoteVi}</p>
             ) : null}
-            <p className="mt-2 text-[12px] leading-snug text-slate-400">{beat.panel.environmentNoteVi}</p>
+            <p className="mt-2 text-[12px] leading-snug text-ds-muted">{beat.panel.environmentNoteVi}</p>
           </>
         )}
 
@@ -138,18 +138,18 @@ export function NarrativeBeatDetailRight({ entityLabel }: { entityLabel: string 
                       ? 'border-amber-500/35 bg-amber-500/10'
                       : ev.tone === 'highlight'
                         ? 'border-cyan-500/30 bg-cyan-500/[0.08]'
-                        : 'border-white/10 bg-white/[0.03]',
+                        : 'border-ds-border bg-white/[0.03]',
                   )}
                 >
                   <div className="font-medium text-slate-100">{ev.title}</div>
-                  <div className="mt-1 leading-snug text-slate-400">{ev.summary}</div>
+                  <div className="mt-1 leading-snug text-ds-muted">{ev.summary}</div>
                 </li>
               ))}
             </ul>
           </>
         ) : null}
 
-        <p className="mt-4 text-[11px] leading-snug text-slate-500">
+        <p className="mt-4 text-[11px] leading-snug text-ds-subtle">
           Chạm ghim trên {entityLabel} để zoom và xem chi tiết địa điểm.
         </p>
       </div>

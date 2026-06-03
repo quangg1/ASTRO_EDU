@@ -96,6 +96,28 @@ export function executeAgentClientAction(
     return
   }
 
+  if (action.type === 'search_learning_content') {
+    return
+  }
+
+  if (action.type === 'generate_concept_quiz') {
+    if (typeof window !== 'undefined' && action.questions?.length >= 3) {
+      window.dispatchEvent(
+        new CustomEvent('galaxies:open-concept-quiz', {
+          detail: {
+            quizSessionId: action.quizSessionId,
+            conceptId: action.conceptId,
+            conceptTitle: action.conceptTitle,
+            lessonId: action.lessonId,
+            questions: action.questions,
+          },
+        }),
+      )
+    }
+    options?.onNavigate?.()
+    return
+  }
+
   if (action.type === 'start_recall_quiz') {
     const onLesson =
       typeof window !== 'undefined' &&

@@ -95,13 +95,13 @@ export function NarrativeEarthFossilPanel() {
 
   return (
     <DetailShell accent={accent} className="min-h-[12rem] flex-1">
-      <div className="shrink-0 border-b border-white/10 px-4 py-3">
+      <div className="shrink-0 border-b border-ds-border px-4 py-3">
         <div className="flex items-center justify-between gap-2">
           <div>
             <p className="text-[10px] uppercase tracking-[0.18em]" style={{ color: accent }}>
               Hóa thạch · tra cứu
             </p>
-            <p className="mt-0.5 text-[11px] text-slate-400">{beat.ageLabelVi}</p>
+            <p className="mt-0.5 text-[11px] text-ds-muted">{beat.ageLabelVi}</p>
           </div>
           <button
             type="button"
@@ -110,7 +110,7 @@ export function NarrativeEarthFossilPanel() {
               'rounded-lg border px-2 py-1 text-[10px] uppercase tracking-wider transition',
               showFossils
                 ? 'border-emerald-400/40 bg-emerald-500/15 text-emerald-100'
-                : 'border-white/15 text-slate-400 hover:bg-white/5',
+                : 'border-ds-border text-ds-muted hover:bg-white/5',
             )}
           >
             {showFossils ? 'Ẩn trên globe' : 'Hiện trên globe'}
@@ -118,26 +118,26 @@ export function NarrativeEarthFossilPanel() {
         </div>
 
         <div className="relative mt-3">
-          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-500" />
+          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-ds-subtle" />
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Tìm tên, ngành, vùng…"
-            className="w-full rounded-lg border border-white/10 bg-black/40 py-2 pl-8 pr-3 text-[12px] text-slate-100 placeholder:text-slate-500 focus:border-white/25 focus:outline-none"
+            className="w-full rounded-lg border border-ds-border bg-ds-elevated/80 py-2 pl-8 pr-3 text-[12px] text-slate-100 placeholder:text-ds-subtle focus:border-white/25 focus:outline-none"
           />
         </div>
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3">
         {fossilsLoading ? (
-          <p className="text-[11px] text-slate-500">Đang tải hóa thạch thời kỳ…</p>
+          <p className="text-[11px] text-ds-subtle">Đang tải hóa thạch thời kỳ…</p>
         ) : !fossilStats || fossilStats.total <= 0 ? (
-          <p className="text-[11px] leading-relaxed text-slate-500">
+          <p className="text-[11px] leading-relaxed text-ds-subtle">
             Chưa có mẫu hóa thạch rõ trong khoảng thời gian này. Thử kéo timeline sang kỷ Phanerozoic.
           </p>
         ) : (
           <>
-            <div className="mb-3 flex items-center gap-2 text-[11px] text-slate-400">
+            <div className="mb-3 flex items-center gap-2 text-[11px] text-ds-muted">
               <Sparkles className="h-3.5 w-3.5" style={{ color: accent }} />
               <span>
                 <strong className="text-slate-100">{fossilStats.total.toLocaleString('vi-VN')}</strong> mẫu ·{' '}
@@ -159,7 +159,7 @@ export function NarrativeEarthFossilPanel() {
                         onClick={() => flyToPhylum(phylum)}
                         className={clsx(
                           'rounded-lg border px-2 py-1 text-[10px] transition',
-                          active ? 'bg-white/10 text-white' : 'border-white/10 text-slate-300 hover:bg-white/5',
+                          active ? 'bg-white/10 text-white' : 'border-ds-border text-ds-muted hover:bg-white/5',
                         )}
                         style={active ? { borderColor: color, boxShadow: `inset 0 0 0 1px ${color}55` } : undefined}
                         title={getPhylumInfo(phylum)?.description}
@@ -190,12 +190,12 @@ export function NarrativeEarthFossilPanel() {
                       <div className="flex items-start justify-between gap-2">
                         <span className="text-[12px] font-medium text-slate-100">{f.name}</span>
                         {f.maxMa != null ? (
-                          <span className="shrink-0 text-[10px] tabular-nums text-slate-500">
+                          <span className="shrink-0 text-[10px] tabular-nums text-ds-subtle">
                             {f.maxMa.toFixed(1)} Ma
                           </span>
                         ) : null}
                       </div>
-                      <p className="mt-0.5 text-[10px] text-slate-500">
+                      <p className="mt-0.5 text-[10px] text-ds-subtle">
                         {f.phylum || 'Khác'}
                         {f.paleoRegionName && f.paleoRegionName !== 'Không xác định'
                           ? ` · ${f.paleoRegionName}`
@@ -207,7 +207,7 @@ export function NarrativeEarthFossilPanel() {
               })}
             </ul>
             {filtered.length > preview.length ? (
-              <p className="mt-2 text-[10px] text-slate-500">
+              <p className="mt-2 text-[10px] text-ds-subtle">
                 +{filtered.length - preview.length} mẫu — thu hẹp tìm kiếm để xem thêm.
               </p>
             ) : null}

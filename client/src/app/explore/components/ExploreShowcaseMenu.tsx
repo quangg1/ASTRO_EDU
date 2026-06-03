@@ -240,7 +240,7 @@ export function ExploreShowcaseMenu({
       onClick={onClose}
     >
       <div
-        className="absolute left-1/2 top-3 flex max-h-[calc(100%-1rem)] w-[min(760px,calc(100vw-2rem))] -translate-x-1/2 flex-col rounded-2xl border border-white/10 bg-[#050a13]/98 shadow-2xl pointer-events-auto"
+        className="absolute left-1/2 top-3 flex max-h-[calc(100%-1rem)] w-[min(760px,calc(100vw-2rem))] -translate-x-1/2 flex-col rounded-2xl border border-white/10 bg-ds-base/98 shadow-2xl pointer-events-auto"
         role="dialog"
         aria-label="Chọn vật thể khám phá"
         onClick={(e) => e.stopPropagation()}
@@ -278,7 +278,7 @@ export function ExploreShowcaseMenu({
             if (group === 'planets_moons') {
               return (
                 <section key={group} className="mb-4">
-                  <p className="sticky top-0 z-[1] mb-2 bg-[#050a13]/95 px-2 py-1 text-[10px] font-medium uppercase tracking-[0.16em] text-slate-400">
+                  <p className="sticky top-0 z-[1] mb-2 bg-ds-base/95 px-2 py-1 text-[10px] font-medium uppercase tracking-[0.16em] text-slate-400">
                     {SHOWCASE_GROUP_LABELS[group]}
                   </p>
                   <PlanetsMoonsSection
@@ -292,7 +292,7 @@ export function ExploreShowcaseMenu({
 
             return (
               <section key={group} className="mb-3 last:mb-0">
-                <p className="sticky top-0 z-[1] bg-[#050a13]/95 px-2 py-1.5 text-[10px] font-medium uppercase tracking-[0.16em] text-slate-400">
+                <p className="sticky top-0 z-[1] bg-ds-base/95 px-2 py-1.5 text-[10px] font-medium uppercase tracking-[0.16em] text-slate-400">
                   {SHOWCASE_GROUP_LABELS[group]}
                 </p>
                 <ul className="space-y-0.5">

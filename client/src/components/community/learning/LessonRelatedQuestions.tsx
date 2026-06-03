@@ -79,9 +79,9 @@ export function LessonRelatedQuestions({ context, className = '' }: Props) {
           <h2 id="lesson-related-questions-heading" className="text-base font-semibold text-white">
             Câu hỏi về bài này
           </h2>
-          <p className="mt-1 text-xs text-slate-400 leading-relaxed">
+          <p className="mt-1 text-xs text-ds-muted leading-relaxed">
             Cộng đồng trả lời trong{' '}
-            <Link href={`/community/${DEFAULT_COURSE_QUESTION_FORUM}`} className="text-violet-300 hover:text-violet-200 underline">
+            <Link href={`/community/${DEFAULT_COURSE_QUESTION_FORUM}`} className="text-ds-accent hover:text-violet-200 underline">
               Hỏi đáp học tập
             </Link>
             {total > 0 ? ` · ${total} câu hỏi` : ''}
@@ -92,7 +92,7 @@ export function LessonRelatedQuestions({ context, className = '' }: Props) {
           {total > 0 && (
             <Link
               href={viewAllHref}
-              className="inline-flex items-center justify-center rounded-lg border border-white/15 bg-white/5 px-3 py-1.5 text-xs text-slate-200 hover:bg-white/10 transition-colors"
+              className="inline-flex items-center justify-center rounded-lg border border-ds-border bg-white/5 px-3 py-1.5 text-xs text-slate-200 hover:bg-white/10 transition-colors"
             >
               Xem tất cả
             </Link>
@@ -102,11 +102,11 @@ export function LessonRelatedQuestions({ context, className = '' }: Props) {
 
       {loading ? (
         <div className="space-y-2" aria-busy="true">
-          <div className="h-14 rounded-xl border border-white/10 bg-white/5 animate-pulse" />
-          <div className="h-14 rounded-xl border border-white/10 bg-white/5 animate-pulse" />
+          <div className="h-14 rounded-xl border border-ds-border bg-white/5 animate-pulse" />
+          <div className="h-14 rounded-xl border border-ds-border bg-white/5 animate-pulse" />
         </div>
       ) : posts.length === 0 ? (
-        <p className="text-sm text-slate-400 rounded-xl border border-dashed border-violet-500/30 bg-black/20 px-4 py-5 text-center">
+        <p className="text-sm text-ds-muted rounded-xl border border-dashed border-violet-500/30 bg-ds-surface/50 px-4 py-5 text-center">
           Chưa có câu hỏi nào cho bài này. Bấm <strong className="text-violet-200 font-medium">Hỏi về bài này</strong> để
           đặt câu hỏi đầu tiên.
         </p>
@@ -116,13 +116,13 @@ export function LessonRelatedQuestions({ context, className = '' }: Props) {
             <li key={p._id}>
               <Link
                 href={`/community/post/${p._id}`}
-                className="block rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 hover:border-violet-400/30 hover:bg-white/[0.07] transition-colors"
+                className="block rounded-xl border border-ds-border bg-ds-surface/50 px-4 py-3 hover:border-violet-400/30 hover:bg-white/[0.07] transition-colors"
               >
                 <p className="text-sm font-medium text-white leading-snug">{p.title}</p>
                 {p.content ? (
-                  <p className="mt-1 text-xs text-slate-400 line-clamp-2">{plainTextExcerpt(p.content, 140)}</p>
+                  <p className="mt-1 text-xs text-ds-muted line-clamp-2">{plainTextExcerpt(p.content, 140)}</p>
                 ) : null}
-                <p className="mt-2 text-[11px] text-slate-500">
+                <p className="mt-2 text-[11px] text-ds-subtle">
                   {p.commentCount} bình luận · {p.voteCount} vote · {formatRelativeDate(p.createdAt)}
                 </p>
               </Link>
@@ -134,7 +134,7 @@ export function LessonRelatedQuestions({ context, className = '' }: Props) {
       {!loading && posts.length > 0 && total > posts.length && (
         <Link
           href={viewAllHref}
-          className="mt-3 inline-block text-xs text-cyan-300 hover:text-cyan-200 underline"
+          className="mt-3 inline-block text-xs text-ds-accent hover:text-cyan-200 underline"
         >
           Xem thêm {total - posts.length} câu hỏi →
         </Link>

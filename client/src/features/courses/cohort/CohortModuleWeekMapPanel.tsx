@@ -57,7 +57,7 @@ export function CohortModuleWeekMapPanel({
   return (
     <section className="rounded-2xl border border-violet-500/25 bg-gradient-to-br from-violet-950/20 to-transparent p-4 space-y-3">
       <div className="flex items-center gap-2">
-        <BookMarked className="w-4 h-4 text-violet-300" aria-hidden />
+        <BookMarked className="w-4 h-4 text-ds-accent" aria-hidden />
         <h3 className="text-sm font-semibold text-white">Ánh xạ Chương → Tuần giao</h3>
       </div>
       <p className="text-[11px] text-ds-muted leading-relaxed">
@@ -66,7 +66,7 @@ export function CohortModuleWeekMapPanel({
       </p>
       <ul className="divide-y divide-ds-border/50 rounded-xl border border-ds-border/80 overflow-hidden">
         {modules.map((mod) => (
-          <li key={mod.id} className="flex flex-wrap items-center gap-3 px-3 py-2 bg-white/[0.02]">
+          <li key={mod.id} className="flex flex-wrap items-center gap-3 px-3 py-2 bg-ds-surface/40">
             <span className="text-sm text-white flex-1 min-w-[120px] truncate">{mod.title}</span>
             <label className="flex items-center gap-2 text-[11px] text-ds-muted shrink-0">
               Tuần

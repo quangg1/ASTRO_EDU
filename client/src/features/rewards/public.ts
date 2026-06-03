@@ -25,7 +25,8 @@ export {
   fetchGemShopBootstrap,
   fetchGemShopCatalogPublic,
 } from './api/gemShopPublicApi'
-export type { GemShopBootstrapDTO, GemShopCatalogItemDTO } from './api/gemShopPublicApi'
+export type { GemShopBootstrapDTO } from './api/gemShopPublicApi'
+export type { GemShopCatalogItem } from '@galaxies/contracts'
 export {
   AVATAR_DECORATION_CATEGORY,
   DECORATION_CATEGORY_FALLBACK_ALL,

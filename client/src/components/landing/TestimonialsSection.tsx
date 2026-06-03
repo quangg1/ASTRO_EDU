@@ -5,8 +5,8 @@ import { Star } from 'lucide-react'
 import { SectionEyebrow } from './SectionEyebrow'
 
 const AVATAR_GRADIENTS = {
-  a: 'linear-gradient(135deg, #ffd27a 0%, #f5a524 100%)',
-  b: 'linear-gradient(135deg, #7ee7ff 0%, #4dd2ff 100%)',
+  a: 'linear-gradient(135deg, #ffd27a 0%, var(--color-brand-amber) 100%)',
+  b: 'linear-gradient(135deg, var(--color-accent) 0%, #4dd2ff 100%)',
   c: 'linear-gradient(135deg, #ff5cd4 0%, #b04bff 100%)',
 } as const
 
@@ -80,9 +80,9 @@ export function TestimonialsSection() {
               key={t.name}
               variants={item}
               whileHover={{ y: -4 }}
-              className="hud-chamfer-md flex flex-col p-7 transition-all duration-300"
+              className="cosmo-dark-panel rounded-2xl flex flex-col p-7 transition-all duration-300"
               style={{
-                background: 'rgba(6,9,26,0.7)',
+                background: 'var(--color-panel-muted)',
                 border: '1px solid rgba(126,231,255,0.16)',
               }}
             >
@@ -91,7 +91,7 @@ export function TestimonialsSection() {
                 {[...Array(t.rating)].map((_, j) => (
                   <Star
                     key={j}
-                    className="h-4 w-4 fill-[color:var(--hud-amber)] text-[color:var(--hud-amber)]"
+                    className="h-4 w-4 fill-[color:var(--color-brand-amber)] text-[color:var(--color-brand-amber)]"
                   />
                 ))}
               </div>
@@ -104,7 +104,7 @@ export function TestimonialsSection() {
               {/* Author */}
               <div
                 className="flex items-center gap-3 pt-5"
-                style={{ borderTop: '1px solid rgba(126,231,255,0.12)' }}
+                style={{ borderTop: '1px solid var(--color-border)' }}
               >
                 <div
                   className="h-10 w-10 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0"

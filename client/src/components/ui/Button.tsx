@@ -4,9 +4,9 @@ import { cn } from '@/lib/cn'
 type ButtonVariant = 'primary' | 'secondary' | 'ghost'
 
 const VARIANTS: Record<ButtonVariant, string> = {
-  primary: 'bg-cyan-500/20 text-cyan-100 border-cyan-400/40 hover:bg-cyan-500/30',
-  secondary: 'bg-white/5 text-white border-white/10 hover:bg-white/10',
-  ghost: 'bg-transparent text-slate-300 border-transparent hover:bg-white/5 hover:text-white',
+  primary: 'bg-ds-accent/15 text-ds-text border-cyan-400/40 hover:opacity-90/30',
+  secondary: 'bg-white/5 text-white border-ds-border hover:bg-white/10',
+  ghost: 'bg-transparent text-ds-muted border-transparent hover:bg-white/5 hover:text-white',
 }
 
 export function Button({

@@ -23,11 +23,11 @@ export function OnboardingWelcomeBanner({ title, description, dismissKey = 'onbo
           'polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px)',
       }}
     >
-      <p className="text-[10px] font-[JetBrains_Mono,monospace] uppercase tracking-[0.18em] text-[#7ee7ff] mb-1">
+      <p className="text-[10px] font-[JetBrains_Mono,monospace] uppercase tracking-[0.18em] text-ds-accent mb-1">
         Trải nghiệm may đo cho bạn
       </p>
       <p className="text-sm font-medium text-white">{title}</p>
-      <p className="text-xs text-[#9aa8c4] mt-1 leading-relaxed">{description}</p>
+      <p className="text-xs text-ds-muted mt-1 leading-relaxed">{description}</p>
       <button
         type="button"
         aria-label="Đóng"
@@ -39,7 +39,7 @@ export function OnboardingWelcomeBanner({ title, description, dismissKey = 'onbo
             /* ignore */
           }
         }}
-        className="absolute top-3 right-3 text-[#5c6886] hover:text-white"
+        className="absolute top-3 right-3 text-ds-subtle hover:text-white"
       >
         <X className="w-4 h-4" />
       </button>

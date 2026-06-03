@@ -1,0 +1,1274 @@
+{
+  "version": 1,
+  "count": 88,
+  "entities": {
+    "constellation-western-aquila": {
+      "nameVi": "Chòm sao Aquila",
+      "nameEn": "Eagle",
+      "iauCode": "Aql",
+      "zodiac": false,
+      "conceptHints": [
+        "aquila",
+        "western",
+        "constellation",
+        "aql",
+        "eagle"
+      ],
+      "museumVi": "Chòm Aquila (Eagle, IAU Aql) — bản đồ chòm phương Tây trên La bàn Galaxies; đường nối theo Stellarium (HIP)."
+    },
+    "constellation-western-andromeda": {
+      "nameVi": "Chòm sao Andromeda",
+      "nameEn": "Chained Maiden",
+      "iauCode": "And",
+      "zodiac": false,
+      "conceptHints": [
+        "andromeda",
+        "western",
+        "constellation",
+        "and",
+        "chained",
+        "maiden"
+      ],
+      "museumVi": "Chòm Andromeda (Chained Maiden, IAU And) — bản đồ chòm phương Tây trên La bàn Galaxies; đường nối theo Stellarium (HIP)."
+    },
+    "constellation-western-sculptor": {
+      "nameVi": "Chòm sao Sculptor",
+      "nameEn": "Sculptor",
+      "iauCode": "Scl",
+      "zodiac": false,
+      "conceptHints": [
+        "sculptor",
+        "western",
+        "constellation",
+        "scl"
+      ],
+      "museumVi": "Chòm Sculptor (Sculptor, IAU Scl) — bản đồ chòm phương Tây trên La bàn Galaxies; đường nối theo Stellarium (HIP)."
+    },
+    "constellation-western-ara": {
+      "nameVi": "Chòm sao Ara",
+      "nameEn": "Altar",
+      "iauCode": "Ara",
+      "zodiac": false,
+      "conceptHints": [
+        "ara",
+        "western",
+        "constellation",
+        "altar"
+      ],
+      "museumVi": "Chòm Ara (Altar, IAU Ara) — bản đồ chòm phương Tây trên La bàn Galaxies; đường nối theo Stellarium (HIP)."
+    },
+    "constellation-western-libra": {
+      "nameVi": "Chòm sao Libra",
+      "nameEn": "Scales",
+      "iauCode": "Lib",
+      "zodiac": true,
+      "conceptHints": [
+        "libra",
+        "western",
+        "constellation",
+        "lib",
+        "scales"
+      ],
+      "museumVi": "Chòm Libra (Scales, IAU Lib) — bản đồ chòm phương Tây trên La bàn Galaxies; đường nối theo Stellarium (HIP). Chòm hoàng đạo (zodiac)."
+    },
+    "constellation-western-cetus": {
+      "nameVi": "Chòm sao Cetus",
+      "nameEn": "Sea Monster",
+      "iauCode": "Cet",
+      "zodiac": false,
+      "conceptHints": [
+        "cetus",
+        "western",
+        "constellation",
+        "cet",
+        "sea",
+        "monster"
+      ],
+      "museumVi": "Chòm Cetus (Sea Monster, IAU Cet) — bản đồ chòm phương Tây trên La bàn Galaxies; đường nối theo Stellarium (HIP)."
+    },
+    "constellation-western-aries": {
+      "nameVi": "Chòm sao Aries",
+      "nameEn": "Ram",
+      "iauCode": "Ari",
+      "zodiac": true,
+      "conceptHints": [
+        "aries",
+        "western",
+        "constellation",
+        "ari",
+        "ram"
+      ],
+      "museumVi": "Chòm Aries (Ram, IAU Ari) — bản đồ chòm phương Tây trên La bàn Galaxies; đường nối theo Stellarium (HIP). Chòm hoàng đạo (zodiac)."
+    },
+    "constellation-western-scutum": {
+      "nameVi": "Chòm sao Scutum",
+      "nameEn": "Shield",
+      "iauCode": "Sct",
+      "zodiac": false,
+      "conceptHints": [
+        "scutum",
+        "western",
+        "constellation",
+        "sct",
+        "shield"
+      ],
+      "museumVi": "Chòm Scutum (Shield, IAU Sct) — bản đồ chòm phương Tây trên La bàn Galaxies; đường nối theo Stellarium (HIP)."
+    },
+    "constellation-western-pyxis": {
+      "nameVi": "Chòm sao Pyxis",
+      "nameEn": "Compass",
+      "iauCode": "Pyx",
+      "zodiac": false,
+      "conceptHints": [
+        "pyxis",
+        "western",
+        "constellation",
+        "pyx",
+        "compass"
+      ],
+      "museumVi": "Chòm Pyxis (Compass, IAU Pyx) — bản đồ chòm phương Tây trên La bàn Galaxies; đường nối theo Stellarium (HIP)."
+    },
+    "constellation-western-bootes": {
+      "nameVi": "Chòm sao Bootes",
+      "nameEn": "Herdsman",
+      "iauCode": "Boo",
+      "zodiac": false,
+      "conceptHints": [
+        "bootes",
+        "western",
+        "constellation",
+        "boo",
+        "herdsman"
+      ],
+      "museumVi": "Chòm Bootes (Herdsman, IAU Boo) — bản đồ chòm phương Tây trên La bàn Galaxies; đường nối theo Stellarium (HIP)."
+    },
+    "constellation-western-caelum": {
+      "nameVi": "Chòm sao Caelum",
+      "nameEn": "Engraving Tool",
+      "iauCode": "Cae",
+      "zodiac": false,
+      "conceptHints": [
+        "caelum",
+        "western",
+        "constellation",
+        "cae",
+        "engraving",
+        "tool"
+      ],
+      "museumVi": "Chòm Caelum (Engraving Tool, IAU Cae) — bản đồ chòm phương Tây trên La bàn Galaxies; đường nối theo Stellarium (HIP)."
+    },
+    "constellation-western-chamaeleon": {
+      "nameVi": "Chòm sao Chamaeleon",
+      "nameEn": "Chameleon",
+      "iauCode": "Cha",
+      "zodiac": false,
+      "conceptHints": [
+        "chamaeleon",
+        "western",
+        "constellation",
+        "cha",
+        "chameleon"
+      ],
+      "museumVi": "Chòm Chamaeleon (Chameleon, IAU Cha) — bản đồ chòm phương Tây trên La bàn Galaxies; đường nối theo Stellarium (HIP)."
+    },
+    "constellation-western-cancer": {
+      "nameVi": "Chòm sao Cancer",
+      "nameEn": "Crab",
+      "iauCode": "Cnc",
+      "zodiac": true,
+      "conceptHints": [
+        "cancer",
+        "western",
+        "constellation",
+        "cnc",
+        "crab"
+      ],
+      "museumVi": "Chòm Cancer (Crab, IAU Cnc) — bản đồ chòm phương Tây trên La bàn Galaxies; đường nối theo Stellarium (HIP). Chòm hoàng đạo (zodiac)."
+    },
+    "constellation-western-capricornus": {
+      "nameVi": "Chòm sao Capricornus",
+      "nameEn": "Sea Goat",
+      "iauCode": "Cap",
+      "zodiac": true,
+      "conceptHints": [
+        "capricornus",
+        "western",
+        "constellation",
+        "cap",
+        "sea",
+        "goat"
+      ],
+      "museumVi": "Chòm Capricornus (Sea Goat, IAU Cap) — bản đồ chòm phương Tây trên La bàn Galaxies; đường nối theo Stellarium (HIP). Chòm hoàng đạo (zodiac)."
+    },
+    "constellation-western-carina": {
+      "nameVi": "Chòm sao Carina",
+      "nameEn": "Keel",
+      "iauCode": "Car",
+      "zodiac": false,
+      "conceptHints": [
+        "carina",
+        "western",
+        "constellation",
+        "car",
+        "keel"
+      ],
+      "museumVi": "Chòm Carina (Keel, IAU Car) — bản đồ chòm phương Tây trên La bàn Galaxies; đường nối theo Stellarium (HIP)."
+    },
+    "constellation-western-cassiopeia": {
+      "nameVi": "Chòm sao Cassiopeia",
+      "nameEn": "Seated Queen",
+      "iauCode": "Cas",
+      "zodiac": false,
+      "conceptHints": [
+        "cassiopeia",
+        "western",
+        "constellation",
+        "cas",
+        "seated",
+        "queen"
+      ],
+      "museumVi": "Chòm Cassiopeia (Seated Queen, IAU Cas) — bản đồ chòm phương Tây trên La bàn Galaxies; đường nối theo Stellarium (HIP)."
+    },
+    "constellation-western-centaurus": {
+      "nameVi": "Chòm sao Centaurus",
+      "nameEn": "Centaur",
+      "iauCode": "Cen",
+      "zodiac": false,
+      "conceptHints": [
+        "centaurus",
+        "western",
+        "constellation",
+        "cen",
+        "centaur"
+      ],
+      "museumVi": "Chòm Centaurus (Centaur, IAU Cen) — bản đồ chòm phương Tây trên La bàn Galaxies; đường nối theo Stellarium (HIP)."
+    },
+    "constellation-western-cepheus": {
+      "nameVi": "Chòm sao Cepheus",
+      "nameEn": "King",
+      "iauCode": "Cep",
+      "zodiac": false,
+      "conceptHints": [
+        "cepheus",
+        "western",
+        "constellation",
+        "cep",
+        "king"
+      ],
+      "museumVi": "Chòm Cepheus (King, IAU Cep) — bản đồ chòm phương Tây trên La bàn Galaxies; đường nối theo Stellarium (HIP)."
+    },
+    "constellation-western-coma-berenices": {
+      "nameVi": "Chòm sao Coma Berenices",
+      "nameEn": "Bernice's Hair",
+      "iauCode": "Com",
+      "zodiac": false,
+      "conceptHints": [
+        "coma-berenices",
+        "western",
+        "constellation",
+        "com",
+        "bernice's",
+        "hair",
+        "coma berenices"
+      ],
+      "museumVi": "Chòm Coma Berenices (Bernice's Hair, IAU Com) — bản đồ chòm phương Tây trên La bàn Galaxies; đường nối theo Stellarium (HIP)."
+    },
+    "constellation-western-canes-venatici": {
+      "nameVi": "Chòm sao Canes Venatici",
+      "nameEn": "Hunting Dogs",
+      "iauCode": "Cvn",
+      "zodiac": false,
+      "conceptHints": [
+        "canes-venatici",
+        "western",
+        "constellation",
+        "cvn",
+        "hunting",
+        "dogs",
+        "canes venatici"
+      ],
+      "museumVi": "Chòm Canes Venatici (Hunting Dogs, IAU Cvn) — bản đồ chòm phương Tây trên La bàn Galaxies; đường nối theo Stellarium (HIP)."
+    },
+    "constellation-western-auriga": {
+      "nameVi": "Chòm sao Auriga",
+      "nameEn": "Charioteer",
+      "iauCode": "Aur",
+      "zodiac": false,
+      "conceptHints": [
+        "auriga",
+        "western",
+        "constellation",
+        "aur",
+        "charioteer"
+      ],
+      "museumVi": "Chòm Auriga (Charioteer, IAU Aur) — bản đồ chòm phương Tây trên La bàn Galaxies; đường nối theo Stellarium (HIP)."
+    },
+    "constellation-western-columba": {
+      "nameVi": "Chòm sao Columba",
+      "nameEn": "Dove",
+      "iauCode": "Col",
+      "zodiac": false,
+      "conceptHints": [
+        "columba",
+        "western",
+        "constellation",
+        "col",
+        "dove"
+      ],
+      "museumVi": "Chòm Columba (Dove, IAU Col) — bản đồ chòm phương Tây trên La bàn Galaxies; đường nối theo Stellarium (HIP)."
+    },
+    "constellation-western-circinus": {
+      "nameVi": "Chòm sao Circinus",
+      "nameEn": "Compass",
+      "iauCode": "Cir",
+      "zodiac": false,
+      "conceptHints": [
+        "circinus",
+        "western",
+        "constellation",
+        "cir",
+        "compass"
+      ],
+      "museumVi": "Chòm Circinus (Compass, IAU Cir) — bản đồ chòm phương Tây trên La bàn Galaxies; đường nối theo Stellarium (HIP)."
+    },
+    "constellation-western-crater": {
+      "nameVi": "Chòm sao Crater",
+      "nameEn": "Cup",
+      "iauCode": "Crt",
+      "zodiac": false,
+      "conceptHints": [
+        "crater",
+        "western",
+        "constellation",
+        "crt",
+        "cup"
+      ],
+      "museumVi": "Chòm Crater (Cup, IAU Crt) — bản đồ chòm phương Tây trên La bàn Galaxies; đường nối theo Stellarium (HIP)."
+    },
+    "constellation-western-corona-australis": {
+      "nameVi": "Chòm sao Corona Australis",
+      "nameEn": "Southern Crown",
+      "iauCode": "CrA",
+      "zodiac": false,
+      "conceptHints": [
+        "corona-australis",
+        "western",
+        "constellation",
+        "cra",
+        "southern",
+        "crown",
+        "corona australis"
+      ],
+      "museumVi": "Chòm Corona Australis (Southern Crown, IAU CrA) — bản đồ chòm phương Tây trên La bàn Galaxies; đường nối theo Stellarium (HIP)."
+    },
+    "constellation-western-corona-borealis": {
+      "nameVi": "Chòm sao Corona Borealis",
+      "nameEn": "Northern Crown",
+      "iauCode": "CrB",
+      "zodiac": false,
+      "conceptHints": [
+        "corona-borealis",
+        "western",
+        "constellation",
+        "crb",
+        "northern",
+        "crown",
+        "corona borealis"
+      ],
+      "museumVi": "Chòm Corona Borealis (Northern Crown, IAU CrB) — bản đồ chòm phương Tây trên La bàn Galaxies; đường nối theo Stellarium (HIP)."
+    },
+    "constellation-western-corvus": {
+      "nameVi": "Chòm sao Corvus",
+      "nameEn": "Crow",
+      "iauCode": "Crv",
+      "zodiac": false,
+      "conceptHints": [
+        "corvus",
+        "western",
+        "constellation",
+        "crv",
+        "crow"
+      ],
+      "museumVi": "Chòm Corvus (Crow, IAU Crv) — bản đồ chòm phương Tây trên La bàn Galaxies; đường nối theo Stellarium (HIP)."
+    },
+    "constellation-western-crux": {
+      "nameVi": "Chòm sao Crux",
+      "nameEn": "Southern Cross",
+      "iauCode": "Cru",
+      "zodiac": false,
+      "conceptHints": [
+        "crux",
+        "western",
+        "constellation",
+        "cru",
+        "southern",
+        "cross"
+      ],
+      "museumVi": "Chòm Crux (Southern Cross, IAU Cru) — bản đồ chòm phương Tây trên La bàn Galaxies; đường nối theo Stellarium (HIP)."
+    },
+    "constellation-western-cygnus": {
+      "nameVi": "Chòm sao Cygnus",
+      "nameEn": "Swan",
+      "iauCode": "Cyg",
+      "zodiac": false,
+      "conceptHints": [
+        "cygnus",
+        "western",
+        "constellation",
+        "cyg",
+        "swan"
+      ],
+      "museumVi": "Chòm Cygnus (Swan, IAU Cyg) — bản đồ chòm phương Tây trên La bàn Galaxies; đường nối theo Stellarium (HIP)."
+    },
+    "constellation-western-delphinus": {
+      "nameVi": "Chòm sao Delphinus",
+      "nameEn": "Dolphin",
+      "iauCode": "Del",
+      "zodiac": false,
+      "conceptHints": [
+        "delphinus",
+        "western",
+        "constellation",
+        "del",
+        "dolphin"
+      ],
+      "museumVi": "Chòm Delphinus (Dolphin, IAU Del) — bản đồ chòm phương Tây trên La bàn Galaxies; đường nối theo Stellarium (HIP)."
+    },
+    "constellation-western-dorado": {
+      "nameVi": "Chòm sao Dorado",
+      "nameEn": "Swordfish",
+      "iauCode": "Dor",
+      "zodiac": false,
+      "conceptHints": [
+        "dorado",
+        "western",
+        "constellation",
+        "dor",
+        "swordfish"
+      ],
+      "museumVi": "Chòm Dorado (Swordfish, IAU Dor) — bản đồ chòm phương Tây trên La bàn Galaxies; đường nối theo Stellarium (HIP)."
+    },
+    "constellation-western-draco": {
+      "nameVi": "Chòm sao Draco",
+      "nameEn": "Dragon",
+      "iauCode": "Dra",
+      "zodiac": false,
+      "conceptHints": [
+        "draco",
+        "western",
+        "constellation",
+        "dra",
+        "dragon"
+      ],
+      "museumVi": "Chòm Draco (Dragon, IAU Dra) — bản đồ chòm phương Tây trên La bàn Galaxies; đường nối theo Stellarium (HIP)."
+    },
+    "constellation-western-norma": {
+      "nameVi": "Chòm sao Norma",
+      "nameEn": "Carpenter's Square",
+      "iauCode": "Nor",
+      "zodiac": false,
+      "conceptHints": [
+        "norma",
+        "western",
+        "constellation",
+        "nor",
+        "carpenter's",
+        "square"
+      ],
+      "museumVi": "Chòm Norma (Carpenter's Square, IAU Nor) — bản đồ chòm phương Tây trên La bàn Galaxies; đường nối theo Stellarium (HIP)."
+    },
+    "constellation-western-eridanus": {
+      "nameVi": "Chòm sao Eridanus",
+      "nameEn": "River",
+      "iauCode": "Eri",
+      "zodiac": false,
+      "conceptHints": [
+        "eridanus",
+        "western",
+        "constellation",
+        "eri",
+        "river"
+      ],
+      "museumVi": "Chòm Eridanus (River, IAU Eri) — bản đồ chòm phương Tây trên La bàn Galaxies; đường nối theo Stellarium (HIP)."
+    },
+    "constellation-western-sagitta": {
+      "nameVi": "Chòm sao Sagitta",
+      "nameEn": "Arrow",
+      "iauCode": "Sge",
+      "zodiac": false,
+      "conceptHints": [
+        "sagitta",
+        "western",
+        "constellation",
+        "sge",
+        "arrow"
+      ],
+      "museumVi": "Chòm Sagitta (Arrow, IAU Sge) — bản đồ chòm phương Tây trên La bàn Galaxies; đường nối theo Stellarium (HIP)."
+    },
+    "constellation-western-fornax": {
+      "nameVi": "Chòm sao Fornax",
+      "nameEn": "Furnace",
+      "iauCode": "For",
+      "zodiac": false,
+      "conceptHints": [
+        "fornax",
+        "western",
+        "constellation",
+        "for",
+        "furnace"
+      ],
+      "museumVi": "Chòm Fornax (Furnace, IAU For) — bản đồ chòm phương Tây trên La bàn Galaxies; đường nối theo Stellarium (HIP)."
+    },
+    "constellation-western-gemini": {
+      "nameVi": "Chòm sao Gemini",
+      "nameEn": "Twins",
+      "iauCode": "Gem",
+      "zodiac": true,
+      "conceptHints": [
+        "gemini",
+        "western",
+        "constellation",
+        "gem",
+        "twins"
+      ],
+      "museumVi": "Chòm Gemini (Twins, IAU Gem) — bản đồ chòm phương Tây trên La bàn Galaxies; đường nối theo Stellarium (HIP). Chòm hoàng đạo (zodiac)."
+    },
+    "constellation-western-camelopardalis": {
+      "nameVi": "Chòm sao Camelopardalis",
+      "nameEn": "Giraffe",
+      "iauCode": "Cam",
+      "zodiac": false,
+      "conceptHints": [
+        "camelopardalis",
+        "western",
+        "constellation",
+        "cam",
+        "giraffe"
+      ],
+      "museumVi": "Chòm Camelopardalis (Giraffe, IAU Cam) — bản đồ chòm phương Tây trên La bàn Galaxies; đường nối theo Stellarium (HIP)."
+    },
+    "constellation-western-canis-major": {
+      "nameVi": "Chòm sao Canis Major",
+      "nameEn": "Great Dog",
+      "iauCode": "CMa",
+      "zodiac": false,
+      "conceptHints": [
+        "canis-major",
+        "western",
+        "constellation",
+        "cma",
+        "great",
+        "dog",
+        "canis major"
+      ],
+      "museumVi": "Chòm Canis Major (Great Dog, IAU CMa) — bản đồ chòm phương Tây trên La bàn Galaxies; đường nối theo Stellarium (HIP)."
+    },
+    "constellation-western-ursa-major": {
+      "nameVi": "Chòm sao Ursa Major",
+      "nameEn": "Great Bear",
+      "iauCode": "UMa",
+      "zodiac": false,
+      "conceptHints": [
+        "ursa-major",
+        "western",
+        "constellation",
+        "uma",
+        "great",
+        "bear",
+        "ursa major"
+      ],
+      "museumVi": "Chòm Ursa Major (Great Bear, IAU UMa) — bản đồ chòm phương Tây trên La bàn Galaxies; đường nối theo Stellarium (HIP)."
+    },
+    "constellation-western-grus": {
+      "nameVi": "Chòm sao Grus",
+      "nameEn": "Crane",
+      "iauCode": "Gru",
+      "zodiac": false,
+      "conceptHints": [
+        "grus",
+        "western",
+        "constellation",
+        "gru",
+        "crane"
+      ],
+      "museumVi": "Chòm Grus (Crane, IAU Gru) — bản đồ chòm phương Tây trên La bàn Galaxies; đường nối theo Stellarium (HIP)."
+    },
+    "constellation-western-hercules": {
+      "nameVi": "Chòm sao Hercules",
+      "nameEn": "Hercules",
+      "iauCode": "Her",
+      "zodiac": false,
+      "conceptHints": [
+        "hercules",
+        "western",
+        "constellation",
+        "her"
+      ],
+      "museumVi": "Chòm Hercules (Hercules, IAU Her) — bản đồ chòm phương Tây trên La bàn Galaxies; đường nối theo Stellarium (HIP)."
+    },
+    "constellation-western-horologium": {
+      "nameVi": "Chòm sao Horologium",
+      "nameEn": "Clock",
+      "iauCode": "Hor",
+      "zodiac": false,
+      "conceptHints": [
+        "horologium",
+        "western",
+        "constellation",
+        "hor",
+        "clock"
+      ],
+      "museumVi": "Chòm Horologium (Clock, IAU Hor) — bản đồ chòm phương Tây trên La bàn Galaxies; đường nối theo Stellarium (HIP)."
+    },
+    "constellation-western-hydra": {
+      "nameVi": "Chòm sao Hydra",
+      "nameEn": "Female Water Snake",
+      "iauCode": "Hya",
+      "zodiac": false,
+      "conceptHints": [
+        "hydra",
+        "western",
+        "constellation",
+        "hya",
+        "female",
+        "water",
+        "snake"
+      ],
+      "museumVi": "Chòm Hydra (Female Water Snake, IAU Hya) — bản đồ chòm phương Tây trên La bàn Galaxies; đường nối theo Stellarium (HIP)."
+    },
+    "constellation-western-hydrus": {
+      "nameVi": "Chòm sao Hydrus",
+      "nameEn": "Male Water Snake",
+      "iauCode": "Hyi",
+      "zodiac": false,
+      "conceptHints": [
+        "hydrus",
+        "western",
+        "constellation",
+        "hyi",
+        "male",
+        "water",
+        "snake"
+      ],
+      "museumVi": "Chòm Hydrus (Male Water Snake, IAU Hyi) — bản đồ chòm phương Tây trên La bàn Galaxies; đường nối theo Stellarium (HIP)."
+    },
+    "constellation-western-indus": {
+      "nameVi": "Chòm sao Indus",
+      "nameEn": "Indian",
+      "iauCode": "Ind",
+      "zodiac": false,
+      "conceptHints": [
+        "indus",
+        "western",
+        "constellation",
+        "ind",
+        "indian"
+      ],
+      "museumVi": "Chòm Indus (Indian, IAU Ind) — bản đồ chòm phương Tây trên La bàn Galaxies; đường nối theo Stellarium (HIP)."
+    },
+    "constellation-western-lacerta": {
+      "nameVi": "Chòm sao Lacerta",
+      "nameEn": "Lizard",
+      "iauCode": "Lac",
+      "zodiac": false,
+      "conceptHints": [
+        "lacerta",
+        "western",
+        "constellation",
+        "lac",
+        "lizard"
+      ],
+      "museumVi": "Chòm Lacerta (Lizard, IAU Lac) — bản đồ chòm phương Tây trên La bàn Galaxies; đường nối theo Stellarium (HIP)."
+    },
+    "constellation-western-monoceros": {
+      "nameVi": "Chòm sao Monoceros",
+      "nameEn": "Unicorn",
+      "iauCode": "Mon",
+      "zodiac": false,
+      "conceptHints": [
+        "monoceros",
+        "western",
+        "constellation",
+        "mon",
+        "unicorn"
+      ],
+      "museumVi": "Chòm Monoceros (Unicorn, IAU Mon) — bản đồ chòm phương Tây trên La bàn Galaxies; đường nối theo Stellarium (HIP)."
+    },
+    "constellation-western-lepus": {
+      "nameVi": "Chòm sao Lepus",
+      "nameEn": "Hare",
+      "iauCode": "Lep",
+      "zodiac": false,
+      "conceptHints": [
+        "lepus",
+        "western",
+        "constellation",
+        "lep",
+        "hare"
+      ],
+      "museumVi": "Chòm Lepus (Hare, IAU Lep) — bản đồ chòm phương Tây trên La bàn Galaxies; đường nối theo Stellarium (HIP)."
+    },
+    "constellation-western-leo": {
+      "nameVi": "Chòm sao Leo",
+      "nameEn": "Lion",
+      "iauCode": "Leo",
+      "zodiac": true,
+      "conceptHints": [
+        "leo",
+        "western",
+        "constellation",
+        "lion"
+      ],
+      "museumVi": "Chòm Leo (Lion, IAU Leo) — bản đồ chòm phương Tây trên La bàn Galaxies; đường nối theo Stellarium (HIP). Chòm hoàng đạo (zodiac)."
+    },
+    "constellation-western-lupus": {
+      "nameVi": "Chòm sao Lupus",
+      "nameEn": "Wolf",
+      "iauCode": "Lup",
+      "zodiac": false,
+      "conceptHints": [
+        "lupus",
+        "western",
+        "constellation",
+        "lup",
+        "wolf"
+      ],
+      "museumVi": "Chòm Lupus (Wolf, IAU Lup) — bản đồ chòm phương Tây trên La bàn Galaxies; đường nối theo Stellarium (HIP)."
+    },
+    "constellation-western-lynx": {
+      "nameVi": "Chòm sao Lynx",
+      "nameEn": "Lynx",
+      "iauCode": "Lyn",
+      "zodiac": false,
+      "conceptHints": [
+        "lynx",
+        "western",
+        "constellation",
+        "lyn"
+      ],
+      "museumVi": "Chòm Lynx (Lynx, IAU Lyn) — bản đồ chòm phương Tây trên La bàn Galaxies; đường nối theo Stellarium (HIP)."
+    },
+    "constellation-western-lyra": {
+      "nameVi": "Chòm sao Lyra",
+      "nameEn": "Lyre",
+      "iauCode": "Lyr",
+      "zodiac": false,
+      "conceptHints": [
+        "lyra",
+        "western",
+        "constellation",
+        "lyr",
+        "lyre"
+      ],
+      "museumVi": "Chòm Lyra (Lyre, IAU Lyr) — bản đồ chòm phương Tây trên La bàn Galaxies; đường nối theo Stellarium (HIP)."
+    },
+    "constellation-western-antlia": {
+      "nameVi": "Chòm sao Antlia",
+      "nameEn": "Air Pump",
+      "iauCode": "Ant",
+      "zodiac": false,
+      "conceptHints": [
+        "antlia",
+        "western",
+        "constellation",
+        "ant",
+        "air",
+        "pump"
+      ],
+      "museumVi": "Chòm Antlia (Air Pump, IAU Ant) — bản đồ chòm phương Tây trên La bàn Galaxies; đường nối theo Stellarium (HIP)."
+    },
+    "constellation-western-microscopium": {
+      "nameVi": "Chòm sao Microscopium",
+      "nameEn": "Microscope",
+      "iauCode": "Mic",
+      "zodiac": false,
+      "conceptHints": [
+        "microscopium",
+        "western",
+        "constellation",
+        "mic",
+        "microscope"
+      ],
+      "museumVi": "Chòm Microscopium (Microscope, IAU Mic) — bản đồ chòm phương Tây trên La bàn Galaxies; đường nối theo Stellarium (HIP)."
+    },
+    "constellation-western-musca": {
+      "nameVi": "Chòm sao Musca",
+      "nameEn": "Fly",
+      "iauCode": "Mus",
+      "zodiac": false,
+      "conceptHints": [
+        "musca",
+        "western",
+        "constellation",
+        "mus",
+        "fly"
+      ],
+      "museumVi": "Chòm Musca (Fly, IAU Mus) — bản đồ chòm phương Tây trên La bàn Galaxies; đường nối theo Stellarium (HIP)."
+    },
+    "constellation-western-octans": {
+      "nameVi": "Chòm sao Octans",
+      "nameEn": "Octant",
+      "iauCode": "Oct",
+      "zodiac": false,
+      "conceptHints": [
+        "octans",
+        "western",
+        "constellation",
+        "oct",
+        "octant"
+      ],
+      "museumVi": "Chòm Octans (Octant, IAU Oct) — bản đồ chòm phương Tây trên La bàn Galaxies; đường nối theo Stellarium (HIP)."
+    },
+    "constellation-western-apus": {
+      "nameVi": "Chòm sao Apus",
+      "nameEn": "Bird of Paradise",
+      "iauCode": "Aps",
+      "zodiac": false,
+      "conceptHints": [
+        "apus",
+        "western",
+        "constellation",
+        "aps",
+        "bird",
+        "paradise"
+      ],
+      "museumVi": "Chòm Apus (Bird of Paradise, IAU Aps) — bản đồ chòm phương Tây trên La bàn Galaxies; đường nối theo Stellarium (HIP)."
+    },
+    "constellation-western-ophiuchus": {
+      "nameVi": "Chòm sao Ophiuchus",
+      "nameEn": "Serpent Bearer",
+      "iauCode": "Oph",
+      "zodiac": false,
+      "conceptHints": [
+        "ophiuchus",
+        "western",
+        "constellation",
+        "oph",
+        "serpent",
+        "bearer"
+      ],
+      "museumVi": "Chòm Ophiuchus (Serpent Bearer, IAU Oph) — bản đồ chòm phương Tây trên La bàn Galaxies; đường nối theo Stellarium (HIP)."
+    },
+    "constellation-western-orion": {
+      "nameVi": "Chòm sao Orion",
+      "nameEn": "Hunter",
+      "iauCode": "Ori",
+      "zodiac": false,
+      "conceptHints": [
+        "orion",
+        "western",
+        "constellation",
+        "ori",
+        "hunter"
+      ],
+      "museumVi": "Chòm Orion (Hunter, IAU Ori) — bản đồ chòm phương Tây trên La bàn Galaxies; đường nối theo Stellarium (HIP)."
+    },
+    "constellation-western-pavo": {
+      "nameVi": "Chòm sao Pavo",
+      "nameEn": "Peacock",
+      "iauCode": "Pav",
+      "zodiac": false,
+      "conceptHints": [
+        "pavo",
+        "western",
+        "constellation",
+        "pav",
+        "peacock"
+      ],
+      "museumVi": "Chòm Pavo (Peacock, IAU Pav) — bản đồ chòm phương Tây trên La bàn Galaxies; đường nối theo Stellarium (HIP)."
+    },
+    "constellation-western-pegasus": {
+      "nameVi": "Chòm sao Pegasus",
+      "nameEn": "Winged Horse",
+      "iauCode": "Peg",
+      "zodiac": false,
+      "conceptHints": [
+        "pegasus",
+        "western",
+        "constellation",
+        "peg",
+        "winged",
+        "horse"
+      ],
+      "museumVi": "Chòm Pegasus (Winged Horse, IAU Peg) — bản đồ chòm phương Tây trên La bàn Galaxies; đường nối theo Stellarium (HIP)."
+    },
+    "constellation-western-pictor": {
+      "nameVi": "Chòm sao Pictor",
+      "nameEn": "Painter's Easel",
+      "iauCode": "Pic",
+      "zodiac": false,
+      "conceptHints": [
+        "pictor",
+        "western",
+        "constellation",
+        "pic",
+        "painter's",
+        "easel"
+      ],
+      "museumVi": "Chòm Pictor (Painter's Easel, IAU Pic) — bản đồ chòm phương Tây trên La bàn Galaxies; đường nối theo Stellarium (HIP)."
+    },
+    "constellation-western-perseus": {
+      "nameVi": "Chòm sao Perseus",
+      "nameEn": "Hero",
+      "iauCode": "Per",
+      "zodiac": false,
+      "conceptHints": [
+        "perseus",
+        "western",
+        "constellation",
+        "per",
+        "hero"
+      ],
+      "museumVi": "Chòm Perseus (Hero, IAU Per) — bản đồ chòm phương Tây trên La bàn Galaxies; đường nối theo Stellarium (HIP)."
+    },
+    "constellation-western-equuleus": {
+      "nameVi": "Chòm sao Equuleus",
+      "nameEn": "Little Horse",
+      "iauCode": "Equ",
+      "zodiac": false,
+      "conceptHints": [
+        "equuleus",
+        "western",
+        "constellation",
+        "equ",
+        "little",
+        "horse"
+      ],
+      "museumVi": "Chòm Equuleus (Little Horse, IAU Equ) — bản đồ chòm phương Tây trên La bàn Galaxies; đường nối theo Stellarium (HIP)."
+    },
+    "constellation-western-canis-minor": {
+      "nameVi": "Chòm sao Canis Minor",
+      "nameEn": "Lesser Dog",
+      "iauCode": "CMi",
+      "zodiac": false,
+      "conceptHints": [
+        "canis-minor",
+        "western",
+        "constellation",
+        "cmi",
+        "lesser",
+        "dog",
+        "canis minor"
+      ],
+      "museumVi": "Chòm Canis Minor (Lesser Dog, IAU CMi) — bản đồ chòm phương Tây trên La bàn Galaxies; đường nối theo Stellarium (HIP)."
+    },
+    "constellation-western-leo-minor": {
+      "nameVi": "Chòm sao Leo Minor",
+      "nameEn": "Lesser Lion",
+      "iauCode": "LMi",
+      "zodiac": false,
+      "conceptHints": [
+        "leo-minor",
+        "western",
+        "constellation",
+        "lmi",
+        "lesser",
+        "lion",
+        "leo minor"
+      ],
+      "museumVi": "Chòm Leo Minor (Lesser Lion, IAU LMi) — bản đồ chòm phương Tây trên La bàn Galaxies; đường nối theo Stellarium (HIP)."
+    },
+    "constellation-western-vulpecula": {
+      "nameVi": "Chòm sao Vulpecula",
+      "nameEn": "Fox",
+      "iauCode": "Vul",
+      "zodiac": false,
+      "conceptHints": [
+        "vulpecula",
+        "western",
+        "constellation",
+        "vul",
+        "fox"
+      ],
+      "museumVi": "Chòm Vulpecula (Fox, IAU Vul) — bản đồ chòm phương Tây trên La bàn Galaxies; đường nối theo Stellarium (HIP)."
+    },
+    "constellation-western-ursa-minor": {
+      "nameVi": "Chòm sao Ursa Minor",
+      "nameEn": "Little Bear",
+      "iauCode": "UMi",
+      "zodiac": false,
+      "conceptHints": [
+        "ursa-minor",
+        "western",
+        "constellation",
+        "umi",
+        "little",
+        "bear",
+        "ursa minor"
+      ],
+      "museumVi": "Chòm Ursa Minor (Little Bear, IAU UMi) — bản đồ chòm phương Tây trên La bàn Galaxies; đường nối theo Stellarium (HIP)."
+    },
+    "constellation-western-phoenix": {
+      "nameVi": "Chòm sao Phoenix",
+      "nameEn": "Phoenix",
+      "iauCode": "Phe",
+      "zodiac": false,
+      "conceptHints": [
+        "phoenix",
+        "western",
+        "constellation",
+        "phe"
+      ],
+      "museumVi": "Chòm Phoenix (Phoenix, IAU Phe) — bản đồ chòm phương Tây trên La bàn Galaxies; đường nối theo Stellarium (HIP)."
+    },
+    "constellation-western-pisces": {
+      "nameVi": "Chòm sao Pisces",
+      "nameEn": "Fishes",
+      "iauCode": "Psc",
+      "zodiac": true,
+      "conceptHints": [
+        "pisces",
+        "western",
+        "constellation",
+        "psc",
+        "fishes"
+      ],
+      "museumVi": "Chòm Pisces (Fishes, IAU Psc) — bản đồ chòm phương Tây trên La bàn Galaxies; đường nối theo Stellarium (HIP). Chòm hoàng đạo (zodiac)."
+    },
+    "constellation-western-piscis-austrinus": {
+      "nameVi": "Chòm sao Piscis Austrinus",
+      "nameEn": "Southern Fish",
+      "iauCode": "PsA",
+      "zodiac": false,
+      "conceptHints": [
+        "piscis-austrinus",
+        "western",
+        "constellation",
+        "psa",
+        "southern",
+        "fish",
+        "piscis austrinus"
+      ],
+      "museumVi": "Chòm Piscis Austrinus (Southern Fish, IAU PsA) — bản đồ chòm phương Tây trên La bàn Galaxies; đường nối theo Stellarium (HIP)."
+    },
+    "constellation-western-volans": {
+      "nameVi": "Chòm sao Volans",
+      "nameEn": "Flying Fish",
+      "iauCode": "Vol",
+      "zodiac": false,
+      "conceptHints": [
+        "volans",
+        "western",
+        "constellation",
+        "vol",
+        "flying",
+        "fish"
+      ],
+      "museumVi": "Chòm Volans (Flying Fish, IAU Vol) — bản đồ chòm phương Tây trên La bàn Galaxies; đường nối theo Stellarium (HIP)."
+    },
+    "constellation-western-puppis": {
+      "nameVi": "Chòm sao Puppis",
+      "nameEn": "Stern",
+      "iauCode": "Pup",
+      "zodiac": false,
+      "conceptHints": [
+        "puppis",
+        "western",
+        "constellation",
+        "pup",
+        "stern"
+      ],
+      "museumVi": "Chòm Puppis (Stern, IAU Pup) — bản đồ chòm phương Tây trên La bàn Galaxies; đường nối theo Stellarium (HIP)."
+    },
+    "constellation-western-reticulum": {
+      "nameVi": "Chòm sao Reticulum",
+      "nameEn": "Reticle",
+      "iauCode": "Ret",
+      "zodiac": false,
+      "conceptHints": [
+        "reticulum",
+        "western",
+        "constellation",
+        "ret",
+        "reticle"
+      ],
+      "museumVi": "Chòm Reticulum (Reticle, IAU Ret) — bản đồ chòm phương Tây trên La bàn Galaxies; đường nối theo Stellarium (HIP)."
+    },
+    "constellation-western-sagittarius": {
+      "nameVi": "Chòm sao Sagittarius",
+      "nameEn": "Archer",
+      "iauCode": "Sgr",
+      "zodiac": true,
+      "conceptHints": [
+        "sagittarius",
+        "western",
+        "constellation",
+        "sgr",
+        "archer"
+      ],
+      "museumVi": "Chòm Sagittarius (Archer, IAU Sgr) — bản đồ chòm phương Tây trên La bàn Galaxies; đường nối theo Stellarium (HIP). Chòm hoàng đạo (zodiac)."
+    },
+    "constellation-western-scorpius": {
+      "nameVi": "Chòm sao Scorpius",
+      "nameEn": "Scorpion",
+      "iauCode": "Sco",
+      "zodiac": true,
+      "conceptHints": [
+        "scorpius",
+        "western",
+        "constellation",
+        "sco",
+        "scorpion"
+      ],
+      "museumVi": "Chòm Scorpius (Scorpion, IAU Sco) — bản đồ chòm phương Tây trên La bàn Galaxies; đường nối theo Stellarium (HIP). Chòm hoàng đạo (zodiac)."
+    },
+    "constellation-western-serpens": {
+      "nameVi": "Chòm sao Serpens",
+      "nameEn": "Serpent",
+      "iauCode": "Ser",
+      "zodiac": false,
+      "conceptHints": [
+        "serpens",
+        "western",
+        "constellation",
+        "ser",
+        "serpent"
+      ],
+      "museumVi": "Chòm Serpens (Serpent, IAU Ser) — bản đồ chòm phương Tây trên La bàn Galaxies; đường nối theo Stellarium (HIP)."
+    },
+    "constellation-western-sextans": {
+      "nameVi": "Chòm sao Sextans",
+      "nameEn": "Sextant",
+      "iauCode": "Sex",
+      "zodiac": false,
+      "conceptHints": [
+        "sextans",
+        "western",
+        "constellation",
+        "sex",
+        "sextant"
+      ],
+      "museumVi": "Chòm Sextans (Sextant, IAU Sex) — bản đồ chòm phương Tây trên La bàn Galaxies; đường nối theo Stellarium (HIP)."
+    },
+    "constellation-western-mensa": {
+      "nameVi": "Chòm sao Mensa",
+      "nameEn": "Table Mountain",
+      "iauCode": "Men",
+      "zodiac": false,
+      "conceptHints": [
+        "mensa",
+        "western",
+        "constellation",
+        "men",
+        "table",
+        "mountain"
+      ],
+      "museumVi": "Chòm Mensa (Table Mountain, IAU Men) — bản đồ chòm phương Tây trên La bàn Galaxies; đường nối theo Stellarium (HIP)."
+    },
+    "constellation-western-taurus": {
+      "nameVi": "Chòm sao Taurus",
+      "nameEn": "Bull",
+      "iauCode": "Tau",
+      "zodiac": true,
+      "conceptHints": [
+        "taurus",
+        "western",
+        "constellation",
+        "tau",
+        "bull"
+      ],
+      "museumVi": "Chòm Taurus (Bull, IAU Tau) — bản đồ chòm phương Tây trên La bàn Galaxies; đường nối theo Stellarium (HIP). Chòm hoàng đạo (zodiac)."
+    },
+    "constellation-western-telescopium": {
+      "nameVi": "Chòm sao Telescopium",
+      "nameEn": "Telescope",
+      "iauCode": "Tel",
+      "zodiac": false,
+      "conceptHints": [
+        "telescopium",
+        "western",
+        "constellation",
+        "tel",
+        "telescope"
+      ],
+      "museumVi": "Chòm Telescopium (Telescope, IAU Tel) — bản đồ chòm phương Tây trên La bàn Galaxies; đường nối theo Stellarium (HIP)."
+    },
+    "constellation-western-tucana": {
+      "nameVi": "Chòm sao Tucana",
+      "nameEn": "Toucan",
+      "iauCode": "Tuc",
+      "zodiac": false,
+      "conceptHints": [
+        "tucana",
+        "western",
+        "constellation",
+        "tuc",
+        "toucan"
+      ],
+      "museumVi": "Chòm Tucana (Toucan, IAU Tuc) — bản đồ chòm phương Tây trên La bàn Galaxies; đường nối theo Stellarium (HIP)."
+    },
+    "constellation-western-triangulum": {
+      "nameVi": "Chòm sao Triangulum",
+      "nameEn": "Triangle",
+      "iauCode": "Tri",
+      "zodiac": false,
+      "conceptHints": [
+        "triangulum",
+        "western",
+        "constellation",
+        "tri",
+        "triangle"
+      ],
+      "museumVi": "Chòm Triangulum (Triangle, IAU Tri) — bản đồ chòm phương Tây trên La bàn Galaxies; đường nối theo Stellarium (HIP)."
+    },
+    "constellation-western-triangulum-australe": {
+      "nameVi": "Chòm sao Triangulum Australe",
+      "nameEn": "Southern Triangle",
+      "iauCode": "Tra",
+      "zodiac": false,
+      "conceptHints": [
+        "triangulum-australe",
+        "western",
+        "constellation",
+        "tra",
+        "southern",
+        "triangle",
+        "triangulum australe"
+      ],
+      "museumVi": "Chòm Triangulum Australe (Southern Triangle, IAU Tra) — bản đồ chòm phương Tây trên La bàn Galaxies; đường nối theo Stellarium (HIP)."
+    },
+    "constellation-western-aquarius": {
+      "nameVi": "Chòm sao Aquarius",
+      "nameEn": "Water Bearer",
+      "iauCode": "Aqr",
+      "zodiac": true,
+      "conceptHints": [
+        "aquarius",
+        "western",
+        "constellation",
+        "aqr",
+        "water",
+        "bearer"
+      ],
+      "museumVi": "Chòm Aquarius (Water Bearer, IAU Aqr) — bản đồ chòm phương Tây trên La bàn Galaxies; đường nối theo Stellarium (HIP). Chòm hoàng đạo (zodiac)."
+    },
+    "constellation-western-virgo": {
+      "nameVi": "Chòm sao Virgo",
+      "nameEn": "Maiden",
+      "iauCode": "Vir",
+      "zodiac": true,
+      "conceptHints": [
+        "virgo",
+        "western",
+        "constellation",
+        "vir",
+        "maiden"
+      ],
+      "museumVi": "Chòm Virgo (Maiden, IAU Vir) — bản đồ chòm phương Tây trên La bàn Galaxies; đường nối theo Stellarium (HIP). Chòm hoàng đạo (zodiac)."
+    },
+    "constellation-western-vela": {
+      "nameVi": "Chòm sao Vela",
+      "nameEn": "Sails",
+      "iauCode": "Vel",
+      "zodiac": false,
+      "conceptHints": [
+        "vela",
+        "western",
+        "constellation",
+        "vel",
+        "sails"
+      ],
+      "museumVi": "Chòm Vela (Sails, IAU Vel) — bản đồ chòm phương Tây trên La bàn Galaxies; đường nối theo Stellarium (HIP)."
+    }
+  }
+}

@@ -65,7 +65,7 @@ function ResetPasswordForm() {
   return (
     <div className="w-full max-w-sm glass rounded-2xl p-6 shadow-xl">
       <h1 className="text-xl font-bold text-cyan-400 mb-2">Đặt lại mật khẩu</h1>
-      <p className="text-sm text-gray-400 mb-6">Nhập mật khẩu mới cho tài khoản của bạn.</p>
+      <p className="text-sm text-ds-muted mb-6">Nhập mật khẩu mới cho tài khoản của bạn.</p>
       <form onSubmit={handleSubmit} className="space-y-4">
         {error && (
           <div className="p-3 rounded-lg bg-red-500/20 text-red-300 text-sm">
@@ -73,7 +73,7 @@ function ResetPasswordForm() {
           </div>
         )}
         <div>
-          <label className="block text-sm text-gray-400 mb-1">Mật khẩu mới (ít nhất 6 ký tự)</label>
+          <label className="block text-sm text-ds-muted mb-1">Mật khẩu mới (ít nhất 6 ký tự)</label>
           <input
             type="password"
             value={newPassword}
@@ -85,7 +85,7 @@ function ResetPasswordForm() {
           />
         </div>
         <div>
-          <label className="block text-sm text-gray-400 mb-1">Xác nhận mật khẩu mới</label>
+          <label className="block text-sm text-ds-muted mb-1">Xác nhận mật khẩu mới</label>
           <input
             type="password"
             value={confirmPassword}
@@ -98,13 +98,13 @@ function ResetPasswordForm() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full py-2.5 rounded-lg bg-cyan-600 text-white font-medium hover:bg-cyan-500 disabled:opacity-50"
+          className="w-full py-2.5 rounded-lg bg-cyan-600 text-white font-medium hover:opacity-90 disabled:opacity-50"
         >
           {loading ? 'Đang xử lý...' : 'Đặt lại mật khẩu'}
         </button>
       </form>
-      <p className="mt-6 text-center text-sm text-gray-400">
-        <Link href="/login" className="text-cyan-400 hover:text-cyan-300">
+      <p className="mt-6 text-center text-sm text-ds-muted">
+        <Link href="/login" className="text-ds-accent hover:text-ds-text">
           ← Quay lại đăng nhập
         </Link>
       </p>
@@ -114,8 +114,8 @@ function ResetPasswordForm() {
 
 export default function ResetPasswordPage() {
   return (
-    <div className="min-h-screen bg-black flex flex-col items-center justify-center p-4">
-      <Suspense fallback={<p className="text-gray-500">Đang tải...</p>}>
+    <div className="relative z-10 text-ds-text w-full flex flex-col items-center justify-center p-4">
+      <Suspense fallback={<p className="text-ds-subtle">Đang tải...</p>}>
         <ResetPasswordForm />
       </Suspense>
     </div>

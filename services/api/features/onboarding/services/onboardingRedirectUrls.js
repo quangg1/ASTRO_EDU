@@ -50,9 +50,19 @@ function buildOnboardingPrimaryHref(input) {
         depth,
       });
     case 'explore_3d': {
+      if (primaryTopicId === 'stars-constellations') {
+        return appendQuery('/explore', {
+          ...baseFrom,
+          view: 'sky',
+          target: 'constellation-orion',
+          tour,
+          topics,
+        });
+      }
       const entity = TOPIC_EXPLORE_ENTITY[primaryTopicId] || 'planet-earth';
       return appendQuery('/explore', {
         ...baseFrom,
+        view: 'solar',
         entity,
         history: '1',
         tour,
@@ -96,8 +106,16 @@ function buildStarterLessonHref(starter, depth) {
 }
 
 function buildExploreEntityHref(primaryTopicId, extra = {}) {
+  if (primaryTopicId === 'stars-constellations') {
+    return appendQuery('/explore', {
+      view: 'sky',
+      target: 'constellation-orion',
+      ...extra,
+    });
+  }
   const entity = TOPIC_EXPLORE_ENTITY[primaryTopicId] || 'planet-earth';
   return appendQuery('/explore', {
+    view: 'solar',
     entity,
     history: '1',
     ...extra,

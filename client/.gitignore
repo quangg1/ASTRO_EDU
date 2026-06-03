@@ -46,3 +46,21 @@ next-env.d.ts
 /public/models/
 /public/textures/
 /public/images/
+/public/videos/
+/public/live2d/
+
+# Sky planetarium (~50MB+) — CDN prefix /sky/; giữ README + index.json trong repo
+/public/sky/**/*.webp
+/public/sky/**/*.png
+/public/sky/**/*.jpg
+/public/sky/**/*.mp4
+/public/sky/data/hygdata_v41.csv
+/public/sky/data/hip-bright.json
+/public/sky/bahia_de_cadiz/
+/public/sky/balinese_sky_culture/
+/public/sky/descr_pics/
+/public/sky/_stellarium-ref/
+!/public/sky/README.md
+!/public/sky/western_sky_culture/
+/public/sky/western_sky_culture/*
+!/public/sky/western_sky_culture/index.json

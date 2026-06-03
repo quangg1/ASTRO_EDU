@@ -28,7 +28,7 @@ export function PostLearningContextChip({ post, className = '' }: Props) {
 
   const inner = (
     <>
-      <span className="text-[10px] uppercase tracking-wide text-violet-300/80 shrink-0">
+      <span className="text-[10px] uppercase tracking-wide text-ds-accent/80 shrink-0">
         {post.pathSource === 'learning-path' ? 'Lộ trình' : 'Khóa học'}
       </span>
       <span className="text-violet-100 truncate">{label}</span>

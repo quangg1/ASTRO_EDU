@@ -1,5 +1,6 @@
 const LearnerAgentProfile = require('../models/LearnerAgentProfile');
-const { detectWeakLessons } = require('./struggleDetector');
+const { getWeakLessons } = require('../../learning-state/services/learningStateEngine');
+const { recordQuizOutcome } = require('../../learning-state/services/learningStateEngine');
 
 const POLICY = {
   triggers: {
@@ -40,7 +41,7 @@ async function evaluateCoachNudge(userId, ctx = {}) {
     return { allowed: false, reason: 'session_cap' };
   }
 
-  const weak = await detectWeakLessons(userId, { lessonId: ctx.lessonId });
+  const weak = await getWeakLessons(userId, { lessonId: ctx.lessonId });
   if (!weak.length) return { allowed: false, reason: 'no_signals' };
 
   const top = weak[0];
@@ -136,56 +137,13 @@ async function dismissCoach(userId) {
   );
 }
 
-async function recordQuizOutcome(userId, { lessonId, passed, misconceptionTag }) {
-  if (!userId || !lessonId) return;
-  if (passed) {
-    const { markLessonMasteredForSpaced } = require('./spacedReviewService');
-    await markLessonMasteredForSpaced(userId, lessonId);
-  }
-  const profile = await LearnerAgentProfile.findOne({ userId });
-  const coach = profile?.coach || {};
-  const map = { ...(coach.quizFailStreakByLesson || {}) };
-  const lid = String(lessonId).trim();
-
-  if (passed) {
-    map[lid] = 0;
-  } else {
-    map[lid] = (Number(map[lid]) || 0) + 1;
-  }
-
-  const update = {
-    'coach.quizFailStreakByLesson': map,
-  };
-
-  if (!passed && misconceptionTag) {
-    const tag = String(misconceptionTag).trim().slice(0, 120);
-    if (tag) {
-      await LearnerAgentProfile.findOneAndUpdate(
-        { userId },
-        {
-          $set: update,
-          $push: {
-            misconceptions: {
-              lessonId: lid,
-              tag,
-              source: 'quiz_clarify',
-              count: 1,
-              lastAt: new Date(),
-            },
-          },
-        },
-        { upsert: true },
-      );
-      return;
-    }
-  }
-
-  await LearnerAgentProfile.findOneAndUpdate({ userId }, { $set: update }, { upsert: true });
+async function recordQuizOutcomeCoach(userId, payload) {
+  return recordQuizOutcome(userId, payload);
 }
 
 module.exports = {
   evaluateCoachNudge,
   dismissCoach,
-  recordQuizOutcome,
+  recordQuizOutcome: recordQuizOutcomeCoach,
   POLICY,
 };

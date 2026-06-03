@@ -9,7 +9,7 @@ const CommentRichEditor = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="min-h-[100px] rounded-xl border border-white/15 bg-black/30 animate-pulse" aria-hidden />
+      <div className="min-h-[100px] rounded-xl border border-ds-border bg-ds-surface/70 animate-pulse" aria-hidden />
     ),
   },
 )
@@ -47,7 +47,7 @@ export function CommentComposer({
         placeholder={placeholder}
         disabled={submitting}
       />
-      <p className="text-[11px] text-slate-500">
+      <p className="text-[11px] text-ds-subtle">
         Định dạng cơ bản, emoji, ảnh và link — giống Reddit. Markdown cũ vẫn hiển thị bình thường.
       </p>
       <div className="flex justify-end gap-2">
@@ -65,7 +65,7 @@ export function CommentComposer({
           type="button"
           onClick={() => void handleSubmit()}
           disabled={submitting || isHtmlFragmentEmpty(content)}
-          className="px-4 py-2 rounded-lg bg-cyan-600 text-white text-sm font-medium disabled:opacity-50 hover:bg-cyan-500"
+          className="px-4 py-2 rounded-lg bg-cyan-600 text-white text-sm font-medium disabled:opacity-50 hover:opacity-90"
         >
           {submitting ? 'Đang gửi…' : submitLabel}
         </button>

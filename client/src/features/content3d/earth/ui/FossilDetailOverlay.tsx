@@ -8,7 +8,7 @@ function Row({ label, value }: { label: string; value: string | number | null | 
   if (value === null || value === undefined || value === '') return null
   return (
     <div className="grid grid-cols-[minmax(0,5.5rem)_1fr] gap-x-2 gap-y-0.5 text-[11px] leading-snug sm:grid-cols-[6.5rem_1fr]">
-      <span className="text-slate-500">{label}</span>
+      <span className="text-ds-subtle">{label}</span>
       <span className="min-w-0 break-words text-slate-100">{String(value)}</span>
     </div>
   )
@@ -69,16 +69,16 @@ export function FossilDetailDock() {
 
   return (
     <section
-      className="flex max-h-[min(38vh,280px)] min-h-0 w-full shrink-0 flex-col overflow-hidden rounded-ds-card border border-cyan-500/30 bg-[#070d14]/95 shadow-lg backdrop-blur-md"
+      className="flex max-h-[min(38vh,280px)] min-h-0 w-full shrink-0 flex-col overflow-hidden rounded-ds-card border border-cyan-500/30 bg-ds-surface/95 shadow-lg backdrop-blur-md"
       role="region"
       aria-label="Chi tiết hóa thạch"
     >
-      <div className="flex shrink-0 items-start justify-between gap-2 border-b border-white/10 px-3 py-2">
-        <h3 className="min-w-0 flex-1 text-xs font-semibold leading-snug text-cyan-100">{f.name}</h3>
+      <div className="flex shrink-0 items-start justify-between gap-2 border-b border-ds-border px-3 py-2">
+        <h3 className="min-w-0 flex-1 text-xs font-semibold leading-snug text-ds-text">{f.name}</h3>
         <button
           type="button"
           onClick={() => setFossilDetailOpen(false)}
-          className="shrink-0 rounded-lg border border-white/15 px-2 py-1 text-[10px] text-slate-300 hover:bg-white/10"
+          className="shrink-0 rounded-lg border border-ds-border px-2 py-1 text-[10px] text-ds-muted hover:bg-white/10"
           aria-label="Thu gọn chi tiết (giữ chọn trên globe)"
         >
           Thu gọn
@@ -89,7 +89,7 @@ export function FossilDetailDock() {
         {fossilDetailRows(f)}
       </div>
 
-      <div className="flex shrink-0 flex-wrap items-center gap-2 border-t border-white/10 px-3 py-2">
+      <div className="flex shrink-0 flex-wrap items-center gap-2 border-t border-ds-border px-3 py-2">
         <button
           type="button"
           onClick={() => clearAllGlobeFossilUi()}
@@ -97,7 +97,7 @@ export function FossilDetailDock() {
         >
           Bỏ chọn trên globe
         </button>
-        <p className="text-[9px] text-slate-500">Esc · thu gọn</p>
+        <p className="text-[9px] text-ds-subtle">Esc · thu gọn</p>
       </div>
     </section>
   )

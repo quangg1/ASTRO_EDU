@@ -10,6 +10,7 @@ const UNIFIED_API_ROUTE_SEGMENTS = [
   'showcase-entities',
   'showcase-catalog',
   'showcase-orbits',
+  'explore',
   'gems',
   'showcase',
   'earth-history',

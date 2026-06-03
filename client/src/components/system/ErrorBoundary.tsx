@@ -30,9 +30,9 @@ export class ErrorBoundary extends React.Component<Props, State> {
     if (this.state.hasError) {
       if (this.props.fallback) return this.props.fallback
       return (
-        <div className="min-h-[200px] flex flex-col items-center justify-center p-8 bg-[#0a0f17] border border-white/10 rounded-2xl">
+        <div className="min-h-[200px] flex flex-col items-center justify-center p-8 bg-ds-base border border-ds-border rounded-2xl">
           <p className="text-amber-300 font-medium mb-2">Đã xảy ra lỗi</p>
-          <p className="text-sm text-gray-500 mb-4 text-center max-w-md">
+          <p className="text-sm text-ds-subtle mb-4 text-center max-w-md">
             {this.state.error?.message || 'Vui lòng tải lại trang hoặc thử lại sau.'}
           </p>
           <button

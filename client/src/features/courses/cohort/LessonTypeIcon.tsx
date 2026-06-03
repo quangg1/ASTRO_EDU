@@ -27,7 +27,7 @@ const TYPE_META: Record<
   visualization: {
     Icon: Box,
     label: '3D / Mô phỏng',
-    className: 'text-violet-300 bg-violet-950/40 border-violet-500/30',
+    className: 'text-ds-accent bg-violet-950/40 border-violet-500/30',
   },
   quiz: { Icon: HelpCircle, label: 'Quiz', className: 'text-amber-300 bg-amber-950/40 border-amber-500/30' },
   assignment: {
@@ -38,7 +38,7 @@ const TYPE_META: Record<
   live_session: {
     Icon: Radio,
     label: 'Live',
-    className: 'text-cyan-300 bg-cyan-950/40 border-cyan-500/30',
+    className: 'text-ds-accent bg-cyan-950/40 border-cyan-500/30',
   },
 }
 

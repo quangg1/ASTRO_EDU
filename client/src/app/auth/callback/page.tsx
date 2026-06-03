@@ -33,7 +33,7 @@ function CallbackContent() {
   }, [searchParams, router, setUser])
 
   return (
-    <div className="min-h-screen bg-black flex items-center justify-center">
+    <div className="relative z-10 text-ds-text w-full flex items-center justify-center">
       <p className="text-cyan-400">Signing you in...</p>
     </div>
   )
@@ -42,7 +42,7 @@ function CallbackContent() {
 export default function AuthCallbackPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-black flex items-center justify-center">
+      <div className="relative z-10 text-ds-text w-full flex items-center justify-center">
         <p className="text-cyan-400">Loading...</p>
       </div>
     }>

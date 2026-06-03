@@ -130,7 +130,7 @@ function LoginPageContent() {
           >
             {/* Chamfered eyebrow pill with mini orbit icon */}
             <span
-              className="hud-chamfer-sm hud-mono hud-mono-md inline-flex items-center gap-2.5 self-start px-3.5 py-2 text-[color:var(--hud-plasma)]"
+              className="cosmo-dark-panel rounded-xl hud-mono hud-mono-md inline-flex items-center gap-2.5 self-start px-3.5 py-2 text-[color:var(--color-accent)]"
               style={{
                 background: 'rgba(126,231,255,0.06)',
                 border: '2px solid rgba(126,231,255,0.25)',
@@ -139,7 +139,7 @@ function LoginPageContent() {
               <svg className="size-4 shrink-0" viewBox="0 0 24 24" fill="none" aria-hidden>
                 <circle cx="12" cy="12" r="9.5" stroke="currentColor" strokeWidth="1" opacity="0.4" />
                 <circle cx="12" cy="12" r="5.5" stroke="currentColor" strokeWidth="1" opacity="0.6" />
-                <circle cx="12" cy="12" r="2" fill="var(--hud-amber)" />
+                <circle cx="12" cy="12" r="2" fill="var(--color-brand-amber)" />
                 <circle cx="17.5" cy="12" r="1.2" fill="currentColor" />
               </svg>
               // ASTRONOMY OBSERVATORY
@@ -168,7 +168,7 @@ function LoginPageContent() {
           className="absolute inset-0 pointer-events-none"
           style={{
             background:
-              'radial-gradient(900px 600px at 85% -10%, rgba(245,165,36,0.10), transparent 60%), radial-gradient(700px 500px at 10% 30%, rgba(126,231,255,0.06), transparent 60%), #03060f',
+              'radial-gradient(900px 600px at 85% -10%, rgba(245,165,36,0.10), transparent 60%), radial-gradient(700px 500px at 10% 30%, rgba(126,231,255,0.06), transparent 60%), var(--color-bg-base)',
           }}
         />
 
@@ -219,11 +219,11 @@ function LoginPageContent() {
           animate={{ opacity: 1, y: 0 }}
           className="hidden sm:block absolute top-6 sm:top-12 right-4 sm:right-12 z-20"
         >
-          <p className="font-[JetBrains_Mono,monospace] text-[11px] uppercase tracking-[0.22em] text-[#9aa8c4]">
+          <p className="font-[JetBrains_Mono,monospace] text-[11px] uppercase tracking-[0.22em] text-ds-muted">
             Bạn mới ở đây?{' '}
             <Link
               href="/register"
-              className="inline-flex items-center gap-1 text-[#7ee7ff] font-medium transition-all"
+              className="inline-flex items-center gap-1 text-ds-accent font-medium transition-all"
               style={{
                 textDecoration: 'underline',
                 textDecorationColor: 'rgba(126,231,255,0.4)',
@@ -253,23 +253,23 @@ function LoginPageContent() {
             <div
               className="relative flex flex-col gap-7 sm:gap-8 px-6 py-8 sm:px-10 sm:py-12"
               style={{
-                background: 'rgba(6,9,26,0.45)',
-                border: '1px solid rgba(126,231,255,0.22)',
+                background: 'var(--color-panel-muted)',
+                border: '1px solid var(--color-border)',
                 boxShadow: 'inset 0 0 80px rgba(126,231,255,0.04)',
                 clipPath:
                   'polygon(22px 0, 100% 0, 100% calc(100% - 22px), calc(100% - 22px) 100%, 0 100%, 0 22px)',
               }}
             >
               {/* 4 corner brackets */}
-              <span aria-hidden className="absolute top-2 left-2 w-[18px] h-[18px]" style={{ borderTop: '1px solid #7ee7ff', borderLeft: '1px solid #7ee7ff' }} />
-              <span aria-hidden className="absolute top-2 right-2 w-[18px] h-[18px]" style={{ borderTop: '1px solid #7ee7ff', borderRight: '1px solid #7ee7ff' }} />
-              <span aria-hidden className="absolute bottom-2 left-2 w-[18px] h-[18px]" style={{ borderBottom: '1px solid #7ee7ff', borderLeft: '1px solid #7ee7ff' }} />
-              <span aria-hidden className="absolute bottom-2 right-2 w-[18px] h-[18px]" style={{ borderBottom: '1px solid #7ee7ff', borderRight: '1px solid #7ee7ff' }} />
+              <span aria-hidden className="absolute top-2 left-2 w-[18px] h-[18px]" style={{ borderTop: '1px solid var(--color-accent)', borderLeft: '1px solid var(--color-accent)' }} />
+              <span aria-hidden className="absolute top-2 right-2 w-[18px] h-[18px]" style={{ borderTop: '1px solid var(--color-accent)', borderRight: '1px solid var(--color-accent)' }} />
+              <span aria-hidden className="absolute bottom-2 left-2 w-[18px] h-[18px]" style={{ borderBottom: '1px solid var(--color-accent)', borderLeft: '1px solid var(--color-accent)' }} />
+              <span aria-hidden className="absolute bottom-2 right-2 w-[18px] h-[18px]" style={{ borderBottom: '1px solid var(--color-accent)', borderRight: '1px solid var(--color-accent)' }} />
 
               {/* Eyebrow */}
               <div className="inline-flex items-center gap-3">
-                <span aria-hidden className="block w-8 h-px bg-[#7ee7ff]/60" />
-                <span className="font-[JetBrains_Mono,monospace] text-[11px] uppercase tracking-[0.22em] text-[#5c6886]">
+                <span aria-hidden className="block w-8 h-px bg-ds-accent/60" />
+                <span className="font-[JetBrains_Mono,monospace] text-[11px] uppercase tracking-[0.22em] text-ds-subtle">
                   // authenticate / 01
                 </span>
               </div>
@@ -285,7 +285,7 @@ function LoginPageContent() {
                 dangerouslySetInnerHTML={{
                   __html: viText.auth.welcomeBack.replace(
                     /(trở lại|back)/i,
-                    '<em style="font-style:italic;font-weight:300;color:#f5a524">$1</em>'
+                    '<em style="font-style:italic;font-weight:300;color:var(--color-brand-amber)">$1</em>'
                   ),
                 }}
               />
@@ -296,11 +296,11 @@ function LoginPageContent() {
 
               {/* Divider HOẶC */}
               <div className="flex items-center gap-4">
-                <div className="flex-1 h-px bg-[rgba(126,231,255,0.14)]" />
-                <span className="font-[JetBrains_Mono,monospace] text-[11px] uppercase tracking-[0.28em] text-[#5c6886]">
+                <div className="flex-1 h-px bg-[var(--color-accent-soft)]" />
+                <span className="font-[JetBrains_Mono,monospace] text-[11px] uppercase tracking-[0.28em] text-ds-subtle">
                   HOẶC
                 </span>
-                <div className="flex-1 h-px bg-[rgba(126,231,255,0.14)]" />
+                <div className="flex-1 h-px bg-[var(--color-accent-soft)]" />
               </div>
 
               <form onSubmit={handleSubmit} className="flex flex-col gap-5">
@@ -324,22 +324,22 @@ function LoginPageContent() {
                     Email
                   </label>
                   <div
-                    className="input-row flex items-center gap-3 px-4 h-[52px] focus-within:!border-[#7ee7ff] transition-all"
+                    className="input-row flex items-center gap-3 px-4 h-[52px] focus-within:!border-ds-accent transition-all"
                     style={{
-                      background: 'rgba(10,16,36,0.85)',
-                      border: '1px solid rgba(126,231,255,0.14)',
+                      background: 'var(--color-panel-glass)',
+                      border: '1px solid var(--color-border)',
                       clipPath:
                         'polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px)',
                     }}
                   >
-                    <Mail className="size-[15px] text-[#5c6886] shrink-0" strokeWidth={1.6} aria-hidden />
+                    <Mail className="size-[15px] text-ds-subtle shrink-0" strokeWidth={1.6} aria-hidden />
                     <input
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="Nhập email của bạn"
                       required
-                      className="flex-1 bg-transparent border-0 outline-none font-[Space_Grotesk,sans-serif] text-[14px] text-[#eaf6ff] placeholder:text-[#5c6886]"
+                      className="flex-1 bg-transparent border-0 outline-none font-[Space_Grotesk,sans-serif] text-[14px] text-ds-text placeholder:text-ds-subtle"
                     />
                   </div>
                 </div>
@@ -353,7 +353,7 @@ function LoginPageContent() {
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="inline-flex items-center gap-1.5 font-[JetBrains_Mono,monospace] text-[10px] uppercase tracking-[0.18em] text-white hover:text-[#7ee7ff] transition-colors"
+                      className="inline-flex items-center gap-1.5 font-[JetBrains_Mono,monospace] text-[10px] uppercase tracking-[0.18em] text-white hover:text-ds-accent transition-colors"
                     >
                       {showPassword ? (
                         <><EyeOff className="size-[13px] text-white" strokeWidth={1.6} /> Ẩn</>
@@ -363,22 +363,22 @@ function LoginPageContent() {
                     </button>
                   </div>
                   <div
-                    className="input-row flex items-center gap-3 px-4 h-[52px] focus-within:!border-[#7ee7ff] transition-all"
+                    className="input-row flex items-center gap-3 px-4 h-[52px] focus-within:!border-ds-accent transition-all"
                     style={{
-                      background: 'rgba(10,16,36,0.85)',
-                      border: '1px solid rgba(126,231,255,0.14)',
+                      background: 'var(--color-panel-glass)',
+                      border: '1px solid var(--color-border)',
                       clipPath:
                         'polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px)',
                     }}
                   >
-                    <Lock className="size-[15px] text-[#5c6886] shrink-0" strokeWidth={1.6} aria-hidden />
+                    <Lock className="size-[15px] text-ds-subtle shrink-0" strokeWidth={1.6} aria-hidden />
                     <input
                       type={showPassword ? 'text' : 'password'}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="Nhập mật khẩu"
                       required
-                      className="flex-1 bg-transparent border-0 outline-none font-[Space_Grotesk,sans-serif] text-[14px] text-[#eaf6ff] placeholder:text-[#5c6886]"
+                      className="flex-1 bg-transparent border-0 outline-none font-[Space_Grotesk,sans-serif] text-[14px] text-ds-text placeholder:text-ds-subtle"
                     />
                   </div>
                 </div>
@@ -391,7 +391,7 @@ function LoginPageContent() {
                   whileTap={{ scale: loading ? 1 : 0.98 }}
                   className="relative inline-flex items-center justify-center gap-2 w-full px-7 py-[18px] mt-1 font-[Space_Grotesk,sans-serif] text-[15px] uppercase tracking-[0.16em] transition-all disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden group"
                   style={{
-                    background: 'linear-gradient(180deg, #ffd27a, #f5a524 60%, #d8901c)',
+                    background: 'linear-gradient(180deg, #ffd27a, var(--color-brand-amber) 60%, #d8901c)',
                     color: '#1a0e00',
                     fontWeight: 600,
                     boxShadow: '0 0 0 1px rgba(245,165,36,0.5), 0 12px 36px -10px rgba(245,165,36,0.55)',
@@ -411,11 +411,11 @@ function LoginPageContent() {
                 </motion.button>
 
                 <div className="lg:hidden text-center">
-                  <p className="font-[JetBrains_Mono,monospace] text-[11px] uppercase tracking-[0.22em] text-[#9aa8c4]">
+                  <p className="font-[JetBrains_Mono,monospace] text-[11px] uppercase tracking-[0.22em] text-ds-muted">
                     Bạn mới ở đây?{' '}
                     <Link
                       href="/register"
-                      className="text-[#7ee7ff] font-medium"
+                      className="text-ds-accent font-medium"
                       style={{ textDecoration: 'underline', textDecorationColor: 'rgba(126,231,255,0.4)', textUnderlineOffset: '3px' }}
                     >
                       Đăng ký
@@ -433,7 +433,7 @@ function LoginPageContent() {
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-black flex items-center justify-center"><p className="text-gray-500">Loading...</p></div>}>
+    <Suspense fallback={<div className="relative z-10 text-ds-text w-full flex items-center justify-center"><p className="text-ds-subtle">Loading...</p></div>}>
       <LoginPageContent />
     </Suspense>
   )

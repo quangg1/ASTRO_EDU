@@ -43,6 +43,20 @@ const depthPrefsSchema = new mongoose.Schema(
   { _id: false },
 );
 
+const proceduralMemorySchema = new mongoose.Schema(
+  {
+    tutoringStyle: {
+      type: String,
+      enum: ['balanced', 'hint_first', 'explain_first'],
+      default: 'balanced',
+    },
+    feedbackThumbsUp: { type: Number, default: 0 },
+    feedbackThumbsDown: { type: Number, default: 0 },
+    lastFeedbackAt: { type: Date, default: null },
+  },
+  { _id: false },
+);
+
 const learnerAgentProfileSchema = new mongoose.Schema(
   {
     userId: { type: String, required: true, unique: true, index: true },
@@ -50,7 +64,10 @@ const learnerAgentProfileSchema = new mongoose.Schema(
     coach: { type: coachStateSchema, default: () => ({}) },
     spacedReview: { type: spacedReviewSchema, default: () => ({}) },
     depthPrefs: { type: depthPrefsSchema, default: () => ({}) },
+    proceduralMemory: { type: proceduralMemorySchema, default: () => ({}) },
     coachCopyVariant: { type: String, enum: ['a', 'b'], default: 'a' },
+    /** Legacy fields migrated to learning-state engine. */
+    learningStateMigratedAt: { type: Date, default: null },
   },
   { timestamps: true },
 );

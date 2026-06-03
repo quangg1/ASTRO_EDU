@@ -55,7 +55,7 @@ export function OnboardingRedirect({ children }: { children: React.ReactNode }) 
 
   if (!ready && user && !isPublicPath(pathname)) {
     return (
-      <div className="min-h-[40vh] flex items-center justify-center text-sm text-gray-500">
+      <div className="min-h-[40vh] flex items-center justify-center text-sm text-ds-subtle">
         Đang tải…
       </div>
     )

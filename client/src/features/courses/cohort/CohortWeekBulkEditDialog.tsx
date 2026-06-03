@@ -100,7 +100,7 @@ export function CohortWeekBulkEditDialog({
         <Button
           type="button"
           size="sm"
-          className="bg-cyan-600 text-white hover:bg-cyan-500"
+          className="bg-cyan-600 text-white hover:opacity-90"
           disabled={!openAt.trim()}
           onClick={() => {
             onApply({

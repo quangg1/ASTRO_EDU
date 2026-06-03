@@ -45,8 +45,8 @@ function OrganismCard({
         <div
           className={
             isCompact
-              ? 'w-10 h-10 rounded bg-cyan-500/20 flex items-center justify-center text-lg shrink-0'
-              : 'w-14 h-14 rounded-lg bg-cyan-500/20 flex items-center justify-center text-xl shrink-0'
+              ? 'w-10 h-10 rounded bg-ds-accent/15 flex items-center justify-center text-lg shrink-0'
+              : 'w-14 h-14 rounded-lg bg-ds-accent/15 flex items-center justify-center text-xl shrink-0'
           }
         >
           {hasModel ? '🦴' : '🦴'}
@@ -57,9 +57,9 @@ function OrganismCard({
           {org.nameVi}
         </div>
         {!isCompact && org.name !== org.nameVi && (
-          <div className="text-xs text-gray-500">{org.name}</div>
+          <div className="text-xs text-ds-subtle">{org.name}</div>
         )}
-        <p className={isCompact ? 'text-xs text-gray-400 mt-0.5 line-clamp-2' : 'text-sm text-gray-400 mt-1'}>
+        <p className={isCompact ? 'text-xs text-ds-muted mt-0.5 line-clamp-2' : 'text-sm text-ds-muted mt-1'}>
           {org.description}
         </p>
         {hasModel && (
@@ -69,7 +69,7 @@ function OrganismCard({
               e.stopPropagation()
               onView3D(org)
             }}
-            className={isCompact ? 'mt-1 text-xs text-cyan-400 hover:text-cyan-300' : 'mt-2 text-sm text-cyan-400 hover:text-cyan-300'}
+            className={isCompact ? 'mt-1 text-xs text-ds-accent hover:text-ds-text' : 'mt-2 text-sm text-ds-accent hover:text-ds-text'}
           >
             Xem 3D →
           </button>
@@ -81,8 +81,8 @@ function OrganismCard({
     <div
       className={
         isCompact
-          ? 'flex gap-2 p-2 rounded-lg bg-white/5 border border-white/10'
-          : 'flex gap-3 p-3 rounded-xl bg-white/5 border border-white/10'
+          ? 'flex gap-2 p-2 rounded-lg bg-white/5 border border-ds-border'
+          : 'flex gap-3 p-3 rounded-xl bg-white/5 border border-ds-border'
       }
     >
       {card}
@@ -142,13 +142,13 @@ export function FeaturedOrganisms({ stageId, variant = 'compact' }: FeaturedOrga
         )}
       </div>
       {showSearch && searchQuery.trim() && (
-        <p className="text-xs text-gray-500">
+        <p className="text-xs text-ds-subtle">
           {filteredOrganisms.length} kết quả
         </p>
       )}
       <div className="space-y-2">
         {filteredOrganisms.length === 0 ? (
-          <p className="text-sm text-gray-500 italic py-2">
+          <p className="text-sm text-ds-subtle italic py-2">
             Không có sinh vật nào trùng với &quot;{searchQuery}&quot;
           </p>
         ) : (

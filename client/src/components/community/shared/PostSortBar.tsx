@@ -28,7 +28,7 @@ export function PostSortBar({ sort, onSortChange, variant = 'discussion' }: Prop
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <span className="text-xs uppercase tracking-wide text-gray-500">Sắp xếp:</span>
+      <span className="text-xs uppercase tracking-wide text-ds-subtle">Sắp xếp:</span>
       {options.map((option) => {
         const Icon = option.icon
         const active = sort === option.value
@@ -40,7 +40,7 @@ export function PostSortBar({ sort, onSortChange, variant = 'discussion' }: Prop
             className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm transition-colors ${
               active
                 ? 'border border-cyan-300/40 bg-cyan-500/25 text-cyan-200'
-                : 'border border-white/10 bg-white/5 text-gray-300 hover:bg-white/10'
+                : 'border border-ds-border bg-white/5 text-gray-300 hover:bg-white/10'
             }`}
           >
             <Icon className="h-3.5 w-3.5" aria-hidden />

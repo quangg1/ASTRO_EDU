@@ -233,7 +233,7 @@ export function ExamRunner({
               type="button"
               onClick={() => void handleSubmit(false)}
               disabled={submitting}
-              className="bg-cyan-600 hover:bg-cyan-500 text-white"
+              className="bg-cyan-600 hover:opacity-90 text-white"
             >
               {submitting ? 'Đang nộp…' : 'Nộp bài'}
             </Button>

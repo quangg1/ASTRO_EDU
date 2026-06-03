@@ -13,6 +13,7 @@ type NavArgs = {
   pathname: string
   router: { replace: (url: string, opts?: { scroll?: boolean }) => void }
   searchParams: ReadonlyURLSearchParams
+  exploreView: import('@/features/explore/public').ExploreView
   showcaseActiveItemId: string
   setShowcaseActiveItemId: (id: string) => void
   selectedSolarPlanetIndex: number | null
@@ -28,6 +29,7 @@ export function useExploreShowcaseNav({
   pathname,
   router,
   searchParams,
+  exploreView,
   showcaseActiveItemId,
   setShowcaseActiveItemId,
   selectedSolarPlanetIndex,
@@ -117,24 +119,26 @@ export function useExploreShowcaseNav({
   }, [searchParams, setShowcaseActiveItemId, syncSelectedPlanetFromItem])
 
   useEffect(() => {
+    if (exploreView !== 'solar') return
     if (earthHistoryOpen || searchParams.get('history') === '1') return
 
     const entityParam = searchParams.get('entity')?.trim()
     if (entityParam && entityParam !== showcaseActiveItemId) return
 
     const next = new URLSearchParams(searchParams.toString())
+    next.set('view', 'solar')
     next.set('mode', 'showcase')
     if (showcaseActiveItemId) {
       next.set('entity', showcaseActiveItemId)
       const item = getNasaCatalogItemById(showcaseActiveItemId)
       if (item?.group) next.set('group', item.group)
-      if (item?.linkedPlanetName) next.set('target', item.linkedPlanetName.toLowerCase())
     }
     next.delete('stage')
+    next.delete('target')
     const updated = next.toString()
     if (updated === searchParams.toString()) return
     router.replace(`${pathname}?${updated}`, { scroll: false })
-  }, [pathname, router, searchParams, showcaseActiveItemId, earthHistoryOpen])
+  }, [pathname, router, searchParams, showcaseActiveItemId, earthHistoryOpen, exploreView])
 
   return {
     initialShowcaseSpherical,

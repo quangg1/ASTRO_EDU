@@ -13,10 +13,10 @@ export function NewsTopicChips({ categories }: Props) {
 
   return (
     <div
-      className="relative hud-chamfer-md p-5 md:p-6"
+      className="relative cosmo-dark-panel rounded-2xl p-5 md:p-6"
       style={{
-        background: 'rgba(6,9,26,0.85)',
-        border: '1px solid rgba(126,231,255,0.15)',
+        background: 'var(--color-panel-glass)',
+        border: '1px solid var(--color-accent-soft)',
       }}
     >
       <CornerBrackets />
@@ -25,16 +25,16 @@ export function NewsTopicChips({ categories }: Props) {
           <Link
             key={c}
             href={`/community/tin-thien-van?category=${encodeURIComponent(c)}`}
-            className="hud-chamfer-sm hud-mono hud-mono-sm inline-flex items-center gap-1.5 px-3.5 py-1.5 transition-all hover:shadow-[0_0_12px_rgba(126,231,255,0.2)]"
+            className="cosmo-dark-panel rounded-xl hud-mono hud-mono-sm inline-flex items-center gap-1.5 px-3.5 py-1.5 transition-all hover:shadow-[0_0_12px_rgba(126,231,255,0.2)]"
             style={{
-              background: 'rgba(126,231,255,0.05)',
-              border: '1px solid rgba(126,231,255,0.18)',
-              color: 'var(--hud-ink-2)',
+              background: 'var(--color-accent-soft)',
+              border: '1px solid var(--color-border)',
+              color: 'var(--color-text-muted)',
             }}
           >
             <span
               className="inline-block w-1.5 h-1.5 rounded-full shrink-0"
-              style={{ background: 'var(--hud-plasma)', opacity: 0.6 }}
+              style={{ background: 'var(--color-accent)', opacity: 0.6 }}
               aria-hidden
             />
             {c}

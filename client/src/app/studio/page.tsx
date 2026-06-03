@@ -17,7 +17,7 @@ const chamfer = (cut = 14) => ({
   clipPath: `polygon(${cut}px 0,100% 0,100% calc(100% - ${cut}px),calc(100% - ${cut}px) 100%,0 100%,0 ${cut}px)`,
 })
 
-function Brackets({ c = '#7ee7ff', s = 12, o = 6 }: { c?: string; s?: number; o?: number }) {
+function Brackets({ c = 'var(--color-accent)', s = 12, o = 6 }: { c?: string; s?: number; o?: number }) {
   const b = (ex: React.CSSProperties): React.CSSProperties => ({
     position: 'absolute', width: s, height: s, opacity: 0.65, pointerEvents: 'none', ...ex,
   })
@@ -59,18 +59,18 @@ export default function StudioHomePage() {
       <div
         style={{
           minHeight: '100vh',
-          background: '#03060f',
+          background: 'var(--color-bg-base)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           ...mono,
           fontSize: 12,
           letterSpacing: '0.18em',
-          color: '#5c6886',
+          color: 'var(--color-text-subtle)',
           textTransform: 'uppercase',
         }}
       >
-        <span style={{ color: '#7ee7ff' }}>●</span>&nbsp;&nbsp;Checking auth…
+        <span style={{ color: 'var(--color-accent)' }}>●</span>&nbsp;&nbsp;Checking auth…
       </div>
     )
   }
@@ -79,7 +79,7 @@ export default function StudioHomePage() {
     <div
       style={{
         minHeight: '100vh',
-        background: '#03060f',
+        background: 'var(--color-bg-base)',
         paddingTop: 72,
         paddingBottom: 64,
         paddingLeft: 16,
@@ -99,13 +99,13 @@ export default function StudioHomePage() {
             ...chamfer(10),
           }}
         >
-          <span style={{ ...mono, fontSize: 11, letterSpacing: '0.18em', color: '#7ee7ff', textTransform: 'uppercase' }}>
+          <span style={{ ...mono, fontSize: 11, letterSpacing: '0.18em', color: 'var(--color-accent)', textTransform: 'uppercase' }}>
             // 00 · cosmolearn · studio
           </span>
-          <div className="flex items-center gap-5" style={{ ...mono, fontSize: 11, letterSpacing: '0.12em', color: '#5c6886' }}>
+          <div className="flex items-center gap-5" style={{ ...mono, fontSize: 11, letterSpacing: '0.12em', color: 'var(--color-text-subtle)' }}>
             <span>Role · <span style={{ color: '#6dffb0' }}>{user.role}</span></span>
             <span className="hidden sm:inline">
-              {zoneLabel} · <span style={{ color: '#9aa8c4' }}>{localTime}</span>
+              {zoneLabel} · <span style={{ color: 'var(--color-text-muted)' }}>{localTime}</span>
             </span>
           </div>
         </div>
@@ -119,21 +119,21 @@ export default function StudioHomePage() {
             ...chamfer(22),
           }}
         >
-          <Brackets c="#7ee7ff" s={16} o={10} />
+          <Brackets c="var(--color-accent)" s={16} o={10} />
 
-          <div style={{ ...mono, fontSize: 11, letterSpacing: '0.20em', color: '#5c6886', marginBottom: 16, textTransform: 'uppercase' }}>
+          <div style={{ ...mono, fontSize: 11, letterSpacing: '0.20em', color: 'var(--color-text-subtle)', marginBottom: 16, textTransform: 'uppercase' }}>
             // 01 · studio · content-authoring
           </div>
 
           <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6">
             <div>
-              <h1 style={{ fontSize: 'clamp(27px, 4vw, 53px)', fontWeight: 500, lineHeight: 1.0, letterSpacing: '-0.03em', color: '#eaf6ff', marginBottom: 10 }}>
+              <h1 style={{ fontSize: 'clamp(27px, 4vw, 53px)', fontWeight: 500, lineHeight: 1.0, letterSpacing: '-0.03em', color: 'var(--color-text-primary)', marginBottom: 10 }}>
                 Cosmo Learn{' '}
-                <em style={{ fontStyle: 'italic', fontWeight: 300, color: '#f5a524' }}>Studio</em>
+                <em style={{ fontStyle: 'italic', fontWeight: 300, color: 'var(--color-brand-amber)' }}>Studio</em>
               </h1>
-              <p style={{ fontSize: 15, color: '#9aa8c4', lineHeight: 1.65, maxWidth: 540 }}>
-                <span style={{ color: '#eaf6ff', fontWeight: 500 }}>Learning Path</span> — Lộ trình 6 module, bài học theo block.{' '}
-                <span style={{ color: '#eaf6ff', fontWeight: 500 }}>Course</span> — Khóa học có curriculum &amp; thanh toán tùy chọn.
+              <p style={{ fontSize: 15, color: 'var(--color-text-muted)', lineHeight: 1.65, maxWidth: 540 }}>
+                <span style={{ color: 'var(--color-text-primary)', fontWeight: 500 }}>Learning Path</span> — Lộ trình 6 module, bài học theo block.{' '}
+                <span style={{ color: 'var(--color-text-primary)', fontWeight: 500 }}>Course</span> — Khóa học có curriculum &amp; thanh toán tùy chọn.
               </p>
             </div>
 
@@ -146,13 +146,13 @@ export default function StudioHomePage() {
                 ...chamfer(12),
               }}
             >
-              <div style={{ ...mono, fontSize: 10, letterSpacing: '0.22em', color: '#5c6886', marginBottom: 6, textTransform: 'uppercase' }}>
+              <div style={{ ...mono, fontSize: 10, letterSpacing: '0.22em', color: 'var(--color-text-subtle)', marginBottom: 6, textTransform: 'uppercase' }}>
                 — Tổng khóa học
               </div>
-              <div style={{ fontSize: 49, fontWeight: 400, lineHeight: 1, color: '#f5a524', textShadow: '0 0 30px rgba(245,165,36,0.4)', letterSpacing: '-0.04em' }}>
+              <div style={{ fontSize: 49, fontWeight: 400, lineHeight: 1, color: 'var(--color-brand-amber)', textShadow: '0 0 30px rgba(245,165,36,0.4)', letterSpacing: '-0.04em' }}>
                 {courses.length}
               </div>
-              <div style={{ ...mono, fontSize: 10, color: '#9aa8c4', marginTop: 4, letterSpacing: '0.12em', textTransform: 'uppercase' }}>
+              <div style={{ ...mono, fontSize: 10, color: 'var(--color-text-muted)', marginTop: 4, letterSpacing: '0.12em', textTransform: 'uppercase' }}>
                 Courses
               </div>
             </div>
@@ -169,7 +169,7 @@ export default function StudioHomePage() {
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: 8,
-                background: 'linear-gradient(135deg, #f5a524 0%, #e8950f 100%)',
+                background: 'linear-gradient(135deg, var(--color-brand-amber) 0%, #e8950f 100%)',
                 color: '#1a0e00',
                 padding: '11px 20px',
                 ...mono,
@@ -195,7 +195,7 @@ export default function StudioHomePage() {
                 alignItems: 'center',
                 gap: 8,
                 background: 'rgba(126,231,255,0.06)',
-                color: '#7ee7ff',
+                color: 'var(--color-accent)',
                 padding: '11px 20px',
                 ...mono,
                 fontSize: 11,
@@ -221,7 +221,7 @@ export default function StudioHomePage() {
                 alignItems: 'center',
                 gap: 8,
                 background: 'rgba(245,165,36,0.08)',
-                color: '#f5a524',
+                color: 'var(--color-brand-amber)',
                 padding: '11px 20px',
                 ...mono,
                 fontSize: 11,
@@ -250,14 +250,14 @@ export default function StudioHomePage() {
                 ...mono,
                 fontSize: 11,
                 letterSpacing: '0.14em',
-                color: '#5c6886',
+                color: 'var(--color-text-subtle)',
                 textDecoration: 'none',
                 textTransform: 'uppercase',
                 alignSelf: 'center',
                 transition: 'color 0.2s',
               }}
-              onMouseEnter={(e) => { e.currentTarget.style.color = '#7ee7ff' }}
-              onMouseLeave={(e) => { e.currentTarget.style.color = '#5c6886' }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--color-accent)' }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--color-text-subtle)' }}
             >
               Xem lộ trình (học viên) →
             </Link>
@@ -273,17 +273,17 @@ export default function StudioHomePage() {
             ...chamfer(18),
           }}
         >
-          <Brackets c="#7ee7ff" s={13} o={8} />
+          <Brackets c="var(--color-accent)" s={13} o={8} />
 
           {/* Section header */}
           <div className="flex items-start justify-between gap-4 mb-5 flex-wrap">
             <div>
-              <div style={{ ...mono, fontSize: 11, letterSpacing: '0.18em', color: '#5c6886', marginBottom: 6, textTransform: 'uppercase' }}>
+              <div style={{ ...mono, fontSize: 11, letterSpacing: '0.18em', color: 'var(--color-text-subtle)', marginBottom: 6, textTransform: 'uppercase' }}>
                 // 02 · courses · curriculum &amp; payments
               </div>
-              <h2 style={{ fontSize: 'clamp(19px, 2.5vw, 27px)', fontWeight: 500, letterSpacing: '-0.02em', color: '#eaf6ff' }}>
+              <h2 style={{ fontSize: 'clamp(19px, 2.5vw, 27px)', fontWeight: 500, letterSpacing: '-0.02em', color: 'var(--color-text-primary)' }}>
                 Quản lý{' '}
-                <em style={{ fontStyle: 'italic', fontWeight: 300, color: '#f5a524' }}>khóa học</em>
+                <em style={{ fontStyle: 'italic', fontWeight: 300, color: 'var(--color-brand-amber)' }}>khóa học</em>
               </h2>
             </div>
 
@@ -323,7 +323,7 @@ export default function StudioHomePage() {
                       background: 'rgba(0,0,0,0.5)',
                       border: '1px solid rgba(126,231,255,0.2)',
                       borderRadius: 2,
-                      color: '#eaf6ff',
+                      color: 'var(--color-text-primary)',
                       padding: '8px 12px',
                       fontSize: 14,
                       outline: 'none',
@@ -371,7 +371,7 @@ export default function StudioHomePage() {
                     disabled={creating || !newCourseTitle.trim()}
                     style={{
                       background: creating || !newCourseTitle.trim() ? 'rgba(126,231,255,0.1)' : 'rgba(126,231,255,0.12)',
-                      color: creating || !newCourseTitle.trim() ? '#3d4f6e' : '#7ee7ff',
+                      color: creating || !newCourseTitle.trim() ? '#3d4f6e' : 'var(--color-accent)',
                       padding: '8px 14px',
                       ...mono,
                       fontSize: 11,
@@ -394,7 +394,7 @@ export default function StudioHomePage() {
                     }}
                     style={{
                       background: 'transparent',
-                      color: '#5c6886',
+                      color: 'var(--color-text-subtle)',
                       padding: '8px 10px',
                       ...mono,
                       fontSize: 11,
@@ -415,13 +415,13 @@ export default function StudioHomePage() {
                   ...mono,
                   fontSize: 11,
                   letterSpacing: '0.14em',
-                  color: '#5c6886',
+                  color: 'var(--color-text-subtle)',
                   textDecoration: 'none',
                   textTransform: 'uppercase',
                   transition: 'color 0.2s',
                 }}
-                onMouseEnter={(e) => { e.currentTarget.style.color = '#7ee7ff' }}
-                onMouseLeave={(e) => { e.currentTarget.style.color = '#5c6886' }}
+                onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--color-accent)' }}
+                onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--color-text-subtle)' }}
               >
                 Student view →
               </Link>
@@ -452,11 +452,11 @@ export default function StudioHomePage() {
 
           {/* Course list */}
           {loadingCourses ? (
-            <div style={{ ...mono, fontSize: 12, letterSpacing: '0.16em', color: '#5c6886', textTransform: 'uppercase', padding: '12px 0' }}>
-              <span style={{ color: '#7ee7ff' }}>●</span>&nbsp;&nbsp;Loading courses…
+            <div style={{ ...mono, fontSize: 12, letterSpacing: '0.16em', color: 'var(--color-text-subtle)', textTransform: 'uppercase', padding: '12px 0' }}>
+              <span style={{ color: 'var(--color-accent)' }}>●</span>&nbsp;&nbsp;Loading courses…
             </div>
           ) : courses.length === 0 && !showCreateCourse ? (
-            <div style={{ ...mono, fontSize: 12, letterSpacing: '0.14em', color: '#5c6886', textTransform: 'uppercase', padding: '12px 0' }}>
+            <div style={{ ...mono, fontSize: 12, letterSpacing: '0.14em', color: 'var(--color-text-subtle)', textTransform: 'uppercase', padding: '12px 0' }}>
               // No courses yet — click "Create course" to get started.
             </div>
           ) : (
@@ -466,10 +466,10 @@ export default function StudioHomePage() {
                 const cohortsNav = cohortsNavEnabledForStrategy(strategy)
                 const strategyColors =
                   strategy === 'self_paced'
-                    ? { border: 'rgba(126,231,255,0.35)', color: '#7ee7ff', bg: 'rgba(126,231,255,0.08)' }
+                    ? { border: 'rgba(126,231,255,0.35)', color: 'var(--color-accent)', bg: 'rgba(126,231,255,0.08)' }
                     : strategy === 'instructor_led'
                       ? { border: 'rgba(167,139,250,0.35)', color: '#c4b5fd', bg: 'rgba(139,92,246,0.1)' }
-                      : { border: 'rgba(245,165,36,0.35)', color: '#f5a524', bg: 'rgba(245,165,36,0.08)' }
+                      : { border: 'rgba(245,165,36,0.35)', color: 'var(--color-brand-amber)', bg: 'rgba(245,165,36,0.08)' }
                 return (
                 <div
                   key={c.id}
@@ -485,8 +485,8 @@ export default function StudioHomePage() {
                     style={{
                       position: 'absolute', top: 10, left: 10,
                       width: 6, height: 6, borderRadius: '50%',
-                      background: '#7ee7ff',
-                      boxShadow: '0 0 6px #7ee7ff',
+                      background: 'var(--color-accent)',
+                      boxShadow: '0 0 6px var(--color-accent)',
                       opacity: 0.45,
                     }}
                   />
@@ -513,7 +513,7 @@ export default function StudioHomePage() {
                             padding: '2px 8px',
                             borderRadius: 999,
                             border: `1px solid ${c.published ? 'rgba(109,255,176,0.35)' : 'rgba(245,165,36,0.35)'}`,
-                            color: c.published ? '#6dffb0' : '#f5a524',
+                            color: c.published ? '#6dffb0' : 'var(--color-brand-amber)',
                             background: c.published ? 'rgba(109,255,176,0.08)' : 'rgba(245,165,36,0.08)',
                           }}
                         >
@@ -536,17 +536,17 @@ export default function StudioHomePage() {
                           {distributionStrategyBadge(strategy)}
                         </span>
                       </div>
-                      <h3 style={{ fontSize: 16, fontWeight: 700, color: '#eaf6ff', marginBottom: 4, paddingRight: 20 }}>
+                      <h3 style={{ fontSize: 16, fontWeight: 700, color: 'var(--color-text-primary)', marginBottom: 4, paddingRight: 20 }}>
                         {c.title}
                       </h3>
-                      <div style={{ ...mono, fontSize: 10.5, color: '#5c6886', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+                      <div style={{ ...mono, fontSize: 10.5, color: 'var(--color-text-subtle)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
                         {c.lessonCount ?? 0} lessons
                         <span style={{ margin: '0 6px', opacity: 0.4 }}>·</span>
                         {c.level}
                         {c.isPaid && (c.price ?? 0) > 0 && (
                           <span>
                             <span style={{ margin: '0 6px', opacity: 0.4 }}>·</span>
-                            <span style={{ color: '#f5a524' }}>
+                            <span style={{ color: 'var(--color-brand-amber)' }}>
                               {formatOrderAmount(c.price ?? 0, c.currency || 'VND')}
                             </span>
                           </span>
@@ -563,7 +563,7 @@ export default function StudioHomePage() {
                           alignItems: 'center',
                           gap: 5,
                           background: 'rgba(126,231,255,0.08)',
-                          color: '#7ee7ff',
+                          color: 'var(--color-accent)',
                           padding: '6px 12px',
                           ...mono,
                           fontSize: 10,
@@ -587,7 +587,7 @@ export default function StudioHomePage() {
                             alignItems: 'center',
                             gap: 5,
                             background: 'rgba(245,165,36,0.08)',
-                            color: '#f5a524',
+                            color: 'var(--color-brand-amber)',
                             padding: '6px 12px',
                             ...mono,
                             fontSize: 10,
@@ -640,7 +640,7 @@ export default function StudioHomePage() {
                     <p
                       style={{
                         fontSize: 14,
-                        color: '#5c6886',
+                        color: 'var(--color-text-subtle)',
                         lineHeight: 1.55,
                         paddingLeft: 12,
                         display: '-webkit-box',

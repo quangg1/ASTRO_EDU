@@ -35,7 +35,7 @@ export function CategoriesSection({ modules }: { modules: LearningModule[] }) {
           </div>
           <Link
             href="/tutorial"
-            className="hud-mono hud-mono-md inline-flex items-center gap-2 text-[color:var(--hud-plasma)] hover:text-white transition-colors self-start md:self-end"
+            className="hud-mono hud-mono-md inline-flex items-center gap-2 text-[color:var(--color-accent)] hover:text-white transition-colors self-start md:self-end"
           >
             Xem lộ trình học →
           </Link>
@@ -58,25 +58,18 @@ export function CategoriesSection({ modules }: { modules: LearningModule[] }) {
                 <motion.div
                   variants={item}
                   whileHover={{ y: -3 }}
-                  className="hud-chamfer-md group relative flex flex-col gap-4 p-5 cursor-pointer transition-all duration-300 min-h-[170px]"
-                  style={{
-                    background: isFeature
-                      ? 'linear-gradient(135deg, rgba(245,165,36,0.18) 0%, rgba(245,165,36,0.04) 100%)'
-                      : 'rgba(6,9,26,0.55)',
-                    border: isFeature
-                      ? '1px solid rgba(245,165,36,0.4)'
-                      : '1px solid rgba(126,231,255,0.14)',
-                    boxShadow: isFeature ? '0 0 30px rgba(245,165,36,0.12)' : 'none',
-                  }}
+                  className={`rounded-2xl group relative flex flex-col gap-4 p-5 cursor-pointer transition-all duration-300 min-h-[170px] ${
+                    isFeature ? 'cosmo-dark-panel cosmo-dark-panel-amber' : 'cosmo-dark-panel'
+                  }`}
                 >
                   {/* LED dot */}
                   <span
                     className="absolute top-3 left-3 w-1.5 h-1.5 rounded-full"
                     style={{
-                      background: isFeature ? 'var(--hud-amber)' : 'var(--hud-plasma)',
+                      background: isFeature ? 'var(--color-brand-amber)' : 'var(--color-accent)',
                       boxShadow: isFeature
-                        ? '0 0 8px var(--hud-amber)'
-                        : '0 0 8px var(--hud-plasma)',
+                        ? '0 0 8px var(--color-brand-amber)'
+                        : '0 0 8px var(--color-accent)',
                     }}
                     aria-hidden
                   />
@@ -87,12 +80,12 @@ export function CategoriesSection({ modules }: { modules: LearningModule[] }) {
 
                   {/* Emoji icon */}
                   <div
-                    className="hud-chamfer-sm flex h-[46px] w-[46px] items-center justify-center mt-4 text-2xl"
+                    className="cosmo-dark-panel rounded-xl flex h-[46px] w-[46px] items-center justify-center mt-4 text-2xl"
                     style={{
                       background: isFeature ? 'rgba(245,165,36,0.15)' : 'rgba(126,231,255,0.06)',
                       border: isFeature
                         ? '1px solid rgba(245,165,36,0.4)'
-                        : '1px solid rgba(126,231,255,0.2)',
+                        : '1px solid var(--color-border)',
                     }}
                   >
                     {mod.emoji}
@@ -108,7 +101,7 @@ export function CategoriesSection({ modules }: { modules: LearningModule[] }) {
 
                   {/* Arrow */}
                   <ArrowUpRight
-                    className="absolute bottom-3 right-3 h-4 w-4 text-white/30 transition-all duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:text-[color:var(--hud-plasma)]"
+                    className="absolute bottom-3 right-3 h-4 w-4 text-white/30 transition-all duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:text-[color:var(--color-accent)]"
                     aria-hidden
                   />
                 </motion.div>

@@ -1,7 +1,7 @@
 const { randomUUID } = require('crypto');
 const { AppError } = require('../../../shared/errors');
 const { resolveAgentTier } = require('./entitlementResolver');
-const { checkHourlyLimit, checkGuestDemoLimit } = require('./rateLimit');
+const { initAgentQuotaForMessage, toolQuotaCost } = require('./agentQuota');
 const { buildAgentContext } = require('./contextBuilder');
 const { callAiChat, callAiChatStream, mapContextForAi } = require('./aiClient');
 const { toolsForTier } = require('../lib/toolSchema');
@@ -27,17 +27,8 @@ async function stepEntitlement(req, sessionContext) {
   });
 }
 
-function stepRateLimit(tier, userId, guestSessionId) {
-  if (tier === 'guest') {
-    if (!guestSessionId) {
-      throw new AppError(400, 'GUEST_SESSION_REQUIRED', 'Thiếu phiên demo.');
-    }
-    return checkGuestDemoLimit(guestSessionId);
-  }
-  if (userId) {
-    return checkHourlyLimit(tier === 'trial_expired' ? 'lp_free' : tier, userId);
-  }
-  throw new AppError(401, 'AUTH_REQUIRED', 'Đăng nhập để dùng agent.');
+async function stepInitQuota(tier, userId, guestSessionId) {
+  return initAgentQuotaForMessage(tier, userId, guestSessionId);
 }
 
 async function stepBuildContext(userId, sessionContext, learnerSnapshot, userRole) {
@@ -49,6 +40,21 @@ async function authorizeToolCalls(toolCalls, ctx) {
   for (const call of toolCalls || []) {
     const name = call?.name;
     const args = call?.arguments || {};
+    const toolCost = toolQuotaCost(name);
+    if (toolCost > 0 && ctx.quotaMeter) {
+      const charged = await ctx.quotaMeter.tryConsume(toolCost, name);
+      if (!charged) {
+        tool_results.push({
+          id: call?.id,
+          name,
+          ok: false,
+          code: 'AGENT_QUOTA_EXCEEDED',
+          suggestion:
+            'Đã hết quota trợ lý trong giờ này. Thử lại sau hoặc gửi câu hỏi ngắn hơn (ít tìm kiếm/quiz hơn).',
+        });
+        continue;
+      }
+    }
     const result = await executeAuthorizedTool({
       tier: ctx.tier,
       toolName: name,
@@ -58,6 +64,8 @@ async function authorizeToolCalls(toolCalls, ctx) {
       courseSlug: ctx.courseSlug,
       courseLessons: ctx.courseLessons,
       userMessage: ctx.userMessage,
+      lessonId: ctx.lessonId,
+      heavyOpsThisTurn: ctx.heavyOpsThisTurn,
     });
     tool_results.push({ id: call?.id, name, ...result });
   }
@@ -128,7 +136,7 @@ function* chunkTextForStream(text, wordsPerChunk = 12) {
 module.exports = {
   stepResolveGuestSession,
   stepEntitlement,
-  stepRateLimit,
+  stepInitQuota,
   stepBuildContext,
   authorizeToolCalls,
   stepPersistSession,

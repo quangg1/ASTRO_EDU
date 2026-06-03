@@ -71,19 +71,19 @@ export function NewsForumView({ forum, slug }: Props) {
   return (
     <>
       <div className="mb-6 rounded-2xl border border-cyan-400/25 bg-gradient-to-br from-[#0a1628]/95 via-[#061018] to-[#050a12] p-5 md:p-6">
-        <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-cyan-300/80">Bản tin thiên văn</p>
+        <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-ds-accent/80">Bản tin thiên văn</p>
         <h1 className="text-2xl font-bold text-white flex items-center gap-2 md:text-3xl">
           <span className="text-3xl" aria-hidden>
             {forum.icon || '🌌'}
           </span>
           {forum.title}
         </h1>
-        <p className="text-gray-400 mt-2 max-w-2xl leading-relaxed">
+        <p className="text-ds-muted mt-2 max-w-2xl leading-relaxed">
           Tóm tắt từ nguồn uy tín — nhấn tin để đọc bài gốc. Tự cập nhật hàng ngày.
         </p>
-        <p className="text-xs text-gray-500 mt-3">{total} bài</p>
+        <p className="text-xs text-ds-subtle mt-3">{total} bài</p>
 
-        <div className="mt-5 space-y-4 border-t border-white/10 pt-4">
+        <div className="mt-5 space-y-4 border-t border-ds-border pt-4">
           <CommunitySearchBar
             global={false}
             scope="news"
@@ -95,15 +95,15 @@ export function NewsForumView({ forum, slug }: Props) {
           />
           <PostSortBar sort={sort} onSortChange={(s) => { setSort(s); setPage(1) }} variant="news" />
           <div>
-            <p className="text-xs uppercase tracking-wide text-gray-500 mb-2">Chủ đề RSS</p>
+            <p className="text-xs uppercase tracking-wide text-ds-subtle mb-2">Chủ đề RSS</p>
             <div className="flex flex-wrap gap-2">
               <button
                 type="button"
                 onClick={() => { setNewsCategoryFilter(''); setPage(1) }}
                 className={`rounded-full px-3 py-1 text-xs border ${
                   !newsCategoryFilter
-                    ? 'border-cyan-400/50 bg-cyan-500/20 text-cyan-100'
-                    : 'border-white/15 bg-white/5 text-gray-400'
+                    ? 'border-ds-accent/50 bg-ds-accent/15 text-ds-text'
+                    : 'border-ds-border bg-white/5 text-ds-muted'
                 }`}
               >
                 Tất cả
@@ -115,8 +115,8 @@ export function NewsForumView({ forum, slug }: Props) {
                   onClick={() => { setNewsCategoryFilter(c); setPage(1) }}
                   className={`rounded-full px-3 py-1 text-xs border ${
                     newsCategoryFilter === c
-                      ? 'border-cyan-400/50 bg-cyan-500/20 text-cyan-100'
-                      : 'border-white/15 bg-white/5 text-gray-400'
+                      ? 'border-ds-accent/50 bg-ds-accent/15 text-ds-text'
+                      : 'border-ds-border bg-white/5 text-ds-muted'
                   }`}
                 >
                   {c}
@@ -128,7 +128,7 @@ export function NewsForumView({ forum, slug }: Props) {
       </div>
 
       {loading ? (
-        <div className="h-56 rounded-2xl border border-white/10 bg-white/5 animate-pulse" />
+        <div className="h-56 rounded-2xl border border-ds-border bg-white/5 animate-pulse" />
       ) : (
         <div className="space-y-8">
           {showSlider && sliderPosts.length > 0 && (
@@ -142,9 +142,9 @@ export function NewsForumView({ forum, slug }: Props) {
                   <NewsCardLink
                     key={p._id}
                     post={p}
-                    className="group flex flex-col overflow-hidden rounded-xl border border-white/10 bg-white/[0.03] hover:border-cyan-300/25"
+                    className="group flex flex-col overflow-hidden rounded-xl border border-ds-border bg-white/[0.03] hover:border-cyan-300/25"
                   >
-                    <div className="relative aspect-[16/10] overflow-hidden bg-[#0c1829]">
+                    <div className="relative aspect-[16/10] overflow-hidden bg-ds-surface">
                       {thumb ? (
                         <img src={thumb} alt="" className="h-full w-full object-cover" referrerPolicy="no-referrer" />
                       ) : (
@@ -153,7 +153,7 @@ export function NewsForumView({ forum, slug }: Props) {
                     </div>
                     <div className="p-4">
                       <h3 className="line-clamp-2 text-sm font-medium text-white">{p.title}</h3>
-                      <p className="mt-2 text-[11px] text-slate-500">
+                      <p className="mt-2 text-[11px] text-ds-subtle">
                         {p.sourceName || p.authorName} · {formatDate(p.publishedAt || p.createdAt)}
                       </p>
                     </div>
@@ -163,7 +163,7 @@ export function NewsForumView({ forum, slug }: Props) {
             </div>
           )}
           {posts.length === 0 && (
-            <div className="rounded-xl border border-dashed border-white/20 p-8 text-center text-gray-400">
+            <div className="rounded-xl border border-dashed border-white/20 p-8 text-center text-ds-muted">
               Chưa có tin phù hợp. Hệ thống tự crawl mỗi ngày — thử lại sau.
             </div>
           )}

@@ -94,19 +94,16 @@ export function AppHeader() {
   const sciFiClip = 'polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px)'
   const navBtnBase =
     'inline-flex items-center gap-2 px-4 py-[7px] text-[11px] font-bold uppercase tracking-widest border-2 transition-colors'
-  const navBtnActive = 'border-[#7ee7ff]/80 bg-[#7ee7ff]/15 text-[#7ee7ff]'
+  const navBtnActive = 'border-ds-accent/50 bg-ds-accent/12 text-ds-accent'
   const navBtnIdle =
-    'border-[#7ee7ff]/30 text-slate-300 hover:border-[#7ee7ff]/70 hover:text-[#7ee7ff] hover:bg-[#7ee7ff]/10'
+    'border-ds-border text-ds-muted hover:border-ds-accent/40 hover:text-ds-accent hover:bg-ds-accent/8'
 
   return (
     <header
-      className="app-header fixed top-0 left-0 right-0 z-40 backdrop-blur-[12px]"
+      className="app-header fixed top-0 left-0 right-0 z-40 border-b border-ds-border backdrop-blur-xl"
       style={{
-        background:
-          'linear-gradient(180deg, rgba(8,16,38,0.92) 0%, rgba(3,6,15,0.85) 100%)',
-        borderBottom: '1px solid rgba(126,231,255,0.5)',
-        boxShadow:
-          '0 1px 0 rgba(126,231,255,0.2), 0 2px 16px rgba(126,231,255,0.12)',
+        background: 'color-mix(in srgb, var(--color-bg-surface) 88%, transparent)',
+        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.35)',
       }}
     >
       <div className="relative h-[3.25rem] sm:h-14 px-3 sm:px-5 flex items-center justify-between gap-3 max-w-[1600px] mx-auto">
@@ -117,7 +114,7 @@ export function AppHeader() {
             <span
               className="block w-[6px] h-full"
               style={{
-                background: '#7ee7ff',
+                background: 'var(--color-accent)',
                 transform: 'skewX(-26deg)',
                 boxShadow: '0 0 12px rgba(126,231,255,0.75)',
               }}
@@ -143,7 +140,7 @@ export function AppHeader() {
         {/* Desktop */}
         <div className="hidden md:flex items-center gap-1 min-w-0 flex-1 justify-end">
           {!checked || loading ? (
-            <span className="text-xs text-slate-500 tabular-nums">…</span>
+            <span className="text-xs text-ds-subtle tabular-nums">…</span>
           ) : user ? (
             <>
               {headerDesktopItems
@@ -196,11 +193,11 @@ export function AppHeader() {
                     style={{
                       clipPath: 'polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px)',
                       background: 'linear-gradient(180deg, rgba(8,16,38,0.96) 0%, rgba(3,6,15,0.96) 100%)',
-                      border: '1px solid rgba(126,231,255,0.35)',
+                      border: '1px solid var(--color-border-accent, var(--color-border))',
                       boxShadow: '0 0 0 1px rgba(126,231,255,0.08), 0 12px 40px rgba(0,0,0,0.55), 0 0 24px rgba(126,231,255,0.12)',
                     }}
                   >
-                    <p className="px-3 py-1.5 text-[10px] uppercase tracking-[0.22em] font-bold text-[#7ee7ff]/80">// Tài khoản</p>
+                    <p className="px-3 py-1.5 text-[10px] uppercase tracking-[0.22em] font-bold text-ds-accent/80">// Tài khoản</p>
                     {headerMobileItems
                       .filter((item) => item.id in dropdownIconById)
                       .map((item) => {
@@ -210,25 +207,25 @@ export function AppHeader() {
                             key={`dropdown-${item.id}`}
                             href={item.href}
                             role="menuitem"
-                            className="flex items-center gap-2.5 px-3 py-2 text-[13px] text-slate-200 hover:bg-[#7ee7ff]/10 hover:text-[#7ee7ff] transition-colors"
+                            className="flex items-center gap-2.5 px-3 py-2 text-[13px] text-slate-200 hover:bg-ds-accent/10 hover:text-ds-accent transition-colors"
                             onClick={() => setUserMenuOpen(false)}
                           >
-                            <Icon className="w-4 h-4 text-[#7ee7ff]/70" />
+                            <Icon className="w-4 h-4 text-ds-accent/70" />
                             {navLabel(item)}
                           </Link>
                         )
                       })}
                     {showStudio && (
                       <>
-                        <div className="my-1 h-px bg-[#7ee7ff]/15" />
-                        <p className="px-3 py-1.5 text-[10px] uppercase tracking-[0.22em] font-bold text-[#7ee7ff]/80">// Giảng viên</p>
+                        <div className="my-1 h-px bg-ds-accent/15" />
+                        <p className="px-3 py-1.5 text-[10px] uppercase tracking-[0.22em] font-bold text-ds-accent/80">// Giảng viên</p>
                         <Link
                           href="/studio"
                           role="menuitem"
-                          className="flex items-center gap-2.5 px-3 py-2 text-[13px] text-slate-200 hover:bg-[#7ee7ff]/10 hover:text-[#7ee7ff] transition-colors"
+                          className="flex items-center gap-2.5 px-3 py-2 text-[13px] text-slate-200 hover:bg-ds-accent/10 hover:text-ds-accent transition-colors"
                           onClick={() => setUserMenuOpen(false)}
                         >
-                          <Clapperboard className="w-4 h-4 text-[#7ee7ff]/70" />
+                          <Clapperboard className="w-4 h-4 text-ds-accent/70" />
                           Studio
                         </Link>
                       </>
@@ -259,14 +256,14 @@ export function AppHeader() {
                       <Link
                         href="/admin"
                         role="menuitem"
-                        className="flex items-center gap-2.5 px-3 py-2 text-[13px] text-[#f5a524] hover:bg-[#f5a524]/12 hover:text-[#ffd27a] transition-colors"
+                        className="flex items-center gap-2.5 px-3 py-2 text-[13px] text-ds-amber hover:bg-ds-amber/12 hover:text-ds-amber transition-colors"
                         onClick={() => setUserMenuOpen(false)}
                       >
-                        <Shield className="w-4 h-4 text-[#f5a524]" />
+                        <Shield className="w-4 h-4 text-ds-amber" />
                         {viText.nav.admin}
                       </Link>
                     )}
-                    <div className="my-1 h-px bg-[#7ee7ff]/15" />
+                    <div className="my-1 h-px bg-ds-accent/15" />
                     <button
                       type="button"
                       role="menuitem"
@@ -285,14 +282,14 @@ export function AppHeader() {
               <Link
                 href="/courses"
                 style={{ clipPath: 'polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px)' }}
-                className="inline-flex items-center gap-2 px-4 py-[7px] text-[11px] font-bold uppercase tracking-widest border-2 border-[#7ee7ff]/30 text-slate-300 hover:border-[#7ee7ff]/70 hover:text-[#7ee7ff] hover:bg-[#7ee7ff]/10 transition-colors"
+                className="inline-flex items-center gap-2 px-4 py-[7px] text-[11px] font-bold uppercase tracking-widest border-2 border-ds-accent/30 text-ds-muted hover:border-ds-accent/70 hover:text-ds-accent hover:bg-ds-accent/10 transition-colors"
               >
                 {viText.nav.courses}
               </Link>
               <Link
                 href="/login"
                 style={{ clipPath: 'polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px)' }}
-                className="inline-flex items-center gap-2 px-4 py-[7px] text-[11px] font-bold uppercase tracking-widest border-2 border-[#7ee7ff]/30 text-slate-300 hover:border-[#7ee7ff]/70 hover:text-[#7ee7ff] hover:bg-[#7ee7ff]/10 transition-colors"
+                className="inline-flex items-center gap-2 px-4 py-[7px] text-[11px] font-bold uppercase tracking-widest border-2 border-ds-accent/30 text-ds-muted hover:border-ds-accent/70 hover:text-ds-accent hover:bg-ds-accent/10 transition-colors"
               >
                 {viText.nav.signIn}
               </Link>
@@ -300,7 +297,7 @@ export function AppHeader() {
                 href="/register"
                 style={{
                   clipPath: 'polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px)',
-                  background: '#f5a524',
+                  background: 'var(--color-brand-amber)',
                   color: '#1a0e00',
                   boxShadow: '0 0 18px rgba(245,165,36,0.4)',
                 }}
@@ -316,7 +313,7 @@ export function AppHeader() {
           {user ? <NotificationBell /> : null}
           <Link
             href="/search"
-            className="h-10 w-10 inline-flex items-center justify-center rounded-xl border-2 border-white/10 bg-white/[0.04] text-slate-300 hover:bg-white/[0.08] hover:text-white active:scale-[0.98] transition"
+            className="h-10 w-10 inline-flex items-center justify-center rounded-xl border-2 border-ds-border bg-ds-surface/50 text-ds-muted hover:bg-white/[0.08] hover:text-white active:scale-[0.98] transition"
             aria-label="Tìm kiếm"
           >
             <Search className="w-5 h-5" />
@@ -324,7 +321,7 @@ export function AppHeader() {
           <button
             type="button"
             onClick={() => setMobileOpen((v) => !v)}
-            className="h-10 min-w-[4.5rem] px-3 rounded-xl border-2 border-white/10 bg-white/[0.04] text-slate-200 text-sm font-medium hover:bg-white/[0.08] active:scale-[0.98] transition"
+            className="h-10 min-w-[4.5rem] px-3 rounded-xl border-2 border-ds-border bg-ds-surface/50 text-slate-200 text-sm font-medium hover:bg-white/[0.08] active:scale-[0.98] transition"
             aria-label={mobileOpen ? 'Đóng menu' : 'Mở menu'}
             aria-expanded={mobileOpen}
           >
@@ -334,10 +331,10 @@ export function AppHeader() {
       </div>
 
       {mobileOpen && (
-        <div className="md:hidden border-t border-white/[0.06] bg-[#0a0f17]/98 backdrop-blur">
+        <div className="md:hidden border-t border-white/[0.06] bg-ds-base/98 backdrop-blur">
           <nav className="px-3 py-3 space-y-1 max-h-[calc(100vh-3.5rem)] overflow-y-auto pb-[env(safe-area-inset-bottom)]">
             {!checked || loading ? (
-              <div className="px-3 py-2 text-sm text-slate-500">{viText.common.loading}</div>
+              <div className="px-3 py-2 text-sm text-ds-subtle">{viText.common.loading}</div>
             ) : user ? (
               <>
                 {headerMobileItems
@@ -345,7 +342,7 @@ export function AppHeader() {
                   .map((item) => {
                     const Icon = desktopIconById[item.id as keyof typeof desktopIconById]
                     const activeCls =
-                      item.id === 'dashboard' ? 'bg-cyan-500/15 text-cyan-100' : 'bg-violet-500/15 text-violet-100'
+                      item.id === 'dashboard' ? 'bg-cyan-500/15 text-ds-text' : 'bg-violet-500/15 text-violet-100'
                     return (
                       <Link
                         key={`mobile-top-${item.id}`}
@@ -360,20 +357,20 @@ export function AppHeader() {
                     )
                   })}
                 <div className="my-2 h-px bg-white/[0.06]" />
-                <p className="px-3 text-[10px] uppercase tracking-wider text-slate-500">{viText.nav.more}</p>
+                <p className="px-3 text-[10px] uppercase tracking-wider text-ds-subtle">{viText.nav.more}</p>
                 {headerMobileItems
                   .filter((item) => mobileMoreItemIds.has(item.id))
                   .map((item) => (
                     <Link
                       key={`mobile-more-${item.id}`}
                       href={item.href}
-                      className="block rounded-xl px-3 py-2.5 text-sm text-slate-300 hover:bg-white/[0.06]"
+                      className="block rounded-xl px-3 py-2.5 text-sm text-ds-muted hover:bg-white/[0.06]"
                     >
                       {navLabel(item)}
                     </Link>
                   ))}
                 {showStudio && (
-                  <Link href="/studio" className="block rounded-xl px-3 py-2.5 text-sm text-slate-300 hover:bg-white/[0.06]">
+                  <Link href="/studio" className="block rounded-xl px-3 py-2.5 text-sm text-ds-muted hover:bg-white/[0.06]">
                     Studio
                   </Link>
                 )}
@@ -415,7 +412,7 @@ export function AppHeader() {
                 <div className="grid grid-cols-2 gap-2 pt-1">
                   <Link
                     href="/login"
-                    className="min-h-11 rounded-xl border border-white/15 text-center text-sm font-medium text-slate-200 inline-flex items-center justify-center hover:bg-white/[0.06]"
+                    className="min-h-11 rounded-xl border border-ds-border text-center text-sm font-medium text-slate-200 inline-flex items-center justify-center hover:bg-white/[0.06]"
                   >
                     {viText.nav.signIn}
                   </Link>

@@ -24,8 +24,8 @@ function generateStars(count = 180, width = 1600, height = 1000): Star[] {
   for (let i = 0; i < count; i++) {
     const roll = rnd()
     let color = '#ffffff'
-    if (roll < 0.1) color = '#7ee7ff'
-    else if (roll < 0.2) color = '#f5a524'
+    if (roll < 0.1) color = 'var(--color-accent)'
+    else if (roll < 0.2) color = 'var(--color-brand-amber)'
     const r = 0.4 + rnd() * 1.2
     stars.push({
       cx: rnd() * width,

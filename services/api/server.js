@@ -21,6 +21,7 @@ const {
   phylaRouter,
   planetNarrativeRouter,
   exploreContextualQuizRouter,
+  exploreSkyTargetsRouter,
 } = require('./features/content3d');
 const { gemsRouter, showcaseGamificationRouter } = require('./features/rewards');
 const paymentRouter = require('./features/payment');
@@ -35,6 +36,7 @@ const { startOrderMaintenanceScheduler } = require('./features/payment/jobs/orde
 const mediaRouter = require('./features/media');
 const adminRouter = require('./features/admin');
 const { agentRouter } = require('./features/agent');
+const { learningStateRouter } = require('./features/learning-state');
 const { onboardingRouter } = require('./features/onboarding');
 const { attachNotificationWebSocket, WS_PATH } = require('./features/notifications/ws/attachNotificationWs');
 const { isMailConfigured } = require('./shared/mailer');
@@ -59,6 +61,7 @@ app.use('/api/showcase-entities', showcaseEntitiesRouter);
 app.use('/api/showcase-catalog', showcaseCatalogRouter);
 app.use('/api/showcase-orbits', showcaseOrbitsJplRouter);
 app.use('/api/explore/contextual-quiz', exploreContextualQuizRouter);
+app.use('/api/explore/sky-targets', exploreSkyTargetsRouter);
 app.use('/api/gems', gemsRouter);
 app.use('/api/showcase', showcaseGamificationRouter);
 app.use('/api/earth-history', earthHistoryRouter);
@@ -77,6 +80,7 @@ app.use('/api/news', newsRouter);
 app.use('/api/community', communityRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api/agent', agentRouter);
+app.use('/api/learning-state', learningStateRouter);
 app.use('/api/onboarding', onboardingRouter);
 app.use(mediaRouter); // POST /upload, GET /files/*
 app.use(errorMiddleware);

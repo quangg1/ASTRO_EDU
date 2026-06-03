@@ -24,28 +24,28 @@ function CosmosTour({ show, onClose }: { show: boolean; onClose: () => void }) {
     <div
       className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30 w-[min(420px,calc(100vw-2rem))] p-5"
       style={{
-        background: 'rgba(6,9,26,0.92)',
+        background: 'var(--color-panel-solid)',
         border: '1px solid rgba(126,231,255,0.3)',
         clipPath:
           'polygon(14px 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%, 0 14px)',
       }}
     >
       <div className="flex items-start justify-between gap-3 mb-2">
-        <p className="text-[10px] font-[JetBrains_Mono,monospace] uppercase tracking-[0.18em] text-[#7ee7ff]">
+        <p className="text-[10px] font-[JetBrains_Mono,monospace] uppercase tracking-[0.18em] text-ds-accent">
           Hướng dẫn · {step + 1}/{TOUR_STEPS.length}
         </p>
-        <button type="button" onClick={onClose} className="text-[#5c6886] hover:text-white" aria-label="Đóng">
+        <button type="button" onClick={onClose} className="text-ds-subtle hover:text-white" aria-label="Đóng">
           <X className="w-4 h-4" />
         </button>
       </div>
       <p className="text-sm font-medium text-white mb-1">{current.title}</p>
-      <p className="text-xs text-[#9aa8c4] leading-relaxed mb-4">{current.body}</p>
+      <p className="text-xs text-ds-muted leading-relaxed mb-4">{current.body}</p>
       <div className="flex justify-end gap-2">
         {!isLast ? (
           <button
             type="button"
             onClick={() => setStep((s) => s + 1)}
-            className="px-4 py-2 text-xs font-medium text-[#031018] bg-[#7ee7ff] rounded-none"
+            className="px-4 py-2 text-xs font-medium text-[#031018] bg-ds-accent rounded-none"
             style={{
               clipPath: 'polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px)',
             }}
@@ -56,7 +56,7 @@ function CosmosTour({ show, onClose }: { show: boolean; onClose: () => void }) {
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 text-xs font-medium text-[#1a0e00] bg-[#f5a524]"
+            className="px-4 py-2 text-xs font-medium text-[#1a0e00] bg-ds-amber"
             style={{
               clipPath: 'polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px)',
             }}
@@ -87,17 +87,17 @@ function CosmosPageInner() {
       <div className="absolute top-0 inset-x-0 z-20 flex items-center justify-between gap-3 px-4 py-3 pointer-events-none">
         <Link
           href="/dashboard"
-          className="pointer-events-auto text-xs font-[JetBrains_Mono,monospace] uppercase tracking-[0.14em] text-[#7ee7ff] hover:text-white"
+          className="pointer-events-auto text-xs font-[JetBrains_Mono,monospace] uppercase tracking-[0.14em] text-ds-accent hover:text-white"
         >
           ← Dashboard
         </Link>
         <div className="pointer-events-auto flex items-center gap-2">
           {landing.focus === 'search' ? (
-            <span className="hidden sm:inline-flex items-center gap-1 text-[10px] text-[#9aa8c4]">
+            <span className="hidden sm:inline-flex items-center gap-1 text-[10px] text-ds-muted">
               <Search className="w-3 h-3" /> Gợi ý: thử M31
             </span>
           ) : (
-            <span className="hidden sm:inline-flex items-center gap-1 text-[10px] text-[#9aa8c4]">
+            <span className="hidden sm:inline-flex items-center gap-1 text-[10px] text-ds-muted">
               <Compass className="w-3 h-3" /> 200 Mpc · MW magenta
             </span>
           )}
@@ -105,7 +105,7 @@ function CosmosPageInner() {
             <button
               type="button"
               onClick={() => setTourOpen(true)}
-              className="text-[10px] uppercase tracking-wider text-[#5c6886] hover:text-[#7ee7ff] pointer-events-auto"
+              className="text-[10px] uppercase tracking-wider text-ds-subtle hover:text-ds-accent pointer-events-auto"
             >
               Hướng dẫn
             </button>
@@ -149,7 +149,7 @@ function CosmosPageInner() {
 
 export default function CosmosPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-black" />}>
+    <Suspense fallback={<div className="relative z-10 text-ds-text w-full" />}>
       <CosmosPageInner />
     </Suspense>
   )

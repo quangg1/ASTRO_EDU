@@ -15,7 +15,7 @@ export function TagChips({ tags, activeTag = '', onSelect, title = 'Hashtag' }: 
 
   return (
     <div className="space-y-2">
-      <p className="text-xs uppercase tracking-wide text-gray-500">{title}</p>
+      <p className="text-xs uppercase tracking-wide text-ds-subtle">{title}</p>
       <div className="flex flex-wrap gap-2">
         {onSelect && (
           <button
@@ -24,7 +24,7 @@ export function TagChips({ tags, activeTag = '', onSelect, title = 'Hashtag' }: 
             className={`rounded-full px-3 py-1 text-xs border transition-colors ${
               !activeTag
                 ? 'border-violet-400/50 bg-violet-500/20 text-violet-100'
-                : 'border-white/15 bg-white/5 text-gray-400 hover:border-white/25'
+                : 'border-ds-border bg-white/5 text-ds-muted hover:border-white/25'
             }`}
           >
             Tất cả
@@ -36,18 +36,18 @@ export function TagChips({ tags, activeTag = '', onSelect, title = 'Hashtag' }: 
           const className = `rounded-full px-3 py-1 text-xs border transition-colors ${
             active
               ? 'border-violet-400/50 bg-violet-500/20 text-violet-100'
-              : 'border-white/15 bg-white/5 text-gray-400 hover:border-white/25'
+              : 'border-ds-border bg-white/5 text-ds-muted hover:border-white/25'
           }`
           if (onSelect) {
             return (
               <button key={t.tag} type="button" onClick={() => onSelect(t.tag)} className={className}>
-                {label} <span className="text-gray-500">({t.count})</span>
+                {label} <span className="text-ds-subtle">({t.count})</span>
               </button>
             )
           }
           return (
             <Link key={t.tag} href={`/community/tags/${encodeURIComponent(t.tag)}`} className={className}>
-              {label} <span className="text-gray-500">({t.count})</span>
+              {label} <span className="text-ds-subtle">({t.count})</span>
             </Link>
           )
         })}

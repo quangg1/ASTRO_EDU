@@ -26,7 +26,7 @@ type Props = {
   node: LearningNode
 }
 
-const CYAN = '#7ee7ff'
+const CYAN = 'var(--color-accent)'
 
 const DEPTH_STYLE: Record<DepthLevel, { label: string; labelVi: string; orbColor: string }> = {
   beginner:   { label: 'Beginner',   labelVi: 'Cơ bản', orbColor: '#3ddc84' },
@@ -114,7 +114,7 @@ export default function NodeDepthPanel({ module, node }: Props) {
           style={{
             borderColor: favoritesOnly ? 'rgba(244,114,182,0.45)' : 'rgba(255,255,255,0.1)',
             background: favoritesOnly ? 'rgba(244,114,182,0.1)' : 'transparent',
-            color: favoritesOnly ? '#fecdd3' : '#9aa8c4',
+            color: favoritesOnly ? '#fecdd3' : 'var(--color-text-muted)',
           }}
         >
           {favoritesOnly ? `♥ Yêu thích (${savedItems.length})` : '♡ Chỉ yêu thích'}
@@ -161,11 +161,11 @@ export default function NodeDepthPanel({ module, node }: Props) {
                   ? 'rgba(126,231,255,0.07)'
                   : isHov
                   ? 'rgba(126,231,255,0.04)'
-                  : 'rgba(6,9,26,0.6)',
+                  : 'var(--color-panel-muted)',
                 border: isOn
                   ? '1px solid rgba(126,231,255,0.45)'
                   : isHov
-                  ? '1px solid rgba(126,231,255,0.2)'
+                  ? '1px solid var(--color-border)'
                   : '1px solid rgba(255,255,255,0.08)',
                 boxShadow: isOn ? '0 0 22px rgba(126,231,255,0.12), inset 0 0 14px rgba(126,231,255,0.04)' : 'none',
                 textAlign: 'left',
@@ -184,7 +184,7 @@ export default function NodeDepthPanel({ module, node }: Props) {
               <span style={{
                 fontFamily: "'Space Grotesk',sans-serif",
                 fontSize: 14, fontWeight: 600,
-                color: isOn ? '#eaf6ff' : '#9aa8c4',
+                color: isOn ? 'var(--color-text-primary)' : 'var(--color-text-muted)',
                 verticalAlign: 'middle', marginRight: 8,
               }}>
                 {ds.label}
@@ -253,7 +253,7 @@ export default function NodeDepthPanel({ module, node }: Props) {
             <p style={{
               margin: 0, flex: 1,
               fontFamily: "'Space Grotesk',sans-serif",
-              fontSize: 13, color: '#5c6886', lineHeight: 1.6,
+              fontSize: 13, color: 'var(--color-text-subtle)', lineHeight: 1.6,
             }}>
               Chọn một bài để đọc nội dung chi tiết — mỗi dòng là một{' '}
               <span style={{ color: CYAN, fontWeight: 500 }}>trang học riêng</span>.
@@ -341,7 +341,7 @@ export default function NodeDepthPanel({ module, node }: Props) {
                         flex: 1, minWidth: 0,
                         fontFamily: "'Space Grotesk',sans-serif",
                         fontSize: 15, fontWeight: 500,
-                        color: done ? '#5c6886' : '#c8d8f0',
+                        color: done ? 'var(--color-text-subtle)' : '#c8d8f0',
                         lineHeight: 1.4,
                       }}>
                         {lesson.titleVi}
@@ -387,7 +387,7 @@ export default function NodeDepthPanel({ module, node }: Props) {
                                 padding: '4px 10px',
                                 clipPath: 'polygon(4px 0%,100% 0%,calc(100% - 4px) 100%,0% 100%)',
                                 background: 'rgba(126,231,255,0.12)',
-                                border: '1px solid rgba(126,231,255,0.35)',
+                                border: '1px solid var(--color-border-accent, var(--color-border))',
                                 fontSize: 11,
                                 fontWeight: 600,
                                 color: CYAN,

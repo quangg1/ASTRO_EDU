@@ -237,7 +237,7 @@ export function LessonRecallQuiz({
                                 ? 'bg-rose-500/20 text-rose-100'
                                 : 'bg-white/10 text-ds-muted'
                             : selected
-                              ? 'bg-ds-accent-strong text-cyan-100'
+                              ? 'bg-ds-accent-strong text-ds-text'
                               : 'bg-white/10 text-ds-muted'
                         }`}
                       >
@@ -275,14 +275,14 @@ export function LessonRecallQuiz({
 
       <div
         className={`relative flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-ds-border px-5 py-4 md:px-6 ${
-          isOverlay ? 'bg-black/20' : 'bg-black/25'
+          isOverlay ? 'bg-ds-surface/50' : 'bg-ds-surface/60'
         }`}
       >
         <button
           type="button"
           disabled={step === 0 || phase === 'checking'}
           onClick={() => setStep((s) => Math.max(0, s - 1))}
-          className="inline-flex items-center gap-1.5 rounded-xl border border-ds-border px-4 py-2 text-sm text-slate-300 hover:bg-white/5 disabled:opacity-30"
+          className="inline-flex items-center gap-1.5 rounded-xl border border-ds-border px-4 py-2 text-sm text-ds-muted hover:bg-white/5 disabled:opacity-30"
         >
           <ChevronLeft className="h-4 w-4" />
           Trước

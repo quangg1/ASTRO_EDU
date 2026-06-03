@@ -19,6 +19,12 @@ const {
 const { getSpacedReviewDue, recordSpacedReview } = require('../services/spacedReviewService');
 const { recordDepthPreference } = require('../services/depthAdaptationService');
 const { assertAgentNotQuizLocked } = require('../lib/agentQuizLock');
+const { recordMessageFeedback } = require('../services/feedbackService');
+const {
+  submitConceptQuizSession,
+  generateConceptQuizForAgent,
+} = require('../services/conceptQuizService');
+const { createAgentQuotaMeter, QUOTA_COST } = require('../services/agentQuota');
 const { AppError } = require('../../../shared/errors');
 
 const router = express.Router();
@@ -86,6 +92,55 @@ router.post('/coach/dismiss', authMiddleware, async (req, res, next) => {
     await dismissCoach(req.userId);
     res.json({ success: true });
   } catch (err) {
+    next(err);
+  }
+});
+
+router.post('/concept-quiz/start', authMiddleware, async (req, res, next) => {
+  try {
+    const conceptId =
+      typeof req.body?.conceptId === 'string' ? req.body.conceptId.trim() : '';
+    const lessonId =
+      typeof req.body?.lessonId === 'string' ? req.body.lessonId.trim() : '';
+    if (!conceptId) {
+      return res.status(400).json({ success: false, error: 'conceptId required' });
+    }
+    const tier = await resolveAgentTier(req.userId, req.userRole);
+    const meter = await createAgentQuotaMeter(tier, req.userId, null);
+    await meter.consume(QUOTA_COST.concept_quiz, 'concept_quiz_explore');
+    const data = await generateConceptQuizForAgent(
+      req.userId,
+      tier,
+      { conceptId, lessonId: lessonId || undefined },
+      null,
+    );
+    res.json({ success: true, data });
+  } catch (err) {
+    if (err.status === 400 || err.status === 429 || err.status === 502) {
+      return res.status(err.status).json({
+        success: false,
+        code: err.code,
+        error: err.message,
+      });
+    }
+    next(err);
+  }
+});
+
+router.post('/concept-quiz/submit', authMiddleware, async (req, res, next) => {
+  try {
+    const quizSessionId =
+      typeof req.body?.quizSessionId === 'string' ? req.body.quizSessionId.trim() : '';
+    const answers = req.body?.answers && typeof req.body.answers === 'object' ? req.body.answers : {};
+    if (!quizSessionId) {
+      return res.status(400).json({ success: false, error: 'quizSessionId required' });
+    }
+    const data = await submitConceptQuizSession(req.userId, quizSessionId, answers);
+    res.json({ success: true, data });
+  } catch (err) {
+    if (err.status === 404) {
+      return res.status(404).json({ success: false, code: err.code, error: err.message });
+    }
     next(err);
   }
 });
@@ -224,6 +279,18 @@ router.post('/tools/execute', authMiddleware, async (req, res, next) => {
     });
     res.json({ success: result.ok, ...result });
   } catch (err) {
+    next(err);
+  }
+});
+
+router.post('/feedback', authMiddleware, async (req, res, next) => {
+  try {
+    const data = await recordMessageFeedback(req.userId, req.body || {});
+    res.json({ success: true, data });
+  } catch (err) {
+    if (err.status === 400) {
+      return res.status(400).json({ success: false, error: err.message });
+    }
     next(err);
   }
 });

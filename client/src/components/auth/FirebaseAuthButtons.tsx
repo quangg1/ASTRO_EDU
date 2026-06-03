@@ -64,7 +64,7 @@ export function FirebaseAuthButtons({
   const [err, setErr] = useState('')
 
   const pillStyle = variant === 'onboarding' ? onboardingPillStyle : defaultPillStyle
-  const labelClass = variant === 'onboarding' ? '' : 'font-[Space_Grotesk,sans-serif] text-[#eaf6ff]'
+  const labelClass = variant === 'onboarding' ? '' : 'font-[Space_Grotesk,sans-serif] text-ds-text'
   const containerClass = layout === 'row' ? 'grid grid-cols-2 gap-3' : 'flex flex-col gap-3'
   const isOnboarding = variant === 'onboarding'
 
@@ -101,8 +101,8 @@ export function FirebaseAuthButtons({
         </div>
         <div className="col-span-2 rounded-xl border border-amber-400/30 bg-amber-500/10 px-4 py-3 text-[13px] text-amber-100/90">
           Bật đăng nhập: thêm{' '}
-          <code className="rounded bg-black/30 px-1 py-0.5 text-[11px]">NEXT_PUBLIC_FIREBASE_*</code> vào{' '}
-          <code className="rounded bg-black/30 px-1 py-0.5 text-[11px]">.env.local</code> và khởi động lại dev server.
+          <code className="rounded bg-ds-surface/70 px-1 py-0.5 text-[11px]">NEXT_PUBLIC_FIREBASE_*</code> vào{' '}
+          <code className="rounded bg-ds-surface/70 px-1 py-0.5 text-[11px]">.env.local</code> và khởi động lại dev server.
         </div>
       </div>
     )

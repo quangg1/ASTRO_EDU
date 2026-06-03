@@ -134,7 +134,32 @@ export type AgentClientAction =
       lessons: Array<{ lessonId: string; title: string; moduleId: string; nodeId: string }>
     }
   | { type: 'start_recall_quiz'; lessonId: string; moduleId: string; nodeId: string }
+  | {
+      type: 'generate_concept_quiz'
+      quizSessionId: string
+      conceptId: string
+      conceptTitle: string
+      lessonId?: string | null
+      questions: Array<{
+        id: string
+        type: string
+        question: string
+        options: { text: string }[]
+      }>
+    }
   | { type: 'suggest_community_thread'; threads: CommunityThreadSuggestion[] }
+  | {
+      type: 'search_learning_content'
+      lpLessons: Array<{
+        lessonId: string
+        title: string
+        moduleId: string
+        nodeId: string
+        href: string
+        snippet?: string
+      }>
+      communityThreads: CommunityThreadSuggestion[]
+    }
 
 export type AgentMessageResponse = {
   success: boolean
@@ -142,6 +167,8 @@ export type AgentMessageResponse = {
     sessionId?: string
     tier?: string
     quotaRemaining?: number | null
+    /** Đơn vị quota đã trừ trong lượt tin nhắn này */
+    quotaTurnUsed?: number | null
     guestSessionId?: string
     trialExpired?: boolean
     allowedTools?: string[]

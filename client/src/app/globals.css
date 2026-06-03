@@ -4,30 +4,40 @@
 
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&family=Poppins:wght@400;500;600;700&family=Sora:wght@600;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap');
 
+@import '../design-system/tokens/semantic.css';
+@import '../design-system/tokens/surfaces/edu.css';
+@import '../design-system/tokens/surfaces/studio.css';
+@import '../design-system/tokens/surfaces/scene.css';
+@import '../components/space-premium/space-premium.css';
+@import '../design-system/tokens/cosmo-utilities.css';
+
 :root {
-  --background: #000000;
-  --foreground: #ffffff;
-  /* Cosmic landing theme (HSL values without hsl() for use with hsl(var(--x))) */
-  --cosmic-background: 222 47% 6%;
-  --cosmic-foreground: 210 40% 96%;
-  --cosmic-card: 222 44% 10%;
-  --cosmic-primary: 45 93% 58%;
-  --cosmic-primary-foreground: 222 47% 6%;
-  --cosmic-secondary: 260 60% 50%;
-  --cosmic-muted: 222 28% 14%;
-  --cosmic-muted-foreground: 40 15% 65%;
-  --cosmic-border: 38 25% 22%;
-  /** Accent phụ — amber (đồng bộ landing mới) */
-  --cosmic-accent: 38 92% 56%;
+  /* Legacy shadcn-style aliases → semantic palette (Cosmo v2) */
+  --background: var(--color-bg-base);
+  --foreground: var(--color-text-primary);
+
+  /* Cosmic landing (HSL triplets; đồng bộ --color-bg-base / brand) */
+  --cosmic-background: 230 23% 5%;
+  --cosmic-foreground: 220 25% 96%;
+  --cosmic-card: 230 18% 9%;
+  --cosmic-primary: 38 92% 56%;
+  --cosmic-primary-foreground: 230 23% 5%;
+  --cosmic-secondary: 260 45% 48%;
+  --cosmic-muted: 230 16% 12%;
+  --cosmic-muted-foreground: 220 12% 58%;
+  --cosmic-border: 230 14% 18%;
+  --cosmic-accent: 187 85% 74%;
   --cosmic-destructive: 0 84% 60%;
+
   --font-heading: 'Space Grotesk', sans-serif;
   --font-body: 'Inter', sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
 }
 
 body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  color: var(--color-text-primary);
+  background: var(--color-bg-base);
+  font-family: var(--font-body), system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
 /* Custom scrollbar */
@@ -342,11 +352,11 @@ body.explore-cockpit-fullscreen [data-mobile-bottom-nav] {
 .enduser-starfield-overlay {
   position: fixed;
   inset: 0;
-  z-index: 2;
+  z-index: 0;
   pointer-events: none;
   overflow: hidden;
   mix-blend-mode: screen;
-  opacity: 0.55;
+  opacity: 0.32;
 }
 
 .enduser-starfield-layer {
@@ -357,39 +367,24 @@ body.explore-cockpit-fullscreen [data-mobile-bottom-nav] {
 }
 
 .enduser-starfield-layer-a {
-  opacity: 0.42;
+  opacity: 0.35;
   background-image:
-    radial-gradient(1px 1px at 12% 20%, rgba(255, 255, 255, 0.9) 0, transparent 100%),
-    radial-gradient(1px 1px at 31% 67%, rgba(255, 255, 255, 0.65) 0, transparent 100%),
-    radial-gradient(1.5px 1.5px at 54% 14%, rgba(186, 230, 253, 0.95) 0, transparent 100%),
-    radial-gradient(1px 1px at 72% 41%, rgba(255, 255, 255, 0.6) 0, transparent 100%),
-    radial-gradient(1px 1px at 88% 78%, rgba(253, 224, 71, 0.55) 0, transparent 100%),
-    radial-gradient(1.5px 1.5px at 16% 83%, rgba(255, 255, 255, 0.85) 0, transparent 100%);
+    radial-gradient(1px 1px at 12% 20%, rgba(255, 255, 255, 0.75) 0, transparent 100%),
+    radial-gradient(1px 1px at 31% 67%, rgba(255, 255, 255, 0.45) 0, transparent 100%),
+    radial-gradient(1.5px 1.5px at 54% 14%, rgba(242, 244, 248, 0.55) 0, transparent 100%),
+    radial-gradient(1px 1px at 88% 78%, rgba(245, 165, 36, 0.35) 0, transparent 100%);
   background-size: 520px 520px;
   animation: enduserStarDriftA 90s linear infinite;
 }
 
 .enduser-starfield-layer-b {
-  opacity: 0.28;
+  opacity: 0.22;
   background-image:
-    radial-gradient(1px 1px at 22% 30%, rgba(255, 255, 255, 0.55) 0, transparent 100%),
-    radial-gradient(1.5px 1.5px at 43% 53%, rgba(34, 211, 238, 0.6) 0, transparent 100%),
-    radial-gradient(1px 1px at 64% 20%, rgba(255, 255, 255, 0.45) 0, transparent 100%),
-    radial-gradient(1px 1px at 81% 62%, rgba(255, 255, 255, 0.5) 0, transparent 100%),
-    radial-gradient(1.5px 1.5px at 9% 72%, rgba(196, 181, 253, 0.55) 0, transparent 100%);
+    radial-gradient(1px 1px at 22% 30%, rgba(255, 255, 255, 0.4) 0, transparent 100%),
+    radial-gradient(1px 1px at 64% 20%, rgba(255, 255, 255, 0.35) 0, transparent 100%),
+    radial-gradient(1.5px 1.5px at 9% 72%, rgba(196, 30, 58, 0.2) 0, transparent 100%);
   background-size: 760px 760px;
   animation: enduserStarDriftB 130s linear infinite reverse;
-}
-
-.enduser-starfield-nebula {
-  position: absolute;
-  inset: -20%;
-  opacity: 0.3;
-  background:
-    radial-gradient(ellipse 40% 30% at 18% 12%, rgba(56, 189, 248, 0.16), transparent 70%),
-    radial-gradient(ellipse 35% 26% at 84% 14%, rgba(168, 85, 247, 0.14), transparent 70%),
-    radial-gradient(ellipse 40% 32% at 52% 82%, rgba(251, 191, 36, 0.09), transparent 72%);
-  animation: enduserNebulaPulse 12s ease-in-out infinite;
 }
 
 @keyframes enduserStarDriftA {
@@ -411,20 +406,20 @@ body.explore-cockpit-fullscreen [data-mobile-bottom-nav] {
    HUD / CosmoLearn home design system (design-home.md)
    ========================================================= */
 :root {
-  --hud-plasma: #7ee7ff;
-  --hud-plasma-2: #4dd2ff;
-  --hud-amber: #f5a524;
+  /* HUD legacy → semantic (Explore, cockpit, home) */
+  --hud-plasma: var(--color-accent);
+  --hud-plasma-2: var(--color-brand-plasma-2);
+  --hud-amber: var(--color-brand-amber);
   --hud-amber-2: #ffd27a;
-  --hud-magenta: #ff5cd4;
-  --hud-ink: #eaf6ff;
-  --hud-ink-2: #9aa8c4;
-  --hud-ink-3: #5c6886;
-  --hud-line: rgba(126, 231, 255, 0.14);
-  --hud-bg: #03060f;
-  --hud-bg-2: #06091a;
-  --hud-bg-3: #0a1024;
+  --hud-magenta: var(--color-brand-magenta);
+  --hud-ink: var(--color-text-primary);
+  --hud-ink-2: var(--color-text-muted);
+  --hud-ink-3: var(--color-text-subtle);
+  --hud-line: var(--color-accent-soft);
+  --hud-bg: var(--color-bg-base);
+  --hud-bg-2: var(--color-bg-surface);
+  --hud-bg-3: var(--color-bg-elevated);
   --hud-cut: 14px;
-  --font-mono: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
 }
 
 /* Chamfered HUD panel (top-left + bottom-right cut) */
@@ -596,9 +591,9 @@ body.explore-cockpit-fullscreen [data-mobile-bottom-nav] {
 .dash-mono { font-family: 'JetBrains Mono', monospace; }
 
 .dash-nav-item:hover {
-  background: rgba(126,231,255,0.05) !important;
-  color: #eaf6ff !important;
-  border-color: rgba(126,231,255,0.15) !important;
+  background: var(--color-accent-soft) !important;
+  color: var(--color-text-primary) !important;
+  border-color: var(--color-accent-strong) !important;
 }
 
 @keyframes dash-scan {
@@ -617,8 +612,8 @@ body.explore-cockpit-fullscreen [data-mobile-bottom-nav] {
   width: 100%;
   border-radius: 0.5rem;
   border: 1px solid rgba(126, 231, 255, 0.24);
-  background: rgba(3, 10, 20, 0.88);
-  color: #eaf6ff;
+  background: color-mix(in srgb, var(--color-bg-base) 88%, transparent);
+  color: var(--color-text-primary);
   padding: 0.5rem 0.75rem;
   font-size: 0.875rem;
   line-height: 1.35;
@@ -672,7 +667,7 @@ textarea.studio-field:-webkit-autofill:focus,
 select.studio-field:-webkit-autofill,
 select.studio-field:-webkit-autofill:hover,
 select.studio-field:-webkit-autofill:focus {
-  -webkit-text-fill-color: #eaf6ff;
+  -webkit-text-fill-color: var(--color-text-primary);
   -webkit-box-shadow: 0 0 0 1000px rgba(3, 10, 20, 0.94) inset;
   box-shadow: 0 0 0 1000px rgba(3, 10, 20, 0.94) inset;
   border: 1px solid rgba(126, 231, 255, 0.24);

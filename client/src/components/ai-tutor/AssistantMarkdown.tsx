@@ -16,10 +16,10 @@ export function AssistantMarkdown({ source }: { source: string }) {
         '[&_h1]:text-base [&_h1]:font-bold [&_h1]:text-white [&_h1]:mt-3 [&_h1]:mb-2',
         '[&_h2]:text-sm [&_h2]:font-semibold [&_h2]:text-white [&_h2]:mt-3 [&_h2]:mb-1.5',
         '[&_h3]:text-sm [&_h3]:font-semibold [&_h3]:text-gray-100 [&_h3]:mt-2',
-        '[&_code]:rounded-md [&_code]:bg-black/35 [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:text-[12.5px] [&_code]:text-cyan-100/90',
-        '[&_pre]:my-2 [&_pre]:overflow-x-auto [&_pre]:rounded-lg [&_pre]:border [&_pre]:border-white/10 [&_pre]:bg-black/40 [&_pre]:p-3 [&_pre]:text-[12px]',
-        '[&_blockquote]:my-2 [&_blockquote]:border-l-2 [&_blockquote]:border-l-cyan-500/40 [&_blockquote]:pl-3 [&_blockquote]:text-gray-400',
-        '[&_a]:text-cyan-400 [&_a]:underline [&_a]:underline-offset-2 hover:[&_a]:text-cyan-300',
+        '[&_code]:rounded-md [&_code]:bg-black/35 [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:text-[12.5px] [&_code]:text-ds-text/90',
+        '[&_pre]:my-2 [&_pre]:overflow-x-auto [&_pre]:rounded-lg [&_pre]:border [&_pre]:border-ds-border [&_pre]:bg-ds-elevated/80 [&_pre]:p-3 [&_pre]:text-[12px]',
+        '[&_blockquote]:my-2 [&_blockquote]:border-l-2 [&_blockquote]:border-l-cyan-500/40 [&_blockquote]:pl-3 [&_blockquote]:text-ds-muted',
+        '[&_a]:text-cyan-400 [&_a]:underline [&_a]:underline-offset-2 hover:[&_a]:text-ds-accent',
       )}
     >
       <ReactMarkdown remarkPlugins={[remarkGfm]}>{source}</ReactMarkdown>

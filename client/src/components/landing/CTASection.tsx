@@ -26,10 +26,10 @@ export function CTASection() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.7 }}
-          className="hud-chamfer-xl relative mx-auto max-w-4xl px-8 py-16 md:px-16 md:py-20 text-center"
+          className="cosmo-dark-panel rounded-2xl relative mx-auto max-w-4xl px-8 py-16 md:px-16 md:py-20 text-center"
           style={{
             background:
-              'radial-gradient(ellipse 80% 60% at 50% 50%, rgba(245,165,36,0.08), transparent 70%), rgba(6,9,26,0.85)',
+              'radial-gradient(ellipse 80% 60% at 50% 50%, rgba(245,165,36,0.08), transparent 70%), var(--color-panel-glass)',
             border: '1px solid rgba(126,231,255,0.25)',
             boxShadow: '0 0 60px rgba(126,231,255,0.06), inset 0 0 60px rgba(245,165,36,0.04)',
           }}
@@ -52,9 +52,9 @@ export function CTASection() {
           <div className="flex flex-col sm:flex-row justify-center gap-3 mb-8">
             <Link
               href={primaryHref}
-              className="hud-chamfer group inline-flex items-center justify-center gap-2 px-8 py-4 text-sm font-semibold transition-all"
+              className="cosmo-dark-panel rounded-2xl group inline-flex items-center justify-center gap-2 px-8 py-4 text-sm font-semibold transition-all"
               style={{
-                background: 'var(--hud-amber)',
+                background: 'var(--color-brand-amber)',
                 color: '#1a0e00',
                 boxShadow: '0 0 28px rgba(245,165,36,0.4)',
               }}
@@ -65,7 +65,7 @@ export function CTASection() {
             </Link>
             <Link
               href={secondaryHref}
-              className="hud-chamfer inline-flex items-center justify-center px-8 py-4 text-sm font-semibold text-white transition-all"
+              className="cosmo-dark-panel rounded-2xl inline-flex items-center justify-center px-8 py-4 text-sm font-semibold text-white transition-all"
               style={{
                 background: 'rgba(126,231,255,0.06)',
                 border: '2px solid rgba(126,231,255,0.3)',

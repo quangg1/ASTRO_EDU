@@ -50,21 +50,17 @@ export function StatsSection() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: i * 0.1, duration: 0.6 }}
-              className="relative flex flex-col items-start justify-between py-8 px-6 min-h-[180px]"
-              style={{
-                background: 'rgba(6,9,26,0.65)',
-                border: '1px solid rgba(126,231,255,0.18)',
-              }}
+              className="cosmo-dark-panel rounded-2xl relative flex flex-col items-start justify-between py-8 px-6 min-h-[180px]"
             >
               <CornerBrackets />
-              <span className="hud-mono hud-mono-sm text-[color:var(--hud-plasma)]/80 mb-2">
+              <span className="hud-mono hud-mono-sm text-[color:var(--color-accent)]/80 mb-2">
                 {stat.code}
               </span>
               <div className="flex flex-col gap-2 mt-auto">
                 <div
                   className="font-heading text-5xl md:text-[clamp(48px,5vw,72px)] font-normal leading-none tabular-nums"
                   style={{
-                    background: 'linear-gradient(135deg, var(--hud-amber-2) 0%, var(--hud-amber) 100%)',
+                    background: 'linear-gradient(135deg, var(--hud-amber-2) 0%, var(--color-brand-amber) 100%)',
                     WebkitBackgroundClip: 'text',
                     WebkitTextFillColor: 'transparent',
                     backgroundClip: 'text',

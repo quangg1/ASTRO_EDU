@@ -94,17 +94,17 @@ export function NarrativeBottomDock() {
 
   return (
     <div
-      className="pointer-events-auto w-full rounded-2xl border border-white/10 bg-black/75 px-3 py-2 shadow-[0_-6px_32px_rgba(0,0,0,0.5)] backdrop-blur-xl sm:px-4"
+      className="pointer-events-auto w-full rounded-2xl border border-ds-border bg-black/75 px-3 py-2 shadow-[0_-6px_32px_rgba(0,0,0,0.5)] backdrop-blur-xl sm:px-4"
     >
       {/* Hàng điều khiển — gọn, không lặp tên giai đoạn (đã có ở panel) */}
       <div className="mb-2 flex items-center justify-between gap-3">
-        <div className="flex items-center gap-1 rounded-lg border border-white/10 bg-white/[0.03] p-0.5">
+        <div className="flex items-center gap-1 rounded-lg border border-ds-border bg-white/[0.03] p-0.5">
           <button
             type="button"
             onClick={prevStage}
             disabled={currentBeatIndex === 0}
             aria-label="Mốc trước"
-            className="flex h-8 w-8 items-center justify-center rounded-md text-slate-400 hover:bg-white/10 hover:text-white disabled:opacity-30"
+            className="flex h-8 w-8 items-center justify-center rounded-md text-ds-muted hover:bg-white/10 hover:text-white disabled:opacity-30"
           >
             <SkipBack className="h-3.5 w-3.5" />
           </button>
@@ -126,13 +126,13 @@ export function NarrativeBottomDock() {
             onClick={nextStage}
             disabled={currentBeatIndex >= totalBeats - 1}
             aria-label="Mốc sau"
-            className="flex h-8 w-8 items-center justify-center rounded-md text-slate-400 hover:bg-white/10 hover:text-white disabled:opacity-30"
+            className="flex h-8 w-8 items-center justify-center rounded-md text-ds-muted hover:bg-white/10 hover:text-white disabled:opacity-30"
           >
             <SkipForward className="h-3.5 w-3.5" />
           </button>
         </div>
 
-        <label className="hidden items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.03] px-2 py-1 text-[10px] uppercase tracking-wider text-slate-500 sm:flex">
+        <label className="hidden items-center gap-1.5 rounded-lg border border-ds-border bg-white/[0.03] px-2 py-1 text-[10px] uppercase tracking-wider text-ds-subtle sm:flex">
           Tốc độ
           <select
             value={playSpeed}
@@ -153,14 +153,14 @@ export function NarrativeBottomDock() {
           title={cur?.name}
         >
           {milestones[currentBeatIndex]}
-          <span className="ml-2 hidden font-normal text-slate-500 sm:inline">{speedLabel}</span>
+          <span className="ml-2 hidden font-normal text-ds-subtle sm:inline">{speedLabel}</span>
         </div>
 
         <div className="hidden shrink-0 items-center gap-1 lg:flex">
           <button
             type="button"
             onClick={() => toggleGlobeRotationPaused()}
-            className="rounded border border-white/10 px-1.5 py-1 text-[10px] text-slate-500 hover:text-slate-300"
+            className="rounded border border-ds-border px-1.5 py-1 text-[10px] text-ds-subtle hover:text-ds-muted"
             title="Space"
           >
             {globeRotationPaused ? '▶' : '⏸'}
@@ -169,7 +169,7 @@ export function NarrativeBottomDock() {
             type="button"
             aria-pressed={effectDustDemo}
             onClick={() => toggleEffectDustDemo()}
-            className="rounded border border-white/10 px-1.5 py-1 text-[10px] text-slate-500 hover:text-slate-300"
+            className="rounded border border-ds-border px-1.5 py-1 text-[10px] text-ds-subtle hover:text-ds-muted"
           >
             🌫
           </button>
@@ -177,7 +177,7 @@ export function NarrativeBottomDock() {
             type="button"
             aria-pressed={effectFloodDemo}
             onClick={() => toggleEffectFloodDemo()}
-            className="rounded border border-white/10 px-1.5 py-1 text-[10px] text-slate-500 hover:text-slate-300"
+            className="rounded border border-ds-border px-1.5 py-1 text-[10px] text-ds-subtle hover:text-ds-muted"
           >
             🌊
           </button>
@@ -198,7 +198,7 @@ export function NarrativeBottomDock() {
                 aria-label={beats[index].name}
                 className={clsx(
                   'min-w-0 flex-1 truncate text-center text-[9px] tabular-nums transition-colors sm:text-[10px]',
-                  active ? 'font-medium text-white' : 'text-slate-600 hover:text-slate-400',
+                  active ? 'font-medium text-white' : 'text-slate-600 hover:text-ds-muted',
                 )}
               >
                 {label}

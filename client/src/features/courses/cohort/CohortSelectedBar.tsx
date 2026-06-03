@@ -16,7 +16,7 @@ export function CohortSelectedBar({
 
   return (
     <div className="rounded-xl border border-cyan-500/25 bg-cyan-950/15 px-3 py-2.5 flex flex-wrap items-center gap-3">
-      <span className="text-[10px] uppercase tracking-wider text-cyan-300/80 font-medium">Đang quản lý</span>
+      <span className="text-[10px] uppercase tracking-wider text-ds-accent/80 font-medium">Đang quản lý</span>
       <select
         value={selectedId || ''}
         onChange={(e) => onSelect(e.target.value)}

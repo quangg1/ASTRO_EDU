@@ -175,7 +175,7 @@ export function AssignmentSubmit({
             type="button"
             disabled={busy || files.length === 0}
             onClick={() => void onSubmit()}
-            className="bg-cyan-600 text-white hover:bg-cyan-500"
+            className="bg-cyan-600 text-white hover:opacity-90"
           >
             {busy ? 'Đang xử lý…' : 'Nộp bài'}
           </Button>
@@ -192,7 +192,7 @@ export function AssignmentSubmit({
             </p>
           )}
           {graded.feedback && (
-            <p className="text-sm text-ds-muted whitespace-pre-wrap border-t border-white/10 pt-3 mt-2">
+            <p className="text-sm text-ds-muted whitespace-pre-wrap border-t border-ds-border pt-3 mt-2">
               {graded.feedback}
             </p>
           )}

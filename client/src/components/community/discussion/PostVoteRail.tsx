@@ -47,7 +47,7 @@ export function PostVoteRail({ postId, voteCount, myVote = null, user, onVote, o
 
   return (
     <div
-      className="flex shrink-0 flex-col items-center justify-center gap-1 border-r border-white/10 bg-black/25 px-2.5 py-3 min-w-[3rem]"
+      className="flex shrink-0 flex-col items-center justify-center gap-1 border-r border-ds-border bg-ds-surface/60 px-2.5 py-3 min-w-[3rem]"
       onClick={(e) => e.stopPropagation()}
     >
       <button
@@ -58,15 +58,15 @@ export function PostVoteRail({ postId, voteCount, myVote = null, user, onVote, o
         onClick={() => void handleVote(1)}
         className={`rounded-md p-1.5 transition-colors disabled:opacity-50 ${
           upActive
-            ? 'text-cyan-300 bg-cyan-500/20'
-            : 'text-gray-500 hover:text-cyan-200 hover:bg-white/5'
+            ? 'text-ds-accent bg-ds-accent/15'
+            : 'text-ds-subtle hover:text-cyan-200 hover:bg-white/5'
         }`}
       >
         <ThumbsUp className="h-4 w-4" strokeWidth={upActive ? 2.25 : 1.75} />
       </button>
       <span
         className={`text-sm font-semibold tabular-nums leading-none ${
-          count > 0 ? 'text-cyan-200' : count < 0 ? 'text-red-300' : 'text-gray-400'
+          count > 0 ? 'text-cyan-200' : count < 0 ? 'text-red-300' : 'text-ds-muted'
         }`}
       >
         {count}
@@ -80,7 +80,7 @@ export function PostVoteRail({ postId, voteCount, myVote = null, user, onVote, o
         className={`rounded-md p-1.5 transition-colors disabled:opacity-50 ${
           downActive
             ? 'text-red-300 bg-red-500/20'
-            : 'text-gray-500 hover:text-red-200 hover:bg-white/5'
+            : 'text-ds-subtle hover:text-red-200 hover:bg-white/5'
         }`}
       >
         <ThumbsDown className="h-4 w-4" strokeWidth={downActive ? 2.25 : 1.75} />

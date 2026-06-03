@@ -347,7 +347,7 @@ function LifeformCard({ lifeform }: { lifeform: Lifeform }) {
   const fallbackEmoji = guessLifeformEmoji(lifeform)
   return (
     <li className="rounded-ds-control border border-ds-border bg-ds-surface overflow-hidden flex flex-col">
-      <div className="aspect-square w-full bg-black/40 flex items-center justify-center overflow-hidden">
+      <div className="aspect-square w-full bg-ds-elevated/80 flex items-center justify-center overflow-hidden">
         {lifeform.imageUrl ? (
           /* eslint-disable-next-line @next/next/no-img-element */
           <img
@@ -417,7 +417,7 @@ function EventCard({ event }: { event: MajorEvent }) {
                   'rounded-full px-1.5 py-0.5 text-[10px] uppercase tracking-wider border',
                   severity === 'catastrophic' && 'border-red-400/50 text-red-200 bg-red-500/15',
                   severity === 'major' && 'border-amber-400/50 text-amber-200 bg-amber-500/10',
-                  severity === 'minor' && 'border-ds-border text-ds-muted bg-black/20',
+                  severity === 'minor' && 'border-ds-border text-ds-muted bg-ds-surface/50',
                 )}
               >
                 {meta.label}
@@ -524,7 +524,7 @@ function Gauge({
           {unit && <span className="ml-1 text-[11px] text-ds-subtle">{unit}</span>}
         </span>
       </div>
-      <div className="relative mt-1 h-2 rounded-full bg-black/40 overflow-hidden">
+      <div className="relative mt-1 h-2 rounded-full bg-ds-elevated/80 overflow-hidden">
         <div
           className="absolute inset-y-0 left-0 rounded-full transition-[width] duration-300"
           style={{ width: `${pct}%`, background: fill }}

@@ -132,11 +132,11 @@ export default function RegisterPage() {
           animate={{ opacity: 1, y: 0 }}
           className="hidden sm:block absolute top-6 sm:top-12 right-4 sm:right-12 z-20"
         >
-          <p className="font-[JetBrains_Mono,monospace] text-[11px] uppercase tracking-[0.22em] text-[#9aa8c4]">
+          <p className="font-[JetBrains_Mono,monospace] text-[11px] uppercase tracking-[0.22em] text-ds-muted">
             Đã có tài khoản?{' '}
             <Link
               href="/login"
-              className="inline-flex items-center gap-1 text-[#7ee7ff] font-medium"
+              className="inline-flex items-center gap-1 text-ds-accent font-medium"
               style={{
                 textDecoration: 'underline',
                 textDecorationColor: 'rgba(126,231,255,0.4)',
@@ -156,7 +156,7 @@ export default function RegisterPage() {
           </motion.div>
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3, duration: 0.8 }} className="flex flex-col gap-6">
             <span
-              className="hud-chamfer-sm hud-mono hud-mono-md inline-flex items-center gap-2.5 self-start px-3.5 py-2 text-[color:var(--hud-plasma)]"
+              className="cosmo-dark-panel rounded-xl hud-mono hud-mono-md inline-flex items-center gap-2.5 self-start px-3.5 py-2 text-[color:var(--color-accent)]"
               style={{ background: 'rgba(126,231,255,0.06)', border: '2px solid rgba(126,231,255,0.25)' }}
             >
               // NEW EXPLORER
@@ -179,7 +179,7 @@ export default function RegisterPage() {
           className="font-[Space_Grotesk,sans-serif] text-white leading-[1.02]"
           style={{ fontSize: 'clamp(36px, 4vw, 56px)', letterSpacing: '-0.03em', fontWeight: 500 }}
           dangerouslySetInnerHTML={{
-            __html: 'Bắt đầu <em style="font-style:italic;font-weight:300;color:#f5a524">hành trình</em>',
+            __html: 'Bắt đầu <em style="font-style:italic;font-weight:300;color:var(--color-brand-amber)">hành trình</em>',
           }}
         />
 
@@ -216,7 +216,7 @@ export default function RegisterPage() {
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="inline-flex items-center gap-1.5 font-[JetBrains_Mono,monospace] text-[10px] uppercase tracking-[0.18em] text-white hover:text-[#7ee7ff]"
+                    className="inline-flex items-center gap-1.5 font-[JetBrains_Mono,monospace] text-[10px] uppercase tracking-[0.18em] text-white hover:text-ds-accent"
                   >
                     {showPassword ? <><EyeOff className="size-[13px]" /> Ẩn</> : <><Eye className="size-[13px]" /> Hiện</>}
                   </button>
@@ -241,7 +241,7 @@ export default function RegisterPage() {
           <form onSubmit={handleVerify} className="flex flex-col gap-5">
             {error ? <AuthAlert tone="error">{error}</AuthAlert> : null}
             {info ? <AuthAlert tone="info">{info}</AuthAlert> : null}
-            <p className="text-sm text-[#9aa8c4]">
+            <p className="text-sm text-ds-muted">
               Mã xác nhận đã gửi tới <strong className="text-white">{pendingEmail}</strong>
             </p>
             <AuthTextField label="Mã xác nhận" icon={Mail}>
@@ -258,7 +258,7 @@ export default function RegisterPage() {
               />
             </AuthTextField>
             {devCode ? (
-              <p className="text-xs text-[#7ee7ff] font-mono border border-[#7ee7ff]/30 bg-[#7ee7ff]/10 px-3 py-2 rounded-lg">
+              <p className="text-xs text-ds-accent font-mono border border-ds-accent/30 bg-ds-accent/10 px-3 py-2 rounded-lg">
                 Dev: {devCode}
               </p>
             ) : null}
@@ -269,7 +269,7 @@ export default function RegisterPage() {
               type="button"
               disabled={loading}
               onClick={() => void handleResend()}
-              className="text-sm text-[#7ee7ff] hover:text-white disabled:opacity-50"
+              className="text-sm text-ds-accent hover:text-white disabled:opacity-50"
             >
               Gửi lại mã
             </button>
@@ -282,7 +282,7 @@ export default function RegisterPage() {
                 setError('')
                 setInfo('')
               }}
-              className="text-sm text-[#5c6886] hover:text-white"
+              className="text-sm text-ds-subtle hover:text-white"
             >
               ← Sửa email
             </button>
@@ -290,9 +290,9 @@ export default function RegisterPage() {
         )}
 
         <div className="lg:hidden text-center">
-          <p className="font-[JetBrains_Mono,monospace] text-[11px] uppercase tracking-[0.22em] text-[#9aa8c4]">
+          <p className="font-[JetBrains_Mono,monospace] text-[11px] uppercase tracking-[0.22em] text-ds-muted">
             Đã có tài khoản?{' '}
-            <Link href="/login" className="text-[#7ee7ff] font-medium">
+            <Link href="/login" className="text-ds-accent font-medium">
               Đăng nhập
             </Link>
           </p>

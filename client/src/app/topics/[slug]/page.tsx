@@ -18,7 +18,7 @@ export function generateMetadata({ params }: Props): Metadata {
 export default function TopicPage({ params }: Props) {
   if (!isValidTopicSlug(params.slug)) notFound()
   return (
-    <Suspense fallback={<div className="min-h-screen bg-ds-base pt-20 px-4 text-ds-subtle text-sm">Đang tải…</div>}>
+    <Suspense fallback={<div className="relative z-10 px-4 pt-2 text-ds-subtle text-sm">Đang tải…</div>}>
       <TopicExploreView slug={params.slug} />
     </Suspense>
   )

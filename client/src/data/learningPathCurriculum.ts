@@ -37,7 +37,7 @@ export const DEPTH_META: Record<
     label: 'Researcher',
     labelVi: 'Sâu',
     short: '🔴',
-    color: 'text-violet-300',
+    color: 'text-ds-accent',
     gradient: 'from-violet-500/30 to-fuchsia-500/20',
   },
 }
@@ -889,11 +889,6 @@ export function countLessonSlots(): number {
     }
   }
   return n
-}
-
-/** @deprecated dùng countLessonSlots */
-export function countDepthSlots(): number {
-  return countLessonSlots()
 }
 
 export function flattenLessons(modules: LearningModule[]) {

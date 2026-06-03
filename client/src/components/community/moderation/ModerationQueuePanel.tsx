@@ -101,20 +101,20 @@ export function ModerationQueuePanel() {
           <p className="text-xs text-violet-200/80 uppercase tracking-wide">Báo cáo mở</p>
           <p className="text-2xl font-semibold text-white mt-1">{stats.openReports}</p>
         </div>
-        <div className="rounded-xl border border-white/10 bg-white/5 p-4">
-          <p className="text-xs text-slate-500 uppercase tracking-wide">Bài đã ẩn</p>
+        <div className="rounded-xl border border-ds-border bg-white/5 p-4">
+          <p className="text-xs text-ds-subtle uppercase tracking-wide">Bài đã ẩn</p>
           <p className="text-2xl font-semibold text-white mt-1">{stats.hiddenPosts}</p>
         </div>
-        <div className="rounded-xl border border-white/10 bg-white/5 p-4">
-          <p className="text-xs text-slate-500 uppercase tracking-wide">BL đã ẩn</p>
+        <div className="rounded-xl border border-ds-border bg-white/5 p-4">
+          <p className="text-xs text-ds-subtle uppercase tracking-wide">BL đã ẩn</p>
           <p className="text-2xl font-semibold text-white mt-1">{stats.hiddenComments}</p>
         </div>
       </div>
 
       {loading ? (
-        <p className="text-slate-500 text-sm">Đang tải hàng đợi…</p>
+        <p className="text-ds-subtle text-sm">Đang tải hàng đợi…</p>
       ) : items.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-white/20 p-8 text-center text-slate-400">
+        <div className="rounded-xl border border-dashed border-white/20 p-8 text-center text-ds-muted">
           Không có báo cáo đang chờ. Bạn vẫn có thể duyệt bài trực tiếp trên diễn đàn.
         </div>
       ) : (
@@ -135,7 +135,7 @@ export function ModerationQueuePanel() {
             return (
               <li
                 key={item.report._id}
-                className="rounded-2xl border border-white/10 bg-[#0a101c] p-5 space-y-3"
+                className="rounded-2xl border border-ds-border bg-ds-surface p-5 space-y-3"
               >
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div>
@@ -144,7 +144,7 @@ export function ModerationQueuePanel() {
                     </span>
                     <h3 className="text-white font-medium mt-1">{title}</h3>
                     {item.post?.forumTitle && (
-                      <p className="text-xs text-slate-500 mt-0.5">
+                      <p className="text-xs text-ds-subtle mt-0.5">
                         {item.post.forumTitle}
                         {item.post.forumSlug && (
                           <>
@@ -158,11 +158,11 @@ export function ModerationQueuePanel() {
                       </p>
                     )}
                   </div>
-                  <span className="text-xs text-slate-500">
+                  <span className="text-xs text-ds-subtle">
                     {new Date(item.report.createdAt).toLocaleString('vi-VN')}
                   </span>
                 </div>
-                {excerpt && <p className="text-sm text-slate-400 line-clamp-3">{excerpt}</p>}
+                {excerpt && <p className="text-sm text-ds-muted line-clamp-3">{excerpt}</p>}
                 {item.report.details && (
                   <p className="text-xs text-amber-200/80 border-l-2 border-amber-500/40 pl-3">
                     {item.report.details}
@@ -172,7 +172,7 @@ export function ModerationQueuePanel() {
                   {item.post?._id && (
                     <Link
                       href={`/community/post/${item.post._id}`}
-                      className="px-3 py-1.5 rounded-lg border border-white/15 text-xs text-slate-200 hover:bg-white/5"
+                      className="px-3 py-1.5 rounded-lg border border-ds-border text-xs text-slate-200 hover:bg-white/5"
                     >
                       Xem bài
                     </Link>
@@ -198,7 +198,7 @@ export function ModerationQueuePanel() {
                       type="button"
                       disabled={busy}
                       onClick={() => void pinTargetPost(item.target._id, true)}
-                      className="px-3 py-1.5 rounded-lg border border-cyan-500/30 text-xs text-cyan-200 hover:bg-cyan-500/10 disabled:opacity-50"
+                      className="px-3 py-1.5 rounded-lg border border-cyan-500/30 text-xs text-cyan-200 hover:opacity-90/10 disabled:opacity-50"
                     >
                       Ghim
                     </button>
@@ -215,7 +215,7 @@ export function ModerationQueuePanel() {
                     type="button"
                     disabled={busy}
                     onClick={() => void dismiss(item.report._id)}
-                    className="px-3 py-1.5 rounded-lg text-xs text-slate-400 hover:bg-white/5 disabled:opacity-50"
+                    className="px-3 py-1.5 rounded-lg text-xs text-ds-muted hover:bg-white/5 disabled:opacity-50"
                   >
                     Bỏ qua
                   </button>

@@ -9,7 +9,7 @@ export function CourseInstructorCard({ teacher }: { teacher: PublicTeacherProfil
     <section className="rounded-2xl border border-ds-border bg-ds-overlay p-5 md:p-6">
       <p className="text-[11px] uppercase tracking-wider text-ds-subtle mb-3">Giảng viên · xác minh</p>
       <div className="flex flex-col sm:flex-row gap-4 sm:items-start">
-        <div className="shrink-0 w-20 h-20 rounded-xl overflow-hidden border border-ds-border bg-black/40 flex items-center justify-center">
+        <div className="shrink-0 w-20 h-20 rounded-xl overflow-hidden border border-ds-border bg-ds-elevated/80 flex items-center justify-center">
           {avatar ? (
             <img src={avatar} alt="" className="w-full h-full object-cover" />
           ) : (

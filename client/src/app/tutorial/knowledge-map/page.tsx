@@ -7,7 +7,7 @@ import { Loading } from '@/components/ui/Loading'
 const KnowledgeStarMap = dynamic(() => import('@/components/knowledge/KnowledgeStarMap'), {
   ssr: false,
   loading: () => (
-    <div className="flex min-h-screen items-center justify-center bg-[#02040a]">
+    <div className="flex min-h-screen items-center justify-center bg-ds-base">
       <Loading />
     </div>
   ),
@@ -15,7 +15,7 @@ const KnowledgeStarMap = dynamic(() => import('@/components/knowledge/KnowledgeS
 
 function KnowledgeMapFallback() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#02040a]">
+    <div className="flex min-h-screen items-center justify-center bg-ds-base">
       <Loading />
     </div>
   )

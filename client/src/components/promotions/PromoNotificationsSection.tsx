@@ -20,7 +20,7 @@ export function PromoNotificationsSection({ onNavigate }: { onNavigate?: () => v
 
   return (
     <div className="border-b border-violet-500/20 bg-violet-500/5">
-      <p className="px-3 pt-2 pb-1 text-[10px] uppercase tracking-wide text-violet-300/90 font-medium flex items-center gap-1">
+      <p className="px-3 pt-2 pb-1 text-[10px] uppercase tracking-wide text-ds-accent/90 font-medium flex items-center gap-1">
         <Sparkles className="h-3 w-3" aria-hidden />
         Ưu đãi đang diễn ra
       </p>

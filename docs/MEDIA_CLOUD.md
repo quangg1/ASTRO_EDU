@@ -8,6 +8,7 @@ Các thư mục sau **không** nằm trong Git (quá nặng), cần lưu trên c
 - `client/public/images/` – ảnh dùng chung (vd nebula-home.jpg)
 - `client/public/videos/` – video UI (vd onboarding launch transition)
 - `client/public/live2d/` – avatar Live2D CosmoLearn AI (nito + motions + Cubism Core)
+- `client/public/sky/` – La bàn chòm sao (HIP catalog, western skyculture webp, landscape panorama)
 
 ---
 
@@ -48,6 +49,12 @@ bucket-hoac-folder/
     nito/
     motion/
     scripts/
+  sky/
+    data/hip-bright.json
+    western_sky_culture/index.json
+    western_sky_culture/*.webp
+    bahia_de_cadiz/bahia.png
+    milkyway.webp
 ```
 
 - **Cloudinary**: tạo folder tương ứng (course-media, models, textures, images), upload từng thư mục.
@@ -74,6 +81,8 @@ App đã dùng **`getStaticAssetUrl(path)`** và **`resolveMediaUrl(url)`** từ
 **Video onboarding (`/videos/onboarding-launch.mp4`):** khi bật CDN, cần sync thư mục `videos/` lên bucket (xem script `scripts/sync-media-to-s3.ps1`). App thử CDN trước; nếu 404 sẽ fallback về `/videos/...` trên cùng origin Next.js.
 
 **Live2D avatar (`/live2d/…`):** sync cả thư mục `live2d/` (model nito, 21 motion, `scripts/live2dcubismcore.min.js`). App load qua `getStaticAssetUrl()` — CDN trước, fallback `/live2d/...` trên Next.js nếu CDN chưa có file.
+
+**Sky planetarium (`/sky/…`):** sync cả thư mục `sky/` (catalog HIP, 88 webp chòm, landscape). App resolve qua `getSkyAssetUrl()` trong `features/explore/lib/skyAssets.ts`. Trong Git chỉ giữ `public/sky/README.md` và `western_sky_culture/index.json` (build bridge); file nặng gitignore.
 
 ### 3b. Cấu hình API (upload lên S3)
 

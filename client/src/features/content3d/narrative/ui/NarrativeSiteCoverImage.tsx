@@ -22,7 +22,7 @@ export function NarrativeSiteCoverImage({ url, alt }: Props) {
   if (!src || failed) {
     return (
       <div className="flex aspect-[16/10] w-full items-center justify-center rounded-xl border border-amber-500/25 bg-black/60 px-3 text-center">
-        <p className="text-[11px] text-slate-400">Ảnh không tải được — cập nhật URL trong Studio.</p>
+        <p className="text-[11px] text-ds-muted">Ảnh không tải được — cập nhật URL trong Studio.</p>
       </div>
     )
   }

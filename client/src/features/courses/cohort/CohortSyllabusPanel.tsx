@@ -54,7 +54,7 @@ export function CohortSyllabusPanel({
                   lesson.schedule.closeAt && `Đóng: ${formatSchedule(lesson.schedule.closeAt)}`,
                 ].filter(Boolean)
                 return (
-                  <li key={lesson.slug} className="px-4 py-3 hover:bg-white/[0.02] transition-colors">
+                  <li key={lesson.slug} className="px-4 py-3 hover:bg-ds-surface/40 transition-colors">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <span className="text-[10px] uppercase tracking-wider text-cyan-400/90 font-medium">
@@ -63,7 +63,7 @@ export function CohortSyllabusPanel({
                         {href && open ? (
                           <Link
                             href={href}
-                            className="block text-white font-medium hover:text-cyan-300 mt-0.5 truncate"
+                            className="block text-white font-medium hover:text-ds-text mt-0.5 truncate"
                           >
                             {done ? '✓ ' : ''}
                             {lesson.title}

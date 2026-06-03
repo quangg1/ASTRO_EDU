@@ -58,7 +58,7 @@ export function UserProfileLink({
           overlayUrl={overlayUrl}
           size={size === 'md' ? 'md' : 'sm'}
         />
-        {showName && <span className={cn('truncate text-sm text-slate-300', nameClassName)}>{displayName}</span>}
+        {showName && <span className={cn('truncate text-sm text-ds-muted', nameClassName)}>{displayName}</span>}
       </span>
     )
   }

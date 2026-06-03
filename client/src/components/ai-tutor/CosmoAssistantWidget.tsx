@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { forwardRef, useCallback, useEffect, useMemo, useRef, useState, type ComponentProps } from 'react'
 import { createPortal } from 'react-dom'
 import dynamic from 'next/dynamic'
 import clsx from 'clsx'
@@ -21,14 +21,24 @@ import { CosmoChatHistoryPanel } from '@/features/agent/ui/CosmoChatHistoryPanel
 import type { OpenCosmoAssistantDetail } from '@/features/agent/lib/openCosmoAssistant'
 import type { SessionContext } from '@/features/agent/types'
 import { isAgentQuizLocked } from '@/features/agent/lib/agentQuizLock'
+import { ThumbsDown, ThumbsUp } from 'lucide-react'
 import { SearchParamsSuspense } from '@/components/layout/SearchParamsSuspense'
 import { AssistantMarkdown } from './AssistantMarkdown'
 import type { Live2DAvatarHandle } from './Live2DAvatar'
 import { NITO_DOCK_RAIL_WIDTH, NITO_SIZE } from '@/lib/live2d/nitoConfig'
 
-const Live2DAvatar = dynamic(() => import('./Live2DAvatar').then((m) => m.Live2DAvatar), {
-  ssr: false,
-})
+const Live2DAvatar = dynamic(
+  () =>
+    import('./Live2DAvatar').then((mod) => {
+      const Inner = mod.Live2DAvatar
+      const Forwarded = forwardRef<Live2DAvatarHandle, ComponentProps<typeof Inner>>((props, ref) => (
+        <Inner ref={ref} {...props} />
+      ))
+      Forwarded.displayName = 'Live2DAvatar'
+      return Forwarded
+    }),
+  { ssr: false },
+)
 
 function routeLabel(pathname: string): string | undefined {
   if (!pathname || pathname === '/') return 'Trang chủ'
@@ -344,29 +354,29 @@ function CosmoAssistantInner() {
         />
       )}
       {canUseAI && attachmentImage && (
-        <div className="mb-2 flex items-center gap-2 rounded-xl border border-white/10 bg-black/20 p-1.5 pr-2">
+        <div className="mb-2 flex items-center gap-2 rounded-xl border border-ds-border bg-ds-surface/50 p-1.5 pr-2">
           <img
             src={`data:${attachmentImage.type};base64,${attachmentImage.base64}`}
             alt=""
             className="h-11 w-11 shrink-0 rounded-lg object-cover"
           />
-          <span className="flex-1 truncate text-xs text-gray-400">Ảnh đính kèm</span>
+          <span className="flex-1 truncate text-xs text-ds-muted">Ảnh đính kèm</span>
           <button
             type="button"
             onClick={() => setAttachmentImage(null)}
-            className="shrink-0 px-1 text-lg leading-none text-gray-400 hover:text-white"
+            className="shrink-0 px-1 text-lg leading-none text-ds-muted hover:text-white"
             aria-label="Bỏ ảnh"
           >
             ×
           </button>
         </div>
       )}
-      <div className="flex items-end gap-2 rounded-xl border border-cyan-400/20 bg-black/30 focus-within:border-cyan-400/40">
+      <div className="flex items-end gap-2 rounded-xl border border-cyan-400/20 bg-ds-surface/70 focus-within:border-cyan-400/40">
         {canUseAI && (
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            className="m-2 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-white/10 hover:text-white"
+            className="m-2 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-ds-muted transition-colors hover:bg-white/10 hover:text-white"
             aria-label="Đính kèm ảnh"
             disabled={loading}
           >
@@ -394,14 +404,14 @@ function CosmoAssistantInner() {
                 : 'Hỏi CosmoLearn AI…'
               : 'Đăng nhập để chat đầy đủ'
           }
-          className="max-h-28 min-h-[44px] flex-1 resize-none bg-transparent px-1 py-2.5 text-sm text-white placeholder:text-gray-500 focus:outline-none"
+          className="max-h-28 min-h-[44px] flex-1 resize-none bg-transparent px-1 py-2.5 text-sm text-white placeholder:text-ds-subtle focus:outline-none"
           disabled={loading}
         />
         <button
           type="button"
           onClick={handleSend}
           disabled={loading || (!input.trim() && !attachmentImage)}
-          className="m-2 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-cyan-400 transition-all hover:bg-cyan-400/15 hover:text-cyan-300 disabled:cursor-not-allowed disabled:opacity-35"
+          className="m-2 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-cyan-400 transition-all hover:bg-cyan-400/15 hover:text-ds-text disabled:cursor-not-allowed disabled:opacity-35"
           aria-label="Gửi"
         >
           <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -422,6 +432,7 @@ function CosmoAssistantInner() {
         )}
         data-ai-tutor-fab
         data-cosmo-assistant-fab
+        data-explore-tour="cosmo-fab"
       >
         {!open && (
           <Live2DAvatar
@@ -459,15 +470,15 @@ function CosmoAssistantInner() {
           >
             <div className="min-w-0 flex-1 pr-2">
               <div className="flex items-center gap-2">
-                <span className="text-sm font-semibold text-cyan-300">CosmoLearn AI</span>
+                <span className="text-sm font-semibold text-ds-accent">CosmoLearn AI</span>
                 <span className="rounded-full bg-cyan-500/15 px-2 py-0.5 text-[10px] text-cyan-200/80">
                   nito
                 </span>
               </div>
               {tag ? (
-                <p className="mt-1 truncate text-[11px] text-cyan-100/85">{tag}</p>
+                <p className="mt-1 truncate text-[11px] text-ds-text/85">{tag}</p>
               ) : (
-                <p className="mt-0.5 text-[11px] text-gray-500">Chế độ tổng quan</p>
+                <p className="mt-0.5 text-[11px] text-ds-subtle">Chế độ tổng quan</p>
               )}
             </div>
             <div className="flex shrink-0 items-center gap-1">
@@ -475,7 +486,7 @@ function CosmoAssistantInner() {
                 <button
                   type="button"
                   onClick={() => setHistoryOpen(true)}
-                  className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-white/10 hover:text-cyan-200"
+                  className="flex h-8 w-8 items-center justify-center rounded-lg text-ds-muted transition-colors hover:bg-white/10 hover:text-cyan-200"
                   aria-label="Lịch sử chat"
                   title="Lịch sử chat"
                 >
@@ -492,7 +503,7 @@ function CosmoAssistantInner() {
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-white/10 hover:text-white"
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-ds-muted transition-colors hover:bg-white/10 hover:text-white"
                 aria-label="Đóng"
               >
                 ×
@@ -547,7 +558,7 @@ function CosmoAssistantInner() {
                     <button
                       type="button"
                       onClick={() => chat.explainActiveSection()}
-                      className="mt-4 w-full max-w-[92%] rounded-xl border border-cyan-400/30 bg-cyan-500/10 px-3 py-2.5 text-left text-xs text-cyan-100 hover:bg-cyan-500/20"
+                      className="mt-4 w-full max-w-[92%] rounded-xl border border-cyan-400/30 bg-cyan-500/10 px-3 py-2.5 text-left text-xs text-ds-text hover:bg-ds-accent/15"
                     >
                       {sessionContext.activeSectionTitle
                         ? `📖 Giải thích mục đang đọc: “${sessionContext.activeSectionTitle}”`
@@ -638,7 +649,7 @@ function CosmoAssistantInner() {
                     <button
                       type="button"
                       onClick={() => chat.explainActiveSection()}
-                      className="w-full rounded-xl border border-cyan-400/30 bg-cyan-500/10 px-3 py-2 text-left text-xs text-cyan-100 hover:bg-cyan-500/20"
+                      className="w-full rounded-xl border border-cyan-400/30 bg-cyan-500/10 px-3 py-2 text-left text-xs text-ds-text hover:bg-ds-accent/15"
                     >
                       {sessionContext.activeSectionTitle
                         ? `📖 Giải thích mục đang đọc: “${sessionContext.activeSectionTitle}”`
@@ -661,7 +672,7 @@ function CosmoAssistantInner() {
                     'max-w-[90%] rounded-2xl text-sm',
                     m.role === 'user'
                       ? 'border border-cyan-400/30 bg-cyan-500/25 px-3 py-2.5 text-cyan-50'
-                      : 'border border-white/10 bg-white/5 px-4 py-3 text-gray-100',
+                      : 'border border-ds-border bg-white/5 px-4 py-3 text-gray-100',
                   )}
                 >
                   {m.role === 'assistant' ? (
@@ -679,7 +690,7 @@ function CosmoAssistantInner() {
                         typeof m.imageAttachment === 'object' &&
                         'mediaType' in m.imageAttachment &&
                         'base64' in m.imageAttachment && (
-                          <div className="mb-2 overflow-hidden rounded-xl border border-white/15 bg-black/25">
+                          <div className="mb-2 overflow-hidden rounded-xl border border-ds-border bg-ds-surface/60">
                             <img
                               src={`data:${String(m.imageAttachment.mediaType)};base64,${String(m.imageAttachment.base64)}`}
                               alt=""
@@ -690,13 +701,35 @@ function CosmoAssistantInner() {
                       {m.content}
                     </>
                   )}
+                  {m.role === 'assistant' &&
+                  !('streaming' in m && (m as { streaming?: boolean }).streaming) &&
+                  m.content ? (
+                    <div className="mt-2 flex items-center gap-1.5 opacity-70 hover:opacity-100">
+                      <button
+                        type="button"
+                        title="Hữu ích"
+                        className="p-1 rounded-md hover:bg-emerald-500/20 text-ds-muted hover:text-emerald-300"
+                        onClick={() => void chat.submitFeedback(m.id, 1)}
+                      >
+                        <ThumbsUp className="h-3.5 w-3.5" aria-hidden />
+                      </button>
+                      <button
+                        type="button"
+                        title="Chưa hữu ích"
+                        className="p-1 rounded-md hover:bg-rose-500/20 text-ds-muted hover:text-rose-300"
+                        onClick={() => void chat.submitFeedback(m.id, -1)}
+                      >
+                        <ThumbsDown className="h-3.5 w-3.5" aria-hidden />
+                      </button>
+                    </div>
+                  ) : null}
                   {assistantActions ? (
                     <div className="mt-2 flex flex-wrap gap-2">
                       {assistantActions.map((a, i) => (
                         <button
                           key={i}
                           type="button"
-                          className="rounded-lg border border-cyan-400/35 bg-cyan-500/20 px-2 py-1 text-xs text-cyan-100 hover:bg-cyan-500/35"
+                          className="rounded-lg border border-cyan-400/35 bg-ds-accent/15 px-2 py-1 text-xs text-ds-text hover:opacity-90/35"
                           onClick={() => chat.runAction(a, closePanel)}
                         >
                           {a.type === 'go_to_explore'
@@ -722,7 +755,7 @@ function CosmoAssistantInner() {
                             (m as { streaming?: boolean }).streaming &&
                             m.content.length > 0,
                         ) && (
-                          <p className="animate-pulse text-xs text-gray-500">Đang suy nghĩ…</p>
+                          <p className="animate-pulse text-xs text-ds-subtle">Đang suy nghĩ…</p>
                         )}
                       {error && <p className="text-xs text-red-300">{error}</p>}
                       <div ref={listEndRef} />

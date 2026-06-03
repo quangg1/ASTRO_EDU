@@ -2,7 +2,7 @@ const LearnerSignal = require('../models/LearnerSignal');
 
 /**
  * Derive normalized learner signals from newly inserted raw events.
- * Cosmo / struggleDetector đọc layer này thay vì phụ thuộc schema raw.
+ * Cosmo / learning-state engine đọc layer này thay vì phụ thuộc schema raw.
  */
 async function processLearnerSignalsForEvents(events) {
   if (!Array.isArray(events) || events.length === 0) return;

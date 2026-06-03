@@ -63,7 +63,7 @@ export function CatalogLearnerPreviewDialog({
         <div className="space-y-4">
           {chapters.map((ch) => (
             <div key={ch.title} className="rounded-xl border border-ds-border/80 overflow-hidden">
-              <p className="text-[10px] uppercase tracking-wider text-ds-subtle px-3 py-2 bg-white/[0.04] border-b border-ds-border/50">
+              <p className="text-[10px] uppercase tracking-wider text-ds-subtle px-3 py-2 bg-ds-surface/50 border-b border-ds-border/50">
                 {ch.title}
               </p>
               <ul className="divide-y divide-ds-border/40">
@@ -110,7 +110,7 @@ export function CatalogLearnerPreviewDialog({
           href={`/courses/${courseSlug}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center px-3 py-1.5 rounded-lg bg-cyan-600 text-white text-sm hover:bg-cyan-500"
+          className="inline-flex items-center px-3 py-1.5 rounded-lg bg-cyan-600 text-white text-sm hover:opacity-90"
         >
           Mở trang khóa (tab mới) →
         </Link>

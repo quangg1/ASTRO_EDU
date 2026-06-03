@@ -96,7 +96,7 @@ export function FossilPanel({ layout = 'overlay' }: { layout?: FossilPanelLayout
         type="button"
         onClick={toggleFossilPanel}
         className={clsx(
-          'glass rounded-lg px-4 py-2.5 text-sm font-medium text-cyan-300 shadow-lg transition-colors hover:bg-cyan-500/20 flex items-center gap-2',
+          'glass rounded-lg px-4 py-2.5 text-sm font-medium text-ds-accent shadow-lg transition-colors hover:bg-ds-accent/15 flex items-center gap-2',
           layout === 'dock' ? 'w-full shrink-0 justify-center' : 'fixed right-4 bottom-24',
         )}
         title="Mở panel Hóa thạch"
@@ -123,7 +123,7 @@ export function FossilPanel({ layout = 'overlay' }: { layout?: FossilPanelLayout
               setEarthRotationPaused(false)
               clearPhylumHighlight()
             }}
-            className="glass rounded-lg px-4 py-2 text-sm font-medium text-cyan-300 hover:bg-cyan-500/20 transition-colors flex items-center gap-2 shrink-0"
+            className="glass rounded-lg px-4 py-2 text-sm font-medium text-ds-accent hover:bg-ds-accent/15 transition-colors flex items-center gap-2 shrink-0"
           >
             🔄 Tiếp tục quay Trái Đất
           </button>
@@ -131,8 +131,8 @@ export function FossilPanel({ layout = 'overlay' }: { layout?: FossilPanelLayout
 
         <div className="glass rounded-xl shadow-xl flex flex-col min-h-0 overflow-hidden flex-1">
           {/* Header luôn ở trên cùng: tiêu đề + nút Đóng rõ ràng */}
-          <div className="flex items-center justify-between gap-2 px-3 py-2.5 border-b border-white/10 bg-black/30 shrink-0">
-            <span className="text-sm font-medium text-cyan-300 truncate">🦴 Hóa thạch</span>
+          <div className="flex items-center justify-between gap-2 px-3 py-2.5 border-b border-ds-border bg-ds-surface/70 shrink-0">
+            <span className="text-sm font-medium text-ds-accent truncate">🦴 Hóa thạch</span>
             <button
               type="button"
               onClick={(e) => {
@@ -140,7 +140,7 @@ export function FossilPanel({ layout = 'overlay' }: { layout?: FossilPanelLayout
                 e.stopPropagation()
                 toggleFossilPanel()
               }}
-              className="shrink-0 w-9 h-9 flex items-center justify-center text-white hover:text-cyan-300 hover:bg-cyan-500/30 border border-white/20 rounded-lg transition-colors touch-manipulation"
+              className="shrink-0 w-9 h-9 flex items-center justify-center text-white hover:text-ds-text hover:opacity-90/30 border border-white/20 rounded-lg transition-colors touch-manipulation"
               title="Đóng panel hóa thạch"
               aria-label="Đóng panel hóa thạch"
             >
@@ -171,29 +171,29 @@ export function FossilPanel({ layout = 'overlay' }: { layout?: FossilPanelLayout
           {/* Stats */}
           <div className="text-sm mb-4">
             {fossilsLoading ? (
-              <span className="text-gray-400">Đang tải...</span>
+              <span className="text-ds-muted">Đang tải...</span>
             ) : fossilStats && fossilStats.total > 0 ? (
               <span>
                 <span className="text-cyan-400 font-semibold">{fossilStats.total}</span>
-                <span className="text-gray-400"> hóa thạch · </span>
+                <span className="text-ds-muted"> hóa thạch · </span>
                 <span className="text-amber-300 font-medium">{Object.keys(fossilStats.byPhylum).length}</span>
-                <span className="text-gray-400"> ngành</span>
+                <span className="text-ds-muted"> ngành</span>
               </span>
             ) : (
-              <span className="text-gray-400">Không có hóa thạch trong thời kỳ này</span>
+              <span className="text-ds-muted">Không có hóa thạch trong thời kỳ này</span>
             )}
           </div>
           {fossilStats && fossilStats.total > 0 ? (
-            <p className="text-[11px] text-slate-500 mb-3 leading-snug">
-              <span className="text-slate-400">Zoom cận Trái Đất</span> (cuộn chuột vào) đến khi các chấm màu hiện rõ — xa quá thì chấm được ẩn để không bấm nhầm.
+            <p className="text-[11px] text-ds-subtle mb-3 leading-snug">
+              <span className="text-ds-muted">Zoom cận Trái Đất</span> (cuộn chuột vào) đến khi các chấm màu hiện rõ — xa quá thì chấm được ẩn để không bấm nhầm.
               Khi đã thấy chấm: nhấn để bay tới · nhấn nhãn tên để chi tiết; hoặc{' '}
-              <span className="text-slate-400">Xem danh sách chi tiết</span>.
+              <span className="text-ds-muted">Xem danh sách chi tiết</span>.
             </p>
           ) : null}
 
           {flyToTarget?.mode === 'phylum' ? (
             <div className="mb-2 flex flex-wrap items-center gap-2 rounded-lg border border-cyan-500/25 bg-cyan-950/30 px-2 py-2">
-              <p className="text-[11px] text-cyan-100/90 flex-1 min-w-[140px]">
+              <p className="text-[11px] text-ds-text/90 flex-1 min-w-[140px]">
                 Đường phân bố ngành · nhấn lại ngành hoặc Esc để ẩn · có thể zoom sau khi camera đậu.
               </p>
               <button
@@ -207,7 +207,7 @@ export function FossilPanel({ layout = 'overlay' }: { layout?: FossilPanelLayout
           ) : null}
 
           {/* Chú thích từng chủng loại – nhấn để bay tới vị trí và dừng quay Trái Đất */}
-          <p className="text-xs text-gray-500 mb-2">
+          <p className="text-xs text-ds-subtle mb-2">
             Nhấn một ngành để bay tới vùng phân bố (đường gợi ý mở); nhấn lại ngành đó để tắt. Esc hoặc nút phía trên cũng tắt.
           </p>
           <div className="space-y-2 pr-1">
@@ -225,8 +225,8 @@ export function FossilPanel({ layout = 'overlay' }: { layout?: FossilPanelLayout
                         onClick={() => handlePhylumClick(phylum)}
                         className={`w-full text-left rounded-lg border px-3 py-2.5 transition-all ${
                           activePhylum
-                            ? 'border-cyan-400/60 bg-cyan-500/15 hover:bg-cyan-500/20'
-                            : 'border-white/10 bg-black/20 hover:bg-white/10 hover:border-cyan-400/30'
+                            ? 'border-cyan-400/60 bg-cyan-500/15 hover:bg-ds-accent/15'
+                            : 'border-ds-border bg-ds-surface/50 hover:bg-white/10 hover:border-cyan-400/30'
                         }`}
                       >
                         <div className="flex items-center gap-3">
@@ -239,7 +239,7 @@ export function FossilPanel({ layout = 'overlay' }: { layout?: FossilPanelLayout
                             <div className="text-sm font-medium text-white">
                               {info.nameVi}
                             </div>
-                            <div className="text-xs text-gray-400">
+                            <div className="text-xs text-ds-muted">
                               {phylum} · {count} mẫu
                             </div>
                           </div>
@@ -247,7 +247,7 @@ export function FossilPanel({ layout = 'overlay' }: { layout?: FossilPanelLayout
                             {activePhylum ? 'Ẩn đường nối' : 'Đi tới →'}
                           </span>
                         </div>
-                        <p className="mt-1.5 ml-6 text-xs text-gray-500 leading-snug">
+                        <p className="mt-1.5 ml-6 text-xs text-ds-subtle leading-snug">
                           {info.description}
                         </p>
                       </button>
@@ -260,7 +260,7 @@ export function FossilPanel({ layout = 'overlay' }: { layout?: FossilPanelLayout
           {fossilStats && fossilStats.total > 0 && (
             <button
               onClick={() => setShowList(true)}
-              className="w-full mt-4 py-2.5 px-4 bg-cyan-600 hover:bg-cyan-500 rounded-lg text-sm font-medium transition-colors"
+              className="w-full mt-4 py-2.5 px-4 bg-cyan-600 hover:opacity-90 rounded-lg text-sm font-medium transition-colors"
             >
               📋 Xem danh sách chi tiết
             </button>
@@ -382,7 +382,7 @@ function FossilListModal({ fossils, phylumMetadata, timeRange, onClose, onFlyToF
           <button
             type="button"
             onClick={onClose}
-            className="text-gray-400 hover:text-white text-2xl leading-none w-8 h-8 flex items-center justify-center rounded hover:bg-white/10"
+            className="text-ds-muted hover:text-white text-2xl leading-none w-8 h-8 flex items-center justify-center rounded hover:bg-white/10"
             aria-label="Đóng"
           >
             ×
@@ -390,7 +390,7 @@ function FossilListModal({ fossils, phylumMetadata, timeRange, onClose, onFlyToF
         </div>
 
         {/* Search – chỉ trong danh sách chi tiết; từ 2 ký tự trở lên tìm toàn DB */}
-        <div className="px-4 pt-3 pb-2 border-b border-white/10">
+        <div className="px-4 pt-3 pb-2 border-b border-ds-border">
           <input
             type="search"
             placeholder="Tìm theo tên trong kỷ này..."
@@ -403,7 +403,7 @@ function FossilListModal({ fossils, phylumMetadata, timeRange, onClose, onFlyToF
             <p className="text-xs text-cyan-400 mt-1.5">Đang tìm...</p>
           )}
           {!searchLoading && searchQuery.trim() && (
-            <p className="text-xs text-gray-500 mt-1.5">
+            <p className="text-xs text-ds-subtle mt-1.5">
               {isServerSearch
                 ? `Trong kỷ này: ${listToShow.length} kết quả`
                 : `${listToShow.length} kết quả (trong mẫu)`}
@@ -414,15 +414,15 @@ function FossilListModal({ fossils, phylumMetadata, timeRange, onClose, onFlyToF
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-4">
           {searchLoading ? (
-            <div className="text-center py-8 text-gray-400">Đang tải kết quả...</div>
+            <div className="text-center py-8 text-ds-muted">Đang tải kết quả...</div>
           ) : listToShow.length === 0 ? (
             <div className="text-center py-8">
               <div className="text-4xl mb-4">🦴</div>
-              <p className="text-gray-400">
+              <p className="text-ds-muted">
                 {searchQuery.trim() ? `Không có kết quả cho "${searchQuery}"` : 'Không có hóa thạch trong thời kỳ này'}
               </p>
               {!searchQuery.trim() && (
-                <p className="text-sm text-gray-500 mt-2">
+                <p className="text-sm text-ds-subtle mt-2">
                   Hóa thạch chỉ xuất hiện từ kỷ Cambrian (~540 Ma)
                 </p>
               )}
@@ -437,8 +437,8 @@ function FossilListModal({ fossils, phylumMetadata, timeRange, onClose, onFlyToF
                     <span className="inline-block w-2.5 h-2.5 rounded-full mr-2 align-middle" style={{ backgroundColor: color }} />
                     {info.nameVi}
                   </h4>
-                  <p className="text-xs text-gray-500 mb-2">{info.description}</p>
-                  <p className="text-xs text-gray-400 mb-2">{phylum} · {items.length} mẫu</p>
+                  <p className="text-xs text-ds-subtle mb-2">{info.description}</p>
+                  <p className="text-xs text-ds-muted mb-2">{phylum} · {items.length} mẫu</p>
                   <div className="space-y-1">
                     {items.slice(0, isServerSearch ? 50 : 15).map((fossil, i) => {
                       const hasCoords = (fossil.paleolat ?? fossil.lat) != null && (fossil.paleolng ?? fossil.lng) != null
@@ -449,10 +449,10 @@ function FossilListModal({ fossils, phylumMetadata, timeRange, onClose, onFlyToF
                         >
                           <div className="min-w-0 flex-1">
                             <div className="text-sm font-medium">{fossil.name}</div>
-                            <div className="text-xs text-gray-400">
+                            <div className="text-xs text-ds-muted">
                               {fossil.maxMa?.toFixed(1)} Ma | {fossil.environment || 'Unknown'}
                               {fossil.paleoRegionName && fossil.paleoRegionName !== 'Không xác định' && (
-                                <> · <span className="text-cyan-300/90">{fossil.paleoRegionName}</span></>
+                                <> · <span className="text-ds-accent/90">{fossil.paleoRegionName}</span></>
                               )}
                             </div>
                           </div>
@@ -460,7 +460,7 @@ function FossilListModal({ fossils, phylumMetadata, timeRange, onClose, onFlyToF
                             <button
                               type="button"
                               onClick={() => onFlyToFossil(fossil)}
-                              className="shrink-0 text-xs text-cyan-400 hover:text-cyan-300 whitespace-nowrap"
+                              className="shrink-0 text-xs text-ds-accent hover:text-ds-text whitespace-nowrap"
                             >
                               Đi tới →
                             </button>
@@ -469,7 +469,7 @@ function FossilListModal({ fossils, phylumMetadata, timeRange, onClose, onFlyToF
                       )
                     })}
                     {items.length > (isServerSearch ? 50 : 15) && (
-                      <div className="text-xs text-gray-500 px-3">
+                      <div className="text-xs text-ds-subtle px-3">
                         ... và {items.length - (isServerSearch ? 50 : 15)} loài khác
                       </div>
                     )}

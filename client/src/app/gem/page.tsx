@@ -39,7 +39,7 @@ const chamfer = (cut = 14) => ({
   clipPath: `polygon(${cut}px 0,100% 0,100% calc(100% - ${cut}px),calc(100% - ${cut}px) 100%,0 100%,0 ${cut}px)`,
 })
 
-function Brackets({ c = '#7ee7ff', s = 12, o = 6 }: { c?: string; s?: number; o?: number }) {
+function Brackets({ c = 'var(--color-accent)', s = 12, o = 6 }: { c?: string; s?: number; o?: number }) {
   const b = (ex: React.CSSProperties): React.CSSProperties => ({
     position: 'absolute', width: s, height: s, opacity: 0.65, pointerEvents: 'none', ...ex,
   })
@@ -54,11 +54,11 @@ function Brackets({ c = '#7ee7ff', s = 12, o = 6 }: { c?: string; s?: number; o?
 }
 
 const NODE_CONFIGS = [
-  { cx: 60,  cy: 155, r: 11, color: '#7ee7ff', shortLabel: 'BÀI HỌC' },
-  { cx: 210, cy: 115, r: 11, color: '#7ee7ff', shortLabel: 'ĐỘ SÂU' },
-  { cx: 380, cy: 75,  r: 11, color: '#7ee7ff', shortLabel: 'QUIZ' },
+  { cx: 60,  cy: 155, r: 11, color: 'var(--color-accent)', shortLabel: 'BÀI HỌC' },
+  { cx: 210, cy: 115, r: 11, color: 'var(--color-accent)', shortLabel: 'ĐỘ SÂU' },
+  { cx: 380, cy: 75,  r: 11, color: 'var(--color-accent)', shortLabel: 'QUIZ' },
   { cx: 540, cy: 115, r: 11, color: '#6dffb0', shortLabel: 'EXPLORE' },
-  { cx: 720, cy: 155, r: 11, color: '#f5a524', shortLabel: 'DEEP HIST' },
+  { cx: 720, cy: 155, r: 11, color: 'var(--color-brand-amber)', shortLabel: 'DEEP HIST' },
   { cx: 860, cy: 120, r: 11, color: '#c4a0ff', shortLabel: 'CỘNG ĐỒNG' },
 ]
 
@@ -204,24 +204,15 @@ export default function GemPage() {
   return (
     <div style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
 
-      {/* HUD header strip */}
-      <div
-        className="relative flex items-center justify-between px-4 py-2.5 mb-5"
-        style={{
-          background: 'rgba(10,16,36,0.6)',
-          border: '1px solid rgba(126,231,255,0.14)',
-          borderBottom: '1px solid rgba(126,231,255,0.25)',
-          ...chamfer(10),
-        }}
-      >
-        <span style={{ ...mono, fontSize: 10, letterSpacing: '0.18em', color: '#7ee7ff', textTransform: 'uppercase' }}>
+      <div className="cosmo-dark-panel relative mb-5 flex items-center justify-between rounded-xl px-4 py-2.5">
+        <span style={{ ...mono, fontSize: 10, letterSpacing: '0.18em', color: 'var(--color-accent)', textTransform: 'uppercase' }}>
           // 04 · gem · constellation
         </span>
-        <div className="flex items-center gap-5" style={{ ...mono, fontSize: 10, letterSpacing: '0.12em', color: '#5c6886' }}>
-          <span>Wallet · <span style={{ color: '#f5a524' }}>{wallet.balance} GEM</span></span>
+        <div className="flex items-center gap-5" style={{ ...mono, fontSize: 10, letterSpacing: '0.12em', color: 'var(--color-text-subtle)' }}>
+          <span>Wallet · <span style={{ color: 'var(--color-brand-amber)' }}>{wallet.balance} GEM</span></span>
           <span>Sync · <span style={{ color: '#6dffb0' }}>●</span></span>
             <span className="hidden sm:inline">
-              {zoneLabel} · <span style={{ color: '#9aa8c4' }}>{localTime}</span>
+              {zoneLabel} · <span style={{ color: 'var(--color-text-muted)' }}>{localTime}</span>
             </span>
         </div>
       </div>
@@ -230,25 +221,18 @@ export default function GemPage() {
       <div className="grid gap-4" style={{ gridTemplateColumns: 'minmax(0,1fr) 260px' }}>
 
         {/* Left: H1 + Constellation map */}
-        <div
-          className="relative p-7"
-          style={{
-            background: 'rgba(6,9,26,0.72)',
-            border: '1px solid rgba(126,231,255,0.13)',
-            ...chamfer(18),
-          }}
-        >
-          <Brackets c="#7ee7ff" s={14} o={8} />
+        <div className="cosmo-dark-panel relative rounded-2xl p-7">
+          <Brackets c="var(--color-accent)" s={14} o={8} />
 
-          <div style={{ ...mono, fontSize: 9, letterSpacing: '0.22em', color: '#5c6886', marginBottom: 20, textTransform: 'uppercase' }}>
+          <div style={{ ...mono, fontSize: 9, letterSpacing: '0.22em', color: 'var(--color-text-subtle)', marginBottom: 20, textTransform: 'uppercase' }}>
             {String(earnWays.length).padStart(2, '0')} Paths · {tierProgress?.current?.nameVi || 'Starter'}
           </div>
 
-          <h1 style={{ fontSize: 'clamp(28px, 3.5vw, 50px)', fontWeight: 500, lineHeight: 1.05, letterSpacing: '-0.03em', color: '#eaf6ff', marginBottom: 10 }}>
+          <h1 style={{ fontSize: 'clamp(28px, 3.5vw, 50px)', fontWeight: 500, lineHeight: 1.05, letterSpacing: '-0.03em', color: 'var(--color-text-primary)', marginBottom: 10 }}>
             Mỗi việc bạn làm thắp sáng{' '}
-            <em style={{ fontStyle: 'italic', fontWeight: 300, color: '#f5a524' }}>một ngôi sao.</em>
+            <em style={{ fontStyle: 'italic', fontWeight: 300, color: 'var(--color-brand-amber)' }}>một ngôi sao.</em>
           </h1>
-          <p style={{ fontSize: 14, color: '#9aa8c4', lineHeight: 1.65, maxWidth: 460, marginBottom: 36 }}>
+          <p style={{ fontSize: 14, color: 'var(--color-text-muted)', lineHeight: 1.65, maxWidth: 460, marginBottom: 36 }}>
             Sáu cách kiếm Gem đang hoạt động — lộ trình học, Explore 3D, Deep History và cộng đồng.
             Đổi thưởng tại Cửa hàng Gem khi đã sẵn sàng.
           </p>
@@ -257,7 +241,7 @@ export default function GemPage() {
             <p
               style={{
                 fontSize: 13,
-                color: '#7ee7ff',
+                color: 'var(--color-accent)',
                 lineHeight: 1.55,
                 maxWidth: 460,
                 marginBottom: 20,
@@ -268,7 +252,7 @@ export default function GemPage() {
               }}
             >
               Bạn chưa đăng nhập — Gem chỉ được lưu sau khi có tài khoản. Học thử rồi{' '}
-              <Link href="/register" style={{ color: '#f5a524', textDecoration: 'underline' }}>
+              <Link href="/register" style={{ color: 'var(--color-brand-amber)', textDecoration: 'underline' }}>
                 đăng ký
               </Link>{' '}
               để nhận thưởng thật trên ví server.
@@ -315,7 +299,7 @@ export default function GemPage() {
                     {/* Short label above */}
                     <text
                       x={cfg.cx} y={cfg.cy - cfg.r - 10}
-                      textAnchor="middle" fill="#9aa8c4"
+                      textAnchor="middle" fill="var(--color-text-muted)"
                       fontSize="8.5" fontFamily="JetBrains Mono, monospace" letterSpacing="0.12em"
                     >
                       {cfg.shortLabel}
@@ -330,7 +314,7 @@ export default function GemPage() {
                     </text>
                     <text
                       x={cfg.cx} y={cfg.cy + cfg.r + 25}
-                      textAnchor="middle" fill="#5c6886"
+                      textAnchor="middle" fill="var(--color-text-subtle)"
                       fontSize="7.5" fontFamily="JetBrains Mono, monospace"
                     >
                       GEM
@@ -344,17 +328,9 @@ export default function GemPage() {
 
         {/* Right: Balance panel + CTA */}
         <div className="flex flex-col gap-4">
-          <div
-            className="relative flex flex-col items-center justify-center text-center p-6 flex-1"
-            style={{
-              background: 'rgba(6,9,26,0.72)',
-              border: '1px solid rgba(126,231,255,0.13)',
-              minHeight: 220,
-              ...chamfer(16),
-            }}
-          >
-            <Brackets c="#7ee7ff" s={12} o={7} />
-            <div style={{ ...mono, fontSize: 9, letterSpacing: '0.28em', color: '#5c6886', marginBottom: 10, textTransform: 'uppercase' }}>
+          <div className="cosmo-dark-panel relative flex flex-1 flex-col items-center justify-center rounded-2xl p-6 text-center" style={{ minHeight: 220 }}>
+            <Brackets c="var(--color-accent)" s={12} o={7} />
+            <div style={{ ...mono, fontSize: 9, letterSpacing: '0.28em', color: 'var(--color-text-subtle)', marginBottom: 10, textTransform: 'uppercase' }}>
               — Tổng số GEM
             </div>
             <div
@@ -362,7 +338,7 @@ export default function GemPage() {
                 fontSize: 'clamp(80px, 7vw, 120px)',
                 fontWeight: 400,
                 lineHeight: 1,
-                color: '#f5a524',
+                color: 'var(--color-brand-amber)',
                 textShadow: '0 0 40px rgba(245,165,36,0.45), 0 0 80px rgba(245,165,36,0.18)',
                 letterSpacing: '-0.04em',
                 marginBottom: 14,
@@ -370,7 +346,7 @@ export default function GemPage() {
             >
               {wallet.balance}
             </div>
-            <div style={{ ...mono, fontSize: 9.5, letterSpacing: '0.22em', color: '#9aa8c4', textTransform: 'uppercase' }}>
+            <div style={{ ...mono, fontSize: 9.5, letterSpacing: '0.22em', color: 'var(--color-text-muted)', textTransform: 'uppercase' }}>
               GEM · {tierProgress?.current?.nameVi || 'ASTEROID'} TIER
             </div>
           </div>
@@ -383,7 +359,7 @@ export default function GemPage() {
               alignItems: 'center',
               justifyContent: 'center',
               gap: 8,
-              background: 'linear-gradient(135deg, #f5a524 0%, #e8950f 100%)',
+              background: 'linear-gradient(135deg, var(--color-brand-amber) 0%, #e8950f 100%)',
               color: '#1a0e00',
               padding: '14px 18px',
               ...mono,
@@ -406,20 +382,13 @@ export default function GemPage() {
       </div>
 
       {(tierPolicy || tierProgress?.next) && (
-        <div
-          className="relative mt-4 p-4"
-          style={{
-            background: 'rgba(6,9,26,0.72)',
-            border: '1px solid rgba(126,231,255,0.13)',
-            ...chamfer(12),
-          }}
-        >
+        <div className="cosmo-dark-panel relative mt-4 rounded-2xl p-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <p style={{ fontSize: 13, color: '#9aa8c4', lineHeight: 1.5 }}>
+            <p style={{ fontSize: 13, color: 'var(--color-text-muted)', lineHeight: 1.5 }}>
               {tierPolicy || 'Hạng Learner tăng theo tổng gem đã kiếm, không giảm khi tiêu gem.'}
             </p>
             {tierProgress?.next ? (
-              <span style={{ ...mono, fontSize: 10, color: '#7ee7ff', letterSpacing: '0.12em', textTransform: 'uppercase' }}>
+              <span style={{ ...mono, fontSize: 10, color: 'var(--color-accent)', letterSpacing: '0.12em', textTransform: 'uppercase' }}>
                 Next · {tierProgress.next.nameVi} · {tierProgress.gemsToNext} gem
               </span>
             ) : null}
@@ -428,27 +397,20 @@ export default function GemPage() {
       )}
 
       {/* Gem activity log */}
-      <div
-        className="relative mt-4 p-6"
-        style={{
-          background: 'rgba(6,9,26,0.72)',
-          border: '1px solid rgba(126,231,255,0.13)',
-          ...chamfer(16),
-        }}
-      >
-        <Brackets c="#7ee7ff" s={12} o={7} />
+      <div className="cosmo-dark-panel relative mt-4 rounded-2xl p-6">
+        <Brackets c="var(--color-accent)" s={12} o={7} />
 
         {/* Section header */}
         <div className="flex items-baseline justify-between mb-1">
-          <h2 style={{ fontSize: 'clamp(22px, 2.8vw, 32px)', fontWeight: 500, letterSpacing: '-0.025em', color: '#eaf6ff' }}>
+          <h2 style={{ fontSize: 'clamp(22px, 2.8vw, 32px)', fontWeight: 500, letterSpacing: '-0.025em', color: 'var(--color-text-primary)' }}>
             Gem bạn{' '}
-            <em style={{ fontStyle: 'italic', fontWeight: 300, color: '#7ee7ff' }}>đã kiếm & tiêu</em>
+            <em style={{ fontStyle: 'italic', fontWeight: 300, color: 'var(--color-accent)' }}>đã kiếm & tiêu</em>
           </h2>
-          <span style={{ ...mono, fontSize: 9.5, letterSpacing: '0.18em', color: '#5c6886', textTransform: 'uppercase' }}>
+          <span style={{ ...mono, fontSize: 9.5, letterSpacing: '0.18em', color: 'var(--color-text-subtle)', textTransform: 'uppercase' }}>
             {String(Math.min(wallet.transactions.length, 8)).padStart(2, '0')} mục · theo ngày
           </span>
         </div>
-        <p style={{ fontSize: 13, color: '#9aa8c4', lineHeight: 1.5, marginBottom: 16 }}>
+        <p style={{ fontSize: 13, color: 'var(--color-text-muted)', lineHeight: 1.5, marginBottom: 16 }}>
           Mỗi dòng là một lần bạn nhận Gem khi học, khám phá 3D, làm quiz — hoặc tiêu Gem tại cửa hàng.
         </p>
 
@@ -456,7 +418,7 @@ export default function GemPage() {
         <div style={{ height: 1, background: 'linear-gradient(90deg, rgba(126,231,255,0.35) 0%, rgba(126,231,255,0.04) 80%)', marginBottom: 20 }} />
 
         {wallet.transactions.length === 0 ? (
-          <p style={{ ...mono, fontSize: 12, color: '#5c6886', letterSpacing: '0.12em' }}>
+          <p style={{ ...mono, fontSize: 12, color: 'var(--color-text-subtle)', letterSpacing: '0.12em' }}>
             // CHƯA CÓ HOẠT ĐỘNG GEM
           </p>
         ) : (
@@ -465,10 +427,10 @@ export default function GemPage() {
               <div key={date} className="flex gap-5">
                 {/* Date label column */}
                 <div style={{ width: 96, flexShrink: 0 }}>
-                  <div style={{ ...mono, fontSize: 11, color: '#f5a524', letterSpacing: '0.06em' }}>
+                  <div style={{ ...mono, fontSize: 11, color: 'var(--color-brand-amber)', letterSpacing: '0.06em' }}>
                     {date}
                   </div>
-                  <div style={{ ...mono, fontSize: 9.5, color: '#5c6886', letterSpacing: '0.06em', marginTop: 3 }}>
+                  <div style={{ ...mono, fontSize: 9.5, color: 'var(--color-text-subtle)', letterSpacing: '0.06em', marginTop: 3 }}>
                     {formatRelativeDate(entries[0].tx.createdAt)}
                   </div>
                 </div>
@@ -478,7 +440,7 @@ export default function GemPage() {
                   {entries.map(({ tx }) => {
                     const direction = gemActivityDirection(tx)
                     const isEarn = direction === 'earn'
-                    const accent = isEarn ? '#6dffb0' : '#f5a524'
+                    const accent = isEarn ? '#6dffb0' : 'var(--color-brand-amber)'
                     const accentBg = isEarn ? 'rgba(109,255,176,0.07)' : 'rgba(245,165,36,0.08)'
                     const accentBorder = isEarn ? 'rgba(109,255,176,0.28)' : 'rgba(245,165,36,0.28)'
 
@@ -509,7 +471,7 @@ export default function GemPage() {
                             const activity = resolveGemActivityDetail(tx)
                             return (
                               <>
-                                <span style={{ display: 'block', fontSize: 13.5, color: '#eaf6ff', lineHeight: 1.35 }}>
+                                <span style={{ display: 'block', fontSize: 13.5, color: 'var(--color-text-primary)', lineHeight: 1.35 }}>
                                   {activity.label}
                                 </span>
                                 {activity.detail ? (
@@ -517,7 +479,7 @@ export default function GemPage() {
                                     style={{
                                       display: 'block',
                                       fontSize: 11.5,
-                                      color: '#9aa8c4',
+                                      color: 'var(--color-text-muted)',
                                       lineHeight: 1.3,
                                       marginTop: 2,
                                     }}
@@ -579,7 +541,7 @@ export default function GemPage() {
             borderTop: '1px dashed rgba(126,231,255,0.1)',
             ...mono,
             fontSize: 9.5,
-            color: '#5c6886',
+            color: 'var(--color-text-subtle)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',

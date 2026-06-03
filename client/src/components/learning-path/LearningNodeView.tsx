@@ -14,8 +14,8 @@ type Props = {
 }
 
 // ── Design tokens ───────────────────────────────────────────────
-const CYAN = '#7ee7ff'
-const AMBER = '#f5a524'
+const CYAN = 'var(--color-accent)'
+const AMBER = 'var(--color-brand-amber)'
 
 function pr(seed: number) { const x = Math.sin(seed + 1) * 10000; return x - Math.floor(x) }
 const STARS = Array.from({ length: 130 }, (_, i) => ({
@@ -56,7 +56,7 @@ export default function LearningNodeView({ module, node }: Props) {
   }, [m.id, n.id])
 
   return (
-    <div style={{ minHeight: '100vh', background: '#03060f', position: 'relative', overflow: 'hidden', fontFamily: "'Space Grotesk', sans-serif" }}>
+    <div style={{ minHeight: '100vh', background: 'var(--color-bg-base)', position: 'relative', overflow: 'hidden', fontFamily: "'Space Grotesk', sans-serif" }}>
 
       {/* ── Keyframes ── */}
       <style>{`
@@ -99,7 +99,7 @@ export default function LearningNodeView({ module, node }: Props) {
       {/* ── Ambient glow ── */}
       <div aria-hidden style={{
         position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0,
-        background: 'radial-gradient(ellipse 55% 35% at 6% 68%,rgba(245,165,36,0.04) 0%,transparent 60%),radial-gradient(ellipse 55% 35% at 94% 32%,rgba(126,231,255,0.05) 0%,transparent 60%)',
+        background: 'radial-gradient(ellipse 55% 35% at 6% 68%,rgba(245,165,36,0.04) 0%,transparent 60%),radial-gradient(ellipse 55% 35% at 94% 32%,var(--color-accent-soft) 0%,transparent 60%)',
       }} />
 
       {/* ── Edge labels ── */}
@@ -176,7 +176,7 @@ export default function LearningNodeView({ module, node }: Props) {
             fontSize: 'clamp(30px,5vw,52px)',
             fontFamily: "'Space Grotesk',sans-serif",
             fontWeight: 600, lineHeight: 1.1, letterSpacing: '-0.025em',
-            color: '#eaf6ff', margin: '0 0 14px',
+            color: 'var(--color-text-primary)', margin: '0 0 14px',
           }}>
             {n.titleVi}
           </h1>
@@ -217,8 +217,8 @@ export default function LearningNodeView({ module, node }: Props) {
                   position: 'relative',
                   padding: '14px 18px',
                   clipPath: 'polygon(10px 0%,100% 0%,100% calc(100% - 10px),calc(100% - 10px) 100%,0% 100%,0% 10px)',
-                  background: hoveredNav === 'prev' ? 'rgba(126,231,255,0.06)' : 'rgba(6,9,26,0.7)',
-                  border: hoveredNav === 'prev' ? '1px solid rgba(126,231,255,0.5)' : '1px solid rgba(255,255,255,0.08)',
+                  background: hoveredNav === 'prev' ? 'var(--color-accent-soft)' : 'color-mix(in srgb, var(--color-bg-surface) 88%, transparent)',
+                  border: hoveredNav === 'prev' ? '1px solid var(--color-accent-strong)' : '1px solid rgba(255,255,255,0.08)',
                   boxShadow: hoveredNav === 'prev' ? '0 0 18px rgba(126,231,255,0.12)' : 'none',
                   transition: 'background 0.22s ease, border-color 0.22s ease, box-shadow 0.22s ease',
                 }}
@@ -226,7 +226,7 @@ export default function LearningNodeView({ module, node }: Props) {
                 <span style={{ display: 'block', fontFamily: "'JetBrains Mono',monospace", fontSize: 10, letterSpacing: '0.18em', textTransform: 'uppercase', color: hoveredNav === 'prev' ? CYAN : '#8a9bb8', marginBottom: 8, transition: 'color 0.22s ease' }}>
                   ← Trước
                 </span>
-                <span style={{ display: 'block', fontFamily: "'Space Grotesk',sans-serif", fontSize: 14, fontWeight: 500, color: hoveredNav === 'prev' ? '#eaf6ff' : '#9aa8c4', lineHeight: 1.4, transition: 'color 0.22s ease' }}>
+                <span style={{ display: 'block', fontFamily: "'Space Grotesk',sans-serif", fontSize: 14, fontWeight: 500, color: hoveredNav === 'prev' ? 'var(--color-text-primary)' : 'var(--color-text-muted)', lineHeight: 1.4, transition: 'color 0.22s ease' }}>
                   {prev.titleVi}
                 </span>
               </Link>
@@ -244,8 +244,8 @@ export default function LearningNodeView({ module, node }: Props) {
                   position: 'relative',
                   padding: '14px 18px',
                   clipPath: 'polygon(10px 0%,100% 0%,100% calc(100% - 10px),calc(100% - 10px) 100%,0% 100%,0% 10px)',
-                  background: hoveredNav === 'next' ? 'rgba(126,231,255,0.06)' : 'rgba(6,9,26,0.7)',
-                  border: hoveredNav === 'next' ? '1px solid rgba(126,231,255,0.5)' : '1px solid rgba(126,231,255,0.2)',
+                  background: hoveredNav === 'next' ? 'var(--color-accent-soft)' : 'color-mix(in srgb, var(--color-bg-surface) 88%, transparent)',
+                  border: hoveredNav === 'next' ? '1px solid var(--color-accent-strong)' : '1px solid var(--color-border)',
                   boxShadow: hoveredNav === 'next' ? '0 0 18px rgba(126,231,255,0.12)' : 'none',
                   textAlign: 'right',
                   transition: 'background 0.22s ease, border-color 0.22s ease, box-shadow 0.22s ease',
@@ -254,7 +254,7 @@ export default function LearningNodeView({ module, node }: Props) {
                 <span style={{ display: 'block', fontFamily: "'JetBrains Mono',monospace", fontSize: 10, letterSpacing: '0.18em', textTransform: 'uppercase', color: CYAN, marginBottom: 8, opacity: 0.8 }}>
                   Tiếp →
                 </span>
-                <span style={{ display: 'block', fontFamily: "'Space Grotesk',sans-serif", fontSize: 14, fontWeight: 500, color: hoveredNav === 'next' ? '#eaf6ff' : '#9aa8c4', lineHeight: 1.4, transition: 'color 0.22s ease' }}>
+                <span style={{ display: 'block', fontFamily: "'Space Grotesk',sans-serif", fontSize: 14, fontWeight: 500, color: hoveredNav === 'next' ? 'var(--color-text-primary)' : 'var(--color-text-muted)', lineHeight: 1.4, transition: 'color 0.22s ease' }}>
                   {next.titleVi}
                 </span>
               </Link>
@@ -268,8 +268,8 @@ export default function LearningNodeView({ module, node }: Props) {
                   position: 'relative',
                   padding: '14px 18px',
                   clipPath: 'polygon(10px 0%,100% 0%,100% calc(100% - 10px),calc(100% - 10px) 100%,0% 100%,0% 10px)',
-                  background: hoveredNav === 'next' ? 'rgba(126,231,255,0.06)' : 'rgba(6,9,26,0.7)',
-                  border: hoveredNav === 'next' ? '1px solid rgba(126,231,255,0.5)' : '1px solid rgba(126,231,255,0.2)',
+                  background: hoveredNav === 'next' ? 'var(--color-accent-soft)' : 'color-mix(in srgb, var(--color-bg-surface) 88%, transparent)',
+                  border: hoveredNav === 'next' ? '1px solid var(--color-accent-strong)' : '1px solid var(--color-border)',
                   boxShadow: hoveredNav === 'next' ? '0 0 18px rgba(126,231,255,0.12)' : 'none',
                   textAlign: 'right',
                   transition: 'background 0.22s ease, border-color 0.22s ease, box-shadow 0.22s ease',
@@ -278,7 +278,7 @@ export default function LearningNodeView({ module, node }: Props) {
                 <span style={{ display: 'block', fontFamily: "'JetBrains Mono',monospace", fontSize: 10, letterSpacing: '0.18em', textTransform: 'uppercase', color: CYAN, marginBottom: 8, opacity: 0.8 }}>
                   Hoàn thành
                 </span>
-                <span style={{ display: 'block', fontFamily: "'Space Grotesk',sans-serif", fontSize: 14, fontWeight: 500, color: hoveredNav === 'next' ? '#eaf6ff' : '#9aa8c4', lineHeight: 1.4, transition: 'color 0.22s ease' }}>
+                <span style={{ display: 'block', fontFamily: "'Space Grotesk',sans-serif", fontSize: 14, fontWeight: 500, color: hoveredNav === 'next' ? 'var(--color-text-primary)' : 'var(--color-text-muted)', lineHeight: 1.4, transition: 'color 0.22s ease' }}>
                   Về tổng quan →
                 </span>
               </Link>

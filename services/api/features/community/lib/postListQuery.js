@@ -3,6 +3,12 @@ const { isNewsForum } = require('../constants/forumCatalog');
 
 const MIN_QUERY_LEN = 2;
 
+/** Tin RSS: từ khóa có thể nằm trong title hoặc body (credit NASA trong content). */
+function titleOrContentMatch(qStr) {
+  const re = new RegExp(escapeRegex(qStr), 'i');
+  return { $or: [{ title: re }, { content: re }] };
+}
+
 function normalizeQueryString(q) {
   const s = typeof q === 'string' ? q.trim() : '';
   return s.length >= MIN_QUERY_LEN ? s : '';
@@ -34,7 +40,7 @@ function buildForumPostFilter(forum, query = {}, viewerRole = null, viewerDoc = 
       extra.push({ rssCategories: new RegExp(`^${escapeRegex(cat)}$`, 'i') });
     }
     if (qStr) {
-      extra.push({ title: new RegExp(escapeRegex(qStr), 'i') });
+      extra.push(titleOrContentMatch(qStr));
     }
   } else {
     if (tag) {
@@ -77,7 +83,7 @@ function buildGlobalSearchFilter({ forumIds, scope, q, tag, category, viewerRole
 
   if (scope === 'news') {
     if (cat) extra.push({ rssCategories: new RegExp(`^${escapeRegex(cat)}$`, 'i') });
-    if (qStr) extra.push({ title: new RegExp(escapeRegex(qStr), 'i') });
+    if (qStr) extra.push(titleOrContentMatch(qStr));
   } else if (scope === 'discussion') {
     if (tagNorm) extra.push({ tags: tagNorm });
     if (qStr) {

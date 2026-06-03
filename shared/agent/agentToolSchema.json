@@ -1,5 +1,5 @@
 {
-  "version": 2,
+  "version": 3,
   "tools": [
     {
       "name": "open_lesson",
@@ -90,13 +90,34 @@
       "parameters": { "lesson_id": { "type": "string", "required": true } }
     },
     {
+      "name": "generate_concept_quiz",
+      "aliases": [],
+      "tierAllow": ["lp_free", "course_trial", "course_enrolled", "teacher"],
+      "parameters": {
+        "concept_id": { "type": "string", "required": false },
+        "lesson_id": { "type": "string", "required": false },
+        "q": { "type": "string", "required": false }
+      }
+    },
+    {
       "name": "suggest_community_thread",
       "aliases": [],
       "tierAllow": ["lp_free", "course_trial", "course_enrolled", "teacher"],
       "parameters": {
+        "q": { "type": "string", "required": false },
         "lesson_id": { "type": "string", "required": false },
         "lesson_slug": { "type": "string", "required": false },
         "course_slug": { "type": "string", "required": false }
+      }
+    },
+    {
+      "name": "search_learning_content",
+      "aliases": [],
+      "tierAllow": ["guest", "lp_free", "course_trial", "course_enrolled", "teacher"],
+      "parameters": {
+        "q": { "type": "string", "required": true },
+        "scopes": { "type": "array", "required": false },
+        "limit": { "type": "number", "required": false }
       }
     }
   ]

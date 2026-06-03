@@ -429,7 +429,7 @@ export function AdminTeacherApplicationsPanel({
   const busy = reviewingAppId != null
 
   return (
-    <section className="rounded-2xl border border-white/10 bg-[#0a0f17] overflow-hidden mb-8">
+    <section className="rounded-2xl border border-white/10 bg-ds-base overflow-hidden mb-8">
       <div className="px-4 py-4 border-b border-white/10 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="font-semibold text-white text-lg">Đơn xin quyền giảng viên</h2>

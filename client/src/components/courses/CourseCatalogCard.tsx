@@ -67,7 +67,7 @@ export function CourseCatalogCard({
           </div>
         )}
         <div className="absolute top-2.5 left-2.5">
-          <span className="px-2 py-0.5 rounded-md text-[10px] font-medium bg-black/55 text-white border border-white/10 backdrop-blur-sm">
+          <span className="px-2 py-0.5 rounded-md text-[10px] font-medium bg-black/55 text-white border border-ds-border backdrop-blur-sm">
             {levelLabel}
           </span>
         </div>

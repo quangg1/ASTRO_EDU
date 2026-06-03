@@ -26,6 +26,8 @@ router.get('/:entityId', optionalAuth, async (req, res) => {
         questions: result.questions,
         poolSize: result.poolSize,
         source: result.source,
+        completedToday: Boolean(result.completedToday),
+        calendarDay: result.calendarDay || null,
       },
     });
   } catch (err) {

@@ -73,7 +73,7 @@ Panel hiển thị:
 | Unlock story | −40 | ⚠️ Economy có, **nội dung/UI chưa** |
 | Unlock orbit | −55 | ⚠️ Economy có, **3D chưa khóa** |
 
-Nút story/orbit trên panel tạm **ẩn** (`SHOWCASE_PREMIUM_UNLOCK_UI = false`) cho đến Phase B.
+Nút story/orbit trên panel tạm **gỡ khỏi UI** (API `showcaseGamificationApi` giữ cho Phase B).
 
 ---
 
@@ -119,7 +119,7 @@ Client: `useDeepHistoryGemRewards` → `trackLearningPathBehavior` → `POST /le
 
 - [ ] **Story viewer:** UI đọc `NASA_SHOWCASE_STORIES` + CMS; campaign theo `targetPlanetName`
 - [ ] **Orbit gate:** filter `mergedOrbitEntities` khi `!orbitUnlocked` (giữ hành tinh cha + Moon cơ bản)
-- [ ] Bật `SHOWCASE_PREMIUM_UNLOCK_UI`
+- [ ] Khôi phục UI mở khóa story/orbit trên `ShowcaseEntityPanel` (dùng `showcaseGamificationApi`)
 - [ ] Post-unlock: camera preset / highlight entity mới mở
 
 ### Phase C — Lộ trình nội dung theo module LP
@@ -143,7 +143,7 @@ Quy trình authoring:
 
 - [x] Agent `focus_showcase_entity` + `assertShowcaseEntityAccess` (LP / gem / public catalog)
 - [x] Client toast khi tool bị từ chối (`no_access`, `auth_required`)
-- [x] `scene_contextual_quiz_passed` (+3 Gem, đúng hết, 1×/entity, cần ≥1 bài LP)
+- [x] `scene_contextual_quiz_passed` (+3 Gem, đúng hết, 1×/entity/ngày VN, cần ≥1 bài LP)
 - [ ] Achievement seed cho DH / discovery
 
 ### Phase E — Deduplicate Earth paths (tùy chọn)

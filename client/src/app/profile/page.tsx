@@ -15,7 +15,7 @@ const chamfer = (cut = 14) => ({
   clipPath: `polygon(${cut}px 0,100% 0,100% calc(100% - ${cut}px),calc(100% - ${cut}px) 100%,0 100%,0 ${cut}px)`,
 })
 
-function Brackets({ c = '#7ee7ff', s = 14, o = 8 }: { c?: string; s?: number; o?: number }) {
+function Brackets({ c = 'var(--color-accent)', s = 14, o = 8 }: { c?: string; s?: number; o?: number }) {
   const b = (ex: React.CSSProperties): React.CSSProperties => ({
     position: 'absolute', width: s, height: s, opacity: 0.85, pointerEvents: 'none', ...ex,
   })
@@ -51,7 +51,7 @@ function PasswordStrength({ password }: { password: string }) {
     password.length < 10 ? 2 :
     /[A-Z]/.test(password) && /[0-9]/.test(password) && /[^A-Za-z0-9]/.test(password) ? 4 : 3
 
-  const colors = ['', '#ff5cd4', '#f5a524', '#7ee7ff', '#6dffb0']
+  const colors = ['', '#ff5cd4', 'var(--color-brand-amber)', 'var(--color-accent)', '#6dffb0']
   const labels = ['', 'Weak', 'Fair', 'Good', 'Strong']
 
   return (
@@ -73,15 +73,6 @@ function PasswordStrength({ password }: { password: string }) {
     </div>
   )
 }
-
-// stable star positions — generated once outside component
-const STARS = Array.from({ length: 130 }, (_, i) => ({
-  x: ((i * 137.508 + 23) % 100).toFixed(2),
-  y: ((i * 97.317 + 11) % 100).toFixed(2),
-  r: (((i * 31) % 12) / 10 + 0.4).toFixed(1),
-  o: (((i * 17) % 7) / 10 + 0.2).toFixed(1),
-  c: i % 11 === 0 ? '#7ee7ff' : i % 9 === 0 ? '#f5a524' : '#eaf6ff',
-}))
 
 function isStudentRole(role: string | undefined) {
   return role === 'student'
@@ -191,8 +182,8 @@ export default function ProfilePage() {
   // ── Loading ──
   if (!checked || !user) {
     return (
-      <div style={{ minHeight: '100vh', background: '#03060f', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <span style={{ fontFamily: 'JetBrains Mono, monospace', color: '#7ee7ff', fontSize: 12, letterSpacing: '0.18em' }}>
+      <div style={{ minHeight: '100vh', background: 'var(--color-bg-base)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <span style={{ fontFamily: 'JetBrains Mono, monospace', color: 'var(--color-accent)', fontSize: 12, letterSpacing: '0.18em' }}>
           LOADING...
         </span>
       </div>
@@ -202,9 +193,9 @@ export default function ProfilePage() {
   // ── Derived values ──
   const initial = (user.displayName || user.email || 'U').charAt(0).toUpperCase()
   const roleColorMap: Record<string, string> = {
-    admin: '#f5a524', teacher: '#7ee7ff', moderator: '#ff5cd4', student: '#6dffb0',
+    admin: 'var(--color-brand-amber)', teacher: 'var(--color-accent)', moderator: '#ff5cd4', student: '#6dffb0',
   }
-  const accentColor = (user.role ? roleColorMap[user.role] : undefined) || '#7ee7ff'
+  const accentColor = (user.role ? roleColorMap[user.role] : undefined) || 'var(--color-accent)'
 
   // shared style helpers
   const mono: React.CSSProperties = { fontFamily: 'JetBrains Mono, monospace' }
@@ -212,20 +203,23 @@ export default function ProfilePage() {
 
   const labelStyle: React.CSSProperties = {
     ...mono, display: 'block', marginBottom: 6,
-    fontSize: 10, letterSpacing: '0.15em', color: '#9aa8c4', textTransform: 'uppercase',
+    fontSize: 10, letterSpacing: '0.15em', color: 'var(--color-text-muted)', textTransform: 'uppercase',
   }
 
   const inputBase: React.CSSProperties = {
     ...grotesk, width: '100%', padding: '10px 14px', boxSizing: 'border-box',
-    background: 'rgba(126,231,255,0.04)', border: '1px solid rgba(126,231,255,0.18)',
-    color: '#eaf6ff', fontSize: 14, outline: 'none',
+    background: 'rgba(126,231,255,0.04)', border: '1px solid var(--color-border)',
+    color: 'var(--color-text-primary)', fontSize: 14, outline: 'none',
     ...chamfer(8),
   }
 
   const card: React.CSSProperties = {
-    position: 'relative', background: 'rgba(6,9,26,0.88)', backdropFilter: 'blur(12px)',
-    border: '1px solid rgba(126,231,255,0.12)', padding: '28px',
-    ...chamfer(14),
+    position: 'relative',
+    background: 'linear-gradient(168deg, var(--color-bg-elevated) 0%, var(--color-bg-surface) 100%)',
+    border: '1px solid var(--color-border)',
+    borderRadius: 16,
+    padding: '28px',
+    boxShadow: '0 12px 36px rgba(0, 0, 0, 0.35)',
   }
 
   const sectionNum = (n: string, col = 'rgba(126,231,255,0.3)'): React.CSSProperties => ({
@@ -234,55 +228,17 @@ export default function ProfilePage() {
   })
 
   return (
-    <div style={{ minHeight: '100vh', background: '#03060f', position: 'relative', overflow: 'hidden' }}>
-
-      {/* ── Starfield ── */}
-      <svg style={{ position: 'fixed', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 0 }}>
-        {STARS.map((s, i) => (
-          <circle key={i} cx={`${s.x}%`} cy={`${s.y}%`} r={Number(s.r)} fill={s.c} opacity={Number(s.o)} />
-        ))}
-      </svg>
-
-      {/* ── Grid overlay ── */}
-      <div style={{
-        position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none',
-        backgroundImage: 'linear-gradient(rgba(255,255,255,0.018) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.018) 1px,transparent 1px)',
-        backgroundSize: '80px 80px',
-        WebkitMaskImage: 'radial-gradient(ellipse 80% 80% at 50% 40%,black 0%,transparent 100%)',
-        maskImage: 'radial-gradient(ellipse 80% 80% at 50% 40%,black 0%,transparent 100%)',
-      }} />
-
-      {/* ── DOC band — fixed below AppHeader (h-14 = 56px) ── */}
-      <div style={{
-        position: 'fixed', top: 52, left: 0, right: 0, zIndex: 30,
-        background: 'rgba(3,6,15,0.92)', backdropFilter: 'blur(10px)',
-        borderBottom: '1px solid rgba(126,231,255,0.1)',
-        padding: '5px 32px', display: 'flex', alignItems: 'center',
-        ...mono, fontSize: 10, letterSpacing: '0.13em', color: '#5c6886',
-      }}>
-        <span>DOC</span>
-        <span style={{ margin: '0 10px', color: '#7ee7ff' }}>USR-001</span>
-        <span style={{ marginRight: 10, opacity: 0.4 }}>|</span>
-        <span>AUTH</span>
-        <span style={{ margin: '0 10px', color: '#eaf6ff' }}>{(user.provider || 'LOCAL').toUpperCase()}</span>
-        <span style={{ marginRight: 10, opacity: 0.4 }}>|</span>
-        <span>{zoneLabel}</span>
-        <span style={{ marginLeft: 8, color: '#7ee7ff', minWidth: 68 }}>{localTime}</span>
-        <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 7, color: '#6dffb0' }}>
-          <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#6dffb0', display: 'inline-block', boxShadow: '0 0 6px #6dffb0' }} />
-          SESSION LIVE
-        </span>
-      </div>
-
-      {/* ── Main content ── */}
-      <div style={{ position: 'relative', zIndex: 1, maxWidth: 1080, margin: '0 auto', padding: '108px 28px 72px' }}>
+    <div className="relative z-10 mx-auto max-w-[1080px] px-4 sm:px-7 pb-16 pt-2">
+        <p className="mb-6 font-mono text-[10px] uppercase tracking-[0.18em] text-ds-subtle">
+          Hồ sơ · {(user.provider || 'local').toUpperCase()} · {zoneLabel} {localTime}
+        </p>
 
         {/* ── User banner ── */}
         <div style={{
           ...card,
           padding: '32px 40px', marginBottom: 20,
-          background: 'linear-gradient(135deg, rgba(6,9,26,0.97) 0%, rgba(10,16,36,0.9) 55%, rgba(28,14,4,0.65) 100%)',
-          border: '1px solid rgba(126,231,255,0.14)',
+          background: 'linear-gradient(135deg, var(--color-bg-elevated) 0%, var(--color-panel-glass) 55%, rgba(28,14,4,0.65) 100%)',
+          border: '1px solid var(--color-border)',
           ...chamfer(22),
         }}>
           <Brackets s={16} o={12} />
@@ -294,7 +250,7 @@ export default function ProfilePage() {
               border: '2px solid rgba(126,231,255,0.55)',
               boxShadow: '0 0 22px rgba(126,231,255,0.28), inset 0 0 14px rgba(126,231,255,0.1)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 30, fontWeight: 700, color: '#eaf6ff', overflow: 'hidden',
+              fontSize: 30, fontWeight: 700, color: 'var(--color-text-primary)', overflow: 'hidden',
               ...grotesk,
             }}>
               {avatar
@@ -304,21 +260,21 @@ export default function ProfilePage() {
 
             <div>
               {/* eyebrow */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, ...mono, fontSize: 10, letterSpacing: '0.2em', color: '#7ee7ff' }}>
-                <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#7ee7ff', display: 'inline-block', boxShadow: '0 0 6px #7ee7ff' }} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, ...mono, fontSize: 10, letterSpacing: '0.2em', color: 'var(--color-accent)' }}>
+                <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--color-accent)', display: 'inline-block', boxShadow: '0 0 6px var(--color-accent)' }} />
                 // USER MANIFEST · LIVE
               </div>
 
               {/* Name */}
-              <div style={{ fontSize: 40, fontWeight: 600, color: '#eaf6ff', lineHeight: 1.1, letterSpacing: '-0.025em', ...grotesk }}>
+              <div style={{ fontSize: 40, fontWeight: 600, color: 'var(--color-text-primary)', lineHeight: 1.1, letterSpacing: '-0.025em', ...grotesk }}>
                 {user.displayName || 'User'}<span style={{ color: accentColor }}>.</span>
               </div>
 
               {/* Meta row */}
-              <div style={{ marginTop: 10, display: 'flex', flexWrap: 'wrap', gap: '6px 18px', alignItems: 'center', ...mono, fontSize: 11, letterSpacing: '0.1em', color: '#9aa8c4' }}>
+              <div style={{ marginTop: 10, display: 'flex', flexWrap: 'wrap', gap: '6px 18px', alignItems: 'center', ...mono, fontSize: 11, letterSpacing: '0.1em', color: 'var(--color-text-muted)' }}>
                 <span>ROLE <span style={{ color: accentColor }}>{(user.role || 'student').toUpperCase()}</span></span>
                 <span style={{ opacity: 0.3 }}>·</span>
-                <span>EMAIL <span style={{ color: '#eaf6ff' }}>{user.email || '—'}</span></span>
+                <span>EMAIL <span style={{ color: 'var(--color-text-primary)' }}>{user.email || '—'}</span></span>
                 <span style={{ opacity: 0.3 }}>·</span>
                 <span style={{ color: '#6dffb0', display: 'flex', alignItems: 'center', gap: 5 }}>
                   <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#6dffb0', display: 'inline-block' }} />
@@ -335,9 +291,9 @@ export default function ProfilePage() {
           <Link href="/my-courses" style={{
             ...mono, padding: '10px 20px', textDecoration: 'none',
             background: 'rgba(126,231,255,0.1)', border: '1px solid rgba(126,231,255,0.45)',
-            color: '#7ee7ff', fontSize: 11, letterSpacing: '0.12em',
+            color: 'var(--color-accent)', fontSize: 11, letterSpacing: '0.12em',
             display: 'inline-flex', alignItems: 'center', gap: 8,
-            boxShadow: 'inset 0 0 8px rgba(126,231,255,0.05)',
+            boxShadow: 'inset 0 0 8px var(--color-accent-soft)',
             ...chamfer(8),
           }}>
             MY LEARNING
@@ -346,7 +302,7 @@ export default function ProfilePage() {
           <Link href="/my-orders" style={{
             ...mono, padding: '10px 20px', textDecoration: 'none',
             background: 'rgba(245,165,36,0.08)', border: '1px solid rgba(245,165,36,0.35)',
-            color: '#f5a524', fontSize: 11, letterSpacing: '0.12em',
+            color: 'var(--color-brand-amber)', fontSize: 11, letterSpacing: '0.12em',
             display: 'inline-flex', alignItems: 'center', gap: 8,
             ...chamfer(8),
           }}>
@@ -356,8 +312,8 @@ export default function ProfilePage() {
           {(user.role === 'teacher' || user.role === 'admin') && (
             <Link href="/studio" style={{
               ...mono, padding: '10px 20px', textDecoration: 'none',
-              background: 'rgba(126,231,255,0.03)', border: '1px solid rgba(126,231,255,0.14)',
-              color: '#9aa8c4', fontSize: 11, letterSpacing: '0.12em',
+              background: 'rgba(126,231,255,0.03)', border: '1px solid var(--color-border)',
+              color: 'var(--color-text-muted)', fontSize: 11, letterSpacing: '0.12em',
               display: 'inline-flex', alignItems: 'center', gap: 8,
               ...chamfer(8),
             }}>
@@ -368,8 +324,8 @@ export default function ProfilePage() {
           {canModerate(user) && (
             <Link href="/dashboard/moderate" style={{
               ...mono, padding: '10px 20px', textDecoration: 'none',
-              background: 'rgba(126,231,255,0.03)', border: '1px solid rgba(126,231,255,0.14)',
-              color: '#9aa8c4', fontSize: 11, letterSpacing: '0.12em',
+              background: 'rgba(126,231,255,0.03)', border: '1px solid var(--color-border)',
+              color: 'var(--color-text-muted)', fontSize: 11, letterSpacing: '0.12em',
               display: 'inline-flex', alignItems: 'center', gap: 8,
               ...chamfer(8),
             }}>
@@ -380,8 +336,8 @@ export default function ProfilePage() {
           {user.role === 'admin' && (
             <Link href="/admin" style={{
               ...mono, padding: '10px 20px', textDecoration: 'none',
-              background: 'rgba(126,231,255,0.03)', border: '1px solid rgba(126,231,255,0.14)',
-              color: '#9aa8c4', fontSize: 11, letterSpacing: '0.12em',
+              background: 'rgba(126,231,255,0.03)', border: '1px solid var(--color-border)',
+              color: 'var(--color-text-muted)', fontSize: 11, letterSpacing: '0.12em',
               display: 'inline-flex', alignItems: 'center', gap: 8,
               ...chamfer(8),
             }}>
@@ -392,8 +348,8 @@ export default function ProfilePage() {
           {isStudentRole(user.role) && (
             <Link href="/apply-teacher" style={{
               ...mono, padding: '10px 20px', textDecoration: 'none',
-              background: 'rgba(126,231,255,0.03)', border: '1px solid rgba(126,231,255,0.14)',
-              color: '#9aa8c4', fontSize: 11, letterSpacing: '0.12em',
+              background: 'rgba(126,231,255,0.03)', border: '1px solid var(--color-border)',
+              color: 'var(--color-text-muted)', fontSize: 11, letterSpacing: '0.12em',
               display: 'inline-flex', alignItems: 'center', gap: 8,
               ...chamfer(8),
             }}>
@@ -418,9 +374,9 @@ export default function ProfilePage() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
               <div style={{ display: 'flex', alignItems: 'center' }}>
                 <span style={sectionNum('01')}>01</span>
-                <h2 style={{ ...grotesk, margin: 0, fontSize: 18, fontWeight: 600, color: '#eaf6ff' }}>Details</h2>
+                <h2 style={{ ...grotesk, margin: 0, fontSize: 18, fontWeight: 600, color: 'var(--color-text-primary)' }}>Details</h2>
               </div>
-              <span style={{ ...mono, fontSize: 10, letterSpacing: '0.15em', color: '#7ee7ff' }}>EDITABLE</span>
+              <span style={{ ...mono, fontSize: 10, letterSpacing: '0.15em', color: 'var(--color-accent)' }}>EDITABLE</span>
             </div>
             <div style={{ height: 1, background: 'rgba(126,231,255,0.1)', marginBottom: 20 }} />
 
@@ -430,7 +386,7 @@ export default function ProfilePage() {
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
                   <label style={{ ...labelStyle, marginBottom: 0 }}>Display Name</label>
-                  <span style={{ ...mono, fontSize: 9, letterSpacing: '0.12em', color: '#5c6886' }}>REQUIRED</span>
+                  <span style={{ ...mono, fontSize: 9, letterSpacing: '0.12em', color: 'var(--color-text-subtle)' }}>REQUIRED</span>
                 </div>
                 <div style={{ position: 'relative' }}>
                   <input
@@ -441,7 +397,7 @@ export default function ProfilePage() {
                     placeholder="Your name"
                   />
                   <svg style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', opacity: 0.35, pointerEvents: 'none' }}
-                    width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#7ee7ff" strokeWidth="1.6">
+                    width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent)" strokeWidth="1.6">
                     <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" />
                   </svg>
                 </div>
@@ -451,7 +407,7 @@ export default function ProfilePage() {
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
                   <label style={{ ...labelStyle, marginBottom: 0 }}>Avatar (URL)</label>
-                  <span style={{ ...mono, fontSize: 9, letterSpacing: '0.12em', color: '#5c6886' }}>OPTIONAL</span>
+                  <span style={{ ...mono, fontSize: 9, letterSpacing: '0.12em', color: 'var(--color-text-subtle)' }}>OPTIONAL</span>
                 </div>
                 <div style={{ position: 'relative' }}>
                   <input
@@ -462,7 +418,7 @@ export default function ProfilePage() {
                     placeholder="https://..."
                   />
                   <svg style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', opacity: 0.35, pointerEvents: 'none' }}
-                    width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#7ee7ff" strokeWidth="1.6">
+                    width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent)" strokeWidth="1.6">
                     <rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" />
                   </svg>
                 </div>
@@ -472,17 +428,17 @@ export default function ProfilePage() {
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
                   <label style={{ ...labelStyle, marginBottom: 0 }}>Email</label>
-                  <span style={{ ...mono, fontSize: 9, letterSpacing: '0.12em', color: '#5c6886' }}>
+                  <span style={{ ...mono, fontSize: 9, letterSpacing: '0.12em', color: 'var(--color-text-subtle)' }}>
                     READ-ONLY · {(user.provider || 'LOCAL').toUpperCase()}
                   </span>
                 </div>
                 <div style={{
                   ...inputBase,
                   background: 'rgba(126,231,255,0.02)', border: '1px solid rgba(126,231,255,0.08)',
-                  color: '#9aa8c4', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                 }}>
                   <span style={{ ...mono, fontSize: 11 }}>
-                    <span style={{ color: '#5c6886', marginRight: 8 }}>ADDR</span>
+                    <span style={{ color: 'var(--color-text-subtle)', marginRight: 8 }}>ADDR</span>
                     {user.email || '—'}
                   </span>
                   <span style={{
@@ -504,11 +460,11 @@ export default function ProfilePage() {
               <div style={{ height: 1, background: 'rgba(126,231,255,0.08)', margin: '4px 0' }} />
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
                 {/* Save status */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, ...mono, fontSize: 10, letterSpacing: '0.1em', color: '#5c6886' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, ...mono, fontSize: 10, letterSpacing: '0.1em', color: 'var(--color-text-subtle)' }}>
                   <span style={{
                     width: 6, height: 6, borderRadius: '50%', display: 'inline-block',
-                    background: isDirty ? '#f5a524' : profileMessage === 'success' ? '#6dffb0' : '#5c6886',
-                    boxShadow: isDirty ? '0 0 6px #f5a524' : profileMessage === 'success' ? '0 0 6px #6dffb0' : 'none',
+                    background: isDirty ? 'var(--color-brand-amber)' : profileMessage === 'success' ? '#6dffb0' : 'var(--color-text-subtle)',
+                    boxShadow: isDirty ? '0 0 6px var(--color-brand-amber)' : profileMessage === 'success' ? '0 0 6px #6dffb0' : 'none',
                   }} />
                   {isDirty ? 'UNSAVED' : profileMessage === 'success' ? 'SAVED' : 'NO CHANGES'}
                 </div>
@@ -520,7 +476,7 @@ export default function ProfilePage() {
                     onClick={() => { setDisplayName(user.displayName || ''); setAvatar(user.avatar || ''); setProfileMessage(null) }}
                     style={{
                       ...mono, padding: '9px 16px', background: 'transparent',
-                      border: '1px solid rgba(126,231,255,0.2)', color: '#9aa8c4',
+                      border: '1px solid var(--color-border)', color: 'var(--color-text-muted)',
                       cursor: 'pointer', fontSize: 11, letterSpacing: '0.1em',
                       display: 'inline-flex', alignItems: 'center', gap: 6,
                       ...chamfer(6),
@@ -537,7 +493,7 @@ export default function ProfilePage() {
                     type="submit"
                     disabled={loadingProfile}
                     style={{
-                      ...mono, padding: '9px 18px', background: '#f5a524',
+                      ...mono, padding: '9px 18px', background: 'var(--color-brand-amber)',
                       border: 'none', color: '#1a0e00', cursor: loadingProfile ? 'not-allowed' : 'pointer',
                       fontSize: 11, fontWeight: 700, letterSpacing: '0.1em',
                       display: 'inline-flex', alignItems: 'center', gap: 6,
@@ -565,9 +521,9 @@ export default function ProfilePage() {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
                 <div style={{ display: 'flex', alignItems: 'center' }}>
                   <span style={sectionNum('02')}>02</span>
-                  <h2 style={{ ...grotesk, margin: 0, fontSize: 18, fontWeight: 600, color: '#eaf6ff' }}>Change password</h2>
+                  <h2 style={{ ...grotesk, margin: 0, fontSize: 18, fontWeight: 600, color: 'var(--color-text-primary)' }}>Change password</h2>
                 </div>
-                <span style={{ ...mono, fontSize: 10, letterSpacing: '0.15em', color: '#5c6886' }}>AES · 256</span>
+                <span style={{ ...mono, fontSize: 10, letterSpacing: '0.15em', color: 'var(--color-text-subtle)' }}>AES · 256</span>
               </div>
               <div style={{ height: 1, background: 'rgba(126,231,255,0.1)', marginBottom: 20 }} />
 
@@ -586,7 +542,7 @@ export default function ProfilePage() {
                     />
                     <button type="button" onClick={() => setShowCurrent(v => !v)} style={{
                       position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)',
-                      background: 'none', border: 'none', cursor: 'pointer', color: '#5c6886', padding: 0, display: 'flex',
+                      background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-subtle)', padding: 0, display: 'flex',
                     }}>
                       <EyeIcon open={showCurrent} />
                     </button>
@@ -597,7 +553,7 @@ export default function ProfilePage() {
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
                     <label style={{ ...labelStyle, marginBottom: 0 }}>New Password</label>
-                    <span style={{ ...mono, fontSize: 9, letterSpacing: '0.12em', color: '#5c6886' }}>MIN · 8 CHARS</span>
+                    <span style={{ ...mono, fontSize: 9, letterSpacing: '0.12em', color: 'var(--color-text-subtle)' }}>MIN · 8 CHARS</span>
                   </div>
                   <div style={{ position: 'relative' }}>
                     <input
@@ -610,7 +566,7 @@ export default function ProfilePage() {
                     />
                     <button type="button" onClick={() => setShowNew(v => !v)} style={{
                       position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)',
-                      background: 'none', border: 'none', cursor: 'pointer', color: '#5c6886', padding: 0, display: 'flex',
+                      background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-subtle)', padding: 0, display: 'flex',
                     }}>
                       <EyeIcon open={showNew} />
                     </button>
@@ -629,13 +585,13 @@ export default function ProfilePage() {
                       style={{
                         ...inputBase, paddingRight: 40,
                         borderColor: confirmPassword && confirmPassword !== newPassword
-                          ? 'rgba(255,92,212,0.5)' : 'rgba(126,231,255,0.18)',
+                          ? 'rgba(255,92,212,0.5)' : 'var(--color-accent-soft)',
                       }}
                       placeholder="••••••••"
                     />
                     <button type="button" onClick={() => setShowConfirm(v => !v)} style={{
                       position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)',
-                      background: 'none', border: 'none', cursor: 'pointer', color: '#5c6886', padding: 0, display: 'flex',
+                      background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-subtle)', padding: 0, display: 'flex',
                     }}>
                       <EyeIcon open={showConfirm} />
                     </button>
@@ -652,7 +608,7 @@ export default function ProfilePage() {
 
                 {/* Footer */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
-                  <Link href="/forgot-password" style={{ ...mono, fontSize: 10, letterSpacing: '0.1em', color: '#7ee7ff', textDecoration: 'none', opacity: 0.65 }}>
+                  <Link href="/forgot-password" style={{ ...mono, fontSize: 10, letterSpacing: '0.1em', color: 'var(--color-accent)', textDecoration: 'none', opacity: 0.65 }}>
                     FORGOT PASSWORD?
                   </Link>
                   <button
@@ -660,7 +616,7 @@ export default function ProfilePage() {
                     disabled={loadingPassword}
                     style={{
                       ...mono, padding: '10px 20px', background: 'transparent',
-                      border: '1px solid rgba(126,231,255,0.3)', color: '#7ee7ff',
+                      border: '1px solid rgba(126,231,255,0.3)', color: 'var(--color-accent)',
                       cursor: loadingPassword ? 'not-allowed' : 'pointer',
                       fontSize: 11, letterSpacing: '0.1em',
                       display: 'inline-flex', alignItems: 'center', gap: 7,
@@ -679,9 +635,9 @@ export default function ProfilePage() {
           ) : (
             /* OAuth users: no password panel */
             <div style={{ ...card, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid rgba(126,231,255,0.06)' }}>
-              <p style={{ ...mono, fontSize: 11, color: '#5c6886', letterSpacing: '0.1em', textAlign: 'center', lineHeight: 2 }}>
+              <p style={{ ...mono, fontSize: 11, color: 'var(--color-text-subtle)', letterSpacing: '0.1em', textAlign: 'center', lineHeight: 2 }}>
                 PASSWORD MANAGEMENT<br />NOT AVAILABLE<br />
-                <span style={{ color: '#9aa8c4' }}>Signed in via {(user.provider || '').toUpperCase()}</span>
+                <span style={{ color: 'var(--color-text-muted)' }}>Signed in via {(user.provider || '').toUpperCase()}</span>
               </p>
             </div>
           )}
@@ -692,11 +648,11 @@ export default function ProfilePage() {
             <Brackets s={12} o={9} />
             <div style={{ display: 'flex', alignItems: 'center', marginBottom: 16 }}>
               <span style={sectionNum('T')}>T</span>
-              <h2 style={{ ...grotesk, margin: 0, fontSize: 18, fontWeight: 600, color: '#eaf6ff' }}>
+              <h2 style={{ ...grotesk, margin: 0, fontSize: 18, fontWeight: 600, color: 'var(--color-text-primary)' }}>
                 Hồ sơ giáo viên
               </h2>
             </div>
-            <p style={{ ...mono, fontSize: 10, color: '#5c6886', letterSpacing: '0.1em', marginBottom: 12 }}>
+            <p style={{ ...mono, fontSize: 10, color: 'var(--color-text-subtle)', letterSpacing: '0.1em', marginBottom: 12 }}>
               Hiển thị công khai trên trang khóa học — sinh viên dùng để xác minh giảng viên.
             </p>
             <TeacherProfileEditor />
@@ -712,7 +668,7 @@ export default function ProfilePage() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
             <div style={{ display: 'flex', alignItems: 'center' }}>
               <span style={sectionNum('03', 'rgba(255,92,212,0.4)')}>03</span>
-              <h2 style={{ ...grotesk, margin: 0, fontSize: 18, fontWeight: 600, color: '#eaf6ff' }}>Ngừng hoạt động tài khoản</h2>
+              <h2 style={{ ...grotesk, margin: 0, fontSize: 18, fontWeight: 600, color: 'var(--color-text-primary)' }}>Ngừng hoạt động tài khoản</h2>
             </div>
             <span style={{ ...mono, fontSize: 10, letterSpacing: '0.15em', color: '#ff5cd4' }}>REVERSIBLE</span>
           </div>
@@ -730,10 +686,10 @@ export default function ProfilePage() {
                 <line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" />
               </svg>
               <div>
-                <p style={{ ...grotesk, margin: '0 0 4px', fontSize: 13, color: '#eaf6ff', fontWeight: 500 }}>
+                <p style={{ ...grotesk, margin: '0 0 4px', fontSize: 13, color: 'var(--color-text-primary)', fontWeight: 500 }}>
                   Tài khoản sẽ không bị xóa vĩnh viễn.
                 </p>
-                <p style={{ ...grotesk, margin: 0, fontSize: 13, color: '#9aa8c4', lineHeight: 1.55 }}>
+                <p style={{ ...grotesk, margin: 0, fontSize: 13, color: 'var(--color-text-muted)', lineHeight: 1.55 }}>
                   Hệ thống chỉ đánh dấu ngừng hoạt động để có thể khôi phục hoặc kiểm tra khi cần. Mọi dữ liệu khóa học, tiến độ và bình luận được giữ nguyên.
                 </p>
               </div>
@@ -766,8 +722,6 @@ export default function ProfilePage() {
             </div>
           </div>
         </div>
-
-      </div>
     </div>
   )
 }

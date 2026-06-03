@@ -107,7 +107,7 @@ function SessionCard({
         'focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60',
         active
           ? 'border-cyan-400/45 bg-gradient-to-br from-cyan-500/20 via-cyan-900/10 to-transparent shadow-[0_0_24px_rgba(6,182,212,0.12)]'
-          : 'border-white/8 bg-white/[0.03] hover:border-cyan-400/30 hover:bg-cyan-500/[0.06] hover:shadow-[0_8px_28px_rgba(0,0,0,0.25)]',
+          : 'border-white/8 bg-white/[0.03] hover:border-cyan-400/30 hover:opacity-90/[0.06] hover:shadow-[0_8px_28px_rgba(0,0,0,0.25)]',
         loading && 'pointer-events-none opacity-60',
       )}
     >
@@ -127,24 +127,24 @@ function SessionCard({
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-2">
             <p className="line-clamp-1 text-sm font-medium text-white">{item.title}</p>
-            <span className="shrink-0 text-[10px] text-gray-500">{relative}</span>
+            <span className="shrink-0 text-[10px] text-ds-subtle">{relative}</span>
           </div>
           {item.preview ? (
-            <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-gray-400">{item.preview}</p>
+            <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-ds-muted">{item.preview}</p>
           ) : null}
           <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
-            <span className="rounded-full border border-cyan-400/20 bg-cyan-500/10 px-2 py-0.5 text-[10px] text-cyan-100/90">
+            <span className="rounded-full border border-cyan-400/20 bg-cyan-500/10 px-2 py-0.5 text-[10px] text-ds-text/90">
               {item.contextLabel}
             </span>
             {item.messageCount > 0 ? (
-              <span className="rounded-full bg-white/5 px-2 py-0.5 text-[10px] text-gray-400">
+              <span className="rounded-full bg-white/5 px-2 py-0.5 text-[10px] text-ds-muted">
                 {item.messageCount} lượt
               </span>
             ) : null}
           </div>
         </div>
         <svg
-          className="mt-1 h-4 w-4 shrink-0 text-gray-600 transition-transform group-hover:translate-x-0.5 group-hover:text-cyan-300/80"
+          className="mt-1 h-4 w-4 shrink-0 text-gray-600 transition-transform group-hover:translate-x-0.5 group-hover:text-ds-text/80"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -228,7 +228,7 @@ export function CosmoChatHistoryPanel({
         <button
           type="button"
           onClick={onClose}
-          className="flex h-9 w-9 items-center justify-center rounded-xl text-gray-400 transition-colors hover:bg-white/10 hover:text-white"
+          className="flex h-9 w-9 items-center justify-center rounded-xl text-ds-muted transition-colors hover:bg-white/10 hover:text-white"
           aria-label="Quay lại chat"
         >
           <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -236,8 +236,8 @@ export function CosmoChatHistoryPanel({
           </svg>
         </button>
         <div className="min-w-0 flex-1">
-          <h2 className="text-sm font-semibold text-cyan-100">Lịch sử chat</h2>
-          <p className="text-[11px] text-gray-500">Các cuộc trò chuyện đã lưu trên tài khoản</p>
+          <h2 className="text-sm font-semibold text-ds-text">Lịch sử chat</h2>
+          <p className="text-[11px] text-ds-subtle">Các cuộc trò chuyện đã lưu trên tài khoản</p>
         </div>
         <button
           type="button"
@@ -245,7 +245,7 @@ export function CosmoChatHistoryPanel({
             onNewChat()
             onClose()
           }}
-          className="shrink-0 rounded-full border border-cyan-400/30 bg-cyan-500/15 px-3 py-1.5 text-[11px] font-medium text-cyan-100 transition-colors hover:bg-cyan-500/25"
+          className="shrink-0 rounded-full border border-cyan-400/30 bg-cyan-500/15 px-3 py-1.5 text-[11px] font-medium text-ds-text transition-colors hover:opacity-90/25"
         >
           + Mới
         </button>
@@ -260,7 +260,7 @@ export function CosmoChatHistoryPanel({
             <button
               type="button"
               onClick={() => void loadSessions()}
-              className="mt-4 rounded-full border border-white/15 px-4 py-2 text-xs text-gray-300 hover:bg-white/5"
+              className="mt-4 rounded-full border border-ds-border px-4 py-2 text-xs text-gray-300 hover:bg-white/5"
             >
               Thử lại
             </button>
@@ -271,7 +271,7 @@ export function CosmoChatHistoryPanel({
               💬
             </div>
             <p className="text-sm font-medium text-white">Chưa có cuộc trò chuyện nào</p>
-            <p className="mt-2 max-w-[240px] text-xs leading-relaxed text-gray-500">
+            <p className="mt-2 max-w-[240px] text-xs leading-relaxed text-ds-subtle">
               Hỏi nito bất cứ điều gì — mỗi lượt chat sẽ được lưu để bạn mở lại sau.
             </p>
             <button
@@ -289,7 +289,7 @@ export function CosmoChatHistoryPanel({
           <div className="space-y-5 px-3 py-3 pb-6">
             {grouped.map((group) => (
               <section key={group.key}>
-                <h3 className="mb-2 px-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-cyan-300/55">
+                <h3 className="mb-2 px-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-ds-accent/55">
                   {group.label}
                 </h3>
                 <div className="space-y-2">

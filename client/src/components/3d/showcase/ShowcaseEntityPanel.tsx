@@ -1,5 +1,6 @@
 'use client'
 
+import type { ReactNode } from 'react'
 import { clsx } from 'clsx'
 import { BookOpen, History, Orbit, Sparkles, Stars, Weight } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
@@ -20,11 +21,6 @@ export type ShowcaseSatellitePickerItem = {
 
 export type ShowcaseGamificationStrip = {
   gemBalance: number
-  storyUnlocked: boolean
-  orbitUnlocked: boolean
-  storyCost: number
-  orbitCost: number
-  onUnlock: (contentType: 'story' | 'orbit') => void | Promise<void>
 }
 
 const TAB_META: Record<
@@ -46,9 +42,6 @@ const TAB_META: Record<
       lessons > 0 ? `${lessons} bài học` : blocks > 0 ? `${blocks} mục` : 'Bầu trời',
   },
 }
-
-/** Bật khi đã có story viewer + khóa quỹ đạo 3D theo unlock. */
-const SHOWCASE_PREMIUM_UNLOCK_UI = false
 
 const GROUP_LABEL_VI: Record<string, string> = {
   planets_moons: 'HÀNH TINH · VỆ TINH',
@@ -85,6 +78,9 @@ export function ShowcaseEntityPanel({
   hostPlanetName,
   activeEntityId,
   onSelectSatellite,
+  learningStepsSlot,
+  conceptChipsSlot,
+  crossViewSlot,
 }: {
   item: ResolvedNasaCatalogItem | null
   orbit: ShowcaseOrbitEntity | null
@@ -100,6 +96,11 @@ export function ShowcaseEntityPanel({
   hostPlanetName?: string | null
   activeEntityId?: string | null
   onSelectSatellite?: (entityId: string) => void
+  /** Explore: bước học + chip concept (trên tabs). */
+  learningStepsSlot?: ReactNode
+  conceptChipsSlot?: ReactNode
+  /** Explore: chuyển sang La bàn chòm sao / hệ Mặt Trời. */
+  crossViewSlot?: ReactNode
 }) {
   const tabs = useMemo(() => {
     const next: Array<{ id: TabId; label: string }> = []
@@ -140,7 +141,10 @@ export function ShowcaseEntityPanel({
   )
 
   return (
-    <aside className="fixed left-4 top-24 z-[24] flex max-h-[calc(100vh-7rem)] w-[min(392px,calc(100vw-1.5rem))] min-h-0 flex-col overflow-hidden rounded-[1.35rem] border border-white/[0.08] bg-[rgba(8,10,16,0.82)] shadow-[0_24px_64px_rgba(0,0,0,0.55)] backdrop-blur-xl">
+    <aside
+      data-explore-tour="explore-panel"
+      className="fixed left-4 top-24 z-[24] flex max-h-[calc(100vh-7rem)] w-[min(392px,calc(100vw-1.5rem))] min-h-0 flex-col overflow-hidden rounded-[1.35rem] border border-white/[0.08] bg-[rgba(8,10,16,0.82)] shadow-[0_24px_64px_rgba(0,0,0,0.55)] backdrop-blur-xl"
+    >
       <header className="shrink-0 px-5 pb-4 pt-5">
         <div className="flex items-center gap-2">
           <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-ds-accent shadow-[0_0_10px_var(--color-accent)]" />
@@ -151,21 +155,20 @@ export function ShowcaseEntityPanel({
         <h2 className="mt-2 font-[family-name:var(--font-heading)] text-[2rem] font-bold uppercase leading-[0.95] tracking-tight text-white">
           {item?.displayName || 'Chưa chọn'}
         </h2>
-        {subtitle ? <p className="mt-1.5 text-sm text-white/50">{subtitle}</p> : null}
-        {description && safeTab === 'overview' ? (
-          <p className="mt-3 text-[13px] leading-relaxed text-white/72">{description}</p>
+        {subtitle ? (
+          <p className="mt-1.5 line-clamp-2 text-sm text-white/50">{subtitle}</p>
         ) : null}
       </header>
 
       {satelliteChildren.length > 0 && hostPlanetName ? (
-        <div className="shrink-0 border-b border-white/[0.06] px-5 pb-3">
-          <div className="mb-2 flex items-center gap-2">
+        <div className="shrink-0 border-b border-white/[0.06] px-5 pb-2.5">
+          <div className="mb-1.5 flex items-center gap-2">
             <Orbit className="h-3.5 w-3.5 text-ds-accent" strokeWidth={1.75} />
             <p className="text-[9px] font-medium uppercase tracking-[0.18em] text-white/45">
-              {hostPlanetName} · vệ tinh & quỹ đạo
+              {hostPlanetName} · vệ tinh
             </p>
           </div>
-          <div className="flex max-h-[7.5rem] flex-wrap gap-1.5 overflow-y-auto pr-0.5">
+          <div className="flex max-h-[4.25rem] flex-wrap gap-1 overflow-y-auto pr-0.5">
             {satelliteChildren.map((child) => {
               const selected = child.active || activeEntityId === child.id
               return (
@@ -177,7 +180,7 @@ export function ShowcaseEntityPanel({
                     'rounded-lg border px-2.5 py-1.5 text-left transition',
                     selected
                       ? 'border-ds-accent-strong bg-ds-accent-soft text-white shadow-[inset_0_0_0_1px_var(--color-accent-strong)]'
-                      : 'border-white/[0.1] bg-white/[0.04] text-white/75 hover:border-white/25 hover:bg-white/[0.08]',
+                      : 'border-white/[0.1] bg-ds-surface/50 text-white/75 hover:border-white/25 hover:bg-white/[0.08]',
                   )}
                 >
                   <span className="block text-[10px] font-semibold uppercase tracking-[0.08em]">{child.name}</span>
@@ -185,14 +188,14 @@ export function ShowcaseEntityPanel({
               )
             })}
           </div>
-          <p className="mt-2 text-[10px] leading-snug text-white/38">
-            Chọn mục tiêu ở đây nếu quỹ đạo 3D quá nhanh để click trực tiếp.
-          </p>
         </div>
       ) : null}
 
       {tabs.length > 0 ? (
-        <div className="shrink-0 px-5 pb-3">
+        <div
+          className="shrink-0 border-b border-white/[0.06] bg-[rgba(8,10,16,0.92)] px-5 py-2.5"
+          data-explore-tour="explore-panel-tabs"
+        >
           <div
             className={clsx(
               'grid gap-2',
@@ -214,7 +217,7 @@ export function ShowcaseEntityPanel({
                   type="button"
                   onClick={() => setActiveTab(tab.id)}
                   className={clsx(
-                    'group rounded-xl border px-2.5 py-2.5 text-left transition',
+                    'group rounded-xl border px-2 py-2 text-left transition',
                     active
                       ? 'border-ds-accent-strong bg-ds-accent-soft shadow-[inset_0_0_0_1px_var(--color-accent-strong)]'
                       : 'border-white/[0.08] bg-white/[0.03] hover:border-white/20 hover:bg-white/[0.06]',
@@ -245,24 +248,32 @@ export function ShowcaseEntityPanel({
         </div>
       ) : null}
 
-      <section className="min-h-0 flex-1 space-y-2.5 overflow-y-auto px-5 py-1">
+      <section className="min-h-0 flex-1 space-y-2.5 overflow-y-auto overscroll-contain px-5 py-3">
+        {crossViewSlot ? <div className="shrink-0">{crossViewSlot}</div> : null}
+        {learningStepsSlot ? <div className="shrink-0">{learningStepsSlot}</div> : null}
+
+        {safeTab === 'overview' && description ? (
+          <p className="text-[13px] leading-relaxed text-white/72">{description}</p>
+        ) : null}
+
         {safeTab === 'overview' ? (
           <>
             {(panelConfig?.overviewBlocks || []).map((b, idx) => (
               <PanelBlock key={b.id || `${b.type}-${idx}`} block={b} />
             ))}
-            {conceptChips.length > 0 ? (
-              <div className="flex flex-wrap gap-1.5 pt-1">
-                {conceptChips.slice(0, 8).map((c) => (
-                  <span
-                    key={c.id}
-                    className="rounded-lg border border-white/[0.08] bg-white/[0.04] px-2 py-1 text-[10px] text-white/55"
-                  >
-                    {c.title || c.id}
-                  </span>
-                ))}
-              </div>
-            ) : null}
+            {conceptChipsSlot ??
+              (conceptChips.length > 0 ? (
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  {conceptChips.slice(0, 8).map((c) => (
+                    <span
+                      key={c.id}
+                      className="rounded-lg border border-white/[0.08] bg-ds-surface/50 px-2 py-1 text-[10px] text-white/55"
+                    >
+                      {c.title || c.id}
+                    </span>
+                  ))}
+                </div>
+              ) : null)}
           </>
         ) : null}
 
@@ -283,7 +294,7 @@ export function ShowcaseEntityPanel({
               <a
                 key={row.lessonId}
                 href={row.href}
-                className="block rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 py-2.5 text-sm text-ds-accent transition hover:border-ds-accent-strong hover:bg-ds-accent-soft"
+                className="block rounded-xl border border-white/[0.08] bg-ds-surface/50 px-3 py-2.5 text-sm text-ds-accent transition hover:border-ds-accent-strong hover:bg-ds-accent-soft"
               >
                 {row.title}
               </a>
@@ -311,30 +322,6 @@ export function ShowcaseEntityPanel({
             </span>
             <span className="tabular-nums font-semibold text-ds-accent">{gamification.gemBalance}</span>
           </div>
-          {SHOWCASE_PREMIUM_UNLOCK_UI &&
-          ((!gamification.storyUnlocked && gamification.storyCost > 0) ||
-            (!gamification.orbitUnlocked && gamification.orbitCost > 0)) ? (
-            <div className="flex flex-wrap gap-1.5">
-              {!gamification.storyUnlocked && gamification.storyCost > 0 ? (
-                <button
-                  type="button"
-                  onClick={() => void gamification.onUnlock('story')}
-                  className="rounded-lg border border-amber-400/30 bg-amber-500/10 px-2.5 py-1.5 text-[10px] font-medium text-amber-100 transition hover:bg-amber-500/20"
-                >
-                  Mở story · {gamification.storyCost} gem
-                </button>
-              ) : null}
-              {!gamification.orbitUnlocked && gamification.orbitCost > 0 ? (
-                <button
-                  type="button"
-                  onClick={() => void gamification.onUnlock('orbit')}
-                  className="rounded-lg border border-sky-400/30 bg-sky-500/10 px-2.5 py-1.5 text-[10px] font-medium text-sky-100 transition hover:bg-sky-500/20"
-                >
-                  Mở orbit · {gamification.orbitCost} gem
-                </button>
-              ) : null}
-            </div>
-          ) : null}
         </div>
       ) : null}
 
@@ -342,6 +329,7 @@ export function ShowcaseEntityPanel({
         <div className="shrink-0 px-5 pb-4 pt-1">
           <button
             type="button"
+            data-explore-tour="explore-deep-history"
             onClick={onOpenDeepHistory}
             className="flex w-full items-center justify-center gap-2 rounded-xl bg-ds-accent px-4 py-3 text-[11px] font-bold uppercase tracking-[0.16em] text-ds-accent-fg shadow-[0_8px_28px_color-mix(in_srgb,var(--color-accent)_35%,transparent)] transition hover:brightness-110 active:scale-[0.99]"
           >
@@ -356,7 +344,10 @@ export function ShowcaseEntityPanel({
         </div>
       ) : null}
 
-      <footer className="flex shrink-0 items-center justify-between gap-2 border-t border-white/[0.06] px-5 py-2.5">
+      <footer
+        data-explore-tour="explore-panel-lessons"
+        className="flex shrink-0 items-center justify-between gap-2 border-t border-white/[0.06] px-5 py-2.5"
+      >
         <p className="text-[10px] text-white/35">
           {learningLinks.length} bài trên lộ trình của bạn
         </p>
@@ -382,7 +373,7 @@ function PanelBlock({ block }: { block: ShowcasePanelBlockDTO }) {
       ? 'rounded-xl border border-transparent bg-transparent p-1'
       : variant === 'solid'
         ? 'rounded-xl border p-3'
-        : 'rounded-xl border border-white/[0.08] bg-white/[0.04] p-3'
+        : 'rounded-xl border border-white/[0.08] bg-ds-surface/50 p-3'
   const textAlignClass = align === 'center' ? 'text-center' : align === 'right' ? 'text-right' : 'text-left'
   const style: React.CSSProperties = {
     backgroundColor: block.style?.bgColor || undefined,

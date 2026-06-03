@@ -59,13 +59,13 @@ export function ProfileAvatarEditor({
         />
         {uploading && (
           <div className="absolute inset-0 rounded-full bg-black/55 flex items-center justify-center">
-            <Loader2 className="w-8 h-8 text-cyan-300 animate-spin" aria-hidden />
+            <Loader2 className="w-8 h-8 text-ds-accent animate-spin" aria-hidden />
           </div>
         )}
       </div>
 
       <div className="flex-1 min-w-0 space-y-3 w-full">
-        <p className="text-sm text-slate-400">
+        <p className="text-sm text-ds-muted">
           Ảnh đại diện của bạn (không thay bằng gói shop). Tải lên sẽ lưu trên CDN khi máy chủ đã cấu hình S3.
         </p>
         <input
@@ -95,7 +95,7 @@ export function ProfileAvatarEditor({
         {uploadError ? <p className="text-sm text-red-400">{uploadError}</p> : null}
 
         <details className="text-sm">
-          <summary className="text-slate-500 cursor-pointer hover:text-slate-300">Hoặc dán URL ảnh (tuỳ chọn)</summary>
+          <summary className="text-ds-subtle cursor-pointer hover:text-ds-muted">Hoặc dán URL ảnh (tuỳ chọn)</summary>
           <div className="mt-2">
             <Input
               type="url"

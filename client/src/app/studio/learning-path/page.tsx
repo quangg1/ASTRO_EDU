@@ -70,10 +70,10 @@ const STUDIO_STARS = Array.from({ length: 100 }, (_, i) => ({
   x: _pr(i * 7 + 1) * 100, y: _pr(i * 7 + 2) * 100,
   r: _pr(i * 7 + 3) * 1.2 + 0.4, o: _pr(i * 7 + 4) * 0.5 + 0.15,
   d: _pr(i * 7 + 5) * 4 + 2,
-  c: _pr(i * 7 + 6) > 0.9 ? '#7ee7ff' : _pr(i * 7 + 1) > 0.88 ? '#f5a524' : '#ffffff',
+  c: _pr(i * 7 + 6) > 0.9 ? 'var(--color-accent)' : _pr(i * 7 + 1) > 0.88 ? 'var(--color-brand-amber)' : '#ffffff',
 }))
 
-function SCorner({ color = '#7ee7ff', size = 12, thick = 1.5 }: { color?: string; size?: number; thick?: number }) {
+function SCorner({ color = 'var(--color-accent)', size = 12, thick = 1.5 }: { color?: string; size?: number; thick?: number }) {
   const b = `${thick}px solid ${color}`
   const s: CSSProperties = { position: 'absolute', width: size, height: size, pointerEvents: 'none' }
   return (
@@ -144,7 +144,7 @@ function buildConceptUsage(modules: LearningModule[]): ConceptUsageItem[] {
 }
 
 const inputCls =
-  'w-full rounded bg-[#030a14] border border-white/10 px-3 py-2 text-white text-sm focus:border-cyan-500/40 focus:outline-none transition-colors placeholder:text-slate-600'
+  'w-full rounded bg-ds-surface border border-white/10 px-3 py-2 text-white text-sm focus:border-cyan-500/40 focus:outline-none transition-colors placeholder:text-slate-600'
 
 function updateLesson(
   modules: LearningModule[],
@@ -404,11 +404,11 @@ function LearningPathLessonEditor({
     <div className="w-full max-w-none space-y-4">
       <div>
         <p className="text-[10px] text-slate-600 font-mono break-all mb-2">{activeLesson.id}</p>
-        <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 10, letterSpacing: '0.2em', color: '#7ee7ff', textTransform: 'uppercase', marginBottom: 8 }}>
+        <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 10, letterSpacing: '0.2em', color: 'var(--color-accent)', textTransform: 'uppercase', marginBottom: 8 }}>
           // lesson editor
         </div>
-        <h2 style={{ fontFamily: "'Space Grotesk',sans-serif", fontSize: 18, fontWeight: 600, color: '#eaf6ff' }}>
-          Soạn <em style={{ fontStyle: 'italic', fontWeight: 300, color: '#f5a524' }}>bài học</em>
+        <h2 style={{ fontFamily: "'Space Grotesk',sans-serif", fontSize: 18, fontWeight: 600, color: 'var(--color-text-primary)' }}>
+          Soạn <em style={{ fontStyle: 'italic', fontWeight: 300, color: 'var(--color-brand-amber)' }}>bài học</em>
         </h2>
         <p className="text-xs text-slate-500 mt-1">
           Cùng block kit với Course Studio — &quot;Lưu toàn bộ&quot; sau khi sửa xong (có thể nhiều bài).
@@ -433,8 +433,8 @@ function LearningPathLessonEditor({
       </label>
 
       <div style={{ position: 'relative', background: 'rgba(3,7,14,0.95)', border: '1px solid rgba(126,231,255,0.22)', clipPath: 'polygon(12px 0%,100% 0%,100% calc(100% - 12px),calc(100% - 12px) 100%,0% 100%,0% 12px)', padding: 16 }}>
-        <SCorner color="#7ee7ff" size={10} thick={1} />
-        <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 10, letterSpacing: '0.2em', color: '#7ee7ff', textTransform: 'uppercase' as const, marginBottom: 12 }}>
+        <SCorner color="var(--color-accent)" size={10} thick={1} />
+        <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 10, letterSpacing: '0.2em', color: 'var(--color-accent)', textTransform: 'uppercase' as const, marginBottom: 12 }}>
           // concept mapping + highlight
         </div>
         {concepts.length === 0 ? (
@@ -721,7 +721,7 @@ function LearningPathLessonEditor({
               clipPath: 'polygon(6px 0%,100% 0%,calc(100% - 6px) 100%,0% 100%)',
               background: editorTab === 'blocks' ? 'rgba(126,231,255,0.12)' : 'transparent',
               border: editorTab === 'blocks' ? '1px solid rgba(126,231,255,0.45)' : '1px solid rgba(255,255,255,0.07)',
-              color: editorTab === 'blocks' ? '#7ee7ff' : '#4a5568',
+              color: editorTab === 'blocks' ? 'var(--color-accent)' : '#4a5568',
               fontFamily: "'JetBrains Mono',monospace", fontSize: 11, letterSpacing: '0.08em',
               cursor: 'pointer', transition: 'all 0.2s',
             }}
@@ -767,7 +767,7 @@ function LearningPathLessonEditor({
                 <div
                   key={bi}
                   id={`lp-studio-block-${bi}`}
-                  className="rounded-2xl border border-white/10 bg-[#0a0f17]/80 p-4 space-y-3 group/block relative scroll-mt-24"
+                  className="rounded-2xl border border-white/10 bg-ds-base/80 p-4 space-y-3 group/block relative scroll-mt-24"
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -833,8 +833,8 @@ function LearningPathLessonEditor({
                   className="flex max-h-[inherit] flex-col"
                   style={{ position: 'relative', background: 'rgba(4,8,18,0.97)', border: '1px solid rgba(126,231,255,0.14)', clipPath: 'polygon(10px 0%,100% 0%,100% calc(100% - 10px),calc(100% - 10px) 100%,0% 100%,0% 10px)', padding: 12, backdropFilter: 'blur(12px)' }}
                 >
-                  <SCorner color="#7ee7ff" size={8} thick={1} />
-                  <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 10, letterSpacing: '0.2em', color: '#7ee7ff', textTransform: 'uppercase', marginBottom: 10 }}>// toc · lesson view</div>
+                  <SCorner color="var(--color-accent)" size={8} thick={1} />
+                  <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 10, letterSpacing: '0.2em', color: 'var(--color-accent)', textTransform: 'uppercase', marginBottom: 10 }}>// toc · lesson view</div>
                   <div className="min-h-0 flex-1 space-y-1.5 overflow-y-auto overscroll-contain pr-1">
                     {tocGroups.map((group) => {
                       return (
@@ -898,11 +898,11 @@ function LearningPathLessonEditor({
             <div className="p-4 md:p-6" style={{ background: '#02040a' }}>
               <div className="max-w-3xl mx-auto space-y-4">
                 <div style={{ position: 'relative', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(7,11,20,0.9)', padding: '16px 20px', clipPath: 'polygon(10px 0%,100% 0%,100% calc(100% - 10px),calc(100% - 10px) 100%,0% 100%,0% 10px)' }}>
-                  <SCorner color="#7ee7ff" size={8} thick={1} />
+                  <SCorner color="var(--color-accent)" size={8} thick={1} />
                   <p style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 10, letterSpacing: '0.18em', color: '#3a4a6a', textTransform: 'uppercase', marginBottom: 8 }}>
                     // learning path · studio preview
                   </p>
-                  <h2 style={{ fontFamily: "'Space Grotesk',sans-serif", fontSize: 20, fontWeight: 700, color: '#eaf6ff' }}>{activeLesson.titleVi}</h2>
+                  <h2 style={{ fontFamily: "'Space Grotesk',sans-serif", fontSize: 20, fontWeight: 700, color: 'var(--color-text-primary)' }}>{activeLesson.titleVi}</h2>
                   {activeLesson.title ? <p className="text-slate-500 text-sm mt-1">{activeLesson.title}</p> : null}
                 </div>
                 <LessonPreview
@@ -1270,7 +1270,7 @@ export default function StudioLearningPathPage() {
 
   if (!checked || !user) {
     return (
-      <div style={{ minHeight: '100vh', background: '#03060f', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ minHeight: '100vh', background: 'var(--color-bg-base)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 11, letterSpacing: '0.2em', color: '#3a4a6a', textTransform: 'uppercase', animation: 'studio-pulse 2s infinite' }}>
           // đang kiểm tra đăng nhập...
         </div>
@@ -1279,7 +1279,7 @@ export default function StudioLearningPathPage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#03060f', position: 'relative', fontFamily: "'Space Grotesk',sans-serif" }}>
+    <div style={{ minHeight: '100vh', background: 'var(--color-bg-base)', position: 'relative', fontFamily: "'Space Grotesk',sans-serif" }}>
 
       {/* ── Animations ── */}
       <style>{`
@@ -1289,7 +1289,7 @@ export default function StudioLearningPathPage() {
         .studio-btn-amber { transition: box-shadow 0.2s, transform 0.15s; }
         .studio-btn-amber:hover { box-shadow: 0 0 20px rgba(245,165,36,0.5) !important; transform: translateY(-1px); }
         .studio-btn-ghost { transition: background 0.2s, border-color 0.2s, box-shadow 0.2s; }
-        .studio-btn-ghost:hover { background: rgba(126,231,255,0.08) !important; border-color: rgba(126,231,255,0.5) !important; box-shadow: 0 0 12px rgba(126,231,255,0.2) !important; }
+        .studio-btn-ghost:hover { background: rgba(126,231,255,0.08) !important; border-color: var(--color-accent-strong) !important; box-shadow: 0 0 12px rgba(126,231,255,0.2) !important; }
         .studio-mod-sel-item { transition: background 0.2s, border-color 0.2s, box-shadow 0.2s; }
         .studio-mod-sel-item:hover { border-color: rgba(126,231,255,0.4) !important; background: rgba(126,231,255,0.06) !important; }
         .studio-lesson-btn { transition: background 0.2s, border-color 0.2s; }
@@ -1318,8 +1318,8 @@ export default function StudioLearningPathPage() {
       {/* ── Scanline ── */}
       <div aria-hidden style={{
         position: 'fixed', left: 0, right: 0, top: 0, height: 2,
-        background: 'linear-gradient(90deg,transparent,#7ee7ff,transparent)',
-        boxShadow: '0 0 8px #7ee7ff', opacity: 0.4,
+        background: 'linear-gradient(90deg,transparent,var(--color-accent),transparent)',
+        boxShadow: '0 0 8px var(--color-accent)', opacity: 0.4,
         animation: 'studio-scan 14s linear infinite',
         pointerEvents: 'none', zIndex: 2,
       }} />
@@ -1345,32 +1345,32 @@ export default function StudioLearningPathPage() {
       {/* ── Main content ── */}
       <div style={{ position: 'relative', zIndex: 10, paddingTop: 72, paddingBottom: 40, paddingLeft: 'clamp(16px,3vw,24px)', paddingRight: 'clamp(16px,3vw,24px)', maxWidth: 1440, margin: '0 auto' }}>
         <nav className="text-sm shrink-0 mb-4">
-          <Link href="/studio" style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 11, letterSpacing: '0.12em', color: '#7ee7ff', textDecoration: 'none', textTransform: 'uppercase' }}>
+          <Link href="/studio" style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 11, letterSpacing: '0.12em', color: 'var(--color-accent)', textDecoration: 'none', textTransform: 'uppercase' }}>
             ← Studio
           </Link>
         </nav>
 
         {/* ── Header ── */}
         <header style={{ position: 'relative', background: 'linear-gradient(120deg,rgba(126,231,255,0.05) 0%,rgba(6,9,26,0.96) 50%,rgba(3,6,15,0.97) 100%)', border: '1px solid rgba(126,231,255,0.2)', clipPath: 'polygon(18px 0%,100% 0%,100% calc(100% - 18px),calc(100% - 18px) 100%,0% 100%,0% 18px)', padding: '20px 28px', marginBottom: 24, display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 20 }}>
-          <SCorner color="#7ee7ff" size={14} thick={1.5} />
+          <SCorner color="var(--color-accent)" size={14} thick={1.5} />
           {/* Left accent bar */}
-          <span aria-hidden style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, background: 'linear-gradient(180deg,transparent 0%,#7ee7ff 38%,#7ee7ff 62%,transparent 100%)', boxShadow: '2px 0 10px rgba(126,231,255,0.45)' }} />
+          <span aria-hidden style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, background: 'linear-gradient(180deg,transparent 0%,var(--color-accent) 38%,var(--color-accent) 62%,transparent 100%)', boxShadow: '2px 0 10px rgba(126,231,255,0.45)' }} />
           <div>
-            <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 10, letterSpacing: '0.22em', color: '#7ee7ff', textTransform: 'uppercase', marginBottom: 10 }}>
+            <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 10, letterSpacing: '0.22em', color: 'var(--color-accent)', textTransform: 'uppercase', marginBottom: 10 }}>
               // learning path · studio editor
             </div>
-            <h1 style={{ fontFamily: "'Space Grotesk',sans-serif", fontSize: 'clamp(20px,3vw,28px)', fontWeight: 600, color: '#eaf6ff', display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8, lineHeight: 1.1 }}>
-              <ListTree style={{ width: 24, height: 24, color: '#7ee7ff', flexShrink: 0 }} />
-              Learning <em style={{ fontStyle: 'italic', fontWeight: 300, color: '#f5a524' }}>Path</em> Studio
+            <h1 style={{ fontFamily: "'Space Grotesk',sans-serif", fontSize: 'clamp(20px,3vw,28px)', fontWeight: 600, color: 'var(--color-text-primary)', display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8, lineHeight: 1.1 }}>
+              <ListTree style={{ width: 24, height: 24, color: 'var(--color-accent)', flexShrink: 0 }} />
+              Learning <em style={{ fontStyle: 'italic', fontWeight: 300, color: 'var(--color-brand-amber)' }}>Path</em> Studio
             </h1>
-            <p style={{ fontSize: 12, color: '#9aa8c4', maxWidth: 520, lineHeight: 1.6, margin: 0 }}>
+            <p style={{ fontSize: 12, color: 'var(--color-text-muted)', maxWidth: 520, lineHeight: 1.6, margin: 0 }}>
               Tạo mới module / chủ đề / bài, hoặc chọn{' '}
-              <span style={{ color: '#eaf6ff' }}>Module → Chủ đề → Tầng → Bài</span> để soạn. Nội dung dùng{' '}
-              <span style={{ color: '#7ee7ff' }}>cùng block kit với khóa học</span>.
+              <span style={{ color: 'var(--color-text-primary)' }}>Module → Chủ đề → Tầng → Bài</span> để soạn. Nội dung dùng{' '}
+              <span style={{ color: 'var(--color-accent)' }}>cùng block kit với khóa học</span>.
             </p>
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 14 }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontFamily: "'JetBrains Mono',monospace", fontSize: 11, letterSpacing: '0.12em', color: '#9aa8c4', textTransform: 'uppercase' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontFamily: "'JetBrains Mono',monospace", fontSize: 11, letterSpacing: '0.12em', color: 'var(--color-text-muted)', textTransform: 'uppercase' }}>
               <input
                 type="checkbox"
                 checked={published}
@@ -1388,7 +1388,7 @@ export default function StudioLearningPathPage() {
                 display: 'inline-flex', alignItems: 'center', gap: 8,
                 padding: '10px 22px',
                 clipPath: 'polygon(10px 0%,100% 0%,100% calc(100% - 10px),calc(100% - 10px) 100%,0% 100%,0% 10px)',
-                background: saving || loading ? 'rgba(245,165,36,0.4)' : '#f5a524',
+                background: saving || loading ? 'rgba(245,165,36,0.4)' : 'var(--color-brand-amber)',
                 color: '#1a0e00', border: 'none', cursor: saving || loading ? 'not-allowed' : 'pointer',
                 fontFamily: "'JetBrains Mono',monospace", fontSize: 12, fontWeight: 700, letterSpacing: '0.1em',
                 boxShadow: '0 0 16px rgba(245,165,36,0.35)',
@@ -1402,7 +1402,7 @@ export default function StudioLearningPathPage() {
               href="/tutorial"
               target="_blank"
               rel="noopener noreferrer"
-              style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 11, letterSpacing: '0.1em', color: '#7ee7ff', textDecoration: 'none', textTransform: 'uppercase' }}
+              style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 11, letterSpacing: '0.1em', color: 'var(--color-accent)', textDecoration: 'none', textTransform: 'uppercase' }}
             >
               Xem học viên →
             </Link>
@@ -1416,8 +1416,8 @@ export default function StudioLearningPathPage() {
         ) : null}
         {invalidConceptIds.length > 0 ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 14px', background: 'rgba(245,165,36,0.07)', border: '1px solid rgba(245,165,36,0.25)', clipPath: 'polygon(8px 0%,100% 0%,calc(100% - 8px) 100%,0% 100%)' }}>
-            <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#f5a524', flexShrink: 0 }} />
-            <p style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 11, color: '#f5a524', letterSpacing: '0.08em', margin: 0 }}>
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--color-brand-amber)', flexShrink: 0 }} />
+            <p style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 11, color: 'var(--color-brand-amber)', letterSpacing: '0.08em', margin: 0 }}>
               Đã loại bỏ concept không tồn tại: <span style={{ color: '#ffd27a' }}>{invalidConceptIds.join(', ')}</span>
             </p>
           </div>
@@ -1431,12 +1431,12 @@ export default function StudioLearningPathPage() {
           </div>
         ) : modules.length === 0 ? (
           <div style={{ position: 'relative', border: '1px dashed rgba(255,255,255,0.15)', background: 'rgba(255,255,255,0.02)', clipPath: 'polygon(18px 0%,100% 0%,100% calc(100% - 18px),calc(100% - 18px) 100%,0% 100%,0% 18px)', padding: '48px 32px', textAlign: 'center', maxWidth: 520, margin: '0 auto' }}>
-            <SCorner color="#7ee7ff" size={14} thick={1} />
-            <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 10, letterSpacing: '0.2em', color: '#7ee7ff', textTransform: 'uppercase', marginBottom: 16 }}>
+            <SCorner color="var(--color-accent)" size={14} thick={1} />
+            <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 10, letterSpacing: '0.2em', color: 'var(--color-accent)', textTransform: 'uppercase', marginBottom: 16 }}>
               // empty · no modules
             </div>
-            <p style={{ fontFamily: "'Space Grotesk',sans-serif", fontSize: 16, fontWeight: 500, color: '#eaf6ff', marginBottom: 8 }}>Chưa có module nào trong Learning Path.</p>
-            <p style={{ fontSize: 12, color: '#9aa8c4', lineHeight: 1.6, marginBottom: 28 }}>
+            <p style={{ fontFamily: "'Space Grotesk',sans-serif", fontSize: 16, fontWeight: 500, color: 'var(--color-text-primary)', marginBottom: 8 }}>Chưa có module nào trong Learning Path.</p>
+            <p style={{ fontSize: 12, color: 'var(--color-text-muted)', lineHeight: 1.6, marginBottom: 28 }}>
               Tạo module đầu tiên (có sẵn một chủ đề và một bài Cơ bản để bạn soạn), sau đó bấm &quot;Lưu toàn bộ&quot; để ghi lên server.
             </p>
             <button
@@ -1447,7 +1447,7 @@ export default function StudioLearningPathPage() {
                 display: 'inline-flex', alignItems: 'center', gap: 8,
                 padding: '12px 28px',
                 clipPath: 'polygon(10px 0%,100% 0%,100% calc(100% - 10px),calc(100% - 10px) 100%,0% 100%,0% 10px)',
-                background: '#f5a524', color: '#1a0e00', border: 'none', cursor: 'pointer',
+                background: 'var(--color-brand-amber)', color: '#1a0e00', border: 'none', cursor: 'pointer',
                 fontFamily: "'JetBrains Mono',monospace", fontSize: 12, fontWeight: 700, letterSpacing: '0.1em',
                 boxShadow: '0 0 16px rgba(245,165,36,0.35)',
               }}
@@ -1463,9 +1463,9 @@ export default function StudioLearningPathPage() {
           <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 lg:items-stretch min-h-[calc(100vh-12rem)]">
             {/* Cột trái: 3 bước điều hướng */}
             <aside className="w-full lg:w-[300px] shrink-0 flex flex-col gap-4">
-              <section style={{ position: 'relative', background: 'rgba(4,8,18,0.95)', border: '1px solid rgba(126,231,255,0.15)', clipPath: 'polygon(12px 0%,100% 0%,100% calc(100% - 12px),calc(100% - 12px) 100%,0% 100%,0% 12px)', padding: 16 }}>
-                <SCorner color="#7ee7ff" size={10} thick={1} />
-                <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 10, letterSpacing: '0.22em', color: '#7ee7ff', textTransform: 'uppercase', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <section style={{ position: 'relative', background: 'rgba(4,8,18,0.95)', border: '1px solid var(--color-accent-soft)', clipPath: 'polygon(12px 0%,100% 0%,100% calc(100% - 12px),calc(100% - 12px) 100%,0% 100%,0% 12px)', padding: 16 }}>
+                <SCorner color="var(--color-accent)" size={10} thick={1} />
+                <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 10, letterSpacing: '0.22em', color: 'var(--color-accent)', textTransform: 'uppercase', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
                   <Layers style={{ width: 12, height: 12 }} />
                   // 01 · modules
                 </div>
@@ -1480,7 +1480,7 @@ export default function StudioLearningPathPage() {
                       style={{
                         display: 'flex', alignItems: 'stretch', gap: 2,
                         border: moduleId === m.id
-                          ? '1px solid rgba(126,231,255,0.5)'
+                          ? '1px solid var(--color-accent-strong)'
                           : dragOverModuleId === m.id
                             ? '1px solid rgba(126,231,255,0.4)'
                             : '1px solid rgba(255,255,255,0.07)',
@@ -1586,7 +1586,7 @@ export default function StudioLearningPathPage() {
                     padding: '8px 0',
                     clipPath: 'polygon(8px 0%,100% 0%,calc(100% - 8px) 100%,0% 100%)',
                     background: 'rgba(126,231,255,0.05)', border: '1px solid rgba(126,231,255,0.3)',
-                    color: '#7ee7ff', cursor: 'pointer',
+                    color: 'var(--color-accent)', cursor: 'pointer',
                     fontFamily: "'JetBrains Mono',monospace", fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase',
                   }}
                 >
@@ -1667,7 +1667,7 @@ export default function StudioLearningPathPage() {
                           clipPath: 'polygon(6px 0%,100% 0%,100% calc(100% - 6px),calc(100% - 6px) 100%,0% 100%,0% 6px)',
                           background: nodeId === n.id ? 'rgba(139,92,246,0.15)' : 'rgba(0,0,0,0.2)',
                           border: nodeId === n.id ? '1px solid rgba(139,92,246,0.5)' : '1px solid rgba(255,255,255,0.06)',
-                          color: nodeId === n.id ? '#eaf6ff' : '#9aa8c4',
+                          color: nodeId === n.id ? 'var(--color-text-primary)' : 'var(--color-text-muted)',
                           fontFamily: "'Space Grotesk',sans-serif", fontSize: 13,
                         }}
                       >
@@ -1748,11 +1748,11 @@ export default function StudioLearningPathPage() {
               )}
 
               <section style={{ position: 'relative', background: 'rgba(4,8,18,0.95)', border: '1px solid rgba(126,231,255,0.12)', clipPath: 'polygon(12px 0%,100% 0%,100% calc(100% - 12px),calc(100% - 12px) 100%,0% 100%,0% 12px)', padding: 16 }}>
-                <SCorner color="#7ee7ff" size={10} thick={1} />
-                <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 10, letterSpacing: '0.22em', color: '#7ee7ff', textTransform: 'uppercase', marginBottom: 8 }}>
+                <SCorner color="var(--color-accent)" size={10} thick={1} />
+                <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 10, letterSpacing: '0.22em', color: 'var(--color-accent)', textTransform: 'uppercase', marginBottom: 8 }}>
                   // concept library
                 </div>
-                <p style={{ fontSize: 12, color: '#9aa8c4', lineHeight: 1.5, marginBottom: 14 }}>
+                <p style={{ fontSize: 12, color: 'var(--color-text-muted)', lineHeight: 1.5, marginBottom: 14 }}>
                   Concept được quản lý ở Studio riêng. Ở đây chỉ dùng để map vào lesson.
                 </p>
                 <Link
@@ -1763,7 +1763,7 @@ export default function StudioLearningPathPage() {
                     padding: '7px 16px',
                     clipPath: 'polygon(8px 0%,100% 0%,calc(100% - 8px) 100%,0% 100%)',
                     background: 'rgba(126,231,255,0.07)', border: '1px solid rgba(126,231,255,0.3)',
-                    color: '#7ee7ff', textDecoration: 'none',
+                    color: 'var(--color-accent)', textDecoration: 'none',
                     fontFamily: "'JetBrains Mono',monospace", fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase',
                   }}
                 >
@@ -1772,8 +1772,8 @@ export default function StudioLearningPathPage() {
               </section>
 
               <section style={{ position: 'relative', background: 'rgba(4,8,18,0.95)', border: '1px solid rgba(126,231,255,0.12)', clipPath: 'polygon(12px 0%,100% 0%,100% calc(100% - 12px),calc(100% - 12px) 100%,0% 100%,0% 12px)', padding: 16 }}>
-                <SCorner color="#7ee7ff" size={10} thick={1} />
-                <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 10, letterSpacing: '0.22em', color: '#7ee7ff', textTransform: 'uppercase', marginBottom: 12 }}>
+                <SCorner color="var(--color-accent)" size={10} thick={1} />
+                <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 10, letterSpacing: '0.22em', color: 'var(--color-accent)', textTransform: 'uppercase', marginBottom: 12 }}>
                   // concept usage report
                 </div>
                 {concepts.length === 0 ? (
@@ -1810,8 +1810,8 @@ export default function StudioLearningPathPage() {
               </section>
 
               <section style={{ position: 'relative', background: 'rgba(4,8,18,0.95)', border: '1px solid rgba(245,165,36,0.18)', clipPath: 'polygon(12px 0%,100% 0%,100% calc(100% - 12px),calc(100% - 12px) 100%,0% 100%,0% 12px)', padding: 16 }}>
-                <SCorner color="#f5a524" size={10} thick={1} />
-                <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 10, letterSpacing: '0.22em', color: '#f5a524', textTransform: 'uppercase', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <SCorner color="var(--color-brand-amber)" size={10} thick={1} />
+                <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 10, letterSpacing: '0.22em', color: 'var(--color-brand-amber)', textTransform: 'uppercase', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
                   <Sparkles style={{ width: 12, height: 12 }} />
                   // 03 · depth
                 </div>
@@ -1823,7 +1823,7 @@ export default function StudioLearningPathPage() {
                       const count = currentNode.depths[d]?.length ?? 0
                       const meta = DEPTH_META[d]
                       const isSelected = depth === d
-                      const depthColor = d === 'beginner' ? '#f5a524' : d === 'explorer' ? '#7ee7ff' : '#eaf6ff'
+                      const depthColor = d === 'beginner' ? 'var(--color-brand-amber)' : d === 'explorer' ? 'var(--color-accent)' : 'var(--color-text-primary)'
                       const depthColorRgb = d === 'beginner' ? '245,165,36' : d === 'explorer' ? '126,231,255' : '234,246,255'
                       return (
                         <button
@@ -1836,7 +1836,7 @@ export default function StudioLearningPathPage() {
                             clipPath: 'polygon(8px 0%,100% 0%,100% calc(100% - 8px),calc(100% - 8px) 100%,0% 100%,0% 8px)',
                             background: isSelected ? `rgba(${depthColorRgb},0.12)` : 'rgba(0,0,0,0.3)',
                             border: isSelected ? `1px solid rgba(${depthColorRgb},0.5)` : '1px solid rgba(255,255,255,0.07)',
-                            color: isSelected ? depthColor : '#9aa8c4',
+                            color: isSelected ? depthColor : 'var(--color-text-muted)',
                             boxShadow: isSelected ? `0 0 16px rgba(${depthColorRgb},0.15)` : 'none',
                             fontFamily: "'Space Grotesk',sans-serif", fontSize: 13,
                           }}
@@ -1859,11 +1859,11 @@ export default function StudioLearningPathPage() {
               {/* Breadcrumb */}
               <div style={{ padding: '10px 20px', borderBottom: '1px solid rgba(255,255,255,0.07)', background: 'rgba(0,0,0,0.4)', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
                 <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 10, letterSpacing: '0.14em', color: '#263042', textTransform: 'uppercase' }}>// editing:</span>
-                <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 11, color: '#7ee7ff' }}>{currentModule?.titleVi ?? '—'}</span>
+                <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 11, color: 'var(--color-accent)' }}>{currentModule?.titleVi ?? '—'}</span>
                 <ChevronRight style={{ width: 10, height: 10, color: '#263042' }} />
                 <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 11, color: '#a78bfa' }}>{currentNode?.titleVi ?? '—'}</span>
                 <ChevronRight style={{ width: 10, height: 10, color: '#263042' }} />
-                <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 11, color: '#eaf6ff' }}>
+                <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 11, color: 'var(--color-text-primary)' }}>
                   {depth ? `${DEPTH_META[depth].short} ${DEPTH_META[depth].labelVi}` : '—'}
                 </span>
               </div>
@@ -1884,7 +1884,7 @@ export default function StudioLearningPathPage() {
                             width: '100%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '8px 0',
                             clipPath: 'polygon(8px 0%,100% 0%,calc(100% - 8px) 100%,0% 100%)',
                             background: 'rgba(126,231,255,0.05)', border: '1px solid rgba(126,231,255,0.3)',
-                            color: '#7ee7ff', cursor: 'pointer',
+                            color: 'var(--color-accent)', cursor: 'pointer',
                             fontFamily: "'JetBrains Mono',monospace", fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase',
                           }}
                         >
@@ -1907,7 +1907,7 @@ export default function StudioLearningPathPage() {
                                 clipPath: 'polygon(6px 0%,100% 0%,100% calc(100% - 6px),calc(100% - 6px) 100%,0% 100%,0% 6px)',
                                 background: activeLessonId === le.id ? 'rgba(126,231,255,0.1)' : 'rgba(0,0,0,0.25)',
                                 border: activeLessonId === le.id ? '1px solid rgba(126,231,255,0.4)' : '1px solid rgba(255,255,255,0.06)',
-                                color: activeLessonId === le.id ? '#eaf6ff' : '#9aa8c4',
+                                color: activeLessonId === le.id ? 'var(--color-text-primary)' : 'var(--color-text-muted)',
                                 fontFamily: "'Space Grotesk',sans-serif", fontSize: 12,
                               }}
                             >
@@ -1947,7 +1947,7 @@ export default function StudioLearningPathPage() {
                           marginTop: 6, width: '100%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '7px 0',
                           clipPath: 'polygon(6px 0%,100% 0%,calc(100% - 6px) 100%,0% 100%)',
                           background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.12)',
-                          color: '#9aa8c4', cursor: 'pointer',
+                          color: 'var(--color-text-muted)', cursor: 'pointer',
                           fontFamily: "'JetBrains Mono',monospace", fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase',
                         }}
                       >

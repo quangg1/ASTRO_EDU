@@ -101,10 +101,10 @@ function FossilNameChip({
           style={{ pointerEvents: 'auto' }}
           zIndexRange={[100, 0]}
         >
-          <div className="flex max-w-[min(188px,40vw)] items-center gap-0.5 rounded-full border border-cyan-400/50 bg-[#070f18]/96 py-0.5 pl-2 pr-0.5 text-[9px] font-semibold leading-tight text-cyan-50 shadow-[0_2px_10px_rgba(0,0,0,0.45)]">
+          <div className="flex max-w-[min(188px,40vw)] items-center gap-0.5 rounded-full border border-cyan-400/50 bg-ds-surface/96 py-0.5 pl-2 pr-0.5 text-[9px] font-semibold leading-tight text-cyan-50 shadow-[0_2px_10px_rgba(0,0,0,0.45)]">
             <button
               type="button"
-              className="min-w-0 flex-1 truncate text-left hover:text-cyan-100"
+              className="min-w-0 flex-1 truncate text-left hover:text-ds-text"
               onClick={(e) => {
                 e.stopPropagation()
                 e.preventDefault()
@@ -117,7 +117,7 @@ function FossilNameChip({
             </button>
             <button
               type="button"
-              className="shrink-0 flex h-5 w-5 items-center justify-center rounded-full border border-white/15 text-[11px] leading-none text-slate-300 hover:border-rose-300/40 hover:bg-rose-950/40 hover:text-rose-100"
+              className="shrink-0 flex h-5 w-5 items-center justify-center rounded-full border border-ds-border text-[11px] leading-none text-ds-muted hover:border-rose-300/40 hover:bg-rose-950/40 hover:text-rose-100"
               title="Bỏ chọn"
               aria-label="Bỏ chọn hóa thạch"
               onClick={(e) => {

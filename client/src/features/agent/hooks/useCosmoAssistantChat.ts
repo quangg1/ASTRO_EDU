@@ -6,8 +6,15 @@ import type { DepthLevel } from '@/data/learningPathCurriculum'
 import type { TutorAction } from '@/components/ai-tutor/parseTutorActions'
 import { useAuthStore } from '@/features/auth/public'
 import { useToast } from '@/design-system'
-import { postAgentMessage, postDepthPreference, prefetchAgentContext, fetchAgentSessionDetail } from '../api/agentApi'
+import {
+  postAgentMessage,
+  postAgentMessageFeedback,
+  postDepthPreference,
+  prefetchAgentContext,
+  fetchAgentSessionDetail,
+} from '../api/agentApi'
 import { executeAgentClientAction, mergeAgentToolCalls } from '../lib/executeToolCall'
+import { sanitizeAssistantContent } from '../lib/sanitizeAssistantContent'
 import type { AgentChip } from '../ui/AgentChips'
 import type { CommunityThreadSuggestion, LearnerSnapshot, SessionContext } from '../types'
 
@@ -207,7 +214,9 @@ export function useCosmoAssistantChat({
       setInput('')
       setError(null)
       setFallbackChips([])
+      setRelatedLessons([])
       setCommunityThreads([])
+      setRelatedLessons([])
       const userContent = trimmed || 'Giải thích hình ảnh này.'
       const userMsg: CosmoChatMessage = {
         id: `u-${Date.now()}`,
@@ -234,10 +243,11 @@ export function useCosmoAssistantChat({
             if (ev.event === 'token') {
               setLoading(false)
               streamContentRef.current += ev.data.content || ''
+              const streamed = sanitizeAssistantContent(streamContentRef.current)
               setMessages((m) =>
                 m.map((msg) =>
                   msg.id === assistantId
-                    ? { ...msg, content: streamContentRef.current, streaming: true }
+                    ? { ...msg, content: streamed, streaming: true }
                     : msg,
                 ),
               )
@@ -269,7 +279,9 @@ export function useCosmoAssistantChat({
         if (res.chips?.length) setFallbackChips(res.chips)
 
         const actions = mergeAgentToolCalls(res.tool_calls, res.tool_results)
-        const content = res.message?.content || streamContentRef.current
+        const content = sanitizeAssistantContent(
+          res.message?.content || streamContentRef.current,
+        )
 
         setMessages((m) =>
           m.map((msg) =>
@@ -300,11 +312,31 @@ export function useCosmoAssistantChat({
             setCommunityThreads(tr.clientAction.threads)
             continue
           }
+          if (tr.clientAction.type === 'search_learning_content') {
+            if (tr.clientAction.lpLessons?.length) {
+              setRelatedLessons(
+                tr.clientAction.lpLessons.map((l) => ({
+                  lessonId: l.lessonId,
+                  title: l.title,
+                  moduleId: l.moduleId,
+                  nodeId: l.nodeId,
+                })),
+              )
+            }
+            if (tr.clientAction.communityThreads?.length) {
+              setCommunityThreads(tr.clientAction.communityThreads)
+            }
+            continue
+          }
           if (tr.clientAction.type === 'suggest_depth_switch') {
             setDepthBanner({
               depth: tr.clientAction.suggestedDepth as DepthLevel,
               reason: tr.clientAction.reason,
             })
+            continue
+          }
+          if (tr.clientAction.type === 'generate_concept_quiz') {
+            runClientAction(tr.clientAction, options?.onClose)
             continue
           }
           runClientAction(tr.clientAction, options?.onClose)
@@ -376,6 +408,20 @@ export function useCosmoAssistantChat({
     [router, navigateLpLesson, learnerSnapshot?.spacedReviewDue?.dueLessons],
   )
 
+  const submitFeedback = useCallback(
+    async (messageId: string, rating: 1 | -1) => {
+      if (!user) return false
+      return postAgentMessageFeedback({
+        sessionId,
+        messageId,
+        rating,
+        surface: sessionContext.surface,
+        lessonId: sessionContext.lessonId,
+      })
+    },
+    [user, sessionId, sessionContext.surface, sessionContext.lessonId],
+  )
+
   const startNewConversation = useCallback(() => {
     setSessionId(undefined)
     setMessages([])
@@ -438,5 +484,6 @@ export function useCosmoAssistantChat({
     onSuggestDepth,
     startNewConversation,
     loadHistorySession,
+    submitFeedback,
   }
 }

@@ -2,12 +2,21 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+import { parseExploreView, buildExploreHref, mergeExplorePreservedParams, normalizeSkyTargetId } from '@/features/explore/public'
+import { DEFAULT_WESTERN_SKY_TARGET_ID } from '@/features/explore/lib/westernSkyCulture'
 import type { ExploreSceneMode } from './types'
+
+const DEFAULT_SKY_TARGET = DEFAULT_WESTERN_SKY_TARGET_ID
 
 export function useExploreModeState() {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
+
+  const exploreView = useMemo(
+    () => parseExploreView(searchParams.get('view')),
+    [searchParams],
+  )
 
   const stageParam = searchParams.get('stage')
   const stageTime = stageParam != null ? parseFloat(stageParam) : null
@@ -22,9 +31,22 @@ export function useExploreModeState() {
   const planetHistoryEntityId = historyEntityFromUrl
   const planetHistoryOpen = planetHistoryEntityId != null
 
+  const targetFromUrl = useMemo(() => {
+    if (exploreView !== 'sky') {
+      const t = searchParams.get('target')?.trim()
+      return t || null
+    }
+    return normalizeSkyTargetId(searchParams.get('target'))
+  }, [searchParams, exploreView])
+
+  const entityFromUrl = useMemo(() => searchParams.get('entity')?.trim() || null, [searchParams])
+
   const [earthHistoryOpen, setEarthHistoryOpen] = useState(!!stageTime)
   const [showcaseMenuOpen, setShowcaseMenuOpen] = useState(false)
   const [showcaseActiveItemId, setShowcaseActiveItemId] = useState('planet-earth')
+  const [skyActiveTargetId, setSkyActiveTargetId] = useState(DEFAULT_SKY_TARGET)
+  /** Sao/hành tinh chọn tạm trên canvas — không thay chòm đang ghim từ HUD. */
+  const [skySceneHighlightId, setSkySceneHighlightId] = useState<string | null>(null)
   const [selectedSolarPlanetIndex, setSelectedSolarPlanetIndex] = useState<number | null>(2)
 
   useEffect(() => {
@@ -34,23 +56,57 @@ export function useExploreModeState() {
     if (historyEntityFromUrl) {
       setShowcaseActiveItemId(historyEntityFromUrl)
     }
-  }, [stageParam, historyEntityFromUrl])
+    if (entityFromUrl && exploreView === 'solar') {
+      setShowcaseActiveItemId(entityFromUrl)
+    }
+    if (targetFromUrl && exploreView === 'sky') {
+      setSkyActiveTargetId(targetFromUrl)
+      setSkySceneHighlightId(null)
+    }
+  }, [stageParam, historyEntityFromUrl, entityFromUrl, targetFromUrl, exploreView])
 
-  const sceneMode: ExploreSceneMode = earthHistoryOpen
-    ? 'earth'
-    : planetHistoryOpen
-      ? 'planet-history'
-      : 'showcase'
+  useEffect(() => {
+    if (exploreView !== 'sky') return
+    const hasSolarNoise =
+      searchParams.get('entity') ||
+      searchParams.get('mode') ||
+      searchParams.get('group') ||
+      searchParams.get('dist') ||
+      searchParams.get('history')
+    const rawTarget = searchParams.get('target')
+    const normalized = normalizeSkyTargetId(rawTarget)
+    const targetMismatch = rawTarget && rawTarget !== normalized
+    if (!hasSolarNoise && !targetMismatch && searchParams.get('view') === 'sky') return
+    router.replace(
+      mergeExplorePreservedParams(
+        buildExploreHref({ view: 'sky', targetId: skyActiveTargetId }),
+        searchParams,
+      ),
+      { scroll: false },
+    )
+  }, [exploreView, pathname, router, searchParams, skyActiveTargetId])
+
+  const sceneMode: ExploreSceneMode =
+    exploreView === 'sky'
+      ? 'showcase'
+      : earthHistoryOpen
+        ? 'earth'
+        : planetHistoryOpen
+          ? 'planet-history'
+          : 'showcase'
+
+  const activeTargetId = exploreView === 'sky' ? skyActiveTargetId : showcaseActiveItemId
 
   const openPlanetHistory = useCallback(
     (entityId: string, focus?: { beatId?: number; pinId?: string }) => {
       setEarthHistoryOpen(false)
       setShowcaseActiveItemId(entityId)
       const next = new URLSearchParams(searchParams.toString())
-      next.set('mode', 'showcase')
+      next.set('view', 'solar')
       next.set('entity', entityId)
       next.set('history', '1')
       next.delete('stage')
+      next.delete('target')
       if (focus?.beatId != null && Number.isFinite(focus.beatId)) {
         next.set('beat', String(Math.round(focus.beatId)))
       } else {
@@ -82,6 +138,8 @@ export function useExploreModeState() {
     pathname,
     router,
     searchParams,
+    exploreView,
+    activeTargetId,
     stageTime,
     bridgeDebugOn,
     earthHistoryOpen,
@@ -93,6 +151,10 @@ export function useExploreModeState() {
     setShowcaseMenuOpen,
     showcaseActiveItemId,
     setShowcaseActiveItemId,
+    skyActiveTargetId,
+    setSkyActiveTargetId,
+    skySceneHighlightId,
+    setSkySceneHighlightId,
     selectedSolarPlanetIndex,
     setSelectedSolarPlanetIndex,
     sceneMode,

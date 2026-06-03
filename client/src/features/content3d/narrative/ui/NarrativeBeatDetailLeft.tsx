@@ -25,16 +25,16 @@ export function NarrativeBeatDetailLeft({ entityLabel }: { entityLabel: string }
 
   return (
     <DetailShell accent={accent}>
-      <div className="shrink-0 border-b border-white/10 px-4 py-3">
+      <div className="shrink-0 border-b border-ds-border px-4 py-3">
         <p className="text-[10px] uppercase tracking-[0.2em]" style={{ color: accent }}>
           Deep History · Telemetry
         </p>
         <div className="mt-2 flex items-start gap-3">
           <span className="text-3xl leading-none">{beat.icon}</span>
           <div className="min-w-0">
-            <p className="text-[10px] uppercase tracking-wider text-slate-500">{entityLabel}</p>
+            <p className="text-[10px] uppercase tracking-wider text-ds-subtle">{entityLabel}</p>
             <h2 className="truncate text-lg font-semibold text-white">{beat.name}</h2>
-            <p className="text-[11px] text-slate-400">{beat.ageLabelVi}</p>
+            <p className="text-[11px] text-ds-muted">{beat.ageLabelVi}</p>
           </div>
         </div>
         <span
@@ -70,14 +70,14 @@ export function NarrativeBeatDetailLeft({ entityLabel }: { entityLabel: string }
         {geoLabel ? (
           <>
             <SectionTitle accent={accent}>Phân vị địa chất</SectionTitle>
-            <p className="text-[12px] leading-snug text-slate-300">{geoLabel}</p>
+            <p className="text-[12px] leading-snug text-ds-muted">{geoLabel}</p>
           </>
         ) : null}
 
         <SectionTitle accent={accent}>Tóm tắt giai đoạn</SectionTitle>
-        <p className="text-[12px] leading-relaxed text-slate-300">{beat.panel.descriptionVi}</p>
+        <p className="text-[12px] leading-relaxed text-ds-muted">{beat.panel.descriptionVi}</p>
         {beat.panel.compareNoteVi ? (
-          <p className="mt-2 text-[11px] italic leading-snug text-slate-500">{beat.panel.compareNoteVi}</p>
+          <p className="mt-2 text-[11px] italic leading-snug text-ds-subtle">{beat.panel.compareNoteVi}</p>
         ) : null}
       </div>
     </DetailShell>

@@ -70,14 +70,33 @@ def _source_lesson_id(source: str | None) -> str | None:
     return None
 
 
-async def retrieve(
+def _source_community_post_id(source: str | None) -> str | None:
+    if not source:
+        return None
+    s = str(source).strip()
+    if s.startswith("community/"):
+        return s[10:].split("/")[0] or None
+    return None
+
+
+def _source_matches_prefixes(source: str | None, prefixes: list[str] | None) -> bool:
+    if not prefixes:
+        return True
+    if not source:
+        return False
+    s = str(source).strip()
+    return any(s.startswith(p) for p in prefixes if p)
+
+
+async def search_hits(
     query: str,
     top_k: int = RAG_TOP_K,
     lesson_id: str | None = None,
-) -> list[str]:
+    source_prefixes: list[str] | None = None,
+) -> list[dict]:
     """
-    Embed query, tìm top_k đoạn giống nhất trong index, trả về list text.
-    Nếu lesson_id được set, ưu tiên chunk có source lp/{lesson_id}; fallback toàn index nếu không đủ.
+    Embed query, similarity search — trả metadata đầy đủ cho agent tools.
+    Mỗi phần tử: { "text", "source", "score" }.
     """
     docs = _load_index()
     if not docs:
@@ -87,35 +106,49 @@ async def retrieve(
         return []
 
     focus = str(lesson_id).strip() if lesson_id else ""
+    prefixes = [p for p in (source_prefixes or []) if p]
 
-    def score_doc(d: dict) -> tuple[float, str]:
+    def score_doc(d: dict) -> tuple[float, str, str]:
+        src = str(d.get("source") or "")
+        if prefixes and not _source_matches_prefixes(src, prefixes):
+            return (-1.0, "", src)
         emb = d.get("embedding")
         if not emb:
-            return (-1.0, "")
+            return (-1.0, "", src)
         sim = _cosine_similarity(embedding, emb)
         if focus:
-            src_lesson = _source_lesson_id(d.get("source"))
+            src_lesson = _source_lesson_id(src)
             if src_lesson == focus:
                 sim += 0.15
-        return (sim, d.get("text", ""))
+        text = d.get("text", "") or ""
+        return (sim, text, src)
 
-    scored = [score_doc(d) for d in docs]
-    scored = [(s, t) for s, t in scored if s >= 0 and t]
+    scored: list[tuple[float, str, str]] = []
+    for d in docs:
+        s, t, src = score_doc(d)
+        if s >= 0 and t:
+            scored.append((s, t, src))
     scored.sort(key=lambda x: -x[0])
 
     if focus:
-        focused = []
-        for d in docs:
-            if _source_lesson_id(d.get("source")) != focus:
-                continue
-            s, t = score_doc(d)
-            if t:
-                focused.append((s, t))
-        focused.sort(key=lambda x: -x[0])
+        focused = [(s, t, src) for s, t, src in scored if _source_lesson_id(src) == focus]
         if len(focused) >= top_k:
-            return [t for _, t in focused[:top_k]]
-        seen = {t for _, t in focused}
-        merged = focused + [(s, t) for s, t in scored if t not in seen]
-        return [t for _, t in merged[:top_k]]
+            scored = focused
+        else:
+            seen = {t for _, t, _ in focused}
+            scored = focused + [(s, t, src) for s, t, src in scored if t not in seen]
 
-    return [text for _, text in scored[:top_k] if text]
+    out: list[dict] = []
+    for sim, text, src in scored[:top_k]:
+        out.append({"text": text, "source": src, "score": round(sim, 5)})
+    return out
+
+
+async def retrieve(
+    query: str,
+    top_k: int = RAG_TOP_K,
+    lesson_id: str | None = None,
+) -> list[str]:
+    """Embed query → top_k đoạn text (dùng cho prompt chat)."""
+    hits = await search_hits(query, top_k=top_k, lesson_id=lesson_id)
+    return [h["text"] for h in hits if h.get("text")]

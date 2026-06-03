@@ -163,11 +163,15 @@ async function sceneDiscoveryRewarded(userId, entityId) {
   return c > 0;
 }
 
-async function contextualQuizPassedRewarded(userId, entityId) {
+const { startOfCalendarDayVi } = require('../../../shared/calendarDayKey');
+
+async function contextualQuizPassedRewardedToday(userId, entityId) {
+  const since = startOfCalendarDayVi();
   const c = await GemTransaction.countDocuments({
     userId,
     entityId,
     reason: 'scene_contextual_quiz_passed',
+    createdAt: { $gte: since },
   });
   return c > 0;
 }
@@ -379,7 +383,7 @@ async function processLearningPathRewardEvent(userId, ev) {
     const completed = up?.learningPathCompletedLessonIds || [];
     if (!Array.isArray(completed) || completed.length < 1) return null;
 
-    if (await contextualQuizPassedRewarded(userId, entityId)) return null;
+    if (await contextualQuizPassedRewardedToday(userId, entityId)) return null;
 
     const amt = scaleEarn(GEM_EARN.scene_contextual_quiz_passed, seasonalMult);
     const agg = await applyGemEarn(userId, amt, {

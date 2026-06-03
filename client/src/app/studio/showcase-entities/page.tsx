@@ -490,7 +490,7 @@ function StudioShowcaseEntitiesPage() {
   }
 
   if (!checked || !user) {
-    return <div className="min-h-screen bg-black pt-20 px-4 text-ds-muted">Đang kiểm tra đăng nhập...</div>
+    return <div className="min-h-screen bg-ds-base text-ds-text pt-20 px-4 text-ds-muted">Đang kiểm tra đăng nhập...</div>
   }
 
   return (

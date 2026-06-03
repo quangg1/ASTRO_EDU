@@ -53,7 +53,9 @@ export function NotificationBell() {
       return
     }
     const loadPromos = () => {
-      void fetchActivePromotions(5).then((list) => setActivePromoCount(undismissedPromos(list).length))
+      void fetchActivePromotions(5)
+        .then((list) => setActivePromoCount(undismissedPromos(list).length))
+        .catch(() => setActivePromoCount(0))
     }
     loadPromos()
     window.addEventListener('promo-dismiss-changed', loadPromos)
@@ -155,7 +157,7 @@ export function NotificationBell() {
               <button
                 type="button"
                 onClick={() => void onReadAll()}
-                className="text-[11px] text-ds-accent hover:text-cyan-100"
+                className="text-[11px] text-ds-accent hover:text-ds-text"
               >
                 Đánh dấu đã đọc
               </button>

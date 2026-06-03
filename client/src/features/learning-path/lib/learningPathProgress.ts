@@ -1,5 +1,5 @@
 import type { LearningModule } from '@/data/learningPathCurriculum'
-import { DEPTH_ORDER, LEARNING_MODULES, countLessonSlots as countLessonsStatic } from '@/data/learningPathCurriculum'
+import { DEPTH_ORDER, LEARNING_MODULES } from '@/data/learningPathCurriculum'
 import { getApiPathBase } from '@/lib/apiConfig'
 
 /** Prefix phiên bản — mỗi user có key riêng để không dùng chung tiến độ trên cùng trình duyệt */
@@ -544,10 +544,3 @@ export function countFullyCompletedModules(
   }
   return c
 }
-
-/** @deprecated — dùng countLessonSlots từ curriculum hoặc countLessonsInModules */
-export function countDepthSlots() {
-  return countLessonsStatic()
-}
-
-export { countLessonsStatic as countLessonSlots }

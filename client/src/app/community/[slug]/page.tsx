@@ -25,7 +25,7 @@ import { parseOnboardingLanding } from '@/lib/onboardingLanding'
 const RichTextEditor = dynamic(() => import('@/components/studio/RichTextEditor'), {
   ssr: false,
   loading: () => (
-    <div className="min-h-[180px] rounded-xl border border-white/15 bg-black/30 animate-pulse" aria-hidden />
+    <div className="min-h-[180px] rounded-xl border border-ds-border bg-ds-surface/70 animate-pulse" aria-hidden />
   ),
 })
 import { NewsCardLink } from '@/components/community/NewsCardLink'
@@ -168,8 +168,8 @@ function ForumPageContent() {
 
   if (!forum && !loading) {
     return (
-      <div className="min-h-screen bg-black pt-20 flex items-center justify-center">
-        <p className="text-gray-500">Forum not found</p>
+      <div className="relative z-10 flex min-h-[40vh] items-center justify-center px-4 pt-6">
+        <p className="text-ds-subtle">Không tìm thấy chuyên mục.</p>
       </div>
     )
   }
@@ -188,32 +188,21 @@ function ForumPageContent() {
   /* ── News Forum (Tin thiên văn) ── HUD redesign ── */
   if (isNewsForum) {
     return (
-      <div className="min-h-screen relative" style={{ background: 'var(--hud-bg)' }}>
-        {/* Atmosphere */}
-        <div className="hud-grid-overlay" aria-hidden />
-        <div className="hud-scan" aria-hidden />
-        <span className="hud-edge-label left hidden lg:block" aria-hidden>
-          CosmoLearn · Community · news-feed · category
-        </span>
-        <span className="hud-edge-label right hidden lg:block" aria-hidden>
-          Channel: TIN-THIÊN-VĂN · Filter: {newsCategoryFilter || 'ALL'} · Sort: {sortLabel}
-        </span>
-
-        <div className="relative z-10 pt-20 px-4 pb-28 max-w-6xl mx-auto">
+      <div className="relative z-10 pt-2 px-4 pb-28 max-w-6xl mx-auto">
 
           {/* Back link */}
           <Link
             href="/community"
-            className="group inline-flex items-center gap-2 mb-6 hud-chamfer-sm px-4 py-2 transition-all hover:shadow-[0_0_16px_rgba(126,231,255,0.25)] hover:-translate-x-0.5"
+            className="group inline-flex items-center gap-2 mb-6 cosmo-dark-panel rounded-xl px-4 py-2 transition-all hover:shadow-[0_0_16px_var(--color-accent-soft)] hover:-translate-x-0.5"
             style={{
-              background: 'rgba(126,231,255,0.05)',
-              border: '1px solid rgba(126,231,255,0.2)',
-              color: 'var(--hud-ink-2)',
+              background: 'var(--color-accent-soft)',
+              border: '1px solid var(--color-border)',
+              color: 'var(--color-text-muted)',
             }}
           >
             <span
               className="transition-transform group-hover:-translate-x-1"
-              style={{ color: 'var(--hud-plasma)' }}
+              style={{ color: 'var(--color-accent)' }}
               aria-hidden
             >
               ←
@@ -224,7 +213,7 @@ function ForumPageContent() {
           {/* Header panel */}
           <section className="relative mb-8">
             <div
-              className="relative hud-chamfer-lg overflow-hidden p-6 md:p-8"
+              className="relative cosmo-dark-panel rounded-2xl overflow-hidden p-6 md:p-8"
               style={{
                 background: 'linear-gradient(135deg, rgba(10,16,36,0.92) 0%, rgba(3,6,15,0.80) 100%)',
                 border: '1px solid rgba(245,165,36,0.25)',
@@ -232,7 +221,7 @@ function ForumPageContent() {
               }}
             >
               <div
-                className="pointer-events-none absolute inset-3 hud-chamfer-md"
+                className="pointer-events-none absolute inset-3 cosmo-dark-panel rounded-2xl"
                 style={{ border: '1px dashed rgba(245,165,36,0.1)' }}
                 aria-hidden
               />
@@ -240,16 +229,16 @@ function ForumPageContent() {
 
               {/* Eyebrow amber */}
               <span
-                className="hud-mono hud-mono-md hud-chamfer-sm inline-flex items-center gap-2 px-3 py-1.5 mb-5"
+                className="hud-mono hud-mono-md cosmo-dark-panel rounded-xl inline-flex items-center gap-2 px-3 py-1.5 mb-5"
                 style={{
                   background: 'rgba(245,165,36,0.1)',
                   border: '1px solid rgba(245,165,36,0.35)',
-                  color: 'var(--hud-amber)',
+                  color: 'var(--color-brand-amber)',
                 }}
               >
                 <span
                   className="inline-block w-2 h-2 rounded-full"
-                  style={{ background: 'var(--hud-amber)', boxShadow: '0 0 8px var(--hud-amber)' }}
+                  style={{ background: 'var(--color-brand-amber)', boxShadow: '0 0 8px var(--color-brand-amber)' }}
                   aria-hidden
                 />
                 BẢN TIN THIÊN VĂN · CHANNEL 01
@@ -258,13 +247,13 @@ function ForumPageContent() {
               {/* Title row */}
               <div className="flex items-center gap-4 mb-4">
                 <div
-                  className="flex items-center justify-center w-16 h-16 shrink-0 hud-chamfer-sm"
+                  className="flex items-center justify-center w-16 h-16 shrink-0 cosmo-dark-panel rounded-xl"
                   style={{
                     background: 'rgba(245,165,36,0.12)',
                     border: '1px solid rgba(245,165,36,0.35)',
                   }}
                 >
-                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ color: 'var(--hud-amber)' }} aria-hidden>
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ color: 'var(--color-brand-amber)' }} aria-hidden>
                     <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
                     <path d="m9 12 2 2 4-4" />
                   </svg>
@@ -276,23 +265,23 @@ function ForumPageContent() {
               </div>
 
               {/* Lede */}
-              <p className="text-sm md:text-base leading-relaxed mb-5" style={{ color: 'var(--hud-ink-2)', maxWidth: '64ch' }}>
+              <p className="text-sm md:text-base leading-relaxed mb-5" style={{ color: 'var(--color-text-muted)', maxWidth: '64ch' }}>
                 Tóm tắt và ảnh từ nguồn uy tín — nhấn vào từng tin để đọc bài gốc trên website của họ. Cập nhật tự động qua RSS từ NASA, ESA, JPL.
               </p>
 
               {/* Readout mono strip */}
               <div
                 className="hud-mono hud-mono-sm flex flex-wrap items-center gap-x-4 gap-y-1 mb-5"
-                style={{ color: 'var(--hud-ink-2)' }}
+                style={{ color: 'var(--color-text-muted)' }}
               >
-                <span>CHANNEL · <span style={{ color: 'var(--hud-amber)' }}>TIN-THIEN-VAN</span></span>
-                <span style={{ color: 'var(--hud-line)' }}>——</span>
-                <span>POSTS · <span style={{ color: 'var(--hud-plasma)' }}>{total}</span></span>
-                <span style={{ color: 'var(--hud-line)' }}>——</span>
+                <span>CHANNEL · <span style={{ color: 'var(--color-brand-amber)' }}>TIN-THIEN-VAN</span></span>
+                <span style={{ color: 'var(--color-border)' }}>——</span>
+                <span>POSTS · <span style={{ color: 'var(--color-accent)' }}>{total}</span></span>
+                <span style={{ color: 'var(--color-border)' }}>——</span>
                 {newsCategoryFilter && (
                   <>
-                    <span>FILTER · <span style={{ color: 'var(--hud-plasma)' }}>{newsCategoryFilter.slice(0, 24)}{newsCategoryFilter.length > 24 ? '…' : ''}</span></span>
-                    <span style={{ color: 'var(--hud-line)' }}>——</span>
+                    <span>FILTER · <span style={{ color: 'var(--color-accent)' }}>{newsCategoryFilter.slice(0, 24)}{newsCategoryFilter.length > 24 ? '…' : ''}</span></span>
+                    <span style={{ color: 'var(--color-border)' }}>——</span>
                   </>
                 )}
                 <span className="inline-flex items-center gap-1.5">
@@ -308,7 +297,7 @@ function ForumPageContent() {
               {/* Ruler bar */}
               <div className="flex items-center gap-3" aria-hidden>
                 <span style={{ color: 'rgba(126,231,255,0.4)', fontSize: 10 }}>◇</span>
-                <div className="flex-1 h-px" style={{ background: 'linear-gradient(90deg, rgba(126,231,255,0.3) 0%, rgba(126,231,255,0.05) 100%)' }} />
+                <div className="flex-1 h-px" style={{ background: 'linear-gradient(90deg, rgba(126,231,255,0.3) 0%, var(--color-accent-soft) 100%)' }} />
                 <span style={{ color: 'rgba(126,231,255,0.4)', fontSize: 10 }}>◇</span>
               </div>
             </div>
@@ -316,7 +305,7 @@ function ForumPageContent() {
 
           {/* Sort tabs */}
           <div className="flex flex-wrap items-center gap-3 mb-6">
-            <span className="hud-mono hud-mono-sm shrink-0" style={{ color: 'var(--hud-ink-3)' }}>
+            <span className="hud-mono hud-mono-sm shrink-0" style={{ color: 'var(--color-text-subtle)' }}>
               // SORT BY
             </span>
             {(
@@ -333,25 +322,25 @@ function ForumPageContent() {
                   setSort(option.value)
                   setPage(1)
                 }}
-                className="hud-mono hud-mono-md hud-chamfer-sm px-4 py-2 transition-all"
+                className="hud-mono hud-mono-md cosmo-dark-panel rounded-xl px-4 py-2 transition-all"
                 style={
                   sort === option.value
                     ? {
-                        background: 'var(--hud-plasma)',
-                        color: '#03060f',
+                        background: 'var(--color-accent)',
+                        color: 'var(--color-bg-base)',
                         boxShadow: '0 0 16px rgba(126,231,255,0.4)',
                       }
                     : {
-                        background: 'rgba(126,231,255,0.05)',
-                        border: '1px solid rgba(126,231,255,0.2)',
-                        color: 'var(--hud-ink-2)',
+                        background: 'var(--color-accent-soft)',
+                        border: '1px solid var(--color-border)',
+                        color: 'var(--color-text-muted)',
                       }
                 }
               >
                 <span
                   className="inline-block w-1.5 h-1.5 rounded-full mr-2"
                   style={{
-                    background: sort === option.value ? '#03060f' : 'rgba(126,231,255,0.4)',
+                    background: sort === option.value ? 'var(--color-bg-base)' : 'rgba(126,231,255,0.4)',
                   }}
                   aria-hidden
                 />
@@ -362,25 +351,25 @@ function ForumPageContent() {
 
           {/* Filter section */}
           <div
-            className="relative hud-chamfer-md mb-6 p-5"
+            className="relative cosmo-dark-panel rounded-2xl mb-6 p-5"
             style={{
-              background: 'rgba(6,9,26,0.7)',
-              border: '1px solid rgba(126,231,255,0.15)',
+              background: 'var(--color-panel-muted)',
+              border: '1px solid var(--color-accent-soft)',
             }}
           >
             {/* Filter header */}
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-5 h-px" style={{ background: 'var(--hud-plasma)' }} aria-hidden />
-              <span className="hud-mono hud-mono-md" style={{ color: 'var(--hud-ink-2)' }}>
-                LỌC THEO METADATA <span style={{ color: 'var(--hud-plasma)' }}>(RSS)</span>
+              <div className="w-5 h-px" style={{ background: 'var(--color-accent)' }} aria-hidden />
+              <span className="hud-mono hud-mono-md" style={{ color: 'var(--color-text-muted)' }}>
+                LỌC THEO METADATA <span style={{ color: 'var(--color-accent)' }}>(RSS)</span>
               </span>
               {newsCategoryFilter && (
                 <span
-                  className="hud-mono hud-mono-sm hud-chamfer-sm px-2 py-0.5 ml-auto"
+                  className="hud-mono hud-mono-sm cosmo-dark-panel rounded-xl px-2 py-0.5 ml-auto"
                   style={{
                     background: 'rgba(126,231,255,0.1)',
                     border: '1px solid rgba(126,231,255,0.3)',
-                    color: 'var(--hud-plasma)',
+                    color: 'var(--color-accent)',
                   }}
                 >
                   1 SELECTED
@@ -397,25 +386,25 @@ function ForumPageContent() {
                   setNewsCategoryFilter('')
                   setPage(1)
                 }}
-                className="hud-chamfer-sm hud-mono hud-mono-sm px-3 py-1.5 transition-all"
+                className="cosmo-dark-panel rounded-xl hud-mono hud-mono-sm px-3 py-1.5 transition-all"
                 style={
                   !newsCategoryFilter
                     ? {
                         background: 'rgba(245,165,36,0.18)',
                         border: '1px solid rgba(245,165,36,0.5)',
-                        color: 'var(--hud-amber)',
+                        color: 'var(--color-brand-amber)',
                         boxShadow: '0 0 8px rgba(245,165,36,0.2)',
                       }
                     : {
                         background: 'rgba(245,165,36,0.06)',
                         border: '1px solid rgba(245,165,36,0.2)',
-                        color: 'var(--hud-amber)',
+                        color: 'var(--color-brand-amber)',
                       }
                 }
               >
                 <span
                   className="inline-block w-1.5 h-1.5 rounded-full mr-1.5"
-                  style={{ background: 'var(--hud-amber)' }}
+                  style={{ background: 'var(--color-brand-amber)' }}
                   aria-hidden
                 />
                 Tất cả
@@ -429,28 +418,28 @@ function ForumPageContent() {
                     setNewsCategoryFilter(c)
                     setPage(1)
                   }}
-                  className="hud-chamfer-sm hud-mono hud-mono-sm px-3 py-1.5 transition-all"
+                  className="cosmo-dark-panel rounded-xl hud-mono hud-mono-sm px-3 py-1.5 transition-all"
                   style={
                     newsCategoryFilter === c
                       ? {
                           background: 'rgba(126,231,255,0.12)',
-                          border: '1px solid rgba(126,231,255,0.5)',
-                          color: 'var(--hud-plasma)',
+                          border: '1px solid var(--color-accent-strong)',
+                          color: 'var(--color-accent)',
                           boxShadow: '0 0 10px rgba(126,231,255,0.2)',
-                          textShadow: '0 0 8px rgba(126,231,255,0.5)',
+                          textShadow: '0 0 8px var(--color-accent-strong)',
                         }
                       : {
                           background: 'rgba(126,231,255,0.03)',
-                          border: '1px solid rgba(126,231,255,0.12)',
-                          color: 'var(--hud-ink-2)',
+                          border: '1px solid var(--color-border)',
+                          color: 'var(--color-text-muted)',
                         }
                   }
                 >
                   <span
                     className="inline-block w-1.5 h-1.5 rounded-full mr-1.5"
                     style={{
-                      background: newsCategoryFilter === c ? 'var(--hud-plasma)' : 'rgba(126,231,255,0.3)',
-                      boxShadow: newsCategoryFilter === c ? '0 0 6px var(--hud-plasma)' : 'none',
+                      background: newsCategoryFilter === c ? 'var(--color-accent)' : 'rgba(126,231,255,0.3)',
+                      boxShadow: newsCategoryFilter === c ? '0 0 6px var(--color-accent)' : 'none',
                     }}
                     aria-hidden
                   />
@@ -461,13 +450,13 @@ function ForumPageContent() {
 
             {/* Search field */}
             <div className="flex flex-col sm:flex-row sm:items-center gap-3 mt-5 pt-4" style={{ borderTop: '1px solid rgba(126,231,255,0.08)' }}>
-              <span className="hud-mono hud-mono-sm shrink-0" style={{ color: 'var(--hud-ink-3)' }}>
+              <span className="hud-mono hud-mono-sm shrink-0" style={{ color: 'var(--color-text-subtle)' }}>
                 // TITLE SEARCH
               </span>
               <div className="relative flex-1 max-w-xl">
                 <Search
                   className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none"
-                  style={{ color: 'var(--hud-ink-3)' }}
+                  style={{ color: 'var(--color-text-subtle)' }}
                   aria-hidden
                 />
                 <input
@@ -477,9 +466,9 @@ function ForumPageContent() {
                   value={titleQ}
                   onChange={(e) => setTitleQ(e.target.value)}
                   placeholder="Tối thiểu 2 ký tự — nhập tiêu đề bài viết"
-                  className="w-full hud-chamfer-sm pl-9 pr-16 py-2.5 text-sm text-white placeholder-[var(--hud-ink-3)] bg-transparent transition-all focus-visible:outline-none"
+                  className="w-full cosmo-dark-panel rounded-xl pl-9 pr-16 py-2.5 text-sm text-white placeholder-[var(--color-text-subtle)] bg-transparent transition-all focus-visible:outline-none"
                   style={{
-                    border: '1px solid rgba(126,231,255,0.2)',
+                    border: '1px solid var(--color-border)',
                     background: 'rgba(3,6,15,0.6)',
                   }}
                   onFocus={(e) => {
@@ -493,7 +482,7 @@ function ForumPageContent() {
                 />
                 <span
                   className="absolute right-3 top-1/2 -translate-y-1/2 hud-mono hud-mono-sm pointer-events-none"
-                  style={{ color: 'var(--hud-ink-3)' }}
+                  style={{ color: 'var(--color-text-subtle)' }}
                   aria-hidden
                 >
                   ⌘ K
@@ -506,33 +495,33 @@ function ForumPageContent() {
           <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
             <div className="flex flex-wrap items-center gap-3">
               <div
-                className="hud-chamfer-sm hud-mono hud-mono-md inline-flex items-center gap-2 px-3 py-1.5"
+                className="cosmo-dark-panel rounded-xl hud-mono hud-mono-md inline-flex items-center gap-2 px-3 py-1.5"
                 style={{
-                  background: 'var(--hud-plasma)',
-                  color: '#03060f',
+                  background: 'var(--color-accent)',
+                  color: 'var(--color-bg-base)',
                   boxShadow: '0 0 12px rgba(126,231,255,0.3)',
                 }}
               >
                 <span
                   className="inline-block w-2 h-2 rounded-full animate-pulse"
-                  style={{ background: '#03060f' }}
+                  style={{ background: 'var(--color-bg-base)' }}
                   aria-hidden
                 />
                 // 01 · KẾT QUẢ
               </div>
-              <span className="hud-mono hud-mono-sm" style={{ color: 'var(--hud-ink-2)' }}>
+              <span className="hud-mono hud-mono-sm" style={{ color: 'var(--color-text-muted)' }}>
                 HIỂN THỊ{' '}
-                <span style={{ color: 'var(--hud-plasma)' }}>{posts.length}</span>{' '}
+                <span style={{ color: 'var(--color-accent)' }}>{posts.length}</span>{' '}
                 BÀI
                 {newsCategoryFilter && (
                   <>
                     {' · '}LỌC{' '}
                     <span
-                      className="hud-chamfer-sm px-1.5 py-0.5"
+                      className="cosmo-dark-panel rounded-xl px-1.5 py-0.5"
                       style={{
                         background: 'rgba(126,231,255,0.1)',
                         border: '1px solid rgba(126,231,255,0.3)',
-                        color: 'var(--hud-plasma)',
+                        color: 'var(--color-accent)',
                       }}
                     >
                       [{newsCategoryFilter.slice(0, 20)}{newsCategoryFilter.length > 20 ? '…' : ''}]
@@ -541,11 +530,11 @@ function ForumPageContent() {
                 )}
                 {' · '}SẮP XẾP{' '}
                 <span
-                  className="hud-chamfer-sm px-1.5 py-0.5"
+                  className="cosmo-dark-panel rounded-xl px-1.5 py-0.5"
                   style={{
                     background: 'rgba(126,231,255,0.1)',
                     border: '1px solid rgba(126,231,255,0.3)',
-                    color: 'var(--hud-plasma)',
+                    color: 'var(--color-accent)',
                   }}
                 >
                   [{sortLabel}]
@@ -558,11 +547,11 @@ function ForumPageContent() {
               <button
                 type="button"
                 onClick={() => setViewMode('grid')}
-                className="hud-chamfer-sm p-2 transition-all"
+                className="cosmo-dark-panel rounded-xl p-2 transition-all"
                 style={
                   viewMode === 'grid'
-                    ? { background: 'rgba(126,231,255,0.15)', border: '1px solid rgba(126,231,255,0.4)', color: 'var(--hud-plasma)' }
-                    : { background: 'rgba(126,231,255,0.03)', border: '1px solid rgba(126,231,255,0.1)', color: 'var(--hud-ink-3)' }
+                    ? { background: 'var(--color-accent-soft)', border: '1px solid rgba(126,231,255,0.4)', color: 'var(--color-accent)' }
+                    : { background: 'rgba(126,231,255,0.03)', border: '1px solid rgba(126,231,255,0.1)', color: 'var(--color-text-subtle)' }
                 }
                 aria-label="Grid view"
               >
@@ -571,11 +560,11 @@ function ForumPageContent() {
               <button
                 type="button"
                 onClick={() => setViewMode('list')}
-                className="hud-chamfer-sm p-2 transition-all"
+                className="cosmo-dark-panel rounded-xl p-2 transition-all"
                 style={
                   viewMode === 'list'
-                    ? { background: 'rgba(126,231,255,0.15)', border: '1px solid rgba(126,231,255,0.4)', color: 'var(--hud-plasma)' }
-                    : { background: 'rgba(126,231,255,0.03)', border: '1px solid rgba(126,231,255,0.1)', color: 'var(--hud-ink-3)' }
+                    ? { background: 'var(--color-accent-soft)', border: '1px solid rgba(126,231,255,0.4)', color: 'var(--color-accent)' }
+                    : { background: 'rgba(126,231,255,0.03)', border: '1px solid rgba(126,231,255,0.1)', color: 'var(--color-text-subtle)' }
                 }
                 aria-label="List view"
               >
@@ -599,7 +588,7 @@ function ForumPageContent() {
               {[1, 2, 3].map((i) => (
                 <div
                   key={i}
-                  className="hud-chamfer-sm overflow-hidden animate-pulse"
+                  className="cosmo-dark-panel rounded-xl overflow-hidden animate-pulse"
                   style={{ background: 'rgba(126,231,255,0.04)', border: '1px solid rgba(126,231,255,0.08)' }}
                 >
                   <div className="aspect-[16/10] bg-white/5" />
@@ -635,10 +624,10 @@ function ForumPageContent() {
                           <NewsCardLink
                             key={p._id}
                             post={p}
-                            className="group relative flex items-start gap-4 hud-chamfer-sm overflow-hidden transition-all hover:shadow-[0_0_20px_rgba(126,231,255,0.12)] hover:-translate-y-0.5"
+                            className="group relative flex items-start gap-4 cosmo-dark-panel rounded-xl overflow-hidden transition-all hover:shadow-[0_0_20px_var(--color-accent-soft)] hover:-translate-y-0.5"
                             style={{
-                              background: 'rgba(6,9,26,0.8)',
-                              border: '1px solid rgba(126,231,255,0.12)',
+                              background: 'var(--color-panel-glass)',
+                              border: '1px solid var(--color-border)',
                             }}
                           >
                             <CornerBrackets />
@@ -653,19 +642,19 @@ function ForumPageContent() {
                               </div>
                             )}
                             <div className="flex-1 min-w-0 py-3 pr-4">
-                              <h3 className="text-sm font-medium leading-snug text-white group-hover:text-cyan-100 line-clamp-2 mb-1">
+                              <h3 className="text-sm font-medium leading-snug text-white group-hover:text-ds-text line-clamp-2 mb-1">
                                 {p.title}
                               </h3>
                               {plainTextExcerpt(p.content, 80) && (
-                                <p className="text-xs line-clamp-1 mb-2" style={{ color: 'var(--hud-ink-3)' }}>
+                                <p className="text-xs line-clamp-1 mb-2" style={{ color: 'var(--color-text-subtle)' }}>
                                   {plainTextExcerpt(p.content, 80)}
                                 </p>
                               )}
-                              <div className="hud-mono hud-mono-sm flex items-center gap-3" style={{ color: 'var(--hud-ink-3)' }}>
-                                <span style={{ color: 'var(--hud-amber)' }}>{p.sourceName || p.authorName}</span>
+                              <div className="hud-mono hud-mono-sm flex items-center gap-3" style={{ color: 'var(--color-text-subtle)' }}>
+                                <span style={{ color: 'var(--color-brand-amber)' }}>{p.sourceName || p.authorName}</span>
                                 <span>{formatDate(p.publishedAt || p.createdAt)}</span>
                                 <span className="inline-flex items-center gap-1">
-                                  <Eye className="w-3 h-3" style={{ color: 'var(--hud-plasma)' }} />
+                                  <Eye className="w-3 h-3" style={{ color: 'var(--color-accent)' }} />
                                   {p.viewCount ?? 0}
                                 </span>
                               </div>
@@ -685,15 +674,15 @@ function ForumPageContent() {
                         <NewsCardLink
                           key={p._id}
                           post={p}
-                          className="group relative flex flex-col hud-chamfer-sm overflow-hidden transition-all hover:shadow-[0_0_24px_rgba(126,231,255,0.15)] hover:-translate-y-1"
+                          className="group relative flex flex-col cosmo-dark-panel rounded-xl overflow-hidden transition-all hover:shadow-[0_0_24px_var(--color-accent-soft)] hover:-translate-y-1"
                           style={{
-                            background: 'rgba(6,9,26,0.8)',
-                            border: '1px solid rgba(126,231,255,0.12)',
+                            background: 'var(--color-panel-glass)',
+                            border: '1px solid var(--color-border)',
                           }}
                         >
                           <CornerBrackets />
                           {/* Thumb */}
-                          <div className="relative overflow-hidden bg-[#0c1829]" style={{ aspectRatio: '16/11' }}>
+                          <div className="relative overflow-hidden bg-ds-surface" style={{ aspectRatio: '16/11' }}>
                             {thumb ? (
                               <img
                                 src={thumb}
@@ -715,7 +704,7 @@ function ForumPageContent() {
                             {/* Source badge top-right */}
                             {(p.sourceName || p.authorName) && (
                               <span
-                                className="absolute top-2 right-2 hud-mono hud-mono-sm hud-chamfer-sm px-2 py-0.5 inline-flex items-center gap-1"
+                                className="absolute top-2 right-2 hud-mono hud-mono-sm cosmo-dark-panel rounded-xl px-2 py-0.5 inline-flex items-center gap-1"
                                 style={{
                                   background: 'rgba(245,165,36,0.85)',
                                   color: '#1a0e00',
@@ -727,10 +716,10 @@ function ForumPageContent() {
                             )}
                             {/* NEW flag bottom-left */}
                             <span
-                              className="absolute bottom-2 left-2 hud-mono hud-mono-sm hud-chamfer-sm px-2 py-0.5"
+                              className="absolute bottom-2 left-2 hud-mono hud-mono-sm cosmo-dark-panel rounded-xl px-2 py-0.5"
                               style={{
-                                background: 'var(--hud-plasma)',
-                                color: '#03060f',
+                                background: 'var(--color-accent)',
+                                color: 'var(--color-bg-base)',
                               }}
                             >
                               ● MỚI
@@ -739,24 +728,24 @@ function ForumPageContent() {
 
                           {/* Body */}
                           <div className="flex flex-1 flex-col p-4">
-                            <h3 className="line-clamp-3 text-sm font-medium leading-snug text-white group-hover:text-cyan-100 mb-2">
+                            <h3 className="line-clamp-3 text-sm font-medium leading-snug text-white group-hover:text-ds-text mb-2">
                               {p.title}
                             </h3>
                             {plainTextExcerpt(p.content, 80) && (
-                              <p className="line-clamp-2 text-xs mb-3" style={{ color: 'var(--hud-ink-3)' }}>
+                              <p className="line-clamp-2 text-xs mb-3" style={{ color: 'var(--color-text-subtle)' }}>
                                 {plainTextExcerpt(p.content, 80)}
                               </p>
                             )}
                             <div
                               className="hud-mono hud-mono-sm mt-auto flex items-center gap-3"
-                              style={{ color: 'var(--hud-ink-3)' }}
+                              style={{ color: 'var(--color-text-subtle)' }}
                             >
-                              <span style={{ color: 'var(--hud-amber)' }}>{p.sourceName || p.authorName}</span>
+                              <span style={{ color: 'var(--color-brand-amber)' }}>{p.sourceName || p.authorName}</span>
                               <span>·</span>
                               <span>{formatDate(p.publishedAt || p.createdAt)}</span>
                               <span className="ml-auto inline-flex items-center gap-1">
-                                <Eye className="w-3 h-3" style={{ color: 'var(--hud-plasma)' }} />
-                                <span style={{ color: 'var(--hud-plasma)' }}>{p.viewCount ?? 0}</span>
+                                <Eye className="w-3 h-3" style={{ color: 'var(--color-accent)' }} />
+                                <span style={{ color: 'var(--color-accent)' }}>{p.viewCount ?? 0}</span>
                               </span>
                             </div>
                           </div>
@@ -770,23 +759,23 @@ function ForumPageContent() {
               {/* Empty state */}
               {posts.length === 0 && (
                 <div
-                  className="relative hud-chamfer-md p-8 flex flex-col items-center gap-4 text-center"
+                  className="relative cosmo-dark-panel rounded-2xl p-8 flex flex-col items-center gap-4 text-center"
                   style={{
                     border: '1px dashed rgba(126,231,255,0.2)',
-                    background: 'rgba(6,9,26,0.4)',
+                    background: 'var(--color-panel-muted)',
                   }}
                 >
                   <span
                     className="w-10 h-10 rounded-full flex items-center justify-center text-lg"
-                    style={{ background: 'rgba(126,231,255,0.08)', border: '1px solid rgba(126,231,255,0.2)', color: 'var(--hud-plasma)' }}
+                    style={{ background: 'rgba(126,231,255,0.08)', border: '1px solid var(--color-border)', color: 'var(--color-accent)' }}
                     aria-hidden
                   >
                     ℹ
                   </span>
-                  <p className="text-sm" style={{ color: 'var(--hud-ink-2)' }}>
+                  <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
                     Bộ lọc{' '}
                     {newsCategoryFilter && (
-                      <span style={{ color: 'var(--hud-plasma)' }}>[{newsCategoryFilter}]</span>
+                      <span style={{ color: 'var(--color-accent)' }}>[{newsCategoryFilter}]</span>
                     )}{' '}
                     hiện chỉ có <strong className="text-white">{total} bài</strong>. Thử{' '}
                     <strong className="text-white">Tất cả</strong> hoặc chọn metadata khác để xem thêm.
@@ -798,11 +787,11 @@ function ForumPageContent() {
                         setNewsCategoryFilter('')
                         setPage(1)
                       }}
-                      className="hud-chamfer-sm hud-mono hud-mono-md px-5 py-2.5 transition-all hover:shadow-[0_0_16px_rgba(245,165,36,0.3)]"
+                      className="cosmo-dark-panel rounded-xl hud-mono hud-mono-md px-5 py-2.5 transition-all hover:shadow-[0_0_16px_rgba(245,165,36,0.3)]"
                       style={{
                         background: 'rgba(245,165,36,0.12)',
                         border: '1px solid rgba(245,165,36,0.4)',
-                        color: 'var(--hud-amber)',
+                        color: 'var(--color-brand-amber)',
                       }}
                     >
                       XOÁ LỌC
@@ -820,11 +809,11 @@ function ForumPageContent() {
                 type="button"
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page <= 1}
-                className="hud-chamfer-sm hud-mono hud-mono-md px-5 py-2.5 transition-all disabled:opacity-40"
+                className="cosmo-dark-panel rounded-xl hud-mono hud-mono-md px-5 py-2.5 transition-all disabled:opacity-40"
                 style={{
                   background: 'rgba(126,231,255,0.06)',
-                  border: '1px solid rgba(126,231,255,0.2)',
-                  color: 'var(--hud-plasma)',
+                  border: '1px solid var(--color-border)',
+                  color: 'var(--color-accent)',
                 }}
               >
                 ← TRANG TRƯỚC
@@ -833,57 +822,55 @@ function ForumPageContent() {
                 type="button"
                 onClick={() => setPage((p) => p + 1)}
                 disabled={page * 20 >= total}
-                className="hud-chamfer-sm hud-mono hud-mono-md px-5 py-2.5 transition-all disabled:opacity-40"
+                className="cosmo-dark-panel rounded-xl hud-mono hud-mono-md px-5 py-2.5 transition-all disabled:opacity-40"
                 style={{
                   background: 'rgba(126,231,255,0.06)',
-                  border: '1px solid rgba(126,231,255,0.2)',
-                  color: 'var(--hud-plasma)',
+                  border: '1px solid var(--color-border)',
+                  color: 'var(--color-accent)',
                 }}
               >
                 TRANG SAU →
               </button>
             </div>
           )}
-        </div>
       </div>
     )
   }
 
   /* ── Non-news forum ── unchanged layout ── */
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#05070c] via-black to-[#04090f]">
-      <div className="pt-20 px-4 pb-12 mx-auto max-w-4xl">
+    <div className="relative z-10 pt-2 px-4 pb-12 mx-auto max-w-4xl">
         <Link
           href="/community"
-          className="text-sm text-cyan-400 hover:text-cyan-300 mb-4 inline-flex items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50 rounded-md px-1"
+          className="text-sm text-ds-accent hover:text-ds-text mb-4 inline-flex items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-accent/50 rounded-md px-1"
         >
           <span aria-hidden>←</span> Quay lại cộng đồng
         </Link>
 
         {forum && (
           <>
-            <div className="mb-6 rounded-2xl border border-white/10 bg-[#08111f]/70 p-5 md:p-6">
+            <div className="cosmo-dark-panel mb-6 rounded-2xl p-5 md:p-6">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <h1 className="text-2xl font-bold text-white flex items-center gap-2 md:text-3xl">
                     <span className="text-3xl md:text-4xl" aria-hidden>{forum.icon || '💬'}</span>
                     {forum.title}
                   </h1>
-                  <p className="text-gray-400 mt-2 max-w-2xl leading-relaxed">{forum.description}</p>
-                  <p className="text-xs text-gray-500 mt-3">{total} bài</p>
+                  <p className="text-ds-muted mt-2 max-w-2xl leading-relaxed">{forum.description}</p>
+                  <p className="text-xs text-ds-subtle mt-3">{total} bài</p>
                 </div>
                 {user && (
                   <button
                     type="button"
                     onClick={() => setShowNewPost(!showNewPost)}
-                    className="px-4 py-2 rounded-xl bg-cyan-600 text-white text-sm font-medium hover:bg-cyan-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60"
+                    className="px-4 py-2 rounded-xl bg-cyan-600 text-white text-sm font-medium hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60"
                   >
                     {showNewPost ? 'Đóng' : 'Tạo bài viết'}
                   </button>
                 )}
               </div>
 
-              <div className="mt-5 border-t border-white/10 pt-4">
+              <div className="mt-5 border-t border-ds-border pt-4">
                 <PostSortBar
                   sort={sort}
                   onSortChange={(s) => {
@@ -914,7 +901,7 @@ function ForumPageContent() {
               >
                 <p className="text-xs uppercase tracking-wider text-amber-300 mb-1">Gợi ý cho người mới</p>
                 <p className="text-sm text-white font-medium">Q&A — Đừng ngại hỏi bất cứ gì!</p>
-                <p className="text-xs text-gray-400 mt-1">
+                <p className="text-xs text-ds-muted mt-1">
                   Bấm «Tạo bài viết» và mô tả thắc mắc — cộng đồng CosmoLearn sẽ giúp bạn.
                 </p>
                 {user ? (
@@ -933,12 +920,12 @@ function ForumPageContent() {
             ) : null}
 
             {showNewPost && (
-              <div className="mb-6 rounded-2xl border border-cyan-500/30 bg-[#060e1c]/90 p-5">
+              <div className="mb-6 rounded-2xl border border-cyan-500/30 bg-ds-surface/90 p-5">
                 <h2 className="text-white font-semibold mb-3">Tạo bài viết mới</h2>
                 <div className="mb-3">
                   <div className="flex items-end justify-between gap-2 mb-1.5">
-                    <label className="text-xs text-slate-400">Tiêu đề</label>
-                    <span className="text-[11px] text-slate-500 tabular-nums">{newTitle.length}/300</span>
+                    <label className="text-xs text-ds-muted">Tiêu đề</label>
+                    <span className="text-[11px] text-ds-subtle tabular-nums">{newTitle.length}/300</span>
                   </div>
                   <input
                     type="text"
@@ -946,10 +933,10 @@ function ForumPageContent() {
                     value={newTitle}
                     maxLength={300}
                     onChange={(e) => setNewTitle(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-lg bg-white/10 border border-white/20 text-white placeholder-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50"
+                    className="w-full px-4 py-2.5 rounded-lg bg-white/10 border border-white/20 text-white placeholder-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-accent/50"
                   />
                 </div>
-                <p className="text-xs text-slate-500 mb-2">Nội dung — soạn có định dạng</p>
+                <p className="text-xs text-ds-subtle mb-2">Nội dung — soạn có định dạng</p>
                 <RichTextEditor
                   value={newContent}
                   onChange={setNewContent}
@@ -977,9 +964,9 @@ function ForumPageContent() {
 
             {loading ? (
                 <div className="space-y-3">
-                  <div className="h-24 rounded-xl border border-white/10 bg-white/5 animate-pulse" />
-                  <div className="h-24 rounded-xl border border-white/10 bg-white/5 animate-pulse" />
-                  <div className="h-24 rounded-xl border border-white/10 bg-white/5 animate-pulse" />
+                  <div className="h-24 rounded-xl border border-ds-border bg-white/5 animate-pulse" />
+                  <div className="h-24 rounded-xl border border-ds-border bg-white/5 animate-pulse" />
+                  <div className="h-24 rounded-xl border border-ds-border bg-white/5 animate-pulse" />
               </div>
             ) : (
               <DiscussionPostList
@@ -1017,7 +1004,6 @@ function ForumPageContent() {
             )}
           </>
         )}
-      </div>
     </div>
   )
 }
@@ -1026,8 +1012,8 @@ export default function ForumPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-black pt-24 flex items-center justify-center">
-          <p className="text-gray-500">Đang tải chuyên mục…</p>
+        <div className="relative z-10 text-ds-text w-full pt-24 flex items-center justify-center">
+          <p className="text-ds-subtle">Đang tải chuyên mục…</p>
         </div>
       }
     >

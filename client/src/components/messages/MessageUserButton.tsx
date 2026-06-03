@@ -37,7 +37,7 @@ export function MessageUserButton({
   const base =
     variant === 'primary'
       ? 'bg-gradient-to-r from-cyan-600/90 to-violet-600/90 border border-cyan-400/30 text-white shadow-lg shadow-cyan-900/20'
-      : 'bg-white/5 border border-white/15 text-slate-200 hover:bg-white/10'
+      : 'bg-white/5 border border-ds-border text-slate-200 hover:bg-white/10'
 
   return (
     <button

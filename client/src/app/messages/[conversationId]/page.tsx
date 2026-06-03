@@ -80,12 +80,12 @@ export default function MessageThreadPage() {
   }
 
   return (
-    <div className="min-h-screen bg-black flex flex-col">
-      <header className="fixed top-14 left-0 right-0 z-20 border-b border-white/10 bg-black/90 backdrop-blur-md">
+    <div className="relative z-10 text-ds-text w-full flex flex-col">
+      <header className="fixed top-14 left-0 right-0 z-20 border-b border-ds-border bg-ds-overlay backdrop-blur-md">
         <div className="max-w-2xl mx-auto px-4 py-3 flex items-center gap-3">
           <Link
             href="/messages"
-            className="p-1.5 rounded-lg text-slate-400 hover:text-cyan-300 hover:bg-white/5"
+            className="p-1.5 rounded-lg text-ds-muted hover:text-ds-text hover:bg-white/5"
             aria-label="Quay lại hộp thư"
           >
             <ChevronLeft className="h-5 w-5" />
@@ -108,14 +108,14 @@ export default function MessageThreadPage() {
               </div>
             </>
           ) : (
-            <span className="text-slate-400 text-sm">Đang tải…</span>
+            <span className="text-ds-muted text-sm">Đang tải…</span>
           )}
         </div>
       </header>
 
       <main className="flex-1 flex flex-col pt-[7.5rem] pb-24 max-w-2xl mx-auto w-full px-4">
         {loading ? (
-          <p className="text-sm text-slate-500 text-center py-12">Đang tải tin nhắn…</p>
+          <p className="text-sm text-ds-subtle text-center py-12">Đang tải tin nhắn…</p>
         ) : (
           <div className="flex-1 space-y-3 overflow-y-auto py-4">
             {messages.map((m) => (
@@ -126,8 +126,8 @@ export default function MessageThreadPage() {
                 <div
                   className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
                     m.isMine
-                      ? 'bg-gradient-to-br from-cyan-600/90 to-violet-700/90 text-white rounded-br-md'
-                      : 'bg-white/[0.06] border border-white/10 text-slate-100 rounded-bl-md'
+                      ? 'bg-ds-accent text-ds-base rounded-br-md'
+                      : 'cosmo-dark-panel border border-ds-border text-ds-text rounded-bl-md'
                   }`}
                 >
                   {m.body}
@@ -141,21 +141,21 @@ export default function MessageThreadPage() {
 
       <form
         onSubmit={(e) => void handleSend(e)}
-        className="fixed bottom-0 left-0 right-0 border-t border-white/10 bg-black/95 backdrop-blur-md p-4"
+        className="fixed bottom-0 left-0 right-0 border-t border-ds-border bg-ds-overlay backdrop-blur-md p-4"
       >
         <div className="max-w-2xl mx-auto flex gap-2">
           <input
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             placeholder="Nhập tin nhắn…"
-            className="flex-1 rounded-xl border border-white/15 bg-white/[0.04] px-4 py-3 text-sm text-white placeholder:text-slate-600 focus:border-cyan-500/40 focus:outline-none"
+            className="cosmo-input-surface flex-1 rounded-xl px-4 py-3 text-sm text-ds-text placeholder:text-ds-subtle focus:border-ds-accent focus:outline-none"
             maxLength={4000}
             disabled={sending}
           />
           <button
             type="submit"
             disabled={sending || !draft.trim()}
-            className="p-3 rounded-xl bg-cyan-600 text-white disabled:opacity-40 hover:bg-cyan-500"
+            className="p-3 rounded-xl bg-ds-accent text-ds-base disabled:opacity-40 hover:opacity-90"
             aria-label="Gửi"
           >
             <Send className="h-5 w-5" />

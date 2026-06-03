@@ -23,10 +23,10 @@ function RecCard({ item }: { item: OnboardingRecommendation }) {
   return (
     <Link
       href={item.href}
-      className="block p-4 transition-colors hover:bg-white/[0.04]"
+      className="block p-4 transition-colors hover:bg-ds-surface/50"
       style={{
         ...chamfer(10),
-        border: '1px solid rgba(126,231,255,0.15)',
+        border: '1px solid var(--color-accent-soft)',
         background: 'rgba(255,255,255,0.02)',
       }}
     >
@@ -35,7 +35,7 @@ function RecCard({ item }: { item: OnboardingRecommendation }) {
         <ChevronRight className="w-4 h-4 text-cyan-400 shrink-0" />
       </p>
       {item.descriptionVi ? (
-        <p className="text-xs text-gray-500 mt-1.5 line-clamp-2">{item.descriptionVi}</p>
+        <p className="text-xs text-ds-subtle mt-1.5 line-clamp-2">{item.descriptionVi}</p>
       ) : null}
     </Link>
   )
@@ -61,8 +61,8 @@ export function DashboardForYouPanel() {
       className="relative p-5 mb-6"
       style={{
         ...chamfer(16),
-        border: '1px solid rgba(126,231,255,0.22)',
-        background: 'linear-gradient(135deg,rgba(6,9,26,0.95) 0%,rgba(12,20,40,0.9) 100%)',
+        border: '1px solid var(--color-border)',
+        background: 'linear-gradient(135deg,var(--color-bg-elevated) 0%,var(--color-panel-glass) 100%)',
       }}
     >
       <div className="flex items-start justify-between gap-3 mb-4 flex-wrap">
@@ -71,7 +71,7 @@ export function DashboardForYouPanel() {
             <Sparkles className="w-3.5 h-3.5" />
             Dành cho bạn
           </p>
-          <p className="text-sm text-gray-400 mt-1">
+          <p className="text-sm text-ds-muted mt-1">
             Gợi ý từ onboarding
             {profile.topicIds?.length ? (
               <>

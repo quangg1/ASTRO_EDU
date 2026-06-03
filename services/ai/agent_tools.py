@@ -136,18 +136,62 @@ _START_RECALL = {
     },
 }
 
+_GENERATE_CONCEPT_QUIZ = {
+    "type": "function",
+    "function": {
+        "name": "generate_concept_quiz",
+        "description": (
+            "Tạo quiz 3–5 câu theo concept (LLM, có quota giờ). "
+            "Dùng khi user muốn kiểm tra một khái niệm; không thay recall quiz cố định."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "concept_id": {"type": "string", "description": "ID concept trong LP"},
+                "lesson_id": {"type": "string", "description": "Bài LP gợi ý nguồn"},
+                "q": {"type": "string", "description": "Từ khóa tìm concept nếu thiếu id"},
+            },
+        },
+    },
+}
+
 _SUGGEST_COMMUNITY = {
     "type": "function",
     "function": {
         "name": "suggest_community_thread",
-        "description": "Tìm thảo luận diễn đàn liên quan bài/khóa (tối đa 3).",
+        "description": "Tìm thảo luận diễn đàn: theo từ khóa q (title/nội dung) hoặc gắn lesson/course (tối đa 3).",
         "parameters": {
             "type": "object",
             "properties": {
+                "q": {"type": "string", "description": "Từ khóa chủ đề, vd. tia X, hố đen"},
                 "lesson_id": {"type": "string"},
                 "lesson_slug": {"type": "string"},
                 "course_slug": {"type": "string"},
             },
+        },
+    },
+}
+
+_SEARCH_LEARNING_CONTENT = {
+    "type": "function",
+    "function": {
+        "name": "search_learning_content",
+        "description": (
+            "Tìm bài LP và thảo luận theo chủ đề (q) qua RAG semantic search (embedding). "
+            "Gọi khi user hỏi «giới thiệu bài», «có bài nào về …» (vd. Sao Hỏa, Mars, tia X) — không đoán slug/id."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "q": {"type": "string", "description": "Từ khóa tìm kiếm (≥2 ký tự)"},
+                "scopes": {
+                    "type": "array",
+                    "items": {"type": "string", "enum": ["lp", "community"]},
+                    "description": "Mặc định cả lp và community",
+                },
+                "limit": {"type": "integer", "description": "Số kết quả mỗi scope (mặc định 3)"},
+            },
+            "required": ["q"],
         },
     },
 }
@@ -189,6 +233,7 @@ COURSE_TOOLS: list[dict[str, Any]] = [
     _GO_EXPLORE_ALIAS,
     _EXPLORE_NAV,
     _SUGGEST_COMMUNITY,
+    _SEARCH_LEARNING_CONTENT,
 ]
 
 LEARNING_PATH_TOOLS: list[dict[str, Any]] = [
@@ -199,7 +244,9 @@ LEARNING_PATH_TOOLS: list[dict[str, Any]] = [
     _HIGHLIGHT_CONCEPT,
     _RELATED_LESSONS,
     _START_RECALL,
+    _GENERATE_CONCEPT_QUIZ,
     _SUGGEST_COMMUNITY,
+    _SEARCH_LEARNING_CONTENT,
 ]
 
 EXPLORE_TOOLS: list[dict[str, Any]] = [
@@ -209,6 +256,7 @@ EXPLORE_TOOLS: list[dict[str, Any]] = [
     _OPEN_LP_LESSON,
     _RELATED_LESSONS,
     _HIGHLIGHT_CONCEPT,
+    _SEARCH_LEARNING_CONTENT,
 ]
 
 GENERAL_TOOLS: list[dict[str, Any]] = [
@@ -238,6 +286,7 @@ GENERAL_TOOLS: list[dict[str, Any]] = [
             "parameters": {"type": "object", "properties": {}, "required": []},
         },
     },
+    _SEARCH_LEARNING_CONTENT,
 ]
 
 _ALL_BY_NAME: dict[str, dict[str, Any]] = {}
@@ -259,8 +308,10 @@ def tools_for_context(
         base = list(EXPLORE_TOOLS)
     else:
         base = list(GENERAL_TOOLS)
-    if not allowed_tools:
+    if allowed_tools is None:
         return base
+    if len(allowed_tools) == 0:
+        return []
     allow = set(allowed_tools)
     allow.update({"go_to_explore", "navigate_to_narrative", "focus_showcase_entity"})
     out: list[dict[str, Any]] = []
@@ -449,10 +500,28 @@ def validate_and_normalize_tool_calls(
                 continue
             out.append({"id": tid, "name": name, "arguments": {"lesson_id": lid.strip()}})
 
+        elif name == "generate_concept_quiz":
+            if context not in ("learning_path", "explore", "general"):
+                continue
+            norm_cq: dict[str, Any] = {}
+            cid = args.get("concept_id") or args.get("conceptId")
+            lid = args.get("lesson_id") or args.get("lessonId")
+            q = args.get("q")
+            if isinstance(cid, str) and cid.strip():
+                norm_cq["concept_id"] = cid.strip()
+            if isinstance(lid, str) and lid.strip():
+                norm_cq["lesson_id"] = lid.strip()
+            if isinstance(q, str) and q.strip():
+                norm_cq["q"] = q.strip()
+            out.append({"id": tid, "name": name, "arguments": norm_cq})
+
         elif name == "suggest_community_thread":
             if context not in ("learning_path", "course", "explore", "general"):
                 continue
             norm_c: dict[str, Any] = {}
+            q = args.get("q")
+            if isinstance(q, str) and q.strip():
+                norm_c["q"] = q.strip()
             lid = args.get("lesson_id") or args.get("lessonId")
             lslug = args.get("lesson_slug") or args.get("lessonSlug")
             cslug = args.get("course_slug") or args.get("courseSlug")
@@ -465,6 +534,27 @@ def validate_and_normalize_tool_calls(
             if not norm_c:
                 continue
             out.append({"id": tid, "name": name, "arguments": norm_c})
+
+        elif name == "search_learning_content":
+            if context not in ("learning_path", "course", "explore", "general"):
+                continue
+            q = args.get("q")
+            if not isinstance(q, str) or len(q.strip()) < 2:
+                continue
+            norm_s: dict[str, Any] = {"q": q.strip()}
+            scopes = args.get("scopes")
+            if isinstance(scopes, list) and scopes:
+                clean = [
+                    str(s).lower()
+                    for s in scopes
+                    if str(s).lower() in ("lp", "community")
+                ]
+                if clean:
+                    norm_s["scopes"] = clean
+            lim = args.get("limit")
+            if isinstance(lim, int) and lim > 0:
+                norm_s["limit"] = min(5, lim)
+            out.append({"id": tid, "name": name, "arguments": norm_s})
 
     return out
 

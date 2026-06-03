@@ -39,7 +39,7 @@ export function ModuleMaterialsList({
               className="group flex items-center gap-2 rounded-lg border border-ds-border/80 bg-ds-surface/50 px-2.5 py-2 text-[11px] text-ds-text hover:border-ds-accent-strong hover:bg-ds-accent-soft/30 transition-colors"
             >
               <span className="text-base shrink-0" aria-hidden>{icon}</span>
-              <span className="font-medium text-ds-accent group-hover:text-cyan-100 truncate">
+              <span className="font-medium text-ds-accent group-hover:text-ds-text truncate">
                 {mat.label || 'Tài liệu'}
               </span>
               <span className="ml-auto text-[10px] text-ds-subtle shrink-0">Mở ↗</span>

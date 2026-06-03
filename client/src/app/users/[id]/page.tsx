@@ -74,20 +74,20 @@ export default function PublicUserProfilePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#030508] flex items-center justify-center">
-        <div className="h-8 w-8 rounded-full border-2 border-cyan-500/30 border-t-cyan-400 animate-spin" />
+      <div className="relative z-10 flex min-h-[40vh] items-center justify-center">
+        <div className="h-8 w-8 rounded-full border-2 border-ds-accent/30 border-t-ds-accent animate-spin" />
       </div>
     )
   }
 
   if (notFound || !profile) {
     return (
-      <div className="min-h-screen bg-[#030508] px-4 pt-20 pb-12 max-w-lg mx-auto">
-        <Link href="/community" className="text-sm text-cyan-400 hover:text-cyan-300 mb-6 inline-block">
+      <div className="relative z-10 px-4 pt-2 pb-12 max-w-lg mx-auto">
+        <Link href="/community" className="text-sm text-ds-accent hover:text-ds-text mb-6 inline-block">
           ← Cộng đồng
         </Link>
         <h1 className="text-xl font-semibold text-white">Không tìm thấy hồ sơ</h1>
-        <p className="mt-2 text-sm text-slate-500">Người dùng này không tồn tại hoặc đã ngừng hoạt động.</p>
+        <p className="mt-2 text-sm text-ds-subtle">Người dùng này không tồn tại hoặc đã ngừng hoạt động.</p>
       </div>
     )
   }
@@ -100,21 +100,11 @@ export default function PublicUserProfilePage() {
   const hasInterests = (lp?.interests?.length ?? 0) > 0
 
   return (
-    <div className="min-h-screen bg-[#030508] text-white overflow-x-hidden">
-      {/* Ambient */}
-      <div
-        className="pointer-events-none fixed inset-0 opacity-40"
-        aria-hidden
-        style={{
-          background:
-            'radial-gradient(ellipse 70% 50% at 50% -10%, rgba(56,189,248,0.15), transparent), radial-gradient(ellipse 50% 40% at 90% 60%, rgba(139,92,246,0.12), transparent)',
-        }}
-      />
-
-      <main className="relative pt-20 pb-16 px-4 max-w-3xl mx-auto">
+    <div className="relative z-10 overflow-x-hidden text-ds-text">
+      <main className="relative pt-2 pb-16 px-4 max-w-3xl mx-auto">
         <Link
           href="/community"
-          className="inline-flex items-center gap-1 text-sm text-slate-400 hover:text-cyan-300 mb-6"
+          className="inline-flex items-center gap-1 text-sm text-ds-muted hover:text-ds-text mb-6"
         >
           <ChevronLeft className="h-4 w-4" aria-hidden />
           Cộng đồng
@@ -130,7 +120,7 @@ export default function PublicUserProfilePage() {
             className="absolute inset-0 opacity-[0.07]"
             style={{
               backgroundImage:
-                'linear-gradient(rgba(126,231,255,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(126,231,255,0.5) 1px, transparent 1px)',
+                'linear-gradient(var(--color-accent-strong) 1px, transparent 1px), linear-gradient(90deg, var(--color-accent-strong) 1px, transparent 1px)',
               backgroundSize: '24px 24px',
             }}
             aria-hidden
@@ -157,7 +147,7 @@ export default function PublicUserProfilePage() {
             </h1>
 
             {lp?.location ? (
-              <p className="mt-2 text-sm text-slate-400 inline-flex items-center justify-center gap-1.5">
+              <p className="mt-2 text-sm text-ds-muted inline-flex items-center justify-center gap-1.5">
                 <MapPin className="h-3.5 w-3.5 text-cyan-500/80" aria-hidden />
                 {lp.location}
               </p>
@@ -165,7 +155,7 @@ export default function PublicUserProfilePage() {
 
             <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
               <LearnerTierBadge tierId={tier.id} size="lg" />
-              <span className="text-sm font-medium text-cyan-100">
+              <span className="text-sm font-medium text-ds-text">
                 {tier.emoji} {tier.nameVi}
               </span>
               {roleChip ? (
@@ -175,7 +165,7 @@ export default function PublicUserProfilePage() {
               ) : null}
             </div>
 
-            <p className="mt-3 text-sm text-slate-400 max-w-md mx-auto leading-relaxed">
+            <p className="mt-3 text-sm text-ds-muted max-w-md mx-auto leading-relaxed">
               {tier.taglineVi}
             </p>
 
@@ -184,14 +174,14 @@ export default function PublicUserProfilePage() {
               {isSelf ? (
                 <Link
                   href="/profile"
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-cyan-500/40 bg-cyan-500/10 text-cyan-100 text-sm hover:bg-cyan-500/20"
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-cyan-500/40 bg-cyan-500/10 text-ds-text text-sm hover:bg-ds-accent/15"
                 >
                   Chỉnh sửa hồ sơ
                 </Link>
               ) : null}
               <Link
                 href="/messages"
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-white/15 bg-white/5 text-slate-300 text-sm hover:bg-white/10"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-ds-border bg-white/5 text-ds-muted text-sm hover:bg-white/10"
               >
                 <MessageSquare className="h-4 w-4" aria-hidden />
                 Tin nhắn
@@ -202,22 +192,22 @@ export default function PublicUserProfilePage() {
 
         {/* Stats */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-          <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4 text-center">
+          <div className="rounded-xl border border-ds-border bg-white/[0.03] p-4 text-center">
             <p className="text-2xl font-semibold tabular-nums text-white">{profile.stats.postCount}</p>
-            <p className="text-[11px] text-slate-500 mt-1 uppercase tracking-wide">Bài viết</p>
+            <p className="text-[11px] text-ds-subtle mt-1 uppercase tracking-wide">Bài viết</p>
           </div>
-          <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4 text-center">
+          <div className="rounded-xl border border-ds-border bg-white/[0.03] p-4 text-center">
             <p className="text-2xl font-semibold tabular-nums text-white">
               {profile.stats.commentCount}
             </p>
-            <p className="text-[11px] text-slate-500 mt-1 uppercase tracking-wide">Bình luận</p>
+            <p className="text-[11px] text-ds-subtle mt-1 uppercase tracking-wide">Bình luận</p>
           </div>
-          <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4 text-center col-span-2 sm:col-span-2">
-            <p className="text-lg font-semibold text-cyan-100 inline-flex items-center justify-center gap-1.5">
+          <div className="rounded-xl border border-ds-border bg-white/[0.03] p-4 text-center col-span-2 sm:col-span-2">
+            <p className="text-lg font-semibold text-ds-text inline-flex items-center justify-center gap-1.5">
               <Gem className="h-4 w-4 text-cyan-400" aria-hidden />
               {profile.totalGemsEarned.toLocaleString('vi-VN')}
             </p>
-            <p className="text-[11px] text-slate-500 mt-1">
+            <p className="text-[11px] text-ds-subtle mt-1">
               Gem đã kiếm · {formatGemsEarnedRange(tier)}
             </p>
           </div>
@@ -225,7 +215,7 @@ export default function PublicUserProfilePage() {
 
         {/* Bio */}
         {hasBio ? (
-          <section className="rounded-2xl border border-white/10 bg-white/[0.02] p-6 mb-4">
+          <section className="rounded-2xl border border-ds-border bg-ds-surface/40 p-6 mb-4">
             <h2 className="text-xs font-mono uppercase tracking-[0.15em] text-cyan-400/90 mb-3 flex items-center gap-2">
               <BookOpen className="h-3.5 w-3.5" aria-hidden />
               Giới thiệu
@@ -240,7 +230,7 @@ export default function PublicUserProfilePage() {
           </p>
         ) : (
           <div className="rounded-2xl border border-dashed border-cyan-500/25 bg-cyan-500/[0.04] p-5 mb-4 text-center">
-            <p className="text-sm text-slate-400">
+            <p className="text-sm text-ds-muted">
               Hồ sơ của bạn còn trống —{' '}
               <Link href="/profile" className="text-cyan-400 hover:underline">
                 thêm giới thiệu
@@ -252,7 +242,7 @@ export default function PublicUserProfilePage() {
 
         {/* Education */}
         {hasEducation ? (
-          <section className="rounded-2xl border border-white/10 bg-white/[0.02] p-6 mb-4">
+          <section className="rounded-2xl border border-ds-border bg-ds-surface/40 p-6 mb-4">
             <h2 className="text-xs font-mono uppercase tracking-[0.15em] text-cyan-400/90 mb-4 flex items-center gap-2">
               <GraduationCap className="h-3.5 w-3.5" aria-hidden />
               Học vấn
@@ -264,11 +254,11 @@ export default function PublicUserProfilePage() {
                   className="relative pl-4 border-l-2 border-cyan-500/30"
                 >
                   <p className="font-medium text-white">{edu.school || '—'}</p>
-                  <p className="text-sm text-slate-300 mt-0.5">
+                  <p className="text-sm text-ds-muted mt-0.5">
                     {[edu.degree, edu.field].filter(Boolean).join(' · ') || '—'}
                   </p>
                   {edu.yearEnd ? (
-                    <p className="text-xs text-slate-500 mt-1">Tốt nghiệp {edu.yearEnd}</p>
+                    <p className="text-xs text-ds-subtle mt-1">Tốt nghiệp {edu.yearEnd}</p>
                   ) : null}
                 </li>
               ))}
@@ -278,7 +268,7 @@ export default function PublicUserProfilePage() {
 
         {/* Interests */}
         {hasInterests ? (
-          <section className="rounded-2xl border border-white/10 bg-white/[0.02] p-6 mb-4">
+          <section className="rounded-2xl border border-ds-border bg-ds-surface/40 p-6 mb-4">
             <h2 className="text-xs font-mono uppercase tracking-[0.15em] text-cyan-400/90 mb-3 flex items-center gap-2">
               <Sparkles className="h-3.5 w-3.5" aria-hidden />
               Sở thích
@@ -297,11 +287,11 @@ export default function PublicUserProfilePage() {
         ) : null}
 
         {/* Tier perks */}
-        <section className="rounded-2xl border border-white/10 bg-white/[0.02] p-6 mb-4">
-          <h2 className="text-xs font-mono uppercase tracking-[0.15em] text-slate-500 mb-3">
+        <section className="rounded-2xl border border-ds-border bg-ds-surface/40 p-6 mb-4">
+          <h2 className="text-xs font-mono uppercase tracking-[0.15em] text-ds-subtle mb-3">
             Quyền lợi hạng {tier.nameVi}
           </h2>
-          <ul className="space-y-2 text-sm text-slate-300">
+          <ul className="space-y-2 text-sm text-ds-muted">
             {tier.perks.map((p) => (
               <li key={p.id} className="flex gap-2 rounded-lg border border-white/5 px-3 py-2">
                 <span className="text-cyan-400 shrink-0">✓</span>
@@ -325,7 +315,7 @@ export default function PublicUserProfilePage() {
         <div className="mt-8 flex justify-center">
           <Link
             href="/gem/tiers"
-            className="text-sm text-slate-500 hover:text-cyan-300"
+            className="text-sm text-ds-subtle hover:text-ds-text"
           >
             Xem các hạng Learner →
           </Link>

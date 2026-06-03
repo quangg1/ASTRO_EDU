@@ -64,10 +64,10 @@ export function NewsHeroSlider({
 
   return (
     <section
-      className="relative overflow-hidden hud-chamfer-lg"
+      className="relative overflow-hidden cosmo-dark-panel rounded-2xl"
       style={{
         background: '#050a14',
-        border: '1px solid rgba(126,231,255,0.2)',
+        border: '1px solid var(--color-border)',
         boxShadow: '0 24px 80px -32px rgba(6,182,212,0.2)',
       }}
       onMouseEnter={() => setPaused(true)}
@@ -77,7 +77,7 @@ export function NewsHeroSlider({
 
       {/* Dashed inner frame accent */}
       <div
-        className="pointer-events-none absolute inset-[6px] hud-chamfer-md z-0"
+        className="pointer-events-none absolute inset-[6px] cosmo-dark-panel rounded-2xl z-0"
         style={{ border: '1px dashed rgba(126,231,255,0.1)' }}
         aria-hidden
       />
@@ -89,8 +89,8 @@ export function NewsHeroSlider({
             key={`progress-${safeIndex}`}
             className="h-full"
             style={{
-              background: 'var(--hud-plasma)',
-              boxShadow: '0 0 8px var(--hud-plasma)',
+              background: 'var(--color-accent)',
+              boxShadow: '0 0 8px var(--color-accent)',
               animation: `sliderProgress ${AUTO_MS}ms linear forwards`,
             }}
           />
@@ -101,18 +101,18 @@ export function NewsHeroSlider({
       <div className="relative z-10 px-4 pt-4 pb-3 md:px-6 md:pt-5">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <p className="hud-mono hud-mono-md" style={{ color: 'var(--hud-plasma)' }}>{title.toUpperCase()}</p>
-            <p className="mt-1 text-sm" style={{ color: 'var(--hud-ink-3)' }}>{subtitle}</p>
+            <p className="hud-mono hud-mono-md" style={{ color: 'var(--color-accent)' }}>{title.toUpperCase()}</p>
+            <p className="mt-1 text-sm" style={{ color: 'var(--color-text-subtle)' }}>{subtitle}</p>
           </div>
           <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={() => setPaused((p) => !p)}
-              className="hud-chamfer-sm inline-flex h-9 items-center gap-1.5 px-3 hud-mono hud-mono-sm transition-all hover:shadow-[0_0_12px_rgba(126,231,255,0.2)]"
+              className="cosmo-dark-panel rounded-xl inline-flex h-9 items-center gap-1.5 px-3 hud-mono hud-mono-sm transition-all hover:shadow-[0_0_12px_rgba(126,231,255,0.2)]"
               style={{
                 background: 'rgba(126,231,255,0.06)',
-                border: '1px solid rgba(126,231,255,0.2)',
-                color: 'var(--hud-ink-2)',
+                border: '1px solid var(--color-border)',
+                color: 'var(--color-text-muted)',
               }}
               aria-label={paused ? 'Phát tự động' : 'Tạm dừng'}
             >
@@ -120,11 +120,11 @@ export function NewsHeroSlider({
               {paused ? 'PHÁT' : 'DỪNG'}
             </button>
             <span
-              className="hud-chamfer-sm px-2.5 py-1 hud-mono hud-mono-sm tabular-nums"
+              className="cosmo-dark-panel rounded-xl px-2.5 py-1 hud-mono hud-mono-sm tabular-nums"
               style={{
                 background: 'rgba(0,0,0,0.5)',
-                border: '1px solid rgba(126,231,255,0.15)',
-                color: 'var(--hud-ink-2)',
+                border: '1px solid var(--color-accent-soft)',
+                color: 'var(--color-text-muted)',
               }}
             >
               {safeIndex + 1} / {n}
@@ -174,9 +174,9 @@ export function NewsHeroSlider({
         <div className="absolute inset-0 z-[15] flex flex-col justify-end p-5 md:p-8 md:pb-10 md:pr-[28%]">
           <div className="max-w-2xl">
             <span
-              className="hud-chamfer-sm hud-mono hud-mono-sm inline-flex items-center gap-1.5 px-2.5 py-1"
+              className="cosmo-dark-panel rounded-xl hud-mono hud-mono-sm inline-flex items-center gap-1.5 px-2.5 py-1"
               style={{
-                background: 'var(--hud-amber)',
+                background: 'var(--color-brand-amber)',
                 color: '#1a0e00',
               }}
             >
@@ -191,8 +191,8 @@ export function NewsHeroSlider({
                 {excerpt}
               </p>
             ) : null}
-            <p className="hud-mono hud-mono-sm mt-3 flex flex-wrap items-center gap-x-2 gap-y-1" style={{ color: 'var(--hud-ink-3)' }}>
-              <span style={{ color: 'var(--hud-plasma)' }}>{current.sourceName || 'Nguồn'}</span>
+            <p className="hud-mono hud-mono-sm mt-3 flex flex-wrap items-center gap-x-2 gap-y-1" style={{ color: 'var(--color-text-subtle)' }}>
+              <span style={{ color: 'var(--color-accent)' }}>{current.sourceName || 'Nguồn'}</span>
               <span>·</span>
               <time dateTime={current.publishedAt || current.createdAt}>
                 {formatDate(current.publishedAt || current.createdAt)}
@@ -206,9 +206,9 @@ export function NewsHeroSlider({
             </p>
             <div className="mt-4">
               <span
-                className="hud-chamfer-sm hud-mono hud-mono-md inline-flex items-center px-4 py-2"
+                className="cosmo-dark-panel rounded-xl hud-mono hud-mono-md inline-flex items-center px-4 py-2"
                 style={{
-                  background: 'var(--hud-amber)',
+                  background: 'var(--color-brand-amber)',
                   color: '#1a0e00',
                   boxShadow: '0 0 20px rgba(245,165,36,0.3)',
                 }}
@@ -235,10 +235,10 @@ export function NewsHeroSlider({
         <button
           type="button"
           onClick={(e) => { e.stopPropagation(); go(-1) }}
-          className="absolute left-2 top-1/2 z-40 flex h-11 w-11 -translate-y-1/2 items-center justify-center hud-chamfer-sm text-white backdrop-blur-md transition-all hover:shadow-[0_0_12px_rgba(126,231,255,0.3)] md:left-4 md:h-12 md:w-12"
+          className="absolute left-2 top-1/2 z-40 flex h-11 w-11 -translate-y-1/2 items-center justify-center cosmo-dark-panel rounded-xl text-white backdrop-blur-md transition-all hover:shadow-[0_0_12px_rgba(126,231,255,0.3)] md:left-4 md:h-12 md:w-12"
           style={{
             background: 'rgba(0,0,0,0.6)',
-            border: '1px solid rgba(126,231,255,0.2)',
+            border: '1px solid var(--color-border)',
           }}
           aria-label="Bài trước"
         >
@@ -249,10 +249,10 @@ export function NewsHeroSlider({
         <button
           type="button"
           onClick={(e) => { e.stopPropagation(); go(1) }}
-          className="absolute right-2 top-1/2 z-40 flex h-11 w-11 -translate-y-1/2 items-center justify-center hud-chamfer-sm text-white backdrop-blur-md transition-all hover:shadow-[0_0_12px_rgba(126,231,255,0.3)] md:right-4 md:h-12 md:w-12"
+          className="absolute right-2 top-1/2 z-40 flex h-11 w-11 -translate-y-1/2 items-center justify-center cosmo-dark-panel rounded-xl text-white backdrop-blur-md transition-all hover:shadow-[0_0_12px_rgba(126,231,255,0.3)] md:right-4 md:h-12 md:w-12"
           style={{
             background: 'rgba(0,0,0,0.6)',
-            border: '1px solid rgba(126,231,255,0.2)',
+            border: '1px solid var(--color-border)',
           }}
           aria-label="Bài sau"
         >
@@ -270,8 +270,8 @@ export function NewsHeroSlider({
                 i === safeIndex ? 'w-8' : 'w-2 hover:opacity-75'
               }`}
               style={{
-                background: i === safeIndex ? 'var(--hud-plasma)' : 'rgba(255,255,255,0.3)',
-                boxShadow: i === safeIndex ? '0 0 8px var(--hud-plasma)' : 'none',
+                background: i === safeIndex ? 'var(--color-accent)' : 'rgba(255,255,255,0.3)',
+                boxShadow: i === safeIndex ? '0 0 8px var(--color-accent)' : 'none',
               }}
               aria-label={`Slide ${i + 1}`}
               aria-current={i === safeIndex ? 'true' : undefined}

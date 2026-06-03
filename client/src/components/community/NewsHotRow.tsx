@@ -36,10 +36,10 @@ export function NewsHotRow({
           <NewsCardLink
             key={p._id}
             post={p}
-            className="group relative flex w-[min(100%,280px)] shrink-0 snap-start flex-col overflow-hidden hud-chamfer-sm transition-all hover:shadow-[0_0_24px_rgba(126,231,255,0.15)]"
+            className="group relative flex w-[min(100%,280px)] shrink-0 snap-start flex-col overflow-hidden cosmo-dark-panel rounded-xl transition-all hover:shadow-[0_0_24px_var(--color-accent-soft)]"
             style={{
-              background: 'rgba(6,9,26,0.9)',
-              border: '1px solid rgba(126,231,255,0.12)',
+              background: 'var(--color-panel-solid)',
+              border: '1px solid var(--color-border)',
             }}
           >
             <CornerBrackets />
@@ -64,11 +64,11 @@ export function NewsHotRow({
               {/* View chip */}
               {p.viewCount != null && p.viewCount > 0 && (
                 <span
-                  className="absolute right-2 top-2 hud-mono hud-mono-sm px-2 py-0.5 hud-chamfer-sm backdrop-blur-sm"
+                  className="absolute right-2 top-2 hud-mono hud-mono-sm px-2 py-0.5 cosmo-dark-panel rounded-xl backdrop-blur-sm"
                   style={{
-                    background: 'rgba(6,9,26,0.75)',
+                    background: 'var(--color-panel-muted)',
                     border: '1px solid rgba(126,231,255,0.25)',
-                    color: 'var(--hud-plasma)',
+                    color: 'var(--color-accent)',
                   }}
                 >
                   👁 {p.viewCount.toLocaleString('vi-VN')}
@@ -78,16 +78,16 @@ export function NewsHotRow({
 
             {/* Body */}
             <div className="flex flex-1 flex-col p-3.5">
-              <h3 className="line-clamp-2 text-sm font-medium leading-snug text-white group-hover:text-cyan-100 transition-colors">
+              <h3 className="line-clamp-2 text-sm font-medium leading-snug text-white group-hover:text-ds-text transition-colors">
                 {p.title}
               </h3>
               {plainTextExcerpt(p.content, 72) ? (
-                <p className="mt-1.5 line-clamp-2 text-xs" style={{ color: 'var(--hud-ink-3)' }}>
+                <p className="mt-1.5 line-clamp-2 text-xs" style={{ color: 'var(--color-text-subtle)' }}>
                   {plainTextExcerpt(p.content, 72)}
                 </p>
               ) : null}
-              <p className="hud-mono hud-mono-sm mt-auto pt-2" style={{ color: 'var(--hud-ink-3)' }}>
-                <span style={{ color: 'var(--hud-plasma)' }}>{p.sourceName || 'Tổng hợp'}</span>
+              <p className="hud-mono hud-mono-sm mt-auto pt-2" style={{ color: 'var(--color-text-subtle)' }}>
+                <span style={{ color: 'var(--color-accent)' }}>{p.sourceName || 'Tổng hợp'}</span>
                 {' · '}
                 {formatDate(p.publishedAt || p.createdAt)}
               </p>

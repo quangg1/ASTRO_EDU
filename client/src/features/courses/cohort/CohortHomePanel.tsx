@@ -22,8 +22,8 @@ export function CohortHomePanel({
   return (
     <div className="space-y-5">
       <section className="rounded-2xl border border-ds-border/80 bg-gradient-to-br from-violet-950/40 via-ds-overlay to-ds-overlay overflow-hidden">
-        <div className="px-4 py-3 border-b border-white/10 flex items-center gap-2">
-          <Megaphone className="w-4 h-4 text-violet-300" aria-hidden />
+        <div className="px-4 py-3 border-b border-ds-border flex items-center gap-2">
+          <Megaphone className="w-4 h-4 text-ds-accent" aria-hidden />
           <h2 className="text-sm font-semibold text-white">Thông báo lớp</h2>
         </div>
         <div className="p-4 space-y-3">
@@ -36,7 +36,7 @@ export function CohortHomePanel({
                 className={`rounded-xl border px-4 py-3 ${
                   a.pinned
                     ? 'border-amber-500/35 bg-amber-950/15'
-                    : 'border-ds-border/60 bg-black/20'
+                    : 'border-ds-border/60 bg-ds-surface/50'
                 }`}
               >
                 <div className="flex items-start gap-2">
@@ -76,10 +76,10 @@ export function CohortHomePanel({
                 const href = lesson ? lessonHref(courseSlug, cohortId, lesson) : null
                 return (
                   <li key={`${u.kind}-${u.lessonSlug}-${u.at}`} className="text-xs">
-                    <span className="text-cyan-300/90 font-medium">{upcomingKindLabel(u.kind)}</span>
+                    <span className="text-ds-accent/90 font-medium">{upcomingKindLabel(u.kind)}</span>
                     <span className="text-ds-subtle"> · {formatSchedule(u.at)}</span>
                     {href ? (
-                      <Link href={href} className="block text-white mt-0.5 hover:text-cyan-300 truncate">
+                      <Link href={href} className="block text-white mt-0.5 hover:text-ds-text truncate">
                         {u.lessonTitle}
                       </Link>
                     ) : (
@@ -117,7 +117,7 @@ export function CohortHomePanel({
         </section>
       </div>
 
-      <section className="rounded-2xl border border-ds-border/60 bg-black/20 p-4">
+      <section className="rounded-2xl border border-ds-border/60 bg-ds-surface/50 p-4">
         <h2 className="text-xs uppercase tracking-wider text-ds-subtle mb-2">Tóm tắt chương trình</h2>
         <p className="text-sm text-ds-muted">
           {completed.size} bài đã hoàn thành · xem chi tiết trong tab <strong className="text-white/80">Chương trình</strong>

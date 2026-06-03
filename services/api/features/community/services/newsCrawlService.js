@@ -669,7 +669,7 @@ async function runNewsCrawl(options = {}) {
       }
 
       try {
-        await Post.create({
+        const createdPost = await Post.create({
           forumId: forum._id,
           authorId: 'system-crawler',
           authorName: 'Tổng hợp',
@@ -682,6 +682,13 @@ async function runNewsCrawl(options = {}) {
           isCrawled: true,
           isExternalArticle,
           rssCategories,
+        });
+        setImmediate(() => {
+          const { appendCommunityPostChunk } = require('../../agent/services/ragIndexService');
+          const postObj = createdPost.toObject ? createdPost.toObject() : createdPost;
+          appendCommunityPostChunk(postObj).catch((e) => {
+            console.warn('[ragIndex] news crawl index:', e.message);
+          });
         });
         await Forum.findByIdAndUpdate(forum._id, { $inc: { postCount: 1 } });
         created += 1;

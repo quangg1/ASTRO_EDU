@@ -62,6 +62,14 @@ const config: Config = {
         'ds-info-soft': 'var(--color-info-soft)',
         'ds-info-strong': 'var(--color-info-strong)',
 
+        'ds-card': 'var(--color-bg-card)',
+        'ds-card-elevated': 'var(--color-bg-card-elevated)',
+        'ds-on-card': 'var(--color-text-on-card)',
+        'ds-on-card-muted': 'var(--color-text-muted-on-card)',
+
+        'ds-amber': 'var(--color-brand-amber)',
+        'ds-highlight': 'var(--color-brand-highlight)',
+
         // ── Domain palettes (referenced by 3D content; not theme tokens) ──
         'earth': {
           'hadean': '#8B4513',

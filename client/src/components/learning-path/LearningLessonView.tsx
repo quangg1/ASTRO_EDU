@@ -71,7 +71,7 @@ function escapeHtmlTitle(s: string) {
 }
 
 function placeholderBody(lesson: LessonItem) {
-  return `<p class="text-slate-300 leading-relaxed">Nội dung bài học đang được biên soạn. Tiêu đề: <strong>${escapeHtmlTitle(lesson.titleVi)}</strong></p><p class="text-ds-subtle text-sm mt-4">Giáo viên có thể thêm nội dung trong Studio → Lộ trình học.</p>`
+  return `<p class="text-ds-muted leading-relaxed">Nội dung bài học đang được biên soạn. Tiêu đề: <strong>${escapeHtmlTitle(lesson.titleVi)}</strong></p><p class="text-ds-subtle text-sm mt-4">Giáo viên có thể thêm nội dung trong Studio → Lộ trình học.</p>`
 }
 
 export default function LearningLessonView({
@@ -618,7 +618,7 @@ export default function LearningLessonView({
 
   return (
     <AgentPageProvider value={agentPageValue}>
-    <div className="min-h-screen bg-ds-base relative overflow-x-hidden">
+    <div className="relative z-10 w-full overflow-x-hidden text-ds-text">
       <div
         className="pointer-events-none fixed inset-0 opacity-25"
         style={{
@@ -693,7 +693,7 @@ export default function LearningLessonView({
                     : `Giải thích giúp tôi bài "${lesson.titleVi}" — tóm tắt ý chính.`,
                 })
               }
-              className="inline-flex items-center justify-center rounded-xl border border-cyan-500/35 bg-cyan-500/10 px-4 py-2 text-sm text-cyan-100 transition-colors hover:bg-cyan-500/20"
+              className="inline-flex items-center justify-center rounded-xl border border-cyan-500/35 bg-cyan-500/10 px-4 py-2 text-sm text-ds-text transition-colors hover:bg-ds-accent/15"
             >
               Hỏi CosmoLearn AI
             </button>
@@ -785,8 +785,8 @@ export default function LearningLessonView({
                           }}
                           className={`w-full text-left rounded-lg px-3 py-2.5 text-sm transition-colors ${
                             parentActive
-                              ? 'border border-ds-accent-strong bg-ds-accent-soft text-cyan-100 shadow-[inset_2px_0_0_0_rgba(34,211,238,0.9)]'
-                              : 'border border-transparent text-slate-300 hover:text-slate-100 hover:bg-white/5'
+                              ? 'border border-ds-accent-strong bg-ds-accent-soft text-ds-text shadow-[inset_2px_0_0_0_rgba(34,211,238,0.9)]'
+                              : 'border border-transparent text-ds-muted hover:text-slate-100 hover:bg-white/5'
                           }`}
                         >
                           {group.parent.title}
@@ -804,7 +804,7 @@ export default function LearningLessonView({
                                 className={`w-full text-left rounded-md px-2.5 py-1.5 text-xs transition-colors ${
                                   activeSectionId === child.id
                                     ? 'text-cyan-200 bg-ds-accent-soft border border-ds-accent-strong'
-                                    : 'text-ds-subtle hover:text-slate-300 hover:bg-white/5 border border-transparent'
+                                    : 'text-ds-subtle hover:text-ds-muted hover:bg-white/5 border border-transparent'
                                 }`}
                               >
                                 {child.title}
@@ -853,7 +853,7 @@ export default function LearningLessonView({
             <p className="text-cyan-200 font-medium">
               {(conceptMap.get(tooltip.id)?.title || tooltip.id)} ({tooltip.id})
             </p>
-            <p className="text-slate-300 mt-0.5">
+            <p className="text-ds-muted mt-0.5">
               {conceptMap.get(tooltip.id)?.short_description || conceptMap.get(tooltip.id)?.explanation}
             </p>
           </div>
@@ -874,7 +874,7 @@ export default function LearningLessonView({
 
         {linkedConcepts.length > 0 && (
           <aside className="mb-8 rounded-2xl border border-ds-accent-strong bg-ds-overlay p-4">
-            <h3 className="text-sm font-semibold text-cyan-100 mb-2">Khái niệm trong bài</h3>
+            <h3 className="text-sm font-semibold text-ds-text mb-2">Khái niệm trong bài</h3>
             <div className="flex flex-wrap gap-2">
               {linkedConcepts.map((c) => (
                 <button
@@ -894,8 +894,8 @@ export default function LearningLessonView({
                   }}
                   className={`rounded-full px-2.5 py-1 text-xs border transition-colors ${
                     activeConceptId === c.id
-                      ? 'border-ds-accent-strong bg-ds-accent-strong text-cyan-100'
-                      : 'border-ds-border-strong bg-white/5 text-slate-300 hover:border-ds-accent-strong'
+                      ? 'border-ds-accent-strong bg-ds-accent-strong text-ds-text'
+                      : 'border-ds-border-strong bg-white/5 text-ds-muted hover:border-ds-accent-strong'
                   }`}
                 >
                   {c.id}
@@ -938,7 +938,7 @@ export default function LearningLessonView({
           {prev ? (
             <Link
               href={`/tutorial/${prev.moduleId}/${prev.nodeId}/${encodeURIComponent(prev.lesson.id)}`}
-              className="group flex-1 rounded-xl border border-ds-border bg-white/[0.02] px-4 py-3 hover:border-ds-border-strong hover:bg-white/[0.04] transition-all"
+              className="group flex-1 rounded-xl border border-ds-border bg-ds-surface/40 px-4 py-3 hover:border-ds-border-strong hover:bg-ds-surface/50 transition-all"
             >
               <span className="text-[10px] uppercase tracking-wider text-ds-subtle flex items-center gap-1">
                 <ChevronLeft className="w-3.5 h-3.5" /> Bài trước
@@ -975,14 +975,14 @@ export default function LearningLessonView({
               <span className="text-[10px] uppercase tracking-wider text-cyan-500/80 flex items-center justify-end gap-1">
                 Bài tiếp <ChevronRight className="w-3.5 h-3.5" />
               </span>
-              <p className="text-sm font-medium text-cyan-100 group-hover:text-white mt-1 line-clamp-2">
+              <p className="text-sm font-medium text-ds-text group-hover:text-white mt-1 line-clamp-2">
                 {next.lesson.titleVi}
               </p>
             </Link>
           ) : (
             <Link
               href="/tutorial"
-              className="flex-1 rounded-xl border border-ds-border bg-white/[0.02] px-4 py-3 text-right hover:bg-white/[0.05] transition-all"
+              className="flex-1 rounded-xl border border-ds-border bg-ds-surface/40 px-4 py-3 text-right hover:bg-white/[0.05] transition-all"
             >
               <span className="text-[10px] uppercase tracking-wider text-ds-subtle">Hết lộ trình</span>
               <p className="text-sm font-medium text-ds-accent mt-1">Về tổng quan →</p>
@@ -1018,22 +1018,22 @@ export default function LearningLessonView({
               }}
             />
             <div className="flex items-start justify-between gap-3">
-              <h3 className="text-base font-semibold text-cyan-100">
+              <h3 className="text-base font-semibold text-ds-text">
                 {activeConcept.title} ({activeConcept.id})
               </h3>
               <button
                 type="button"
                 onClick={() => setActiveConceptId(null)}
-                className="text-xs rounded border border-ds-border-strong px-2 py-1 text-slate-300 hover:bg-white/10"
+                className="text-xs rounded border border-ds-border-strong px-2 py-1 text-ds-muted hover:bg-white/10"
               >
                 Đóng
               </button>
             </div>
-            <p className="text-sm text-slate-300 mt-2">{activeConcept.explanation}</p>
+            <p className="text-sm text-ds-muted mt-2">{activeConcept.explanation}</p>
             {activeConcept.examples?.length ? (
               <ul className="mt-3 list-disc pl-5 space-y-1">
                 {activeConcept.examples.map((ex, i) => (
-                  <li key={`${activeConcept.id}-detail-ex-${i}`} className="text-sm text-slate-300">
+                  <li key={`${activeConcept.id}-detail-ex-${i}`} className="text-sm text-ds-muted">
                     {ex}
                   </li>
                 ))}
@@ -1106,7 +1106,7 @@ export default function LearningLessonView({
                         <Link
                           href={p.lessonHref}
                           onClick={() => setActiveConceptId(null)}
-                          className="ml-3 inline-block text-ds-accent hover:text-cyan-100 underline underline-offset-2"
+                          className="ml-3 inline-block text-ds-accent hover:text-ds-text underline underline-offset-2"
                         >
                           Học trước: {p.lessonTitle}
                         </Link>

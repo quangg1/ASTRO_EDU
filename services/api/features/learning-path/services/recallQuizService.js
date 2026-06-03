@@ -4,6 +4,7 @@ const { collectLpLessons } = require('../lib/collectLpLessons');
 const { normalizeQuizList } = require('../../../shared/quizQuestion');
 const { sanitizeQuizQuestionForDelivery } = require('../../courses/services/courseContentRedact');
 const { gradeAnswers } = require('../../courses/services/quizExamService');
+const { recordRecallQuizSubmit } = require('../../learning-state/services/learningStateEngine');
 
 let recallGatedLessonIdsCache = null;
 let recallGatedCacheAt = 0;
@@ -125,25 +126,7 @@ async function submitRecallQuiz(userId, lessonId, answers) {
   const graded = gradeAnswers(questions, normalizedAnswers);
   const passed = graded.total > 0 && graded.correct === graded.total;
 
-  if (passed) {
-    const doc = await UserProgress.findOne({ userId }).lean();
-    const mastered = new Set(doc?.learningPathMasteredLessonIds || []);
-    const lid = String(hit.lesson.id).trim();
-    mastered.add(lid);
-    const completed = new Set(doc?.learningPathCompletedLessonIds || []);
-    completed.add(lid);
-    await UserProgress.findOneAndUpdate(
-      { userId },
-      {
-        $set: {
-          learningPathMasteredLessonIds: [...mastered],
-          learningPathCompletedLessonIds: [...completed],
-          learningPathLastLessonId: lid,
-        },
-      },
-      { upsert: true, new: true, setDefaultsOnInsert: true },
-    );
-  }
+  await recordRecallQuizSubmit(userId, String(hit.lesson.id).trim(), graded);
 
   return {
     passed,

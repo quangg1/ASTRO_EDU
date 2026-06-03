@@ -61,7 +61,7 @@ export function SavedItemsPanel() {
             style={{
               borderColor: filter === key ? 'rgba(126,231,255,0.45)' : 'rgba(255,255,255,0.1)',
               background: filter === key ? 'rgba(126,231,255,0.1)' : 'transparent',
-              color: filter === key ? '#7ee7ff' : '#9aa8c4',
+              color: filter === key ? 'var(--color-accent)' : 'var(--color-text-muted)',
             }}
           >
             {label}

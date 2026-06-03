@@ -256,7 +256,7 @@ Mount: `app.use('/api/agent', agentRouter)` trong `services/api/server.js`.
 | AI bridge | `services/aiClient.js` | `mapContextForAi` + `callAiChat` |
 | Tools | `services/toolAuthorizers/executeTool.js` | Authorize + `clientAction` |
 | Coach | `services/coachPolicyService.js` | Nudge + quiz outcome |
-| Struggle | `services/struggleDetector.js` | Weak lesson signals |
+| Struggle | `learning-state/learningStateEngine` (`getWeakLessons`) | Weak lesson signals |
 | Spaced review | `services/spacedReviewService.js` | SM-2 lite intervals |
 | Sessions | `services/sessionHistoryService.js` | Mongo `AgentSession` |
 
@@ -463,6 +463,8 @@ Server-built `LearnerSnapshot` cho dashboard chips / coach — không bắt clie
 | `highlight_concept_in_map` | lp_free+ | `/map` + highlight concept |
 | `show_related_lessons` | lp_free+ | Panel tối đa 3 bài liên quan |
 | `start_recall_quiz` | lp_free+ | Event mở recall quiz |
+| `generate_concept_quiz` | lp_free+ | Quiz LLM theo concept; overlay + `POST /agent/concept-quiz/submit`; quota **heavy op** (tách tin nhắn) |
+| `search_learning_content` | guest+ | RAG LP + cộng đồng; có thể auto-bootstrap mỗi tin nhắn |
 | `suggest_community_thread` | lp_free+ | Tối đa 3 thread liên quan |
 | `open_courses` / `open_dashboard` / `open_my_courses` | lp_free+ | Điều hướng |
 
@@ -643,18 +645,31 @@ flowchart LR
 
 ---
 
-## 14. Rate limit & quota
+## 14. Rate limit & quota (đơn vị / lượt gọi)
 
-Định nghĩa: `services/api/features/agent/services/rateLimit.js` (in-memory bucket — **reset khi restart process**).
+Định nghĩa: `services/api/features/agent/services/agentQuota.js` (Redis `INCRBY` hoặc memory — **reset khi restart process** nếu không có Redis).
 
-| Tier | Giới hạn |
-|------|----------|
-| `guest` | 2 tin / `guestSessionId` (lifetime bucket key) |
-| `lp_free`, `course_trial`, `trial_expired` | 40 / giờ / user |
-| `course_enrolled` | 60 / giờ |
-| `teacher` | 120 / giờ |
+Ngân sách **đơn vị quota** / giờ (không còn “1 tin = 1 quota”):
 
-**Agent không trừ gem** — chỉ rate limit message.
+| Tier | Budget / giờ |
+|------|----------------|
+| `guest` | 6 đơn vị / `guestSessionId` (lifetime) |
+| `lp_free`, `course_trial`, `trial_expired` | 40 |
+| `course_enrolled` | 60 |
+| `teacher` | 120 |
+
+**Chi phí mỗi thao tác** (`QUOTA_COST`):
+
+| Thao tác | Đơn vị |
+|----------|--------|
+| Mỗi HTTP `/message` | 1 (`user_message`) |
+| Mỗi lần gọi LLM (ReAct + synthesize) | 1 (`llm_call`) |
+| `search_learning_content` (kể cả auto-bootstrap) | 2 (`rag_search`) |
+| `generate_concept_quiz` | 6 (`concept_quiz`) |
+
+Ví dụ một tin nặng: 1 + 2 (auto-search) + 1 (synth) + 3×1 (ReAct) + 6 (quiz) ≈ **13 đơn vị** — vượt vài tin “nhẹ” chỉ tốn 2–3 đơn vị.
+
+**Agent không trừ gem.** Trong một tin: `heavyOpsThisTurn` vẫn giới hạn **1** quiz concept; ReAct tối đa `AGENT_REACT_MAX_STEPS`; tin dài bị cắt `AGENT_MAX_USER_MESSAGE_CHARS`.
 
 ---
 
@@ -704,20 +719,70 @@ flowchart LR
 
 ## 18. Hạn chế & nợ kỹ thuật (hiện tại)
 
-| # | Mô tả |
-|---|--------|
-| 1 | **Hai luồng chat** — production vs guest `/api/chat`; behavior không đồng nhất |
-| 2 | **Stream giả lập** — Node chunk full LLM response thành SSE tokens, chưa stream token-native từ Groq qua pipeline |
-| 3 | **Rate limit in-memory** — không shared giữa nhiều instance API |
-| 4 | **Tool định nghĩa đôi** — Python + JSON; cần kỷ luật sync |
-| 5 | **Context bridge Zustand** — bắt buộc vì widget ở layout root |
-| 6 | **Admin agent analytics** — API có, UI admin tab có thể chưa gắn |
-| 7 | **RAG invalidation** — chủ yếu manual rebuild; event-driven chưa đầy đủ |
-| 8 | **Episodic memory / multi-day planner** — chưa có (P2+) |
+| # | Trạng thái | Mô tả |
+|---|------------|--------|
+| 1 | **Mở** | **Hai luồng chat** — production vs guest `/api/chat`; behavior không đồng nhất |
+| 2 | **Đã cải thiện** | **Stream thật** — Python `/chat/stream` → Node `callAiChatStream` → SSE token; fallback vẫn chunk giả. Metric: `t_llm_ttft_ms` (sau RAG), `t_rag_ms`, `stream_proxy` |
+| 3 | **Đã cải thiện** | **Rate limit** — `REDIS_URL` → Redis INCR; không có URL → in-memory (dev). Production multi-instance: **bắt buộc** set `REDIS_URL` |
+| 4 | **Đã cải thiện** | **ReAct loop** — `runReactAgentTurn` tối đa `AGENT_REACT_MAX_STEPS` (mặc định 3): tool → observe → LLM lại; synthesis stream khi hết bước |
+| 5 | **Đã cải thiện** | **Token budget** — `trimMessagesForBudget` + `context_budget` trong `agent_state` (mặc định 12k token / 40 tin) |
+| 6 | **Đã cải thiện** | **Feedback** — `POST /api/agent/feedback` (±1); thumbs trên widget; cộng `proceduralMemory` |
+| 7 | **Đã cải thiện** | **LLM observability** — `prompt_tokens`, `completion_tokens`, `react_steps`, `tools_ok` / `tools_fail`, `history_dropped` trong `agent_metrics` |
+| 8 | **Một phần** | **Procedural memory** — `tutoring_style` (`balanced` / `hint_first` / `explain_first`); **tutoring engagement** prompt: `generate_analogy` (interests), `ask_understanding_check`, `suggest_curiosity_hook` (`server.py` `TUTORING_ENGAGEMENT_VI`); chưa tự học từ feedback |
+| 9 | **Một phần** | **RAG** — vẫn `rag_index.json` in-memory; **LP save** gọi `scheduleReindexAllLessons`; chưa pgvector |
+| 10 | **Mở** | **Tool schema drift** — Python + JSON; cần codegen/CI |
+| 11 | **Mở** | **Context bridge Zustand** — widget ở layout root |
+| 12 | **Mở** | **Output safety filter** — chưa Llama Guard / classifier sau LLM |
+| 13 | **Mở** | **Episodic memory nâng cao** — misconceptions list; chưa embedding cross-session |
 
 ---
 
-## 19. Quan hệ với tài liệu khác
+## 19. Learning State Engine (SSOT trạng thái học)
+
+**Module:** `services/api/features/learning-state/`  
+**API:** `GET/POST /api/learning-state/*`
+
+### Vai trò
+
+Một nguồn sự thật cho mastery, struggle, misconceptions, spaced review, depth suggestion — thay cho việc rải logic trên `LearnerAgentProfile` (misconceptions/spaced/quiz streak), `struggleDetector` aggregate thô, và `coachPolicyService.recordQuizOutcome` ghi trực tiếp profile.
+
+`LearnerAgentProfile` giữ: coach session (dismiss, cooldown), `proceduralMemory` (tutoring style, thumbs), A/B copy.
+
+### Models
+
+| Collection | Key | Nội dung |
+|------------|-----|----------|
+| `LearningStateEvent` | `eventId` + `userId` | Event log idempotent |
+| `LessonLearningState` | `userId` + `lessonId` | mastery, confidence, quizFailStreak, signals, spacedReview |
+| `ConceptLearningState` | `userId` + `conceptId` | mastery, misconceptions[], recommendedDifficulty |
+
+### Event types
+
+`recall_quiz_submitted`, `concept_quiz_submitted`, `lesson_dwell`, `lesson_revisit`, `lesson_mastered`, `spaced_review_completed`, `depth_preference_set`, …
+
+### Luồng ghi
+
+- Recall submit → `recordRecallQuizSubmit` → lesson state + `UserProgress` mastery sync
+- Concept quiz submit → `recordConceptQuizSubmit`
+- `POST /agent/quiz-outcome` → `recordQuizOutcome` (engine)
+- LP `events/batch` ingest → `bridgeLearningPathEvents` (dwell, revisit, mastered)
+
+### Đọc (agent / UI)
+
+- `getLearnerSnapshot` — widget Cosmo
+- `getAgentLearningContext` — `contextBuilder` / `aiClient` (`lesson_learning_state`, `concept_learning_states`)
+- `spacedReviewService`, `depthAdaptationService` — delegate sang engine (`struggleDetector.js` đã gỡ)
+
+### Client & Explore
+
+- `postExploreLearningStateEvent` — focus, discovery, contextual quiz → engine.
+- LP `events/batch` bridge map `scene_*` → cùng event types (fallback nếu client không POST).
+- **visited3D** (client): chỉ khi quiz Explore **đúng hết**; focus không còn auto-mark visited.
+- **mastery LP** (server): recall pass = 100; Explore quiz pass = tối đa ~55 lesson / concept qua engine (không thay recall gate).
+
+---
+
+## 20. Quan hệ với tài liệu khác
 
 | Tài liệu | Dùng khi nào |
 |----------|--------------|
@@ -729,12 +794,14 @@ flowchart LR
 
 ---
 
-## 20. Audit changelog
+## 21. Audit changelog
 
 | Ngày | Nội dung |
 |------|----------|
 | 2026-05-30 | Thêm mục «Đọc nhanh» + «Từ điển thuật ngữ»; làm rõ nguyên tắc thiết kế |
 | 2026-05-30 | Tạo architecture doc đầu tiên — đồng bộ codebase: Option B pipeline, nito Live2D, session history API, tool schema v2, rate limits |
+| 2026-06-01 | Stream thật, ReAct loop, token budget, Redis rate limit, feedback, LLM metrics, procedural memory sơ |
+| 2026-06-02 | Learning State Engine v1 — SSOT mastery/misconceptions/spaced; quota theo đơn vị; `generate_concept_quiz` |
 
 ---
 

@@ -1,67 +1,111 @@
 /**
- * Layer 2 — Semantic tokens.
- *
- * Components reference these by role (--color-accent, --color-bg-surface),
- * never the raw color value. Surfaces in `surfaces/*.css` override these per
- * context (Edu / Studio / Scene / etc.) without touching component code.
- *
- * Defaults below are tuned to match the dominant Edu/Course look already in
- * the codebase, so a primitive consuming these tokens renders identically
- * to the legacy hand-rolled markup it replaces.
+ * Cosmo Learn v2 — semantic palette (SSOT toàn app).
+ * Space-premium, HUD, cosmic landing và surfaces đều alias về đây.
  */
 
 :root {
-  /* ── Backgrounds ──────────────────────────────────────────────────────── */
-  --color-bg-base: #02040a;            /* page background */
-  --color-bg-surface: #0a0f17;         /* cards, sidebars, inline panels */
-  --color-bg-elevated: #0f1623;        /* dialogs, popovers, raised cards */
-  --color-bg-overlay: rgba(7, 13, 20, 0.92); /* glass / 3D overlay panels */
+  /* ── Backgrounds (dark, soft black — không #000 thuần) ───────────────── */
+  --color-bg-base: #0a0b10;
+  --color-bg-surface: #12141c;
+  --color-bg-elevated: #1a1d28;
+  --color-bg-overlay: rgba(10, 11, 16, 0.92);
 
-  /* ── Borders ──────────────────────────────────────────────────────────── */
-  --color-border: rgba(255, 255, 255, 0.10);
-  --color-border-strong: rgba(255, 255, 255, 0.20);
+  /** Thay rgba(6,9,26,…) HUD cũ — panel inline style */
+  --color-panel-solid: var(--color-bg-surface);
+  --color-panel-glass: color-mix(in srgb, var(--color-bg-surface) 92%, transparent);
+  --color-panel-muted: color-mix(in srgb, var(--color-bg-surface) 72%, transparent);
 
-  /* ── Text ─────────────────────────────────────────────────────────────── */
-  --color-text-primary: #f1f5f9;       /* slate-100 */
-  --color-text-muted: #94a3b8;         /* slate-400 */
-  --color-text-subtle: #64748b;        /* slate-500 */
+  /** Light cards trên nền tối (LP hub, marketing modules) */
+  --color-bg-card: #eeedf0;
+  --color-bg-card-elevated: #f6f5f8;
+  --color-bg-card-border: rgba(28, 29, 36, 0.08);
+  --color-shadow-card: 0 20px 50px rgba(0, 0, 0, 0.45);
 
-  /* ── Accent (default = Edu/Course cyan; surfaces override) ────────────── */
-  --color-accent: #22d3ee;                          /* cyan-400 */
-  --color-accent-soft: rgba(34, 211, 238, 0.10);    /* tint backgrounds */
-  --color-accent-strong: rgba(34, 211, 238, 0.30);  /* hover/active borders */
-  --color-accent-fg: #042e36;                       /* on-accent text */
+  /* ── Borders ─────────────────────────────────────────────────────────── */
+  --color-border: rgba(255, 255, 255, 0.1);
+  --color-border-strong: rgba(255, 255, 255, 0.2);
 
-  /* ── Roles ────────────────────────────────────────────────────────────── */
+  /* ── Text (dark UI) ──────────────────────────────────────────────────── */
+  --color-text-primary: #f2f4f8;
+  --color-text-muted: rgba(242, 244, 248, 0.55);
+  --color-text-subtle: rgba(242, 244, 248, 0.35);
+
+  /* ── Text (light cards) ──────────────────────────────────────────────── */
+  --color-text-on-card: #1c1d24;
+  --color-text-muted-on-card: #5e6270;
+
+  /* ── Brand accents ───────────────────────────────────────────────────── */
+  /** Primary interactive — links, focus, Edu, Explore HUD */
+  --color-accent: #7ee7ff;
+  --color-accent-soft: rgba(126, 231, 255, 0.12);
+  --color-accent-strong: rgba(126, 231, 255, 0.35);
+  --color-accent-fg: #042028;
+
+  /** Secondary — emphasis trong heading, gem, warmth */
+  --color-brand-amber: #f5a524;
+  --color-brand-amber-soft: rgba(245, 165, 36, 0.14);
+  --color-brand-amber-fg: #1a0e00;
+
+  /** Highlight — marketing hero, featured ring (dùng tiết kiệm) */
+  --color-brand-highlight: #c41e3a;
+  --color-brand-highlight-soft: rgba(196, 30, 58, 0.28);
+
+  --color-brand-plasma-2: #4dd2ff;
+  --color-brand-magenta: #ff5cd4;
+
+  /* ── Roles ───────────────────────────────────────────────────────────── */
   --color-success: #10b981;
-  --color-success-soft: rgba(16, 185, 129, 0.10);
-  --color-success-strong: rgba(16, 185, 129, 0.30);
+  --color-success-soft: rgba(16, 185, 129, 0.12);
+  --color-success-strong: rgba(16, 185, 129, 0.32);
 
-  --color-warning: #f59e0b;
-  --color-warning-soft: rgba(245, 158, 11, 0.10);
-  --color-warning-strong: rgba(245, 158, 11, 0.30);
+  --color-warning: #f5a524;
+  --color-warning-soft: rgba(245, 165, 36, 0.12);
+  --color-warning-strong: rgba(245, 165, 36, 0.32);
 
   --color-danger: #ef4444;
-  --color-danger-soft: rgba(239, 68, 68, 0.10);
-  --color-danger-strong: rgba(239, 68, 68, 0.30);
+  --color-danger-soft: rgba(239, 68, 68, 0.12);
+  --color-danger-strong: rgba(239, 68, 68, 0.32);
 
-  --color-info: #22d3ee;
-  --color-info-soft: rgba(34, 211, 238, 0.10);
-  --color-info-strong: rgba(34, 211, 238, 0.30);
+  --color-info: #7ee7ff;
+  --color-info-soft: rgba(126, 231, 255, 0.12);
+  --color-info-strong: rgba(126, 231, 255, 0.32);
 
-  /* ── Radius (semantic) ────────────────────────────────────────────────── */
+  /* ── Learning-path module accents (nhận diện nhanh) ─────────────────── */
+  --color-module-intro-scale: #a78bfa;
+  --color-module-sky-motion: #38bdf8;
+  --color-module-light-observation: #f5a524;
+  --color-module-solar-system: #fb923c;
+  --color-module-stars-evolution: #f472b6;
+  --color-module-universe-cosmology: #818cf8;
+
+  /* ── Radius / density / motion ───────────────────────────────────────── */
   --radius-card: 16px;
   --radius-control: 12px;
   --radius-chip: 9999px;
 
-  /* ── Density (per surface; primitives read these for padding/gap) ─────── */
   --density-pad-x: 14px;
   --density-pad-y: 8px;
   --density-content: 24px;
   --density-gap: 16px;
 
-  /* ── Motion ───────────────────────────────────────────────────────────── */
   --motion-fast: 120ms;
   --motion-base: 200ms;
   --motion-easing: cubic-bezier(0.22, 1, 0.36, 1);
+
+  /* ── Aliases Space-premium (legacy class .space-premium) ───────────────── */
+  --sp-bg: var(--color-bg-base);
+  --sp-ink: var(--color-text-primary);
+  --sp-ink-muted: var(--color-text-muted);
+  --sp-ink-dim: var(--color-text-subtle);
+  --sp-accent: var(--color-brand-highlight);
+  --sp-accent-soft: var(--color-brand-highlight-soft);
+  --sp-card: var(--color-bg-card);
+  --sp-card-elevated: var(--color-bg-card-elevated);
+  --sp-card-ink: var(--color-text-on-card);
+  --sp-card-muted: var(--color-text-muted-on-card);
+  --sp-card-border: var(--color-bg-card-border);
+  --sp-card-shadow: var(--color-shadow-card);
+  --sp-divider: var(--color-border);
+  --sp-font-display: var(--font-heading);
+  --sp-font-mono: var(--font-mono);
 }

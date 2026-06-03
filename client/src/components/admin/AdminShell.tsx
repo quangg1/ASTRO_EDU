@@ -31,10 +31,10 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   const navItems = NAV.filter((item) => user && hasAdminScope(user, item.scope))
 
   return (
-    <div className="min-h-screen bg-black pt-16">
+    <div className="min-h-screen bg-ds-base text-ds-text pt-16">
       <div className="max-w-7xl mx-auto px-4 pb-12 flex flex-col lg:flex-row gap-6">
         <aside className="lg:w-52 shrink-0">
-          <nav className="rounded-2xl border border-white/10 bg-[#0a0f17] p-2 sticky top-20">
+          <nav className="rounded-2xl border border-white/10 bg-ds-base p-2 sticky top-20">
             <p className="px-3 py-2 text-[10px] uppercase tracking-wider text-gray-500">Quản trị</p>
             {user && canAccessAdmin(user) && !navItems.length ? (
               <p className="px-3 py-2 text-xs text-amber-300/90">Tài khoản chưa được gán phạm vi quản trị.</p>
@@ -80,11 +80,11 @@ export function AdminGate({
   deniedMessage?: string
 }) {
   if (!checked) {
-    return <div className="min-h-screen bg-black pt-20 px-4 text-gray-400">Đang kiểm tra phiên đăng nhập...</div>
+    return <div className="min-h-screen bg-ds-base text-ds-text pt-20 px-4 text-gray-400">Đang kiểm tra phiên đăng nhập...</div>
   }
   if (!allowed) {
     return (
-      <div className="min-h-screen bg-black pt-20 px-4">
+      <div className="min-h-screen bg-ds-base text-ds-text pt-20 px-4">
         <p className="text-gray-400">{deniedMessage}</p>
         <Link href="/" className="text-sm text-cyan-400 hover:underline mt-3 inline-block">
           ← Về trang chủ

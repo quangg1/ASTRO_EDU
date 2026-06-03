@@ -18,7 +18,7 @@ const chamfer = (cut = 14) => ({
   clipPath: `polygon(${cut}px 0,100% 0,100% calc(100% - ${cut}px),calc(100% - ${cut}px) 100%,0 100%,0 ${cut}px)`,
 })
 
-function Brackets({ c = '#7ee7ff', s = 12, o = 6 }: { c?: string; s?: number; o?: number }) {
+function Brackets({ c = 'var(--color-accent)', s = 12, o = 6 }: { c?: string; s?: number; o?: number }) {
   const b = (ex: React.CSSProperties): React.CSSProperties => ({
     position: 'absolute', width: s, height: s, opacity: 0.65, pointerEvents: 'none', ...ex,
   })
@@ -43,7 +43,7 @@ const PLANNED_ITEMS = [
     desc: 'Khung avatar độc quyền cho profile',
     cost: '120 GEM',
     tag: 'COSMETIC',
-    tagColor: '#7ee7ff',
+    tagColor: 'var(--color-accent)',
   },
   {
     icon: (
@@ -67,7 +67,7 @@ const PLANNED_ITEMS = [
     desc: 'Mở khoá 1 chương premium miễn phí',
     cost: '200 GEM',
     tag: 'PREMIUM',
-    tagColor: '#f5a524',
+    tagColor: 'var(--color-brand-amber)',
   },
   {
     icon: (
@@ -79,7 +79,7 @@ const PLANNED_ITEMS = [
     desc: 'Huy hiệu thứ hạng đặc biệt trên diễn đàn',
     cost: '80 GEM',
     tag: 'COSMETIC',
-    tagColor: '#7ee7ff',
+    tagColor: 'var(--color-accent)',
   },
 ]
 
@@ -97,16 +97,7 @@ function PlannedItemCard({
   mono: React.CSSProperties
 }) {
   return (
-    <div
-      className="relative flex items-start gap-4 p-5"
-      style={{
-        background: 'rgba(6,9,26,0.72)',
-        border: '1px solid rgba(126,231,255,0.1)',
-        opacity: 0.72,
-        cursor: 'not-allowed',
-        ...chamfer(12),
-      }}
-    >
+    <div className="cosmo-dark-panel relative flex items-start gap-4 rounded-2xl p-5 opacity-70 cursor-not-allowed">
       <span
         style={{
           position: 'absolute',
@@ -138,7 +129,7 @@ function PlannedItemCard({
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-1 flex-wrap">
-          <span style={{ fontSize: 15, fontWeight: 500, color: '#eaf6ff' }}>{item.label}</span>
+          <span style={{ fontSize: 15, fontWeight: 500, color: 'var(--color-text-primary)' }}>{item.label}</span>
           <span
             style={{
               ...mono,
@@ -170,14 +161,14 @@ function PlannedItemCard({
             Sắp ra mắt
           </span>
         </div>
-        <p style={{ fontSize: 13, color: '#9aa8c4', lineHeight: 1.5, marginBottom: 10 }}>{item.desc}</p>
+        <p style={{ fontSize: 13, color: 'var(--color-text-muted)', lineHeight: 1.5, marginBottom: 10 }}>{item.desc}</p>
         <div
           style={{
             ...mono,
             fontSize: 11,
             fontWeight: 600,
             letterSpacing: '0.06em',
-            color: '#5c6886',
+            color: 'var(--color-text-subtle)',
             display: 'inline-flex',
             alignItems: 'center',
             gap: 5,
@@ -245,55 +236,38 @@ export default function GemShopPage() {
   return (
     <div style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
 
-      {/* HUD header strip */}
-      <div
-        className="relative flex items-center justify-between px-4 py-2.5 mb-5"
-        style={{
-          background: 'rgba(10,16,36,0.6)',
-          border: '1px solid rgba(126,231,255,0.14)',
-          borderBottom: '1px solid rgba(126,231,255,0.25)',
-          ...chamfer(10),
-        }}
-      >
-        <span style={{ ...mono, fontSize: 10, letterSpacing: '0.18em', color: '#7ee7ff', textTransform: 'uppercase' }}>
+      <div className="cosmo-dark-panel relative mb-5 flex items-center justify-between rounded-xl px-4 py-2.5">
+        <span style={{ ...mono, fontSize: 10, letterSpacing: '0.18em', color: 'var(--color-accent)', textTransform: 'uppercase' }}>
           // 05 · gem · exchange
         </span>
-        <div className="flex items-center gap-5" style={{ ...mono, fontSize: 10, letterSpacing: '0.12em', color: '#5c6886' }}>
-          <span>Wallet · <span style={{ color: '#f5a524' }}>{balance} GEM</span></span>
+        <div className="flex items-center gap-5" style={{ ...mono, fontSize: 10, letterSpacing: '0.12em', color: 'var(--color-text-subtle)' }}>
+          <span>Wallet · <span style={{ color: 'var(--color-brand-amber)' }}>{balance} GEM</span></span>
           <span style={{ color: categories.length > 0 ? '#6dffb0' : '#ff5cd4' }}>
             {categories.length > 0 ? '● LIVE' : '● LAUNCHING SOON'}
           </span>
           <span className="hidden sm:inline">
-            {zoneLabel} · <span style={{ color: '#9aa8c4' }}>{localTime}</span>
+            {zoneLabel} · <span style={{ color: 'var(--color-text-muted)' }}>{localTime}</span>
           </span>
         </div>
       </div>
 
-      {/* Hero panel */}
-      <div
-        className="relative p-8 mb-4"
-        style={{
-          background: 'rgba(6,9,26,0.72)',
-          border: '1px solid rgba(126,231,255,0.13)',
-          ...chamfer(22),
-        }}
-      >
-        <Brackets c="#7ee7ff" s={16} o={10} />
+      <div className="cosmo-dark-panel relative mb-4 rounded-2xl p-8">
+        <Brackets c="var(--color-accent)" s={16} o={10} />
 
         {/* Eyebrow */}
-        <div style={{ ...mono, fontSize: 10, letterSpacing: '0.20em', color: '#5c6886', marginBottom: 18, textTransform: 'uppercase' }}>
+        <div style={{ ...mono, fontSize: 10, letterSpacing: '0.20em', color: 'var(--color-text-subtle)', marginBottom: 18, textTransform: 'uppercase' }}>
           // 01 · storefront · gem exchange
         </div>
 
         <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6">
           <div>
-            <h1 style={{ fontSize: 'clamp(28px, 4vw, 56px)', fontWeight: 500, lineHeight: 1.0, letterSpacing: '-0.03em', color: '#eaf6ff', marginBottom: 12 }}>
+            <h1 style={{ fontSize: 'clamp(28px, 4vw, 56px)', fontWeight: 500, lineHeight: 1.0, letterSpacing: '-0.03em', color: 'var(--color-text-primary)', marginBottom: 12 }}>
               Đổi Gem lấy{' '}
-              <em style={{ fontStyle: 'italic', fontWeight: 300, color: '#f5a524' }}>quyền lợi</em>
+              <em style={{ fontStyle: 'italic', fontWeight: 300, color: 'var(--color-brand-amber)' }}>quyền lợi</em>
               <br />
-              <em style={{ fontStyle: 'italic', fontWeight: 300, color: '#f5a524' }}>thực sự.</em>
+              <em style={{ fontStyle: 'italic', fontWeight: 300, color: 'var(--color-brand-amber)' }}>thực sự.</em>
             </h1>
-            <p style={{ fontSize: 15, color: '#9aa8c4', lineHeight: 1.65, maxWidth: 500 }}>
+            <p style={{ fontSize: 15, color: 'var(--color-text-muted)', lineHeight: 1.65, maxWidth: 500 }}>
               Cửa hàng Gem đang trong quá trình xây dựng. Tích lũy GEM ngay hôm nay
               để sẵn sàng đổi thưởng khi hệ thống khai trương.
             </p>
@@ -308,13 +282,13 @@ export default function GemShopPage() {
               ...chamfer(14),
             }}
           >
-            <div style={{ ...mono, fontSize: 9, letterSpacing: '0.22em', color: '#5c6886', marginBottom: 8, textTransform: 'uppercase' }}>
+            <div style={{ ...mono, fontSize: 9, letterSpacing: '0.22em', color: 'var(--color-text-subtle)', marginBottom: 8, textTransform: 'uppercase' }}>
               — Trạng thái hệ thống
             </div>
             <div style={{ ...mono, fontSize: 13, letterSpacing: '0.1em', color: categories.length > 0 ? '#6dffb0' : '#ff5cd4', fontWeight: 600 }}>
               {categories.length > 0 ? '● LIVE DECORATIONS' : '● COMING SOON'}
             </div>
-            <div style={{ ...mono, fontSize: 9, color: '#5c6886', marginTop: 6, letterSpacing: '0.1em' }}>
+            <div style={{ ...mono, fontSize: 9, color: 'var(--color-text-subtle)', marginTop: 6, letterSpacing: '0.1em' }}>
               {bootstrap?.seasonalEndsAt ? `SEASON ENDS · ${new Date(bootstrap.seasonalEndsAt).toLocaleDateString('vi-VN')}` : 'Q3 / 2025'}
             </div>
           </div>
@@ -329,12 +303,12 @@ export default function GemShopPage() {
         {/* Section header */}
         <div className="flex items-baseline justify-between mb-3">
           <div>
-            <div style={{ ...mono, fontSize: 10, letterSpacing: '0.18em', color: '#5c6886', marginBottom: 6, textTransform: 'uppercase' }}>
+            <div style={{ ...mono, fontSize: 10, letterSpacing: '0.18em', color: 'var(--color-text-subtle)', marginBottom: 6, textTransform: 'uppercase' }}>
               // 02 · catalog · planned items
             </div>
-            <h2 style={{ fontSize: 'clamp(20px, 2.5vw, 30px)', fontWeight: 500, letterSpacing: '-0.02em', color: '#eaf6ff' }}>
+            <h2 style={{ fontSize: 'clamp(20px, 2.5vw, 30px)', fontWeight: 500, letterSpacing: '-0.02em', color: 'var(--color-text-primary)' }}>
               Cửa hàng{' '}
-              <em style={{ fontStyle: 'italic', fontWeight: 300, color: '#f5a524' }}>trang trí</em>
+              <em style={{ fontStyle: 'italic', fontWeight: 300, color: 'var(--color-brand-amber)' }}>trang trí</em>
             </h2>
           </div>
           <span style={{ ...mono, fontSize: 9, letterSpacing: '0.16em', color: '#3d4f6e', textTransform: 'uppercase' }}>
@@ -342,7 +316,7 @@ export default function GemShopPage() {
           </span>
         </div>
         {loadingCatalog ? (
-          <div style={{ ...mono, fontSize: 11, color: '#5c6886', letterSpacing: '0.12em', textTransform: 'uppercase' }}>
+          <div style={{ ...mono, fontSize: 11, color: 'var(--color-text-subtle)', letterSpacing: '0.12em', textTransform: 'uppercase' }}>
             ● loading catalog...
           </div>
         ) : categories.length > 0 ? (
@@ -354,7 +328,7 @@ export default function GemShopPage() {
               email={user?.email || null}
             />
             <div className="mt-8">
-              <div style={{ ...mono, fontSize: 10, letterSpacing: '0.18em', color: '#5c6886', marginBottom: 10, textTransform: 'uppercase' }}>
+              <div style={{ ...mono, fontSize: 10, letterSpacing: '0.18em', color: 'var(--color-text-subtle)', marginBottom: 10, textTransform: 'uppercase' }}>
                 // 03 · utility · sắp ra mắt
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -376,24 +350,16 @@ export default function GemShopPage() {
         )}
       </div>
 
-      {/* Bottom CTA panel */}
-      <div
-        className="relative p-7 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5"
-        style={{
-          background: 'rgba(6,9,26,0.72)',
-          border: '1px solid rgba(126,231,255,0.13)',
-          ...chamfer(18),
-        }}
-      >
-        <Brackets c="#f5a524" s={12} o={8} />
+      <div className="cosmo-dark-panel relative flex flex-col gap-5 rounded-2xl p-7 sm:flex-row sm:items-center sm:justify-between">
+        <Brackets c="var(--color-brand-amber)" s={12} o={8} />
 
         <div>
-          <div style={{ ...mono, fontSize: 10, letterSpacing: '0.18em', color: '#5c6886', marginBottom: 8, textTransform: 'uppercase' }}>
+          <div style={{ ...mono, fontSize: 10, letterSpacing: '0.18em', color: 'var(--color-text-subtle)', marginBottom: 8, textTransform: 'uppercase' }}>
             // 03 · wallet · current balance
           </div>
-          <p style={{ fontSize: 14, color: '#9aa8c4', lineHeight: 1.6 }}>
+          <p style={{ fontSize: 14, color: 'var(--color-text-muted)', lineHeight: 1.6 }}>
             Bạn đang có{' '}
-            <span style={{ color: '#f5a524', fontWeight: 600, fontSize: 16 }}>{balance} GEM</span>
+            <span style={{ color: 'var(--color-brand-amber)', fontWeight: 600, fontSize: 16 }}>{balance} GEM</span>
             {' '}trong ví. Tiếp tục hoàn thành bài học và nhiệm vụ để tích lũy thêm.
           </p>
         </div>
@@ -404,7 +370,7 @@ export default function GemShopPage() {
             flexShrink: 0,
             display: 'inline-flex', alignItems: 'center', gap: 8,
             background: 'rgba(126,231,255,0.06)',
-            color: '#7ee7ff',
+            color: 'var(--color-accent)',
             padding: '12px 22px',
             ...mono,
             fontSize: 10,
@@ -412,10 +378,10 @@ export default function GemShopPage() {
             letterSpacing: '0.18em',
             textTransform: 'uppercase',
             textDecoration: 'none',
-            border: '1px solid rgba(126,231,255,0.22)',
-            boxShadow: '0 0 20px rgba(126,231,255,0.06)',
+            border: '1px solid var(--color-border)',
+            boxShadow: '0 0 20px var(--color-accent-soft)',
             transition: 'box-shadow 0.2s, border-color 0.2s',
-            ...chamfer(10),
+            borderRadius: 12,
           }}
         >
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

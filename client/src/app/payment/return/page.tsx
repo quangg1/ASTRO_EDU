@@ -28,7 +28,7 @@ function PaymentReturnInner() {
   const isSuccess = status === 'success'
 
   return (
-    <main className="surface-edu min-h-screen flex items-center justify-center px-4 py-16">
+    <main className="surface-edu relative z-10 flex min-h-[50vh] items-center justify-center px-4 py-16">
       <Card className="max-w-md w-full text-center space-y-4 p-ds-content">
         <div
           aria-hidden

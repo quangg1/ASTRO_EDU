@@ -7,6 +7,9 @@ export type ExploreContextualQuizResponse = {
   questions: QuizQuestion[]
   poolSize: number
   source: string
+  /** Server: user already finished contextual quiz today (VN calendar day). */
+  completedToday?: boolean
+  calendarDay?: string | null
 }
 
 export async function fetchExploreContextualQuiz(
@@ -28,6 +31,8 @@ export async function fetchExploreContextualQuiz(
     data?: ExploreContextualQuizResponse
   } | null
 
-  if (!res.ok || !data?.success || !data.data?.questions?.length) return null
+  if (!res.ok || !data?.success || !data.data) return null
+  if (data.data.completedToday) return data.data
+  if (!data.data.questions?.length) return null
   return data.data
 }

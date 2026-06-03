@@ -10,7 +10,7 @@ PUBLIC="client/public"
 
 echo "Bucket: $BUCKET"
 
-for dir in course-media models textures images videos live2d; do
+for dir in course-media models textures images videos live2d sky; do
   if [ -d "$PUBLIC/$dir" ]; then
     echo "Syncing $PUBLIC/$dir -> s3://$BUCKET/$dir ..."
     aws s3 sync "$PUBLIC/$dir" "s3://$BUCKET/$dir" --acl public-read

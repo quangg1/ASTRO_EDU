@@ -27,9 +27,6 @@ export async function fetchGemShopBootstrap(): Promise<GemShopBootstrapDTO> {
   return json.data
 }
 
-/** @deprecated Use `GemShopCatalogItem` from `@galaxies/contracts` */
-export type GemShopCatalogItemDTO = GemShopCatalogItem
-
 export async function fetchGemShopCatalogPublic(): Promise<GemShopCatalogItem[]> {
   const res = await fetch(`${API_BASE}/gems/shop/catalog`)
   const json = await readApiResponseJson<{

@@ -66,7 +66,7 @@ export function StatRow({ label, value, accent }: { label: string; value: string
       className="flex items-center justify-between gap-3 border-b border-white/[0.06] py-2.5 last:border-0"
       style={{ borderColor: `${accent}18` }}
     >
-      <span className="text-[11px] text-slate-400">{label}</span>
+      <span className="text-[11px] text-ds-muted">{label}</span>
       <span className="text-right text-[12px] font-medium tabular-nums text-slate-100">{value}</span>
     </div>
   )

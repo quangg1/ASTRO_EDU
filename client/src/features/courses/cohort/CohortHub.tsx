@@ -66,7 +66,7 @@ export function CohortHub({ courseSlug, cohortId }: { courseSlug: string; cohort
     <div className="min-h-screen bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-violet-950/25 via-transparent to-transparent">
       <div className="max-w-3xl mx-auto px-4 py-8 sm:px-6 space-y-6">
         <header className="space-y-1">
-          <Link href={`/courses/${course.slug}`} className="text-xs text-cyan-400/90 hover:text-cyan-300">
+          <Link href={`/courses/${course.slug}`} className="text-xs text-cyan-400/90 hover:text-ds-text">
             ← {course.title}
           </Link>
           <h1 className="text-2xl sm:text-3xl font-semibold text-white tracking-tight">{cohort.title}</h1>
@@ -74,7 +74,7 @@ export function CohortHub({ courseSlug, cohortId }: { courseSlug: string; cohort
         </header>
 
         <nav
-          className="flex gap-1 p-1 rounded-xl bg-black/40 border border-ds-border/80 backdrop-blur-sm"
+          className="flex gap-1 p-1 rounded-xl bg-ds-elevated/80 border border-ds-border/80 backdrop-blur-sm"
           aria-label="Các mục lớp học"
         >
           {TABS.map(({ id, label, icon: Icon }) => (

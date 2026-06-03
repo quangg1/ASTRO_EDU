@@ -49,19 +49,19 @@ export function CommunitySearchBar({
           if (onLocalSearch && e.target.value.trim().length < 2) onLocalSearch('')
         }}
         placeholder={placeholder}
-        className="flex-1 rounded-xl border border-white/15 bg-black/30 px-3 py-2.5 text-sm text-white placeholder-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/40"
+        className="cosmo-input-surface flex-1 rounded-xl px-3 py-2.5 text-sm text-ds-text placeholder:text-ds-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-accent/40"
       />
       <button
         type="submit"
         disabled={value.trim().length < 2}
-        className="rounded-xl bg-cyan-600/80 px-4 py-2.5 text-sm font-medium text-white disabled:opacity-40 hover:bg-cyan-500"
+        className="rounded-xl bg-ds-accent px-4 py-2.5 text-sm font-medium text-ds-base disabled:opacity-40 hover:opacity-90"
       >
         Tìm
       </button>
       {global && (
         <Link
           href={`/community/search?scope=${scope}`}
-          className="text-xs text-cyan-400/90 self-center hover:text-cyan-300 whitespace-nowrap"
+          className="text-xs text-cyan-400/90 self-center hover:text-ds-text whitespace-nowrap"
         >
           Tìm nâng cao
         </Link>

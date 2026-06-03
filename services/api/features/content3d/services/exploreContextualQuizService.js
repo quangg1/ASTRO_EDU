@@ -2,8 +2,11 @@ const ShowcaseCatalogBundle = require('../models/ShowcaseCatalogBundle');
 const ExploreContextualQuestionPool = require('../models/ExploreContextualQuestionPool');
 const Concept = require('../../concepts/models/Concept');
 const UserProgress = require('../../learning-path/models/UserProgress');
+const { calendarDayKeyVi } = require('../../../shared/calendarDayKey');
 const { buildExploreContextualQuizTemplate } = require('../lib/buildExploreContextualQuizTemplate');
+const { buildSkyConstellationQuizTemplate } = require('../lib/buildSkyConstellationQuizTemplate');
 const { generateExploreContextualQuizFromContext } = require('../../../lib/ai/tasks/generateExploreContextualQuiz');
+const westernBridgeBundle = require('../../../data/westernConstellationBridge.json');
 
 const GROUP_LABEL_VI = {
   planets_moons: 'Hành tinh · vệ tinh',
@@ -90,6 +93,29 @@ async function loadConceptsForEntity(item) {
   return rows.map((c) => ({ id: c.id, title: String(c.title || '').trim() }));
 }
 
+async function loadConceptsForHints(conceptHints) {
+  const hints = (conceptHints || []).map((h) => String(h || '').trim().toLowerCase()).filter(Boolean);
+  if (!hints.length) return [];
+  const rows = await Concept.find({ published: { $ne: false } })
+    .select('id title short_description explanation aliases')
+    .lean();
+  return rows
+    .filter((c) => {
+      const hay = [
+        c.id,
+        c.title,
+        c.short_description,
+        c.explanation,
+        ...(Array.isArray(c.aliases) ? c.aliases : []),
+      ]
+        .join(' ')
+        .toLowerCase();
+      return hints.some((h) => hay.includes(h));
+    })
+    .slice(0, 12)
+    .map((c) => ({ id: c.id, title: String(c.title || '').trim() }));
+}
+
 function buildAiContext(entityId, item, orbit, concepts) {
   const periodRaw = Number(
     orbit?.orbitalElements?.periodDays ?? orbit?.periodDays ?? orbit?.period ?? NaN,
@@ -105,7 +131,44 @@ function buildAiContext(entityId, item, orbit, concepts) {
   };
 }
 
+async function ensureConstellationTemplatePool(entityId) {
+  const entity = westernBridgeBundle?.entities?.[entityId];
+  if (!entity) return null;
+
+  const peerEntities = Object.entries(westernBridgeBundle.entities || {})
+    .filter(([id]) => id !== entityId)
+    .map(([, row]) => row);
+  const concepts = await loadConceptsForHints(entity.conceptHints);
+  const templateQs = buildSkyConstellationQuizTemplate({
+    entityId,
+    entity,
+    peerEntities,
+    concepts,
+    limit: TEMPLATE_SEED_LIMIT,
+  });
+  if (templateQs.length < 1) return null;
+
+  const existing = await ExploreContextualQuestionPool.findOne({ entityId }).lean();
+  const merged = mergeQuestions(existing?.questions || [], templateQs);
+  const doc = await ExploreContextualQuestionPool.findOneAndUpdate(
+    { entityId },
+    {
+      $set: {
+        questions: merged,
+        source: existing?.aiGenerationCount ? 'mixed' : 'template_seed_sky',
+        templateSeededAt: existing?.templateSeededAt || new Date(),
+      },
+    },
+    { upsert: true, new: true, setDefaultsOnInsert: true },
+  ).lean();
+  return doc;
+}
+
 async function ensureTemplatePool(entityId) {
+  if (String(entityId).startsWith('constellation-western-')) {
+    return ensureConstellationTemplatePool(entityId);
+  }
+
   const bundle = await loadShowcaseBundle();
   const { item, orbit, resolvedCatalog } = resolveCatalogEntry(bundle, entityId);
   if (!item) return null;
@@ -137,9 +200,45 @@ async function ensureTemplatePool(entityId) {
   return doc;
 }
 
+async function getExploreContextualQuizCompletedToday(userId, entityId) {
+  if (!userId || !entityId) return false;
+  const today = calendarDayKeyVi();
+  const doc = await UserProgress.findOne({ userId })
+    .select('exploreContextualQuizDayByEntity')
+    .lean();
+  const map = doc?.exploreContextualQuizDayByEntity;
+  if (!map || typeof map !== 'object') return false;
+  return String(map[entityId] || '').trim() === today;
+}
+
+async function markExploreContextualQuizDayCompleted(userId, entityId) {
+  if (!userId || !entityId) return;
+  const today = calendarDayKeyVi();
+  const doc = await UserProgress.findOne({ userId })
+    .select('exploreContextualQuizDayByEntity')
+    .lean();
+  const map =
+    doc?.exploreContextualQuizDayByEntity && typeof doc.exploreContextualQuizDayByEntity === 'object'
+      ? { ...doc.exploreContextualQuizDayByEntity }
+      : {};
+  map[entityId] = today;
+  await UserProgress.findOneAndUpdate(
+    { userId },
+    { $set: { exploreContextualQuizDayByEntity: map } },
+    { upsert: true, setDefaultsOnInsert: true },
+  );
+}
+
 async function getRecentQuestionIds(userId, entityId) {
   if (!userId) return [];
-  const doc = await UserProgress.findOne({ userId }).select('exploreQuizRecentByEntity').lean();
+  const today = calendarDayKeyVi();
+  const doc = await UserProgress.findOne({ userId })
+    .select('exploreQuizRecentByEntity exploreQuizRecentDayByEntity')
+    .lean();
+  const dayMap = doc?.exploreQuizRecentDayByEntity;
+  if (!dayMap || typeof dayMap !== 'object' || String(dayMap[entityId] || '').trim() !== today) {
+    return [];
+  }
   const map = doc?.exploreQuizRecentByEntity;
   if (!map || typeof map !== 'object') return [];
   const rows = map[entityId];
@@ -148,17 +247,32 @@ async function getRecentQuestionIds(userId, entityId) {
 
 async function recordRecentQuestionIds(userId, entityId, questionIds) {
   if (!userId || !entityId || !questionIds?.length) return;
-  const doc = await UserProgress.findOne({ userId }).select('exploreQuizRecentByEntity').lean();
+  const today = calendarDayKeyVi();
+  const doc = await UserProgress.findOne({ userId })
+    .select('exploreQuizRecentByEntity exploreQuizRecentDayByEntity')
+    .lean();
   const map =
     doc?.exploreQuizRecentByEntity && typeof doc.exploreQuizRecentByEntity === 'object'
       ? { ...doc.exploreQuizRecentByEntity }
       : {};
-  const prev = Array.isArray(map[entityId]) ? map[entityId] : [];
+  const dayMap =
+    doc?.exploreQuizRecentDayByEntity && typeof doc.exploreQuizRecentDayByEntity === 'object'
+      ? { ...doc.exploreQuizRecentDayByEntity }
+      : {};
+  const prevDay = String(dayMap[entityId] || '').trim();
+  const prev =
+    prevDay === today && Array.isArray(map[entityId]) ? map[entityId] : [];
   const next = [...questionIds, ...prev.filter((id) => !questionIds.includes(id))].slice(0, RECENT_KEEP);
   map[entityId] = next;
+  dayMap[entityId] = today;
   await UserProgress.findOneAndUpdate(
     { userId },
-    { $set: { exploreQuizRecentByEntity: map } },
+    {
+      $set: {
+        exploreQuizRecentByEntity: map,
+        exploreQuizRecentDayByEntity: dayMap,
+      },
+    },
     { upsert: true, setDefaultsOnInsert: true },
   );
 }
@@ -180,6 +294,19 @@ async function deliverExploreContextualQuiz(entityId, userId) {
     return { ok: false, status: 404, code: 'NO_QUESTIONS', error: 'Chưa có câu quiz cho thiên thể này' };
   }
 
+  const calendarDay = calendarDayKeyVi();
+  const completedToday = await getExploreContextualQuizCompletedToday(userId, id);
+  if (completedToday) {
+    return {
+      ok: true,
+      questions: [],
+      poolSize: pool.questions.length,
+      source: pool.source || 'pool',
+      completedToday: true,
+      calendarDay,
+    };
+  }
+
   const recent = await getRecentQuestionIds(userId, id);
   const questions = pickQuestions(pool.questions, recent, PICK_LIMIT);
   if (userId && questions.length) {
@@ -195,6 +322,8 @@ async function deliverExploreContextualQuiz(entityId, userId) {
     questions,
     poolSize: pool.questions.length,
     source: pool.source || 'pool',
+    completedToday: false,
+    calendarDay,
   };
 }
 
@@ -216,6 +345,21 @@ async function generateExploreContextualQuizPool(entityId, opts = {}) {
   const force = Boolean(opts.force);
   if (!id) {
     return { ok: false, status: 400, code: 'INVALID_ENTITY', error: 'Thiếu entityId' };
+  }
+
+  if (id.startsWith('constellation-western-')) {
+    await ensureConstellationTemplatePool(id);
+    const pool = await ExploreContextualQuestionPool.findOne({ entityId: id }).lean();
+    const entity = westernBridgeBundle?.entities?.[id];
+    return {
+      ok: true,
+      provider: 'template_sky',
+      added: 0,
+      poolSize: pool?.questions?.length || 0,
+      entityId: id,
+      displayName: entity?.nameVi || id,
+      note: 'Chòm sao La bàn — pool template, không gọi AI',
+    };
   }
 
   const bundle = await loadShowcaseBundle();
@@ -293,6 +437,8 @@ module.exports = {
   deliverExploreContextualQuiz,
   generateExploreContextualQuizPool,
   ensureTemplatePool,
+  markExploreContextualQuizDayCompleted,
+  getExploreContextualQuizCompletedToday,
   AI_COOLDOWN_MS,
   AI_POOL_FULL_COUNT,
 };

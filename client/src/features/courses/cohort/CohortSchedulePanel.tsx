@@ -289,7 +289,7 @@ export function CohortSchedulePanel({
                 <Button
                   type="button"
                   onClick={() => void handleSaveSchedules()}
-                  className="bg-cyan-600 text-white hover:bg-cyan-500"
+                  className="bg-cyan-600 text-white hover:opacity-90"
                   size="sm"
                 >
                   Lưu chỉnh sửa lịch

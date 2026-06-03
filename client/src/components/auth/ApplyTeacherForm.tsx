@@ -25,9 +25,9 @@ const TEACHING_LEVELS = [
 const fieldStyle: React.CSSProperties = {
   width: '100%',
   background: 'rgba(0,0,0,0.45)',
-  border: '1px solid rgba(126,231,255,0.15)',
+  border: '1px solid var(--color-accent-soft)',
   borderRadius: 2,
-  color: '#eaf6ff',
+  color: 'var(--color-text-primary)',
   padding: '10px 14px',
   fontSize: 14,
   outline: 'none',
@@ -164,7 +164,7 @@ export function ApplyTeacherForm({
 
   return (
     <div className="space-y-6">
-      <div className="flex gap-2 text-[10px] font-mono uppercase tracking-wider text-slate-500">
+      <div className="flex gap-2 text-[10px] font-mono uppercase tracking-wider text-ds-subtle">
         {['Liên hệ & nghề', 'Giới thiệu', 'Hồ sơ & CV'].map((label, i) => (
           <span
             key={label}
@@ -173,7 +173,7 @@ export function ApplyTeacherForm({
                 ? 'border-cyan-500/50 text-cyan-200 bg-cyan-500/10'
                 : step > i + 1
                   ? 'border-emerald-500/30 text-emerald-300'
-                  : 'border-white/10'
+                  : 'border-ds-border'
             }`}
           >
             {i + 1}. {label}
@@ -182,8 +182,8 @@ export function ApplyTeacherForm({
       </div>
 
       {defaultEmail ? (
-        <p className="text-xs text-slate-500 font-mono">
-          Đăng nhập bằng: <span className="text-slate-300">{defaultEmail}</span> — khi duyệt bạn dùng
+        <p className="text-xs text-ds-subtle font-mono">
+          Đăng nhập bằng: <span className="text-ds-muted">{defaultEmail}</span> — khi duyệt bạn dùng
           cùng tài khoản này, không cần mật khẩu mới.
         </p>
       ) : null}
@@ -192,11 +192,11 @@ export function ApplyTeacherForm({
 
       {step === 1 && (
         <div className="space-y-4">
-          <label className="block text-xs text-slate-400">
+          <label className="block text-xs text-ds-muted">
             Họ tên đầy đủ <span className="text-pink-400">*</span>
             <input className="mt-1 w-full" style={fieldStyle} value={fullName} onChange={(e) => setFullName(e.target.value)} />
           </label>
-          <label className="block text-xs text-slate-400">
+          <label className="block text-xs text-ds-muted">
             Số điện thoại <span className="text-pink-400">*</span>
             <input
               className="mt-1 w-full"
@@ -207,7 +207,7 @@ export function ApplyTeacherForm({
               placeholder="VD: 09xxxxxxxx"
             />
           </label>
-          <label className="block text-xs text-slate-400">
+          <label className="block text-xs text-ds-muted">
             Chức danh / mô tả ngắn <span className="text-pink-400">*</span>
             <input
               className="mt-1 w-full"
@@ -217,7 +217,7 @@ export function ApplyTeacherForm({
               placeholder="VD: Giảng viên Vật lý THPT, TS. Thiên văn học"
             />
           </label>
-          <label className="block text-xs text-slate-400">
+          <label className="block text-xs text-ds-muted">
             Thành phố / tỉnh
             <input
               className="mt-1 w-full"
@@ -232,7 +232,7 @@ export function ApplyTeacherForm({
             onChange={(sel) => setOrganization(sel.name)}
             defaultCountry="Vietnam"
           />
-          <label className="block text-xs text-slate-400">
+          <label className="block text-xs text-ds-muted">
             Vai trò tại cơ quan / trường
             <input
               className="mt-1 w-full"
@@ -242,7 +242,7 @@ export function ApplyTeacherForm({
               placeholder="VD: Giảng viên chính, Trợ giảng, Nghiên cứu viên"
             />
           </label>
-          <label className="block text-xs text-slate-400">
+          <label className="block text-xs text-ds-muted">
             Lĩnh vực / môn giảng dạy <span className="text-pink-400">*</span>
             <input
               className="mt-1 w-full"
@@ -253,7 +253,7 @@ export function ApplyTeacherForm({
             />
           </label>
           <div>
-            <p className="text-xs text-slate-400 mb-2">Cấp đang / muốn giảng dạy</p>
+            <p className="text-xs text-ds-muted mb-2">Cấp đang / muốn giảng dạy</p>
             <div className="flex flex-wrap gap-2">
               {TEACHING_LEVELS.map((level) => (
                 <button
@@ -263,7 +263,7 @@ export function ApplyTeacherForm({
                   className={`text-[11px] px-2.5 py-1 rounded-full border transition-colors ${
                     teachingLevels.includes(level)
                       ? 'border-cyan-500/50 bg-cyan-500/15 text-cyan-200'
-                      : 'border-white/10 text-slate-500 hover:border-white/20'
+                      : 'border-ds-border text-ds-subtle hover:border-white/20'
                   }`}
                 >
                   {level}
@@ -271,7 +271,7 @@ export function ApplyTeacherForm({
               ))}
             </div>
           </div>
-          <label className="block text-xs text-slate-400">
+          <label className="block text-xs text-ds-muted">
             Học vấn (bằng cao nhất) <span className="text-pink-400">*</span>
             <input
               className="mt-1 w-full"
@@ -281,7 +281,7 @@ export function ApplyTeacherForm({
               placeholder="VD: Thạc sĩ Vật lý, Tiến sĩ Thiên văn"
             />
           </label>
-          <label className="block text-xs text-slate-400">
+          <label className="block text-xs text-ds-muted">
             Số năm kinh nghiệm giảng dạy
             <input
               type="number"
@@ -294,19 +294,19 @@ export function ApplyTeacherForm({
             />
           </label>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <label className="block text-xs text-slate-400">
+            <label className="block text-xs text-ds-muted">
               Website
               <input className="mt-1 w-full" style={fieldStyle} value={website} onChange={(e) => setWebsite(e.target.value)} />
             </label>
-            <label className="block text-xs text-slate-400">
+            <label className="block text-xs text-ds-muted">
               LinkedIn
               <input className="mt-1 w-full" style={fieldStyle} value={linkedin} onChange={(e) => setLinkedin(e.target.value)} />
             </label>
           </div>
-          <label className="block text-xs text-slate-400">
+          <label className="block text-xs text-ds-muted">
             Ảnh đại diện (khuyến nghị — hiển thị trên khóa học)
             <div className="mt-2 flex items-center gap-4">
-              <div className="w-16 h-16 rounded-lg border border-white/10 overflow-hidden bg-black/40 flex items-center justify-center">
+              <div className="w-16 h-16 rounded-lg border border-ds-border overflow-hidden bg-ds-elevated/80 flex items-center justify-center">
                 {avatarUrl ? (
                   <img src={resolveMediaUrl(avatarUrl)} alt="" className="w-full h-full object-cover" />
                 ) : (
@@ -318,7 +318,7 @@ export function ApplyTeacherForm({
                 accept="image/jpeg,image/png,image/webp,image/gif"
                 disabled={uploadingAvatar}
                 onChange={(e) => void handleAvatar(e.target.files?.[0] ?? null)}
-                className="text-xs text-slate-400"
+                className="text-xs text-ds-muted"
               />
             </div>
           </label>
@@ -335,7 +335,7 @@ export function ApplyTeacherForm({
 
       {step === 2 && (
         <div className="space-y-4">
-          <label className="block text-xs text-slate-400">
+          <label className="block text-xs text-ds-muted">
             Giới thiệu &amp; lý do muốn giảng dạy <span className="text-pink-400">*</span>
             <textarea
               className="mt-1 w-full min-h-[180px]"
@@ -347,7 +347,7 @@ export function ApplyTeacherForm({
             <span className="text-[10px] text-slate-600">{bio.trim().length} / {BIO_MIN}+ ký tự</span>
           </label>
           <div className="flex gap-2">
-            <button type="button" onClick={() => setStep(1)} className="flex-1 py-2 border border-white/10 rounded-lg text-sm text-slate-400">
+            <button type="button" onClick={() => setStep(1)} className="flex-1 py-2 border border-ds-border rounded-lg text-sm text-ds-muted">
               Quay lại
             </button>
             <button
@@ -365,24 +365,24 @@ export function ApplyTeacherForm({
       {step === 3 && (
         <div className="space-y-4">
           <div>
-            <p className="text-sm text-slate-300 font-medium">
+            <p className="text-sm text-ds-muted font-medium">
               CV (PDF) <span className="text-pink-400">*</span>
             </p>
-            <p className="text-xs text-slate-500 mt-0.5">Ban quản trị xem CV trước khi duyệt.</p>
+            <p className="text-xs text-ds-subtle mt-0.5">Ban quản trị xem CV trước khi duyệt.</p>
             <input
               type="file"
               accept="application/pdf,.pdf"
               disabled={uploadingCv}
               onChange={(e) => void handleCv(e.target.files?.[0] ?? null)}
-              className="mt-2 text-sm text-slate-300"
+              className="mt-2 text-sm text-ds-muted"
             />
             {cvUrl ? (
               <p className="text-xs text-emerald-300 mt-1">Đã tải: {cvFileName || 'cv.pdf'}</p>
             ) : null}
           </div>
           <div>
-            <p className="text-sm text-slate-300 font-medium">Giấy tờ xác nhận (tuỳ chọn)</p>
-            <p className="text-xs text-slate-500 mt-0.5">
+            <p className="text-sm text-ds-muted font-medium">Giấy tờ xác nhận (tuỳ chọn)</p>
+            <p className="text-xs text-ds-subtle mt-0.5">
               Quyết định bổ nhiệm, thẻ giảng viên, hợp đồng… — PDF hoặc ảnh.
             </p>
             <input
@@ -390,14 +390,14 @@ export function ApplyTeacherForm({
               accept="application/pdf,.pdf,image/jpeg,image/png,image/webp"
               disabled={uploadingCert}
               onChange={(e) => void handleCert(e.target.files?.[0] ?? null)}
-              className="mt-2 text-sm text-slate-300"
+              className="mt-2 text-sm text-ds-muted"
             />
             {certificateUrl ? (
               <p className="text-xs text-emerald-300 mt-1">Đã tải: {certificateFileName || 'certificate'}</p>
             ) : null}
           </div>
           <div className="flex gap-2">
-            <button type="button" onClick={() => setStep(2)} className="flex-1 py-2 border border-white/10 rounded-lg text-sm text-slate-400">
+            <button type="button" onClick={() => setStep(2)} className="flex-1 py-2 border border-ds-border rounded-lg text-sm text-ds-muted">
               Quay lại
             </button>
             <button

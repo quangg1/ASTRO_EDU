@@ -4,6 +4,15 @@ import type {
   LessonHistoryFocus,
   LessonItem,
 } from '@/data/learningPathCurriculum'
+import {
+  WESTERN_CONSTELLATION_BRIDGE_MAP,
+  WESTERN_CONSTELLATION_MUSEUM_VI,
+} from '@/features/explore/data/westernConstellationBridge.generated'
+import {
+  LEGACY_CONSTELLATION_TARGET_MAP,
+  resolveWesternConstellationTargetId,
+} from '@/features/explore/lib/westernSkyCulture'
+import { buildExploreHref } from '@/features/explore/lib/exploreViewUrl'
 import { NASA_SHOWCASE_ITEMS } from './showcaseCatalogRuntime'
 
 export type ShowcaseBridgeMap = {
@@ -22,6 +31,10 @@ export const SHOWCASE_ENTITY_CONCEPT_MAP: ShowcaseBridgeMap[] = [
   { entityId: 'moon-europa', conceptHints: ['europa', 'ice', 'subsurface ocean'] },
   { entityId: 'sc-cassini', conceptHints: ['cassini', 'saturn', 'rings', 'titan'] },
 ]
+
+const WESTERN_BRIDGE_BY_ID = new Map(
+  WESTERN_CONSTELLATION_BRIDGE_MAP.map((r) => [r.entityId, r]),
+)
 
 const BRIDGE_VISITED_PREFIX = 'showcase-bridge-visited-v2'
 const LEGACY_BRIDGE_VISITED_KEY = 'showcase-bridge-visited-v1'
@@ -104,16 +117,34 @@ function safeLower(v: unknown) {
 }
 
 export function getEntityConceptMap(entityId: string): ShowcaseBridgeMap | null {
-  return SHOWCASE_ENTITY_CONCEPT_MAP.find((r) => r.entityId === entityId) ?? null
+  const direct = SHOWCASE_ENTITY_CONCEPT_MAP.find((r) => r.entityId === entityId)
+  if (direct) return direct
+  const western = WESTERN_BRIDGE_BY_ID.get(entityId)
+  if (western) return western
+  const legacy = LEGACY_CONSTELLATION_TARGET_MAP[entityId]
+  if (legacy) return WESTERN_BRIDGE_BY_ID.get(legacy) ?? null
+  return null
+}
+
+/** Gộp map tĩnh + hints từ target sky (western skyculture). */
+export function resolveConceptHintsForEntity(
+  entityId: string,
+  extraHints?: string[] | null,
+): string[] {
+  const row = getEntityConceptMap(entityId)
+  const merged = [...(row?.conceptHints ?? []), ...(extraHints ?? [])]
+    .map((h) => String(h || '').trim())
+    .filter(Boolean)
+  return [...new Set(merged)]
 }
 
 export function resolveMappedConcepts(
   concepts: LearningConcept[],
   entityId: string,
+  extraHints?: string[] | null,
 ): LearningConcept[] {
-  const row = getEntityConceptMap(entityId)
-  if (!row) return []
-  const hints = row.conceptHints.map((h) => h.toLowerCase())
+  const hints = resolveConceptHintsForEntity(entityId, extraHints).map((h) => h.toLowerCase())
+  if (!hints.length) return []
   return concepts.filter((c) => {
     const hay = [
       c.id,
@@ -177,6 +208,11 @@ export function getShowcaseMuseumLabelVi(
   const ed = String(editorialBlurbVi || '').trim()
   if (ed) return ed
   const key = String(entityId || '').trim()
+  if (WESTERN_CONSTELLATION_MUSEUM_VI[key]) return WESTERN_CONSTELLATION_MUSEUM_VI[key]
+  const legacyWest = LEGACY_CONSTELLATION_TARGET_MAP[key]
+  if (legacyWest && WESTERN_CONSTELLATION_MUSEUM_VI[legacyWest]) {
+    return WESTERN_CONSTELLATION_MUSEUM_VI[legacyWest]
+  }
   if (ENTITY_MUSEUM_LABEL_VI[key]) return ENTITY_MUSEUM_LABEL_VI[key]!
   const name = String(displayName || key || 'thiên thể').trim()
   return `Đây là “${name}” trong bản đồ khám phá 3D. Bạn có thể xoay/zoom để quan sát hình dạng và vị trí tương đối; phần liên kết bài học sẽ hiện bên dưới nếu lộ trình của bạn có nội dung liên quan.`
@@ -235,11 +271,12 @@ export function resolveAllLessonsForEntity(
   modules: LearningModule[],
   concepts: LearningConcept[],
   entityId: string,
+  extraHints?: string[] | null,
 ): Array<{ lessonId: string; title: string; href: string; source: 'scene' | 'concept' }> {
   const sceneRows = resolveSceneContextLessons(modules, entityId)
   const conceptRows = resolveMappedLessons(
     modules,
-    resolveMappedConcepts(concepts, entityId).map((c) => c.id),
+    resolveMappedConcepts(concepts, entityId, extraHints).map((c) => c.id),
   )
   const byId = new Map<string, { lessonId: string; title: string; href: string; source: 'scene' | 'concept' }>()
   for (const r of sceneRows) {
@@ -294,6 +331,10 @@ export function exploreHrefForHistory(
 function exploreHrefForShowcaseEntity(entityIdRaw: unknown): { entityId: string; href: string } | null {
   const entityId = String(entityIdRaw || '').trim()
   if (!entityId) return null
+  if (entityId.startsWith('constellation-')) {
+    const skyId = resolveWesternConstellationTargetId(entityId) ?? entityId
+    return { entityId: skyId, href: buildExploreHref({ view: 'sky', targetId: skyId }) }
+  }
   const item = NASA_SHOWCASE_ITEMS.find((i) => i.id === entityId)
   const target = item?.linkedPlanetName ? item.linkedPlanetName.toLowerCase() : undefined
   const params = new URLSearchParams()
@@ -305,6 +346,7 @@ function exploreHrefForShowcaseEntity(entityIdRaw: unknown): { entityId: string;
 
 export function guessEntityRarity(entityId: string): 'common' | 'rare' | 'epic' {
   const id = safeLower(entityId)
+  if (id.startsWith('constellation-')) return 'rare'
   if (id.includes('eris') || id.includes('sedna') || id.includes('haumea') || id.includes('makemake')) return 'epic'
   if (id.includes('comet') || id.includes('dwarf') || id.includes('spacecraft') || id.includes('charon')) return 'rare'
   return 'common'

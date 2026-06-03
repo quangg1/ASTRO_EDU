@@ -63,17 +63,17 @@ export function AuthHudPanel({ children, className = '' }: { children: ReactNode
     <div
       className={`relative flex flex-col gap-7 sm:gap-8 px-6 py-8 sm:px-10 sm:py-12 ${className}`}
       style={{
-        background: 'rgba(6,9,26,0.45)',
-        border: '1px solid rgba(126,231,255,0.22)',
+        background: 'var(--color-panel-muted)',
+        border: '1px solid var(--color-border)',
         boxShadow: 'inset 0 0 80px rgba(126,231,255,0.04)',
         clipPath:
           'polygon(22px 0, 100% 0, 100% calc(100% - 22px), calc(100% - 22px) 100%, 0 100%, 0 22px)',
       }}
     >
-      <span aria-hidden className="absolute top-2 left-2 w-[18px] h-[18px]" style={{ borderTop: '1px solid #7ee7ff', borderLeft: '1px solid #7ee7ff' }} />
-      <span aria-hidden className="absolute top-2 right-2 w-[18px] h-[18px]" style={{ borderTop: '1px solid #7ee7ff', borderRight: '1px solid #7ee7ff' }} />
-      <span aria-hidden className="absolute bottom-2 left-2 w-[18px] h-[18px]" style={{ borderBottom: '1px solid #7ee7ff', borderLeft: '1px solid #7ee7ff' }} />
-      <span aria-hidden className="absolute bottom-2 right-2 w-[18px] h-[18px]" style={{ borderBottom: '1px solid #7ee7ff', borderRight: '1px solid #7ee7ff' }} />
+      <span aria-hidden className="absolute top-2 left-2 w-[18px] h-[18px]" style={{ borderTop: '1px solid var(--color-accent)', borderLeft: '1px solid var(--color-accent)' }} />
+      <span aria-hidden className="absolute top-2 right-2 w-[18px] h-[18px]" style={{ borderTop: '1px solid var(--color-accent)', borderRight: '1px solid var(--color-accent)' }} />
+      <span aria-hidden className="absolute bottom-2 left-2 w-[18px] h-[18px]" style={{ borderBottom: '1px solid var(--color-accent)', borderLeft: '1px solid var(--color-accent)' }} />
+      <span aria-hidden className="absolute bottom-2 right-2 w-[18px] h-[18px]" style={{ borderBottom: '1px solid var(--color-accent)', borderRight: '1px solid var(--color-accent)' }} />
       {children}
     </div>
   )
@@ -82,8 +82,8 @@ export function AuthHudPanel({ children, className = '' }: { children: ReactNode
 export function AuthEyebrow({ label }: { label: string }) {
   return (
     <div className="inline-flex items-center gap-3">
-      <span aria-hidden className="block w-8 h-px bg-[#7ee7ff]/60" />
-      <span className="font-[JetBrains_Mono,monospace] text-[11px] uppercase tracking-[0.22em] text-[#5c6886]">
+      <span aria-hidden className="block w-8 h-px bg-ds-accent/60" />
+      <span className="font-[JetBrains_Mono,monospace] text-[11px] uppercase tracking-[0.22em] text-ds-subtle">
         {label}
       </span>
     </div>
@@ -93,11 +93,11 @@ export function AuthEyebrow({ label }: { label: string }) {
 export function AuthOrDivider() {
   return (
     <div className="flex items-center gap-4">
-      <div className="flex-1 h-px bg-[rgba(126,231,255,0.14)]" />
-      <span className="font-[JetBrains_Mono,monospace] text-[11px] uppercase tracking-[0.28em] text-[#5c6886]">
+      <div className="flex-1 h-px bg-[var(--color-accent-soft)]" />
+      <span className="font-[JetBrains_Mono,monospace] text-[11px] uppercase tracking-[0.28em] text-ds-subtle">
         HOẶC
       </span>
-      <div className="flex-1 h-px bg-[rgba(126,231,255,0.14)]" />
+      <div className="flex-1 h-px bg-[var(--color-accent-soft)]" />
     </div>
   )
 }
@@ -132,7 +132,7 @@ export function AuthSplitLayout({
           className="absolute inset-0 pointer-events-none"
           style={{
             background:
-              'radial-gradient(900px 600px at 85% -10%, rgba(245,165,36,0.10), transparent 60%), radial-gradient(700px 500px at 10% 30%, rgba(126,231,255,0.06), transparent 60%), #03060f',
+              'radial-gradient(900px 600px at 85% -10%, rgba(245,165,36,0.10), transparent 60%), radial-gradient(700px 500px at 10% 30%, rgba(126,231,255,0.06), transparent 60%), var(--color-bg-base)',
           }}
         />
         <AuthStarfield />
@@ -163,7 +163,7 @@ export function AuthSingleColumnLayout({ children, topRight }: { children: React
         className="absolute inset-0 pointer-events-none"
         style={{
           background:
-            'radial-gradient(900px 600px at 85% -10%, rgba(245,165,36,0.10), transparent 60%), radial-gradient(700px 500px at 10% 30%, rgba(126,231,255,0.06), transparent 60%), #03060f',
+            'radial-gradient(900px 600px at 85% -10%, rgba(245,165,36,0.10), transparent 60%), radial-gradient(700px 500px at 10% 30%, rgba(126,231,255,0.06), transparent 60%), var(--color-bg-base)',
         }}
       />
       <AuthStarfield />
@@ -186,18 +186,18 @@ export function AuthProgressBar({ step, total, label }: { step: number; total: n
   const pct = ((step + 1) / total) * 100
   return (
     <div className="mb-2">
-      <div className="flex items-center justify-between text-[11px] font-[JetBrains_Mono,monospace] uppercase tracking-[0.18em] text-[#5c6886] mb-2">
+      <div className="flex items-center justify-between text-[11px] font-[JetBrains_Mono,monospace] uppercase tracking-[0.18em] text-ds-subtle mb-2">
         <span>
           Bước {step + 1} / {total}
         </span>
-        <span className="text-[#7ee7ff]">{label}</span>
+        <span className="text-ds-accent">{label}</span>
       </div>
       <div className="h-1 rounded-full overflow-hidden" style={{ background: 'rgba(126,231,255,0.08)' }}>
         <div
           className="h-full transition-all duration-500"
           style={{
             width: `${pct}%`,
-            background: step === total - 1 ? 'linear-gradient(90deg, #7ee7ff, #f5a524)' : '#7ee7ff',
+            background: step === total - 1 ? 'linear-gradient(90deg, var(--color-accent), var(--color-brand-amber))' : 'var(--color-accent)',
           }}
         />
       </div>
@@ -250,14 +250,14 @@ export function AuthPrimaryButton({
           ? 'none'
           : isAmber
             ? '0 0 0 1px rgba(245,165,36,0.6), 0 16px 44px -10px rgba(245,165,36,0.7)'
-            : '0 0 0 1px rgba(126,231,255,0.5), 0 16px 44px -10px rgba(126,231,255,0.35)',
+            : '0 0 0 1px var(--color-accent-strong), 0 16px 44px -10px rgba(126,231,255,0.35)',
       }}
       whileTap={{ scale: disabled ? 1 : 0.98 }}
       className="relative inline-flex items-center justify-center gap-2 w-full px-7 py-[18px] mt-1 font-[Space_Grotesk,sans-serif] text-[15px] uppercase tracking-[0.16em] transition-all disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden"
       style={{
         background: isAmber
-          ? 'linear-gradient(180deg, #ffd27a, #f5a524 60%, #d8901c)'
-          : 'linear-gradient(180deg, #a8f0ff, #7ee7ff 60%, #5bc4e0)',
+          ? 'linear-gradient(180deg, #ffd27a, var(--color-brand-amber) 60%, #d8901c)'
+          : 'linear-gradient(180deg, #a8f0ff, var(--color-accent) 60%, #5bc4e0)',
         color: isAmber ? '#1a0e00' : '#031018',
         fontWeight: 600,
         boxShadow: isAmber
@@ -278,7 +278,7 @@ export function AuthPrimaryButton({
 }
 
 export const authInputClass =
-  'flex-1 bg-transparent border-0 outline-none font-[Space_Grotesk,sans-serif] text-[14px] text-[#eaf6ff] placeholder:text-[#5c6886]'
+  'flex-1 bg-transparent border-0 outline-none font-[Space_Grotesk,sans-serif] text-[14px] text-ds-text placeholder:text-ds-subtle'
 
 export function AuthTextField({
   label,
@@ -300,15 +300,15 @@ export function AuthTextField({
         {trailing}
       </div>
       <div
-        className="input-row flex items-center gap-3 px-4 h-[52px] focus-within:!border-[#7ee7ff] transition-all"
+        className="input-row flex items-center gap-3 px-4 h-[52px] focus-within:!border-ds-accent transition-all"
         style={{
-          background: 'rgba(10,16,36,0.85)',
-          border: '1px solid rgba(126,231,255,0.14)',
+          background: 'var(--color-panel-glass)',
+          border: '1px solid var(--color-border)',
           clipPath:
             'polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px)',
         }}
       >
-        <Icon className="size-[15px] text-[#5c6886] shrink-0" strokeWidth={1.6} aria-hidden />
+        <Icon className="size-[15px] text-ds-subtle shrink-0" strokeWidth={1.6} aria-hidden />
         {children}
       </div>
     </div>

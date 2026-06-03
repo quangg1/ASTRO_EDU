@@ -6,6 +6,19 @@ Service AI tập trung: bảo mật đầu vào, RAG (embedding + retrieval), h�
 
 - **Security**: Chặn câu hỏi vi phạm (blocklist), trả lời từ chối thống nhất tiếng Việt trước khi gửi tới model.
 - **RAG**: Embed câu hỏi qua embedding service (BGE-M3), tìm top-k đoạn trong index, đưa vào system prompt.
+- **RAG search API**: `POST /rag/search` — semantic search trả `{ hits: [{ text, source, score }] }` (agent tool `search_learning_content`); `source` dạng `lp/{lessonId}` hoặc `community/{postId}`.
+
+### Rebuild index đầy đủ (corpus + LP + cộng đồng)
+
+Từ root repo (cần **embedding** port 5004, **AI** 5005, **MongoDB**):
+
+```bash
+npm run dev:embedding   # terminal 1
+npm run dev:ai          # terminal 2
+npm run rag:reindex-full  # terminal 3 — vài phút tùy số bài/post
+```
+
+Chỉ corpus/seed (không LP/community): `npm run rag:build` — **ghi đè** file index, chạy `rag:reindex-full` sau đó nếu cần index project.
 - **Knowledge corpus**: Thư mục `knowledge/corpus/*.md` — nội dung mới (bài báo tóm tắt, cập nhật khoa học) được chunk + embed vào `data/rag_index.json`; có API rebuild/append và reload RAM.
 - **AI Agent (function calling)**: Với backend hỗ trợ OpenAI-style `tools` (OpenRouter hoặc LM Studio), service gửi tool `open_lesson`, `go_to_explore` (khóa học) hoặc điều hướng app (ngoài khóa). Client gửi `agent_state` (pathname, query, nhãn màn hình) để model hiểu ngữ cảnh. Tắt bằng `USE_AGENT_TOOLS=0`. Khi có ảnh đính kèm, tool tạm tắt (tránh lỗi vision / model free không hỗ trợ tool).
 - **Multimodal**: Nhận `image_base64` kèm tin nhắn; gửi tới LLM dạng `image_url` (OpenAI format, data URL base64). Cần model **VLM** (OpenRouter: `openrouter/free`, hoặc slug có vision như `…:free` / model trả phí; LM Studio: model vision local).

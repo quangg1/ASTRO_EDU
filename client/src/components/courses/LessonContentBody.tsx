@@ -41,14 +41,14 @@ export function LessonContentBody({ lesson }: { lesson: Lesson }) {
   return (
     <div className="p-6 space-y-6 w-full" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
       {lesson.coverImage && (
-        <section className="hud-chamfer-md overflow-hidden border" style={{ borderColor: 'rgba(126,231,255,0.18)', background: '#08111f' }}>
+        <section className="cosmo-dark-panel rounded-2xl overflow-hidden border" style={{ borderColor: 'var(--color-accent-soft)', background: 'var(--color-bg-surface)' }}>
           <div className="relative w-full h-56 md:h-72">
             <img src={lesson.coverImage} alt={lesson.title} className="w-full h-full object-cover opacity-80" />
-            <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, #03060f 0%, rgba(0,0,0,0.4) 50%, transparent 100%)' }} />
+            <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, var(--color-bg-base) 0%, rgba(0,0,0,0.4) 50%, transparent 100%)' }} />
             <div className="absolute bottom-0 left-0 right-0 p-5">
-              <h2 className="text-xl md:text-2xl font-semibold" style={{ color: '#eaf6ff' }}>{lesson.title}</h2>
+              <h2 className="text-xl md:text-2xl font-semibold" style={{ color: 'var(--color-text-primary)' }}>{lesson.title}</h2>
               {lesson.description && (
-                <p className="text-sm mt-1 line-clamp-2" style={{ color: '#9aa8c4' }}>{lesson.description}</p>
+                <p className="text-sm mt-1 line-clamp-2" style={{ color: 'var(--color-text-muted)' }}>{lesson.description}</p>
               )}
             </div>
           </div>
@@ -56,8 +56,8 @@ export function LessonContentBody({ lesson }: { lesson: Lesson }) {
       )}
 
       {gallery.length > 0 && (
-        <section className="hud-chamfer border p-4" style={{ borderColor: 'rgba(126,231,255,0.12)', background: '#08111f' }}>
-          <h3 className="text-sm font-semibold text-gray-200 mb-3">Thư viện hình ảnh</h3>
+        <section className="cosmo-dark-panel rounded-2xl border p-4" style={{ borderColor: 'rgba(126,231,255,0.12)', background: 'var(--color-bg-surface)' }}>
+          <h3 className="text-sm font-semibold text-ds-text mb-3">Thư viện hình ảnh</h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {gallery.map((img, idx) => (
               <img
@@ -74,7 +74,7 @@ export function LessonContentBody({ lesson }: { lesson: Lesson }) {
       {showVideoTab && (
         <div className="space-y-4">
           {lesson.videoUrl && (
-            <section className="hud-chamfer-md overflow-hidden border" style={{ borderColor: 'rgba(126,231,255,0.12)', background: '#08111f' }}>
+            <section className="cosmo-dark-panel rounded-2xl overflow-hidden border" style={{ borderColor: 'rgba(126,231,255,0.12)', background: 'var(--color-bg-surface)' }}>
               <div className="w-full aspect-video">
                 {lesson.videoUrl.includes('youtube.com') || lesson.videoUrl.includes('youtu.be') ? (
                   <iframe
@@ -94,7 +94,7 @@ export function LessonContentBody({ lesson }: { lesson: Lesson }) {
           )}
 
           {videoSections.map((sec, idx) => (
-            <section key={`${sec.title ?? 'video'}-${idx}`} className="hud-chamfer border p-4 space-y-3" style={{ borderColor: 'rgba(126,231,255,0.12)', background: '#08111f' }}>
+            <section key={`${sec.title ?? 'video'}-${idx}`} className="cosmo-dark-panel rounded-2xl border p-4 space-y-3" style={{ borderColor: 'rgba(126,231,255,0.12)', background: 'var(--color-bg-surface)' }}>
               {sec.title ? <h3 className="text-white font-medium">{sec.title}</h3> : null}
               {sec.content ? <p className="text-sm text-ds-muted">{sec.content}</p> : null}
               {sec.videoUrl ? (
@@ -112,8 +112,8 @@ export function LessonContentBody({ lesson }: { lesson: Lesson }) {
       {(
         <>
           {(lesson.sourcePdf || lesson.sourcePageCount != null) && (
-            <section className="hud-chamfer border p-4" style={{ borderColor: 'rgba(126,231,255,0.1)', background: 'rgba(0,0,0,0.25)' }}>
-              <h3 className="text-sm font-semibold text-gray-200 mb-2">Nguồn nội dung PDF</h3>
+            <section className="cosmo-dark-panel rounded-2xl border p-4" style={{ borderColor: 'rgba(126,231,255,0.1)', background: 'rgba(0,0,0,0.25)' }}>
+              <h3 className="text-sm font-semibold text-ds-text mb-2">Nguồn nội dung PDF</h3>
               <p className="text-sm text-ds-muted">
                 {lesson.sourcePdf ? `File: ${lesson.sourcePdf}` : 'File: không xác định'}
                 {lesson.sourcePageCount != null ? ` · ${lesson.sourcePageCount} trang` : ''}
@@ -122,9 +122,9 @@ export function LessonContentBody({ lesson }: { lesson: Lesson }) {
           )}
 
           {learningGoals && (
-            <section className="hud-chamfer border p-5" style={{ borderColor: 'rgba(126,231,255,0.2)', background: 'rgba(126,231,255,0.06)' }}>
+            <section className="cosmo-dark-panel rounded-2xl border p-5" style={{ borderColor: 'rgba(126,231,255,0.2)', background: 'rgba(126,231,255,0.06)' }}>
               <h3 className="text-sm font-semibold text-ds-accent mb-2">Mục tiêu học tập</h3>
-              <ul className="list-disc list-inside text-gray-200 text-sm md:text-[15px] space-y-2 leading-relaxed">
+              <ul className="list-disc list-inside text-ds-text text-sm md:text-[15px] space-y-2 leading-relaxed">
                 {lesson.learningGoals?.map((goal, i) => (
                   <li key={i}>{goal}</li>
                 ))}
@@ -133,7 +133,7 @@ export function LessonContentBody({ lesson }: { lesson: Lesson }) {
           )}
 
           {lesson.stageTime != null && (
-            <section className="hud-chamfer-md overflow-hidden border" style={{ borderColor: 'rgba(126,231,255,0.18)', background: '#08111f' }}>
+            <section className="cosmo-dark-panel rounded-2xl overflow-hidden border" style={{ borderColor: 'var(--color-accent-soft)', background: 'var(--color-bg-surface)' }}>
               <div className="px-4 py-3 border-b border-ds-border">
                 <h3 className="text-sm font-semibold text-ds-accent">Mô phỏng 3D trong bài học</h3>
                 <p className="text-xs text-ds-muted mt-1">
@@ -166,8 +166,8 @@ export function LessonContentBody({ lesson }: { lesson: Lesson }) {
               {readingSections.map((sec, i) => (
                 <section
                   key={`${sec.type}-${sec.title ?? 'sec'}-${i}`}
-                  className="hud-chamfer border p-5"
-                  style={{ borderColor: 'rgba(126,231,255,0.12)', background: '#08111f' }}
+                  className="cosmo-dark-panel rounded-2xl border p-5"
+                  style={{ borderColor: 'rgba(126,231,255,0.12)', background: 'var(--color-bg-surface)' }}
                 >
                   <SectionPreview sec={sec} />
                 </section>
@@ -175,16 +175,16 @@ export function LessonContentBody({ lesson }: { lesson: Lesson }) {
             </div>
           ) : lesson.content?.trim() ? (
             <section
-              className="hud-chamfer border p-5"
-              style={{ borderColor: 'rgba(126,231,255,0.12)', background: '#08111f' }}
+              className="cosmo-dark-panel rounded-2xl border p-5"
+              style={{ borderColor: 'rgba(126,231,255,0.12)', background: 'var(--color-bg-surface)' }}
             >
               {lesson.content.includes('<') ? (
                 <div
-                  className="prose prose-invert prose-sm max-w-none text-gray-200 leading-relaxed [&_p]:my-4"
+                  className="prose prose-invert prose-sm max-w-none text-ds-text leading-relaxed [&_p]:my-4"
                   dangerouslySetInnerHTML={{ __html: lesson.content }}
                 />
               ) : (
-                <p className="text-gray-200 text-sm md:text-[15px] leading-relaxed whitespace-pre-wrap">{lesson.content}</p>
+                <p className="text-ds-text text-sm md:text-[15px] leading-relaxed whitespace-pre-wrap">{lesson.content}</p>
               )}
             </section>
           ) : (
@@ -194,7 +194,7 @@ export function LessonContentBody({ lesson }: { lesson: Lesson }) {
       )}
 
       {resources.length > 0 && (
-        <details className="hud-chamfer border overflow-hidden" style={{ borderColor: 'rgba(126,231,255,0.12)', background: '#08111f' }}>
+        <details className="cosmo-dark-panel rounded-2xl border overflow-hidden" style={{ borderColor: 'rgba(126,231,255,0.12)', background: 'var(--color-bg-surface)' }}>
           <summary className="px-5 py-3 text-sm font-semibold text-white cursor-pointer hover:bg-white/5 transition-colors">
             Resources ({resources.length})
           </summary>
@@ -205,7 +205,7 @@ export function LessonContentBody({ lesson }: { lesson: Lesson }) {
                 href={link.url}
                 target="_blank"
                 rel="noreferrer"
-                className="block rounded-lg border border-ds-border bg-white/5 px-3 py-2 text-sm text-gray-200 hover:border-ds-accent-strong hover:bg-ds-accent-soft"
+                className="block rounded-lg border border-ds-border bg-white/5 px-3 py-2 text-sm text-ds-text hover:border-ds-accent-strong hover:bg-ds-accent-soft"
               >
                 <span className="font-medium text-ds-accent">[{link.kind}]</span> {getResourceLabel(link, idx)}
                 <div className="text-xs text-ds-subtle truncate mt-1">{link.url}</div>
