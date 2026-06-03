@@ -85,7 +85,7 @@ export function MilkyWayPlane({ texture, fovDeg, observer }: Props) {
 
   useLayoutEffect(() => {
     uniforms.uMap.value = texture
-    uniforms.uSceneToEquat.value.copy(sceneToEquat)
+    ;(uniforms.uSceneToEquat.value as THREE.Matrix3).copy(sceneToEquat)
   }, [texture, sceneToEquat, uniforms])
 
   useFrame(() => {

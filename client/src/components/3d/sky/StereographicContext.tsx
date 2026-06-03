@@ -31,6 +31,7 @@ export function buildStereographicUniforms(view: SkyViewState, fovDeg: number): 
     worldFromView,
     tanHalfFov: Math.tan(maxTheta * 0.5),
     maxTheta,
+    aspect: 1,
   }
 }
 

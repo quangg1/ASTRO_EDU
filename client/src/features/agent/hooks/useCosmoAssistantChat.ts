@@ -416,7 +416,7 @@ export function useCosmoAssistantChat({
         messageId,
         rating,
         surface: sessionContext.surface,
-        lessonId: sessionContext.lessonId,
+        lessonId: sessionContext.lessonId ?? undefined,
       })
     },
     [user, sessionId, sessionContext.surface, sessionContext.lessonId],
