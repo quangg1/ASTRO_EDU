@@ -36,6 +36,7 @@ export {
   postAgentMessageFeedback,
   getAgentApiBase,
   startConceptQuiz,
+  submitConceptQuiz,
 } from './api/agentApi'
 export type { ConceptQuizStartPayload } from './api/agentApi'
 export {

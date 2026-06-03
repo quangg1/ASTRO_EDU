@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { useAuthStore } from '@/features/auth/public'
-import { submitConceptQuiz } from '@/features/agent/api/agentApi'
+import { submitConceptQuiz } from '@/features/agent/public'
 import type { RecallQuizDeliveryQuestion, RecallQuizSubmitResult } from '@/features/learning-path/public'
 import { LessonRecallQuizOverlay } from '@/components/learning-path/LessonRecallQuizOverlay'
 
