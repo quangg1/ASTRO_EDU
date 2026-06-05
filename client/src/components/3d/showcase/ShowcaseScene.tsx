@@ -182,6 +182,13 @@ function ShowcaseSceneContent({
 
   const contextPlanetIndex = contextPlanetName ? runtimePlanetsData.findIndex((p) => p.name === contextPlanetName) : -1
   const effectiveSelectedIndex = selectedIndex ?? (contextPlanetIndex >= 0 ? contextPlanetIndex : null)
+  const focusPlanetName =
+    contextPlanetName ??
+    (effectiveSelectedIndex !== null ? runtimePlanetsData[effectiveSelectedIndex]?.name ?? null : null)
+  /** NASA Eyes–style: khi chọn planet/entity chỉ hiện hệ parent + con (con = chấm 2D + đường quỹ đạo). */
+  const systemFocusMode = Boolean(showcaseActiveItemId || effectiveSelectedIndex !== null)
+  /** Chọn hành tinh (heliocentric): Sun là parent → texture đầy đủ. Chọn moon: Sun chỉ chấm vàng. */
+  const sunCompactIcon = systemFocusMode && isMoonSelection
   const selectedSemiMajorAxis =
     effectiveSelectedIndex !== null ? Math.max(1, runtimePlanetsData[effectiveSelectedIndex]?.distance ?? 1) : 1
   const focusBlend =
@@ -249,13 +256,15 @@ function ShowcaseSceneContent({
   }, [scene, camera, sceneRadius])
 
   useEffect(() => {
+    // Chỉ reset overview khi chưa chọn entity — tránh ghi đè camera focus (Earth/Mars…).
+    if (systemFocusMode) return
     const c = controlsRef.current
     if (!c) return
     c.target.set(0, 0, 0)
     c.object.position.set(0, overviewDistance * 0.4, overviewDistance)
     sanitizeControlsCamera(c)
     c.update()
-  }, [overviewDistance])
+  }, [overviewDistance, systemFocusMode])
 
   return (
     <>
@@ -265,23 +274,36 @@ function ShowcaseSceneContent({
         const isSelected = i === effectiveSelectedIndex
         const isHovered = i === hoveredOrbitIndex
         const isContextPlanet = contextPlanetName ? data.name === contextPlanetName : false
-        const orbitVisible =
-          dynamicContextLevel === 'moon'
+        const orbitVisible = systemFocusMode
+          ? true
+          : dynamicContextLevel === 'moon'
             ? isContextPlanet
             : dynamicContextLevel === 'planet'
               ? true
               : true
         const a = Math.max(1, data.distance)
-        const proximityFade = {
-          getWorldPosition: () => {
-            const p = planetPositionsRef.current[i]
-            return p && p.lengthSq() > 1e-8 ? p : null
-          },
-          // Each orbit fades by its own scale (NASA Eyes-like), not a flat global threshold.
-          near: Math.max(2.4, a * PLANET_HELIO_ORBIT_FADE_NEAR_SCALE),
-          far: Math.max(6.2, a * PLANET_HELIO_ORBIT_FADE_FAR_SCALE),
-          getCameraDistance: () => cameraDistanceToSun,
-        }
+        const isFocusPlanet = isContextPlanet || isSelected
+        const proximityFade = systemFocusMode
+          ? isFocusPlanet
+            ? {
+                getWorldPosition: () => {
+                  const p = planetPositionsRef.current[i]
+                  return p && p.lengthSq() > 1e-8 ? p : null
+                },
+                near: Math.max(2.4, a * PLANET_HELIO_ORBIT_FADE_NEAR_SCALE),
+                far: Math.max(6.2, a * PLANET_HELIO_ORBIT_FADE_FAR_SCALE),
+                getCameraDistance: () => cameraDistanceToSun,
+              }
+            : undefined
+          : {
+              getWorldPosition: () => {
+                const p = planetPositionsRef.current[i]
+                return p && p.lengthSq() > 1e-8 ? p : null
+              },
+              near: Math.max(2.4, a * PLANET_HELIO_ORBIT_FADE_NEAR_SCALE),
+              far: Math.max(6.2, a * PLANET_HELIO_ORBIT_FADE_FAR_SCALE),
+              getCameraDistance: () => cameraDistanceToSun,
+            }
         return (
           <OrbitPath
             key={data.name}
@@ -297,24 +319,31 @@ function ShowcaseSceneContent({
 
       <Sun
         visible
+        compactIcon={sunCompactIcon}
         interactive
         onSelect={() => {
           setSelection(null)
         }}
       />
-      {runtimePlanetsData.map((data, i) => (
+      {runtimePlanetsData.map((data, i) => {
+        const isContextPlanet = contextPlanetName ? data.name === contextPlanetName : false
+        const isFocusPlanet = isContextPlanet || effectiveSelectedIndex === i
+        return (
         <Planet
           key={data.name}
           data={data}
           index={i}
           positionRef={planetPositionsRef}
           visible
+          forceIconMode={systemFocusMode && !isFocusPlanet}
+          forceFullBody={systemFocusMode && isFocusPlanet}
+          distantIconScale={0.22}
           orbitTimeScale={motionScale}
           spinTimeScale={motionScale}
           showLabel
           compactPlanetLabel
           exploreStyleLod
-          isSelected={effectiveSelectedIndex === i}
+          isSelected={isFocusPlanet}
           interactive
           showcaseOrbitEntity={planetShowcaseByName.get(data.name) ?? orbitById.get(planetEntityId(data.name)) ?? null}
           onHoverChange={(hovered) => setHoveredOrbitIndex(hovered ? i : (prev) => (prev === i ? null : prev))}
@@ -324,7 +353,8 @@ function ShowcaseSceneContent({
           }}
           onPlanetSelect={onPlanetSelect}
         />
-      ))}
+        )
+      })}
 
       <ExploreEntityFx
         entityId={observerExploreEntityId}
@@ -339,7 +369,8 @@ function ShowcaseSceneContent({
         activeItemId={showcaseActiveItemId}
         visible
         activeGroup={activeGroup}
-        selectedPlanetName={dynamicContextLevel === 'solar' ? null : contextPlanetName}
+        selectedPlanetName={systemFocusMode ? focusPlanetName : null}
+        systemFocusMode={systemFocusMode}
         onPositionUpdate={(id, p) => {
           const prev = showcaseEntityPositionsRef.current.get(id)
           if (prev) prev.copy(p)

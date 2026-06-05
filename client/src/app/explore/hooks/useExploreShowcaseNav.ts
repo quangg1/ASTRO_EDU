@@ -64,6 +64,12 @@ export function useExploreShowcaseNav({
   }, [planetHistoryOpen, planetBeatAccent, selectedSolarPlanetIndex, activeResolved?.linkedPlanetName])
 
   const syncSelectedPlanetFromItem = useCallback((entityId: string) => {
+    if (entityId.startsWith('planet-')) {
+      const slug = entityId.slice('planet-'.length)
+      const idx = planetsData.findIndex((p) => p.name.toLowerCase() === slug)
+      if (idx >= 0) setSelectedSolarPlanetIndex(idx)
+      return
+    }
     const item = getNasaCatalogItemById(entityId)
     const planetName = item?.linkedPlanetName
     if (!planetName) return

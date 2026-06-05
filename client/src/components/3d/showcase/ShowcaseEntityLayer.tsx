@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useMemo, useRef } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
-import { Html } from '@react-three/drei'
+import { Billboard, Html } from '@react-three/drei'
 import * as THREE from 'three'
 import type { PlanetData } from '@/lib/solarSystemData'
 import { planetsData } from '@/lib/solarSystemData'
@@ -26,13 +26,14 @@ import {
   heliocentricOrbitDisplayRadius,
   initialOrbitAngleForEntity,
   resolveHeliocentricAuToSceneScale,
+  resolveShowcaseEntityBodySceneSize,
+  resolveShowcaseEntityMeshRadius,
+  resolveSatelliteBodySceneSize,
+  resolveSatelliteMeshRadius,
   satelliteOrbitDisplayRadius,
   type SatelliteOrbitLayout,
 } from '@/features/content3d/showcase/lib/showcaseOrbitLayout'
 
-const EARTH_RADIUS_KM = 6371
-/** Đơn vị scene cho bán kính vật thể showcase (đủ lớn so với `planetsData.radius`). */
-const EARTH_BASE_SIZE = 0.2
 const AU_IN_KM = 149_597_870.7
 /** BASE scale: 1 AU = BASE_AU scene units (single source of truth). */
 const BASE_AU = 26
@@ -76,15 +77,43 @@ function isSatelliteEntity(e: ShowcaseOrbitEntity): boolean {
   )
 }
 
-function radiusToSize(radiusKm: number | undefined, fallback: number, orbitDistanceScaleAu: number): number {
-  if (!radiusKm || !Number.isFinite(radiusKm) || radiusKm <= 0) {
-    return Math.max(0.08, fallback * 2.1)
+/** Chỉ entity thuộc hệ đang focus (parent + con + bản thân) — không render toàn bộ catalog. */
+function entityInFocusSystem(
+  entity: ShowcaseOrbitEntity,
+  activeItemId: string | null | undefined,
+  focusPlanetName: string | null,
+  orbitById: Map<string, ShowcaseOrbitEntity>,
+): boolean {
+  const id = String(entity.id || '').trim()
+  if (!id) return false
+  if (activeItemId && id === activeItemId) return true
+
+  const active = activeItemId ? orbitById.get(activeItemId) : undefined
+  const parentShowcaseId = String(
+    entity.parentShowcaseEntityId || entity.parentId || '',
+  ).trim()
+  if (activeItemId && parentShowcaseId === activeItemId) return true
+
+  if (active) {
+    const activeParentShowcase = String(
+      active.parentShowcaseEntityId || active.parentId || '',
+    ).trim()
+    if (activeParentShowcase && id === activeParentShowcase) return true
   }
-  const sizeScaleKm = (orbitDistanceScaleAu * SIZE_DISTANCE_RATIO_KM) / AU_IN_KM
-  const base = radiusKm * sizeScaleKm
-  const ratio = radiusKm / EARTH_RADIUS_KM
-  const boost = radiusKm < 2400 ? 2.05 : radiusKm < 12000 ? 1.35 : 1
-  return Math.max(0.09, Math.max(base, ratio * EARTH_BASE_SIZE) * boost)
+
+  if (focusPlanetName) {
+    const pp = resolveShowcaseOrbitParentPlanetName(entity)
+    if (pp === focusPlanetName) return true
+    const selPlanetId = showcaseIdForSolarPlanetName(focusPlanetName)
+    const pid = String(entity.parentId || '').trim()
+    if (selPlanetId && pid === selPlanetId) return true
+  }
+
+  if (active && !resolveShowcaseOrbitParentPlanetName(active) && !active.parentShowcaseEntityId) {
+    return id === activeItemId || parentShowcaseId === activeItemId
+  }
+
+  return false
 }
 
 function satelliteRevealAlpha(cameraDistanceToSun: number): number {
@@ -118,8 +147,14 @@ function solveKeplerLocalOrbitPosition(
   axisX: THREE.Vector3,
   satelliteLayout?: Map<string, SatelliteOrbitLayout>,
 ): THREE.Vector3 {
+  const parentPlanetNameEarly = resolveShowcaseOrbitParentPlanetName(entity)
   const oe = entity.orbitalElements
   if (!oe) {
+    if (parentPlanetNameEarly) {
+      const a = satelliteOrbitDisplayRadius(entity, satelliteLayout)
+      out.set(Math.cos(angle) * a, 0, Math.sin(angle) * a)
+      return out
+    }
     const pseudo = {
       distance: entity.distance,
       orbitEccentricity: entity.orbitEccentricity ?? 0.05,
@@ -166,6 +201,7 @@ export function ShowcaseEntityLayer({
   onPositionUpdate,
   onSelectEntity,
   selectedPlanetName,
+  systemFocusMode = false,
   orbitEntities = SHOWCASE_ORBIT_ENTITIES,
 }: {
   planetPositionsRef: React.MutableRefObject<THREE.Vector3[]>
@@ -175,6 +211,8 @@ export function ShowcaseEntityLayer({
   onPositionUpdate?: (id: string, position: THREE.Vector3) => void
   onSelectEntity?: (id: string) => void
   selectedPlanetName?: string | null
+  /** Khi true: chỉ entity trong hệ focus; vệ tinh render dạng chấm 2D + đường quỹ đạo. */
+  systemFocusMode?: boolean
   /** Mặc định catalog orbit trong code; Explore có thể truyền bản merge texture HTTPS từ CMS. */
   orbitEntities?: ShowcaseOrbitEntity[]
 }) {
@@ -199,7 +237,14 @@ export function ShowcaseEntityLayer({
   const groupsRef = useRef(new Map<string, THREE.Group>())
   const anglesRef = useRef(new Map<string, number>())
 
-  const satelliteLayout = useMemo(() => buildSatelliteOrbitLayout(orbitEntities), [orbitEntities])
+  const orbitDistanceScaleAu = useMemo(
+    () => resolveHeliocentricAuToSceneScale(orbitEntities),
+    [orbitEntities],
+  )
+  const satelliteLayout = useMemo(
+    () => buildSatelliteOrbitLayout(orbitEntities, orbitDistanceScaleAu),
+    [orbitEntities, orbitDistanceScaleAu],
+  )
 
   useEffect(() => {
     const next = new Map<string, number>()
@@ -217,11 +262,6 @@ export function ShowcaseEntityLayer({
     () => new Map(orbitEntities.map((e) => [String(e.id || '').trim(), e] as const)),
     [orbitEntities],
   )
-  const orbitDistanceScaleAu = useMemo(
-    () => resolveHeliocentricAuToSceneScale(orbitEntities),
-    [orbitEntities],
-  )
-
   useEffect(() => {
     const depth = new Map<string, number>()
     const depthOf = (id: string, stack: Set<string> = new Set()): number => {
@@ -384,6 +424,11 @@ export function ShowcaseEntityLayer({
       if (!groupOk) return false
       const isActive = entity.id === activeItemId
       if (!isActive && !hasRenderableShowcaseMedia(entity)) return false
+
+      if (systemFocusMode) {
+        return entityInFocusSystem(entity, activeItemId, selectedPlanetName ?? null, orbitById)
+      }
+
       if (!selectedPlanetName) {
         if (isActive) return true
         if (isSatelliteEntity(entity)) {
@@ -402,7 +447,7 @@ export function ShowcaseEntityLayer({
       if (parentPlanet || pid || psc) return false
       return false
     })
-  }, [activeGroup, preloadGroup, activeItemId, selectedPlanetName, orbitEntities])
+  }, [activeGroup, preloadGroup, activeItemId, selectedPlanetName, orbitEntities, systemFocusMode, orbitById])
 
   if (!visible) return null
   const revealAlpha =
@@ -425,6 +470,7 @@ export function ShowcaseEntityLayer({
             frameRef={collisionFrameRef}
             revealAlpha={revealAlpha}
             satelliteLayout={satelliteLayout}
+            systemFocusMode={systemFocusMode}
           />
         </Suspense>
       ))}
@@ -648,6 +694,77 @@ function FadedLocalEllipticOrbit({
   )
 }
 
+/** Chấm 2D + vòng (NASA Eyes) — dùng cho vệ tinh khi focus hệ hành tinh. */
+function ShowcaseEntityMarker({
+  entity,
+  active,
+  onSelect,
+}: {
+  entity: ShowcaseOrbitEntity
+  active: boolean
+  onSelect?: () => void
+}) {
+  const { camera } = useThree()
+  const scaleRef = useRef<THREE.Group>(null)
+  const worldPos = useRef(new THREE.Vector3())
+  const orbitColor = entity.orbitColor || entity.color || '#94a3b8'
+  const inner = active ? 0.38 : 0.34
+  const outer = active ? 0.58 : 0.52
+
+  useFrame(() => {
+    if (!scaleRef.current) return
+    scaleRef.current.getWorldPosition(worldPos.current)
+    const d = camera.position.distanceTo(worldPos.current)
+    const s = THREE.MathUtils.clamp(d * 0.0055, 0.028, 0.095)
+    scaleRef.current.scale.setScalar(s)
+  })
+
+  return (
+    <group ref={scaleRef}>
+    <Billboard>
+      <mesh
+        onClick={
+          onSelect
+            ? (e) => {
+                e.stopPropagation()
+                onSelect()
+              }
+            : undefined
+        }
+        onPointerOver={() => {
+          document.body.style.cursor = 'pointer'
+        }}
+        onPointerOut={() => {
+          document.body.style.cursor = 'auto'
+        }}
+      >
+        <ringGeometry args={[inner, outer, 48]} />
+        <meshBasicMaterial
+          color={orbitColor}
+          side={THREE.DoubleSide}
+          transparent
+          opacity={active ? 0.98 : 0.82}
+          depthWrite={false}
+        />
+      </mesh>
+      <mesh
+        onClick={
+          onSelect
+            ? (e) => {
+                e.stopPropagation()
+                onSelect()
+              }
+            : undefined
+        }
+      >
+        <circleGeometry args={[0.55, 32]} />
+        <meshBasicMaterial color={orbitColor} transparent opacity={0.03} depthWrite={false} />
+      </mesh>
+    </Billboard>
+    </group>
+  )
+}
+
 function ShowcaseEntityRow({
   entity,
   orbitDistanceScaleAu,
@@ -661,6 +778,7 @@ function ShowcaseEntityRow({
   frameRef,
   revealAlpha,
   satelliteLayout,
+  systemFocusMode = false,
 }: {
   entity: ShowcaseOrbitEntity
   orbitDistanceScaleAu: number
@@ -674,6 +792,7 @@ function ShowcaseEntityRow({
   collisionStateRef: React.MutableRefObject<{ frame: number; points: Array<{ x: number; y: number }> }>
   frameRef: React.MutableRefObject<number>
   revealAlpha: number
+  systemFocusMode?: boolean
 }) {
   const bodyWorldScratch = useRef(new THREE.Vector3())
   const active = activeItemId === entity.id
@@ -684,12 +803,24 @@ function ShowcaseEntityRow({
     entity.parentShowcaseEntityId != null
       ? groupsRef.current.get(entity.parentShowcaseEntityId)?.position
       : null
+  const isChildOfFocusPlanet = Boolean(
+    selectedPlanetName && parentPlanetResolved === selectedPlanetName,
+  )
+  const parentShowcaseId = String(entity.parentShowcaseEntityId || entity.parentId || '').trim()
+  const isChildOfActive = Boolean(activeItemId && parentShowcaseId === activeItemId)
+  /** Entity đang chọn + parent planet: mesh 3D; anh em cùng hệ: chấm 2D trên quỹ đạo. */
+  const useMarkerBody =
+    systemFocusMode && (isChildOfFocusPlanet || isChildOfActive) && !active
   const showSatelliteOrbit =
     Boolean(parentPos) &&
     Boolean(selectedPlanetName) &&
     parentPlanetResolved === selectedPlanetName
   const showCharonOrbit =
-    Boolean(showcaseParentPos) && entity.parentShowcaseEntityId != null && activeItemId === entity.id
+    Boolean(showcaseParentPos) &&
+    entity.parentShowcaseEntityId != null &&
+    (systemFocusMode
+      ? activeItemId === entity.parentShowcaseEntityId
+      : activeItemId === entity.id)
 
   const helioOrbitRadius = heliocentricOrbitDisplayRadius(entity, orbitDistanceScaleAu)
   const helioOrbitPeriod =
@@ -710,8 +841,14 @@ function ShowcaseEntityRow({
       : undefined
 
   const anchorRef = useRef<THREE.Group | null>(null)
-  const bodySceneSize = radiusToSize(entity.radiusKm, entity.size, orbitDistanceScaleAu)
-  const meshR = Math.max(0.14, bodySceneSize * 2.55)
+  const isSatelliteAroundPlanet = Boolean(parentPlanetResolved)
+  const useProportionalChildSize = systemFocusMode && active && isSatelliteAroundPlanet
+  const bodySceneSize = useProportionalChildSize
+    ? resolveSatelliteBodySceneSize(entity, parentPlanetResolved!)
+    : resolveShowcaseEntityBodySceneSize(entity, orbitDistanceScaleAu)
+  const meshR = useProportionalChildSize
+    ? resolveSatelliteMeshRadius(entity, parentPlanetResolved!)
+    : resolveShowcaseEntityMeshRadius(entity, orbitDistanceScaleAu)
   const nametagLift = meshR * 1.58
   const rowRevealAlpha = !selectedPlanetName && parentPlanetResolved ? revealAlpha : 1
   const parentSceneRadius =
@@ -748,7 +885,7 @@ function ShowcaseEntityRow({
           getAnchor={() => parentPos}
           parentSceneRadius={parentSceneRadius}
           orbitDistanceScaleAu={orbitDistanceScaleAu}
-          baseOpacity={(active ? 0.95 : 0.35) * rowRevealAlpha}
+          baseOpacity={(systemFocusMode ? (active ? 0.88 : 0.52) : active ? 0.95 : 0.35) * rowRevealAlpha}
           satelliteLayout={satelliteLayout}
         />
       ) : showcaseParentPos && showCharonOrbit ? (
@@ -768,12 +905,21 @@ function ShowcaseEntityRow({
           else groupsRef.current.set(entity.id, node)
         }}
       >
-        <ShowcaseEntityMesh
-          entity={{ ...entity, size: bodySceneSize }}
-          active={active}
-          visualOpacity={rowRevealAlpha}
-          onSelect={() => onSelectEntity?.(entity.id)}
-        />
+        {useMarkerBody ? (
+          <ShowcaseEntityMarker
+            entity={entity}
+            active={active}
+            onSelect={() => onSelectEntity?.(entity.id)}
+          />
+        ) : (
+          <ShowcaseEntityMesh
+            entity={{ ...entity, size: bodySceneSize }}
+            active={active}
+            visualOpacity={rowRevealAlpha}
+            skipDistanceBasedScale={systemFocusMode && active && isSatelliteAroundPlanet}
+            onSelect={() => onSelectEntity?.(entity.id)}
+          />
+        )}
         <ShowcaseEntityNametag
           anchorRef={anchorRef}
           label={entity.name.toUpperCase()}

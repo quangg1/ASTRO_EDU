@@ -283,7 +283,14 @@ export function ShowcaseCameraManager({
     const timedOut = elapsed >= MAX_TRANSITION_SEC
 
     const safeInitial = validateInitialSpherical(initialSpherical)
-    if (!appliedUrlRef.current && safeInitial && phaseRef.current === 'transitioning') {
+    const urlDistTooWideForFocus =
+      safeInitial != null && aid != null && safeInitial.distance > wantDist * 2.8
+    if (
+      !appliedUrlRef.current &&
+      safeInitial &&
+      !urlDistTooWideForFocus &&
+      phaseRef.current === 'transitioning'
+    ) {
       onProgrammaticMoveChange?.(true)
       appliedUrlRef.current = true
       const { distance, az, el } = safeInitial

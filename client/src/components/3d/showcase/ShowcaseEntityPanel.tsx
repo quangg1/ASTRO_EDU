@@ -2,7 +2,7 @@
 
 import type { ReactNode } from 'react'
 import { clsx } from 'clsx'
-import { BookOpen, History, Orbit, Sparkles, Stars, Weight } from 'lucide-react'
+import { BookOpen, ChevronsLeft, ChevronsRight, History, Orbit, Sparkles, Stars, Weight } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import type { ResolvedNasaCatalogItem } from '@/lib/mergeShowcaseCatalog'
 import type { ShowcaseOrbitEntity } from '@/lib/showcaseEntities'
@@ -114,11 +114,27 @@ export function ShowcaseEntityPanel({
   }, [panelConfig?.tabs, panelConfig?.tabLabels])
 
   const [activeTab, setActiveTab] = useState<TabId>('overview')
+  const [panelCollapsed, setPanelCollapsed] = useState(false)
   const safeTab = tabs.some((t) => t.id === activeTab) ? activeTab : tabs[0]?.id ?? 'overview'
 
   useEffect(() => {
     setActiveTab('overview')
   }, [item?.id])
+
+  if (panelCollapsed) {
+    return (
+      <button
+        type="button"
+        data-explore-tour="explore-panel-expand"
+        onClick={() => setPanelCollapsed(false)}
+        className="fixed left-4 top-24 z-[24] flex h-10 w-10 items-center justify-center rounded-lg border border-white/[0.12] bg-[rgba(8,10,16,0.88)] text-white/70 shadow-[0_8px_24px_rgba(0,0,0,0.45)] backdrop-blur-md transition hover:border-white/25 hover:bg-white/[0.08] hover:text-white"
+        aria-label="Mở panel thông tin"
+        title="Mở panel"
+      >
+        <ChevronsRight className="h-5 w-5" strokeWidth={1.75} />
+      </button>
+    )
+  }
 
   const badge = String(panelConfig?.stateBadge || '').trim()
   const overviewLead = firstTextBlock(panelConfig?.overviewBlocks)
@@ -196,6 +212,17 @@ export function ShowcaseEntityPanel({
           className="shrink-0 border-b border-white/[0.06] bg-[rgba(8,10,16,0.92)] px-5 py-2.5"
           data-explore-tour="explore-panel-tabs"
         >
+          <div className="mb-2 flex items-center justify-end">
+            <button
+              type="button"
+              onClick={() => setPanelCollapsed(true)}
+              className="flex h-8 w-8 items-center justify-center rounded-md border border-white/[0.1] text-white/50 transition hover:border-white/20 hover:bg-white/[0.06] hover:text-white/85"
+              aria-label="Thu gọn panel"
+              title="Thu panel"
+            >
+              <ChevronsLeft className="h-4 w-4" strokeWidth={1.75} />
+            </button>
+          </div>
           <div
             className={clsx(
               'grid gap-2',
@@ -246,7 +273,21 @@ export function ShowcaseEntityPanel({
             })}
           </div>
         </div>
-      ) : null}
+      ) : (
+        <div className="shrink-0 border-b border-white/[0.06] px-5 py-2">
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={() => setPanelCollapsed(true)}
+              className="flex h-8 w-8 items-center justify-center rounded-md border border-white/[0.1] text-white/50 transition hover:border-white/20 hover:bg-white/[0.06] hover:text-white/85"
+              aria-label="Thu gọn panel"
+              title="Thu panel"
+            >
+              <ChevronsLeft className="h-4 w-4" strokeWidth={1.75} />
+            </button>
+          </div>
+        </div>
+      )}
 
       <section className="min-h-0 flex-1 space-y-2.5 overflow-y-auto overscroll-contain px-5 py-3">
         {crossViewSlot ? <div className="shrink-0">{crossViewSlot}</div> : null}

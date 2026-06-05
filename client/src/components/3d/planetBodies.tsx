@@ -20,6 +20,9 @@ const EXPLORE_LOD_TEXTURE_DISTANCE = 16
 const EXPLORE_ICON_ANGULAR_SCALE = 0.024
 const EXPLORE_ICON_SCALE_MIN = 0.4
 const EXPLORE_ICON_SCALE_MAX = 2.6
+/** Chấm planet xa khi focus hệ — cố định nhỏ, không phóng theo camera. */
+const DISTANT_PLANET_ICON_MIN = 0.045
+const DISTANT_PLANET_ICON_MAX = 0.14
 
 type PlanetLabelCollisionEntry = {
   x: number
@@ -281,12 +284,15 @@ export function Sun({
   spinTimeScale = 1,
   visible = true,
   radiusScale = 1,
+  /** NASA Eyes focus: chỉ chấm vàng nhỏ, không texture đầy đủ. */
+  compactIcon = false,
 }: {
   onSelect: () => void
   interactive?: boolean
   spinTimeScale?: number
   visible?: boolean
   radiusScale?: number
+  compactIcon?: boolean
 }) {
   const groupRef = useRef<THREE.Group>(null)
   const meshRef = useRef<THREE.Mesh>(null)
@@ -296,14 +302,32 @@ export function Sun({
   const { gl } = useThree()
   const texture = useLoader(THREE.TextureLoader, getStaticAssetUrl(sunData.texture)) as THREE.Texture
   useLayoutEffect(() => {
-    applyGlobeTextureQuality(texture, gl, { wrap: 'repeat' })
-  }, [texture, gl])
+    if (!compactIcon) applyGlobeTextureQuality(texture, gl, { wrap: 'repeat' })
+  }, [texture, gl, compactIcon])
   useFrame((_, delta) => {
-    if (groupRef.current) {
-      const spinSpeed = (spinTimeScale * (2 * Math.PI)) / SUN_SPIN_PERIOD
-      groupRef.current.rotation.y += delta * spinSpeed
-    }
+    if (compactIcon || !groupRef.current) return
+    const spinSpeed = (spinTimeScale * (2 * Math.PI)) / SUN_SPIN_PERIOD
+    groupRef.current.rotation.y += delta * spinSpeed
   })
+  if (compactIcon) {
+    const r = 0.42 * radiusScale
+    return (
+      <group
+        ref={groupRef}
+        visible={visible}
+        onClick={interactive ? (e) => { e.stopPropagation(); onSelect() } : undefined}
+      >
+        <mesh ref={meshGlowRef}>
+          <sphereGeometry args={[r * 1.8, 16, 16]} />
+          <meshBasicMaterial color="#ffd54f" transparent opacity={0.35} depthWrite={false} />
+        </mesh>
+        <mesh ref={meshRef}>
+          <sphereGeometry args={[r, 16, 16]} />
+          <meshBasicMaterial color="#ffca28" toneMapped={false} />
+        </mesh>
+      </group>
+    )
+  }
   return (
     <group
       ref={groupRef}
@@ -543,6 +567,12 @@ export function Planet({
   exploreStyleLod = false,
   /** Hành tinh đang chọn: luôn ưu tiên texture + nhãn rõ. */
   isSelected = false,
+  /** Buộc chế độ chấm 2D (các planet ngoài hệ đang focus). */
+  forceIconMode = false,
+  /** Entity/parent đang focus — luôn mesh 3D, không LOD sang chấm. */
+  forceFullBody = false,
+  /** Hệ số nhỏ hơn cho chấm planet xa (NASA Eyes). */
+  distantIconScale = 0.42,
   onHoverChange,
   showcaseOrbitEntity = null,
 }: {
@@ -562,6 +592,9 @@ export function Planet({
   compactPlanetLabel?: boolean
   exploreStyleLod?: boolean
   isSelected?: boolean
+  forceIconMode?: boolean
+  forceFullBody?: boolean
+  distantIconScale?: number
   onHoverChange?: (hovered: boolean) => void
   /** Merge orbit entity (planet-*) — khi có diffuse/normal/spec/cloud từ Studio thì thay texture `planetsData`. */
   showcaseOrbitEntity?: ShowcaseOrbitEntity | null
@@ -598,9 +631,9 @@ export function Planet({
   const angleRef = useRef(Math.random() * Math.PI * 2 + phaseOffset)
   const profile = useMemo(() => getPlanetRenderProfile(data.name), [data.name])
   const orbitColor = data.orbitColor || '#94a3b8'
-  const iconRingArgs = useMemo(() => {
-    return [0.4, 0.58, 64] as [number, number, number]
-  }, [])
+  const iconRingArgs = useMemo((): [number, number, number] => {
+    return forceIconMode ? [0.5, 0.78, 40] : [0.4, 0.58, 64]
+  }, [forceIconMode])
 
   useFrame((_, delta) => {
     if (!groupRef.current) return
@@ -620,13 +653,20 @@ export function Planet({
 
     lastWorldPos.current.setFromMatrixPosition(groupRef.current.matrixWorld)
     const dCam = camera.position.distanceTo(lastWorldPos.current)
-    const useIcon = !isSelected && dCam > EXPLORE_LOD_TEXTURE_DISTANCE
+    const useIcon =
+      !forceFullBody && (forceIconMode || (!isSelected && dCam > EXPLORE_LOD_TEXTURE_DISTANCE))
     if (iconScaleRef.current) {
-      const s = THREE.MathUtils.clamp(
-        dCam * EXPLORE_ICON_ANGULAR_SCALE,
-        EXPLORE_ICON_SCALE_MIN,
-        EXPLORE_ICON_SCALE_MAX,
-      )
+      const s = forceIconMode
+        ? THREE.MathUtils.clamp(
+            dCam * EXPLORE_ICON_ANGULAR_SCALE * distantIconScale * 0.1,
+            DISTANT_PLANET_ICON_MIN,
+            DISTANT_PLANET_ICON_MAX,
+          )
+        : THREE.MathUtils.clamp(
+            dCam * EXPLORE_ICON_ANGULAR_SCALE,
+            EXPLORE_ICON_SCALE_MIN,
+            EXPLORE_ICON_SCALE_MAX,
+          )
       iconScaleRef.current.scale.setScalar(s)
     }
     if (fullGroupRef.current) fullGroupRef.current.visible = !useIcon

@@ -10,11 +10,14 @@ export function ShowcaseEntityMesh({
   entity,
   active,
   visualOpacity = 1,
+  skipDistanceBasedScale = false,
   onSelect,
 }: {
   entity: ShowcaseOrbitEntity
   active: boolean
   visualOpacity?: number
+  /** Giữ tỉ lệ mesh con/cha khi focus — không phóng theo camera. */
+  skipDistanceBasedScale?: boolean
   onSelect?: () => void
 }) {
   const remoteModelRaw = entity.remoteModelUrl?.trim()
@@ -60,7 +63,7 @@ export function ShowcaseEntityMesh({
         sphereRadius={sphereRadius}
         visualOpacity={visualOpacity}
         active={active}
-        skipDistanceBasedScale={false}
+        skipDistanceBasedScale={skipDistanceBasedScale || active}
       />
     </group>
   )
