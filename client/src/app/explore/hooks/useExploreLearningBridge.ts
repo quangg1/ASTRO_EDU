@@ -152,22 +152,42 @@ export function useExploreLearningBridge({
     return m
   }, [modules])
 
+  const skyPanelConfig = exploreView === 'sky' ? activeSkyTarget?.panelConfig ?? null : null
+
   const effectiveConceptCards = useMemo(() => {
-    const ids = activeContentRow?.panelConfig?.conceptTagIds || []
+    const ids =
+      exploreView === 'sky'
+        ? skyPanelConfig?.conceptTagIds || []
+        : activeContentRow?.panelConfig?.conceptTagIds || []
     if (!ids.length) return bridgeConceptCards
     const set = new Set(ids.map((x) => String(x || '').trim()))
     const picked = concepts.filter((c) => set.has(c.id))
     return picked.length ? picked.slice(0, 12) : bridgeConceptCards
-  }, [activeContentRow?.panelConfig?.conceptTagIds, bridgeConceptCards, concepts])
+  }, [
+    exploreView,
+    skyPanelConfig?.conceptTagIds,
+    activeContentRow?.panelConfig?.conceptTagIds,
+    bridgeConceptCards,
+    concepts,
+  ])
 
   const effectiveLessonLinks = useMemo(() => {
-    const ids = activeContentRow?.panelConfig?.lessonIds || []
+    const ids =
+      exploreView === 'sky'
+        ? skyPanelConfig?.lessonIds || []
+        : activeContentRow?.panelConfig?.lessonIds || []
     if (!ids.length) return bridgeLessonLinks
     const out = ids
       .map((id) => lessonLinkById.get(String(id || '').trim()))
       .filter((x): x is { lessonId: string; title: string; href: string } => Boolean(x))
     return out.length ? out : bridgeLessonLinks
-  }, [activeContentRow?.panelConfig?.lessonIds, bridgeLessonLinks, lessonLinkById])
+  }, [
+    exploreView,
+    skyPanelConfig?.lessonIds,
+    activeContentRow?.panelConfig?.lessonIds,
+    bridgeLessonLinks,
+    lessonLinkById,
+  ])
 
   const bridgeVisitedLessonsForEntity = useMemo(
     () => effectiveLessonLinks.filter((row) => visited3DMap[row.lessonId]).length,
@@ -178,6 +198,10 @@ export function useExploreLearningBridge({
     if (exploreView === 'sky') {
       const id = activeSkyTarget?.id ?? activeTargetId
       const name = getSkyTargetLabel(activeSkyTarget, activeTargetId)
+      const skyBlurb = activeSkyTarget?.museumBlurbVi
+      if (skyBlurb?.trim()) {
+        return getShowcaseMuseumLabelVi(id, name, skyBlurb)
+      }
       if (activeSkyTarget?.kind === 'body' && activeResolved) {
         return getShowcaseMuseumLabelVi(
           bridgeEntityId,

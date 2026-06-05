@@ -11,6 +11,7 @@ import {
 } from '@/features/explore/lib/skyTargetPanel'
 import { ExploreLearningSteps } from './ExploreLearningSteps'
 import { ExploreConceptChips } from './ExploreConceptChips'
+import { ExploreSkyPanelBlocks } from './ExploreSkyPanelBlocks'
 import type { useExplorePanelLearning } from '../hooks/useExplorePanelLearning'
 
 type PanelLearning = ReturnType<typeof useExplorePanelLearning>
@@ -42,6 +43,11 @@ export function ExploreSkyLearnPanel({
   const stats = skyTargetStarStats(target)
   const subtitle = skyTargetSubtitle(target)
   const isConstellation = target?.kind === 'constellation'
+  const panelBlocks = [
+    ...(target?.panelConfig?.overviewBlocks || []),
+    ...(target?.panelConfig?.skyBlocks || []),
+  ]
+  const stateBadge = String(target?.panelConfig?.stateBadge || '').trim()
 
   return (
     <aside
@@ -106,6 +112,9 @@ export function ExploreSkyLearnPanel({
           {subtitle ? (
             <p className="mt-1 text-xs text-slate-400">{subtitle}</p>
           ) : null}
+          {stateBadge ? (
+            <p className="mt-2 text-[11px] font-medium text-violet-200/90">{stateBadge}</p>
+          ) : null}
 
           {isConstellation ? (
             <div className="mt-3 grid grid-cols-3 gap-2">
@@ -138,6 +147,7 @@ export function ExploreSkyLearnPanel({
           ) : null}
 
           <p className="mt-4 text-sm leading-relaxed text-slate-300/95">{museumLabelVi}</p>
+          <ExploreSkyPanelBlocks blocks={panelBlocks} />
 
           <div className="mt-5 space-y-4 border-t border-white/[0.06] pt-4">
             <ExploreLearningSteps

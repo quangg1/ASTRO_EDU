@@ -6,6 +6,10 @@ import {
   getBundledSkyExploreTargets,
   type SkyExploreTarget,
 } from '@/features/explore/public'
+import {
+  mergeSkyTargetContent,
+  type SkyTargetContentDTO,
+} from '@/features/explore/lib/mergeSkyTargetContent'
 import { loadWesternExploreTargets } from '@/features/explore/lib/westernSkyCulture'
 import {
   fetchHipCatalogIndex,
@@ -30,6 +34,7 @@ export function useExploreSkyCatalog(skyActiveTargetId: string) {
   const [baseTargets, setBaseTargets] = useState<SkyExploreTarget[]>(
     () => getBundledSkyExploreTargets().targets,
   )
+  const [contentById, setContentById] = useState<Record<string, SkyTargetContentDTO>>({})
   const [westernTargets, setWesternTargets] = useState<SkyExploreTarget[]>([])
   const [dataSource, setDataSource] = useState<'api' | 'bundled' | 'loading'>('loading')
   const [cultureReady, setCultureReady] = useState(false)
@@ -39,6 +44,7 @@ export function useExploreSkyCatalog(skyActiveTargetId: string) {
     void fetchSkyExploreTargets().then((data) => {
       if (cancelled) return
       setBaseTargets(data.targets)
+      setContentById(data.contentById || {})
       setDataSource(data.source === 'api' ? 'api' : 'bundled')
     })
     return () => {
@@ -65,10 +71,10 @@ export function useExploreSkyCatalog(skyActiveTargetId: string) {
     }
   }, [])
 
-  const skyTargets = useMemo(
-    () => mergeSkyTargets(baseTargets, westernTargets),
-    [baseTargets, westernTargets],
-  )
+  const skyTargets = useMemo(() => {
+    const merged = mergeSkyTargets(baseTargets, westernTargets)
+    return mergeSkyTargetContent(merged, contentById)
+  }, [baseTargets, westernTargets, contentById])
 
   const activeSkyTarget = useMemo(
     () => skyTargets.find((t) => t.id === skyActiveTargetId) ?? null,

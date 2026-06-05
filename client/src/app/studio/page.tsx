@@ -215,6 +215,33 @@ export default function StudioHomePage() {
             </Link>
 
             <Link
+              href="/studio/sky-targets"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 8,
+                background: 'rgba(167,139,250,0.08)',
+                color: '#c4b5fd',
+                padding: '11px 20px',
+                ...mono,
+                fontSize: 11,
+                fontWeight: 600,
+                letterSpacing: '0.16em',
+                textTransform: 'uppercase',
+                textDecoration: 'none',
+                border: '1px solid rgba(167,139,250,0.28)',
+                boxShadow: '0 0 16px rgba(167,139,250,0.08)',
+                ...chamfer(10),
+              }}
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <path d="M12 2a15 15 0 0 1 4 10 15 15 0 0 1-4 10 15 15 0 0 1-4-10 15 15 0 0 1 4-10z" />
+              </svg>
+              Sky Compass Studio
+            </Link>
+
+            <Link
               href="/studio/showcase-entities"
               style={{
                 display: 'inline-flex',

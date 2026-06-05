@@ -1,11 +1,13 @@
 import { getApiPathBase } from '@/lib/apiConfig'
 import type { SkyExploreTarget } from '../lib/exploreTargets'
 import { SKY_EXPLORE_SEED, SKY_EXPLORE_SEED_VERSION } from '../data/skyExploreSeed'
+import type { SkyTargetContentDTO } from '../lib/mergeSkyTargetContent'
 
 export type SkyTargetsResponse = {
   version: number
   attribution?: string
   targets: SkyExploreTarget[]
+  contentById?: Record<string, SkyTargetContentDTO>
   source?: 'api' | 'bundled'
 }
 

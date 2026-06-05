@@ -105,7 +105,8 @@ export function useSkyDomeTexture() {
   }, [])
 }
 
-export const SKY_FOV_MIN_DEG = 65
+/** Zoom sâu nhất (~28°) — đủ gần để đọc tên sao mờ trong chòm sao. */
+export const SKY_FOV_MIN_DEG = 28
 /** Stellarium Web thường ~185°; stereographic an toàn tới ~150°. */
 export const SKY_FOV_MAX_DEG = 150
 /** Mặc định hơi zoom (~86°) — Ngân Hà rõ ngay lần đầu mở; vẫn zoom ra tới 150°. */
@@ -217,7 +218,9 @@ function fillStarBuffers(
     const [r, g, b] = applyHorizonReddening(cr, cg, cb, ext.redness)
     colors.push(r, g, b)
 
-    if ((s.name && s.mag <= 3.2) || s.mag <= 1.8) {
+    if (s.name && s.mag <= magLimit) {
+      labeled.push({ id: s.id, name: s.name, dir: p, mag: s.mag, pos })
+    } else if (s.mag <= 1.8) {
       labeled.push({ id: s.id, name: s.name || s.id, dir: p, mag: s.mag, pos })
     }
   }

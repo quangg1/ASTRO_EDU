@@ -10,6 +10,8 @@ export type SkyLabel = {
   dir: [number, number, number]
   emphasis?: 'star' | 'body' | 'cardinal' | 'constellation'
   selected?: boolean
+  /** Luôn hiện nhãn (vd. sao thuộc chòm sao đang chọn) — bỏ lọc độ sáng / chồng lấn. */
+  forceShow?: boolean
   /** Độ cao thực (°) — ẩn nhãn khi alt < 0. */
   altDeg?: number
 }

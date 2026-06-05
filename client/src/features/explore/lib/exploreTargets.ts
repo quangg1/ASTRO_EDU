@@ -1,3 +1,5 @@
+import type { ShowcasePanelConfigDTO } from '@/features/content3d/showcase/api/showcaseEntitiesApi'
+
 /** Explore hub: solar 3D entities vs sky dome targets share `entityId` where possible. */
 
 export type ExploreView = 'solar' | 'sky'
@@ -27,6 +29,9 @@ export type SkyExploreTarget = {
   /** Stellarium western skyculture illustration (`/sky/western_sky_culture/*.webp`). */
   illustrationUrl?: string
   iauCode?: string
+  /** CMS copy — panel học tập la bàn chòm sao (Studio → Sky Targets). */
+  museumBlurbVi?: string
+  panelConfig?: ShowcasePanelConfigDTO
 }
 
 export function parseExploreView(raw: string | null | undefined): ExploreView {

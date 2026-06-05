@@ -75,18 +75,19 @@ import { SKY_RENDER_ORDER } from './skyLayers'
 
 import {
   applyViewDrag,
-  clampViewAltRad,
   DEFAULT_SKY_VIEW,
-  SKY_VIEW_ALT_MAX,
   viewLandscapeOpacity,
   viewNadirLookAmount,
-  wrapViewAzRad,
   type SkyViewState,
 } from './skyViewState'
 import { appendGreatCircleArcSegments } from './skyStereographic'
 import { SKY_ACTIVE_LANDSCAPE } from '@/features/explore/lib/skyLandscapePack'
 
 import { pickNearestSkyObject, type SkyPickCandidate } from './skyPick'
+import {
+  resolveSkyTargetSceneDirection,
+  skyViewStateFromSceneDirection,
+} from './skyFocusView'
 
 
 
@@ -199,24 +200,6 @@ function FisheyeSky({
   const activeConstellationId = constellationTargetId
 
   const focusTargetId = sceneHighlightId ?? pinnedTargetId
-
-  const lastConstellationPan = useRef<string | null>(null)
-
-  useEffect(() => {
-    if (!activeConstellationId) return
-    if (lastConstellationPan.current === activeConstellationId) return
-    lastConstellationPan.current = activeConstellationId
-    const t = targets.find((x) => x.id === activeConstellationId)
-    if (!t) return
-    const hor = equatorialToHorizontal(t.raDeg, t.decDeg, observer)
-    if (hor.altDeg < 8) return
-    onViewChange({
-      viewAzRad: wrapViewAzRad(hor.azRad),
-      viewAltRad: clampViewAltRad(
-        Math.min(SKY_VIEW_ALT_MAX, Math.max(0.38, hor.altRad * 0.82)),
-      ),
-    })
-  }, [activeConstellationId, targets, observer, onViewChange])
 
   const activeStar = useMemo(() => {
 
@@ -553,11 +536,64 @@ export function SkyPlanetariumScene(props: Props) {
 
   const focusTargetId = props.sceneHighlightId ?? props.pinnedTargetId
 
+  const observerFocusKey = `${props.observer.latDeg}|${props.observer.lonDeg}|${props.observer.at.getTime()}`
+
+  useEffect(() => {
+    if (!focusTargetId) return
+    const dir = resolveSkyTargetSceneDirection(focusTargetId, {
+      targets: props.targets,
+      ephemerisBodies: props.ephemerisBodies,
+      catalogLabeled,
+      observer: props.observer,
+    })
+    if (!dir) return
+    setView(skyViewStateFromSceneDirection(dir))
+  }, [focusTargetId, observerFocusKey, props.targets, props.ephemerisBodies, catalogLabeled])
+
   const labelCandidates = useMemo((): LabelCandidate[] => {
     const active = focusTargetId
     const out: LabelCandidate[] = []
+    const constellationId = props.constellationTargetId
+    const constellationStarIds = new Set<string>()
+
+    if (constellationId) {
+      const t = props.targets.find((x) => x.id === constellationId)
+      const nameById = new Map<string, string>()
+      for (const s of catalogLabeled) {
+        if (s.name) nameById.set(s.id, s.name)
+      }
+      for (const s of hipCatalog ?? []) {
+        if (s.name && !nameById.has(s.id)) nameById.set(s.id, s.name)
+      }
+
+      for (const node of t?.starNodes ?? []) {
+        constellationStarIds.add(node.id)
+        const name = nameById.get(node.id)
+        if (!name) continue
+        const mappedId = catalogEntryTargetId(node.id)
+        const isStarPicked =
+          active === node.id ||
+          active === mappedId ||
+          props.sceneHighlightId === node.id ||
+          props.sceneHighlightId === mappedId
+        const dir = equatorialToSceneVector(node.raDeg, node.decDeg, props.observer)
+        const altDeg = Math.asin(Math.min(1, Math.max(-1, dir[1]))) * (180 / Math.PI)
+        out.push({
+          id: `lbl-${node.id}`,
+          text: name,
+          dir,
+          emphasis: 'star',
+          mag: node.mag,
+          altDeg,
+          priority: 160 + Math.max(0, 4 - node.mag) * 10 + (isStarPicked ? 200 : 0),
+          selected: isStarPicked,
+          forceShow: true,
+        })
+      }
+    }
 
     for (const s of catalogLabeled) {
+      if (constellationStarIds.has(s.id)) continue
       if (!s.name) continue
       const id = catalogEntryTargetId(s.id)
       const isActive = id === active || s.id === active
@@ -593,7 +629,6 @@ export function SkyPlanetariumScene(props: Props) {
       })
     }
 
-    const constellationId = props.constellationTargetId
     if (constellationId) {
       const t = props.targets.find((x) => x.id === constellationId)
       if (t) {
@@ -611,6 +646,7 @@ export function SkyPlanetariumScene(props: Props) {
     return out
   }, [
     catalogLabeled,
+    hipCatalog,
     props.ephemerisBodies,
     props.observer,
     focusTargetId,
@@ -666,8 +702,10 @@ export function SkyPlanetariumScene(props: Props) {
     if (!el) return
     const onWheel = (ev: WheelEvent) => {
       ev.preventDefault()
-      const step = ev.deltaY > 0 ? 4 : -4
-      setFovDeg((d) => clampFovDeg(d + step))
+      setFovDeg((d) => {
+        const step = Math.max(1.5, d * 0.055) * (ev.deltaY > 0 ? 1 : -1)
+        return clampFovDeg(d + step)
+      })
     }
     el.addEventListener('wheel', onWheel, { passive: false })
     return () => el.removeEventListener('wheel', onWheel)

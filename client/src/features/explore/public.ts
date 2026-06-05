@@ -9,6 +9,13 @@ export {
 } from './lib/exploreTargets'
 export { buildExploreHref, mergeExplorePreservedParams, normalizeSkyTargetId, EXPLORE_SOLAR_ONLY_PARAMS, EXPLORE_SKY_ONLY_PARAMS } from './lib/exploreViewUrl'
 export { fetchSkyExploreTargets, getBundledSkyExploreTargets, type SkyTargetsResponse } from './api/skyTargetsApi'
+export {
+  fetchEditorSkyTargets,
+  saveEditorSkyTargets,
+  emptySkyTargetEditorRow,
+  type SkyTargetEditorRow,
+} from './api/skyTargetsEditorApi'
+export { mergeSkyTargetContent, type SkyTargetContentDTO } from './lib/mergeSkyTargetContent'
 export { SKY_EXPLORE_SEED, SKY_EXPLORE_SEED_VERSION } from './data/skyExploreSeed'
 export {
   DEFAULT_WESTERN_SKY_TARGET_ID,
