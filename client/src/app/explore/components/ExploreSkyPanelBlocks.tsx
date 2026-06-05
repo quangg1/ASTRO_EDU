@@ -1,7 +1,7 @@
 'use client'
 
 import Image from 'next/image'
-import type { ShowcasePanelBlockDTO } from '@/features/content3d/showcase/api/showcaseEntitiesApi'
+import type { ShowcasePanelBlockDTO } from '@/features/content3d/showcase/public'
 
 export function ExploreSkyPanelBlocks({ blocks }: { blocks: ShowcasePanelBlockDTO[] }) {
   if (!blocks.length) return null

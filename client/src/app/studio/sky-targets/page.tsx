@@ -10,8 +10,8 @@ import {
   fetchEditorSkyTargets,
   saveEditorSkyTargets,
   type SkyTargetEditorRow,
-} from '@/features/explore/api/skyTargetsEditorApi'
-import type { ShowcasePanelBlockDTO } from '@/features/content3d/showcase/api/showcaseEntitiesApi'
+} from '@/features/explore/public'
+import type { ShowcasePanelBlockDTO } from '@/features/content3d/showcase/public'
 import {
   fetchHipCatalogIndex,
   preloadHipCatalogIndex,
