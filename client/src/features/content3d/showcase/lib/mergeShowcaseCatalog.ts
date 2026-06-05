@@ -183,11 +183,11 @@ export function buildStudioGlobeEntity(
   const hit = merged.find((e) => String(e.id || '').trim() === id)
   if (hit) {
     if (entityHasRenderableDiffuse(hit)) return hit
-    if (catalogTexture && !isPlanetShowcaseCatalogId(id)) {
-      return { ...hit, texturePath: catalogTexture }
-    }
     if (planetFallbackTexture) {
       return { ...hit, texturePath: planetFallbackTexture }
+    }
+    if (catalogTexture) {
+      return { ...hit, texturePath: catalogTexture }
     }
     return hit
   }
@@ -206,10 +206,7 @@ export function buildStudioGlobeEntity(
     size: 0.42,
     color: id.startsWith('planet-') ? '#b48a5a' : '#9ca3af',
     orbitColor: '#64748b',
-    texturePath: cmsDiffuse
-      ? undefined
-      : planetFallbackTexture ||
-        (!isPlanetShowcaseCatalogId(id) && catalogTexture ? catalogTexture : undefined),
+    texturePath: cmsDiffuse ? undefined : planetFallbackTexture || catalogTexture || undefined,
     remoteTextureUrl: cmsDiffuse || undefined,
   }
 }
