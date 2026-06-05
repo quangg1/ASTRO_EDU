@@ -18,6 +18,28 @@ function errorMiddleware(err, _req, res, _next) {
     });
   }
 
+  if (err && err.name === 'MulterError') {
+    console.error('Multer error:', err);
+    const byCode = {
+      LIMIT_FILE_SIZE: 'File quá lớn (tối đa 20 MB).',
+      LIMIT_UNEXPECTED_FILE: 'Field upload phải là "file".',
+    };
+    return res.status(400).json({
+      success: false,
+      code: err.code || 'MULTER_ERROR',
+      error: byCode[err.code] || err.message || 'Upload không hợp lệ',
+    });
+  }
+
+  if (err && err.name === 'CastError') {
+    console.error('Cast error:', err);
+    return res.status(401).json({
+      success: false,
+      code: 'INVALID_SESSION',
+      error: 'Phiên đăng nhập không hợp lệ — đăng xuất và đăng nhập lại.',
+    });
+  }
+
   console.error('Unhandled API error:', err);
   return res.status(500).json({
     success: false,

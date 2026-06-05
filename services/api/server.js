@@ -40,6 +40,7 @@ const { learningStateRouter } = require('./features/learning-state');
 const { onboardingRouter } = require('./features/onboarding');
 const { attachNotificationWebSocket, WS_PATH } = require('./features/notifications/ws/attachNotificationWs');
 const { isMailConfigured } = require('./shared/mailer');
+const { hasS3 } = require('./features/media/uploadStorage');
 
 const env = validateApiEnv();
 const app = express();
@@ -91,6 +92,7 @@ app.get('/health', (req, res) => {
     service: 'api',
     timestamp: new Date().toISOString(),
     smtpConfigured: isMailConfigured(),
+    s3UploadConfigured: hasS3,
   });
 });
 
