@@ -31,7 +31,7 @@ const decorationOverlayFilter = (_req, file, cb) => {
 
 const upload = multer({
   storage: getMulterStorage(),
-  limits: { fileSize: 20 * 1024 * 1024 },
+  limits: { fileSize: 50 * 1024 * 1024 },
   fileFilter,
 });
 
