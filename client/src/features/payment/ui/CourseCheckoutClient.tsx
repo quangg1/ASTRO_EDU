@@ -9,6 +9,7 @@ import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Button, Card, useToast } from '@/design-system'
+import { CosmoPageBackdrop } from '@/components/layout/CosmoPageBackdrop'
 import { useAuthStore } from '@/features/auth/public'
 import { forUserFacingError } from '@/lib/sanitizeUserError'
 import { userMessages } from '@/lib/userMessages'
@@ -21,11 +22,9 @@ import {
   type CheckoutSession,
 } from '../api/paymentApi'
 import { formatCourseMoney } from './formatCourseMoney'
-import {
-  CheckoutCardForm,
-  validateDemoCardForm,
-  type CheckoutCardFormValues,
-} from './CheckoutCardForm'
+import { validateDemoCardForm, type CheckoutCardFormValues } from './CheckoutCardForm'
+import { CheckoutOrderPanel } from './CheckoutOrderPanel'
+import { CheckoutPaymentView } from './CheckoutPaymentView'
 import { validatePromoCode } from '@/features/promotions/api/promoApi'
 
 type Phase = 'loading' | 'review' | 'payment' | 'processing' | 'completed' | 'error'
@@ -41,6 +40,7 @@ export interface CourseCheckoutClientProps {
   slug: string
   courseId: string
   courseTitle: string
+  courseThumbnail?: string | null
   /** Từ server (cohort checkout) — fallback nếu query chưa sync. */
   initialCohortId?: string | null
 }
@@ -49,81 +49,13 @@ function isAlreadyOwnedCode(code?: string) {
   return code === 'ALREADY_ENROLLED' || code === 'ALREADY_PURCHASED'
 }
 
-function OrderSummary({
-  quote,
-  session,
-}: {
-  quote: CheckoutQuote | null
-  session: CheckoutSession | null
-}) {
-  const currency = session?.currency || quote?.currency || 'VND'
-  const listPrice = session?.listPrice ?? quote?.listPrice ?? 0
-  const discountAmount = session?.discountAmount ?? quote?.selected.discountAmount ?? 0
-  const finalAmount = session?.amount ?? quote?.selected.finalAmount ?? listPrice
-  const title = session?.courseTitle || quote?.courseTitle || ''
-  const isUpgrade = Boolean(quote?.isCatalogUpgrade && quote.catalogCredit)
-  const cohortFull = quote?.cohortFullPrice ?? null
-
-  return (
-    <dl className="space-y-2 text-sm">
-      <div className="flex justify-between gap-2">
-        <dt className="text-ds-muted">Khóa học</dt>
-        <dd className="text-ds-text font-medium text-right">{title}</dd>
-      </div>
-      {isUpgrade && cohortFull != null && cohortFull > listPrice && (
-        <>
-          <div className="flex justify-between gap-2">
-            <dt className="text-ds-muted">Học phí lớp (đủ)</dt>
-            <dd className="text-ds-text tabular-nums">{formatCourseMoney(cohortFull, currency)}</dd>
-          </div>
-          <div className="flex justify-between gap-2 text-emerald-300/90">
-            <dt>Đã trả gói tự học</dt>
-            <dd className="tabular-nums">−{formatCourseMoney(quote!.catalogCredit!, currency)}</dd>
-          </div>
-        </>
-      )}
-      <div className="flex justify-between gap-2">
-        <dt className="text-ds-muted">{isUpgrade ? 'Phần cần trả thêm' : 'Giá gốc'}</dt>
-        <dd className="text-ds-text tabular-nums">{formatCourseMoney(listPrice, currency)}</dd>
-      </div>
-      {discountAmount > 0 && (
-        <div className="flex justify-between gap-2 text-ds-accent">
-          <dt>
-            Giảm giá
-            {quote?.discountSource === 'promo' && quote.selected.promoLabelVi
-              ? ` (${quote.selected.promoCode})`
-              : quote?.discountSource === 'gem_voucher'
-                ? ' (voucher gem)'
-                : quote?.discountSource === 'learner_tier' && quote.selected.learnerTierLabelVi
-                  ? ` (${quote.selected.learnerTierLabelVi})`
-                  : ''}
-          </dt>
-          <dd className="tabular-nums">−{formatCourseMoney(discountAmount, currency)}</dd>
-        </div>
-      )}
-      <div className="flex justify-between gap-2 pt-2 border-t border-ds-border">
-        <dt className="text-ds-muted font-medium">Tổng</dt>
-        <dd className="text-lg font-semibold text-ds-accent tabular-nums">
-          {formatCourseMoney(finalAmount, currency)}
-        </dd>
-      </div>
-      {quote && (
-        <div className="flex justify-between gap-2 text-xs pt-1">
-          <dt className="text-ds-muted">Số dư gem</dt>
-          <dd className="text-ds-text tabular-nums">{quote.gemBalance}</dd>
-        </div>
-      )}
-      {session?.txnRef && (
-        <div className="flex justify-between gap-2 text-xs">
-          <dt className="text-ds-muted">Mã đơn</dt>
-          <dd className="text-ds-text font-mono text-right break-all">{session.txnRef}</dd>
-        </div>
-      )}
-    </dl>
-  )
-}
-
-export function CourseCheckoutClient({ slug, courseId, courseTitle, initialCohortId }: CourseCheckoutClientProps) {
+export function CourseCheckoutClient({
+  slug,
+  courseId,
+  courseTitle,
+  courseThumbnail,
+  initialCohortId,
+}: CourseCheckoutClientProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const toast = useToast()
@@ -138,6 +70,7 @@ export function CourseCheckoutClient({ slug, courseId, courseTitle, initialCohor
   const [promoBusy, setPromoBusy] = useState(false)
   const [card, setCard] = useState<CheckoutCardFormValues>(EMPTY_CARD)
   const [cardError, setCardError] = useState('')
+  const [confirmingPayment, setConfirmingPayment] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
 
   const promoLocked = Boolean(appliedPromoCode)
@@ -279,12 +212,12 @@ export function CourseCheckoutClient({ slug, courseId, courseTitle, initialCohor
     }
     setCardError('')
     setErrorMsg('')
-    setPhase('processing')
+    setConfirmingPayment(true)
     try {
       const result = await confirmCheckout({ txnRef: session.txnRef, paymentMethod: 'card' })
       if (!result.success) {
         setErrorMsg(forUserFacingError(result.error, userMessages.paymentConfirmFailed))
-        setPhase('payment')
+        setConfirmingPayment(false)
         return
       }
       setPhase('completed')
@@ -301,7 +234,7 @@ export function CourseCheckoutClient({ slug, courseId, courseTitle, initialCohor
       }, 1200)
     } catch {
       setErrorMsg(userMessages.paymentConfirmFailed)
-      setPhase('payment')
+      setConfirmingPayment(false)
     }
   }, [session, card, toast, router, cohortIdFromUrl])
 
@@ -314,10 +247,13 @@ export function CourseCheckoutClient({ slug, courseId, courseTitle, initialCohor
   }
 
   const displayTitle = quote?.courseTitle || courseTitle
+  const isPaymentPhase = phase === 'payment' && quote && session
 
   return (
-    <main className="surface-edu min-h-screen px-4 pb-16 pt-20">
-      <div className="max-w-4xl mx-auto">
+    <main className="surface-edu relative min-h-screen px-4 pb-16 pt-20">
+      {isPaymentPhase && <CosmoPageBackdrop />}
+      <div className={isPaymentPhase ? 'relative z-10 max-w-6xl mx-auto' : 'max-w-4xl mx-auto'}>
+        {!isPaymentPhase && (
         <nav className="text-sm text-ds-muted mb-6 flex flex-wrap items-center gap-x-2 gap-y-1">
           <Link href="/courses" className="text-ds-accent hover:text-ds-text">
             Khóa học
@@ -332,7 +268,9 @@ export function CourseCheckoutClient({ slug, courseId, courseTitle, initialCohor
           <span aria-hidden>/</span>
           <span className="text-ds-text">Thanh toán</span>
         </nav>
+        )}
 
+        {!isPaymentPhase && (
         <header className="mb-8">
           <h1 className="text-2xl font-bold text-ds-text">Thanh toán</h1>
           <p className="mt-2 text-sm text-ds-muted leading-relaxed max-w-2xl">
@@ -359,8 +297,9 @@ export function CourseCheckoutClient({ slug, courseId, courseTitle, initialCohor
             </p>
           )}
         </header>
+        )}
 
-        {(phase === 'loading' || phase === 'processing') && (
+        {(phase === 'loading' || (phase === 'processing' && !isPaymentPhase)) && (
           <Card className="p-10 flex flex-col items-center gap-3">
             <div className="h-10 w-10 rounded-full border-2 border-ds-border border-t-ds-accent animate-spin" />
             <p className="text-sm text-ds-muted">
@@ -475,43 +414,38 @@ export function CourseCheckoutClient({ slug, courseId, courseTitle, initialCohor
               <Button onClick={() => void continueToPayment()}>Tiếp tục — thanh toán</Button>
             </Card>
 
-            <Card className="p-6 lg:sticky lg:top-20">
-              <h2 className="text-sm font-semibold text-ds-text mb-4">Đơn hàng</h2>
-              <OrderSummary quote={quote} session={null} />
+            <div className="space-y-4">
+              <CheckoutOrderPanel
+                quote={quote}
+                session={null}
+                courseThumbnail={courseThumbnail}
+                courseTitle={courseTitle}
+              />
               <Link
                 href={`/courses/${slug}`}
-                className="block text-center text-sm text-ds-muted hover:text-ds-accent mt-4"
+                className="block text-center text-sm text-ds-muted hover:text-ds-accent"
               >
                 ← Quay lại
               </Link>
-            </Card>
+            </div>
           </div>
         )}
 
-        {phase === 'payment' && quote && session && (
-          <div className="grid gap-6 lg:grid-cols-[1fr_300px] lg:items-start">
-            <Card className="p-6 space-y-5">
-              <h2 className="text-sm font-semibold text-ds-text">2. Thanh toán bằng thẻ</h2>
-              <CheckoutCardForm values={card} onChange={setCard} />
-              {cardError && <p className="text-sm text-ds-warning">{cardError}</p>}
-              {errorMsg && (
-                <p className="text-sm text-ds-warning rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2">
-                  {errorMsg}
-                </p>
-              )}
-              <div className="flex flex-wrap gap-3 pt-2">
-                <Button onClick={() => void completePurchase()}>Hoàn tất thanh toán</Button>
-                <Button variant="ghost" onClick={() => setPhase('review')}>
-                  Quay lại
-                </Button>
-              </div>
-            </Card>
-
-            <Card className="p-6 lg:sticky lg:top-20">
-              <h2 className="text-sm font-semibold text-ds-text mb-4">Đơn hàng</h2>
-              <OrderSummary quote={quote} session={session} />
-            </Card>
-          </div>
+        {isPaymentPhase && (
+          <CheckoutPaymentView
+            slug={slug}
+            quote={quote}
+            session={session}
+            courseTitle={courseTitle}
+            courseThumbnail={courseThumbnail}
+            card={card}
+            onCardChange={setCard}
+            cardError={cardError}
+            errorMsg={errorMsg}
+            confirming={confirmingPayment}
+            onBack={() => setPhase('review')}
+            onSubmit={() => void completePurchase()}
+          />
         )}
 
         {phase === 'error' && (

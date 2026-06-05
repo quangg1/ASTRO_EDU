@@ -49,26 +49,15 @@ function buildOnboardingPrimaryHref(input) {
         topics,
         depth,
       });
-    case 'explore_3d': {
-      if (primaryTopicId === 'stars-constellations') {
-        return appendQuery('/explore', {
-          ...baseFrom,
-          view: 'sky',
-          target: 'constellation-orion',
-          tour,
-          topics,
-        });
-      }
-      const entity = TOPIC_EXPLORE_ENTITY[primaryTopicId] || 'planet-earth';
+    case 'explore_3d':
+      // Luôn mở Showcase Trái Đất — tour 3D chạy trên solar/showcase, không planet-history.
       return appendQuery('/explore', {
         ...baseFrom,
         view: 'solar',
-        entity,
-        history: '1',
+        entity: 'planet-earth',
         tour,
         topics,
       });
-    }
     case 'stargazing':
       return appendQuery('/cosmos', {
         ...baseFrom,

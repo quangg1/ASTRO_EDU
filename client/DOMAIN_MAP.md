@@ -28,6 +28,11 @@ only (enforced by `check:app-public`). Non-`app/` feature code may still import 
 | `promotions` | `/api/promotions/*` | `features/promotions/` | **`features/promotions/public`** | — | `NEXT_PUBLIC_API_BASE_URL` |
 | `notifications` | `/api/notifications/*` | `features/notifications/` | **`features/notifications/public`** | — | `NEXT_PUBLIC_API_BASE_URL` |
 | `media` | `/upload`, `/files/*` | (no dedicated frontend domain) | `lib/apiConfig.ts:resolveMediaUrl` (kept in shared) | — | `NEXT_PUBLIC_API_BASE_URL` |
+| `agent` | `/api/agent/*` | `features/agent/` | **`agent/public`** (chat, coach, concept quiz, tools) | — | `NEXT_PUBLIC_API_BASE_URL`, `NEXT_PUBLIC_AI_SERVICE_URL` |
+| `learning-state` | `/api/learning-state/*` | `features/learning-state/` | **`learning-state/public`** | — | `NEXT_PUBLIC_API_BASE_URL` |
+| `explore` (client hub) | `/api/explore/*`, sky-targets, contextual-quiz | `features/explore/`, `app/explore/` | `explore/public`, sky assets CDN via `skyAssets.ts` | — | `NEXT_PUBLIC_MEDIA_CDN` (prefix `/sky/`) |
+
+**Use case diagram ↔ code:** see [`docs/use-case-coverage.md`](../docs/use-case-coverage.md) — hầu hết use case trên sơ đồ UML **đã có**; sơ đồ **chưa** phản ánh Explore sky, agent, gems, community.
 
 ---
 

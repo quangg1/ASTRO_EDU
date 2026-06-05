@@ -26,7 +26,6 @@ import {
   type OnboardingOptions,
 } from '@/features/onboarding/public'
 import { OnboardingLaunchOverlay } from '@/components/onboarding/OnboardingLaunchOverlay'
-import { getOnboardingLaunchVideoSrc } from '@/lib/onboardingLaunchVideo'
 import { AuthSingleColumnLayout } from '@/components/auth/AuthFlowShell'
 import { SpaceSelectCard } from '@/components/space-premium'
 import {
@@ -115,17 +114,6 @@ export function OnboardingWizard() {
       cancelled = true
     }
   }, [user, checked, loading, router])
-
-  useEffect(() => {
-    const link = document.createElement('link')
-    link.rel = 'preload'
-    link.as = 'video'
-    link.href = getOnboardingLaunchVideoSrc()
-    document.head.appendChild(link)
-    return () => {
-      document.head.removeChild(link)
-    }
-  }, [])
 
   const maxTopics = options?.maxTopicPicks ?? 3
   const isFinalStep = step === TOTAL - 1

@@ -15,6 +15,13 @@ Mô phỏng 3D tương tác lịch sử 4.6 tỷ năm của Trái Đất.
 - **MongoDB + Mongoose** - Database
 - **PBDB Data** - 500,000+ fossil records
 
+## Tài liệu sản phẩm
+
+- **Use case ↔ codebase:** [`docs/use-case-coverage.md`](docs/use-case-coverage.md) · UML: [`docs/diagrams/UC-Diagram.drawio`](docs/diagrams/UC-Diagram.drawio)
+- **Domain map (frontend):** [`client/DOMAIN_MAP.md`](client/DOMAIN_MAP.md)
+- **Media / CDN:** [`docs/MEDIA_CLOUD.md`](docs/MEDIA_CLOUD.md)
+- **La bàn chòm sao:** [`docs/architecture/sky-planetarium.md`](docs/architecture/sky-planetarium.md)
+
 ## Cấu trúc Project
 
 ```

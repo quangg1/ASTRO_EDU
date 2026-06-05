@@ -13,6 +13,8 @@
     "install:all": "npm install && cd packages/contracts && npm install && npm run build && cd ../auth-shared && npm install && cd ../../services/api && npm install && cd ../../client && npm install",
     "rag:validate": "python services/ai/scripts/validate_corpus.py",
     "rag:build": "cd services/ai && python scripts/build_rag_index.py",
-    "rag:reindex-full": "cd services/api && npm run rag:reindex-full"
+    "rag:reindex-full": "cd services/api && npm run rag:reindex-full",
+    "diagrams:uc": "node scripts/generate-uc-diagram.mjs",
+    "diagrams:seq": "node scripts/generate-seq-diagrams.mjs"
   }
 }

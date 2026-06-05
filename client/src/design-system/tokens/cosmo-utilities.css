@@ -73,3 +73,25 @@
 .cosmo-light-panel-muted {
   color: var(--color-text-muted-on-card);
 }
+
+/** CTA thanh toán — gradient accent Cosmo (cyan → amber) */
+.checkout-pay-cta {
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--color-accent) 88%, #0a1628) 0%,
+    color-mix(in srgb, var(--color-brand-highlight) 75%, #1a1030) 55%,
+    color-mix(in srgb, var(--color-brand-amber) 70%, #1a1408) 100%
+  );
+  border: 1px solid color-mix(in srgb, var(--color-accent) 45%, transparent);
+  box-shadow:
+    0 8px 28px color-mix(in srgb, var(--color-accent) 22%, transparent),
+    inset 0 1px 0 color-mix(in srgb, white 12%, transparent);
+}
+
+.checkout-pay-cta:hover:not(:disabled) {
+  filter: brightness(1.06);
+}
+
+.checkout-pay-cta:active:not(:disabled) {
+  filter: brightness(0.98);
+}

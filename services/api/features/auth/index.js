@@ -15,7 +15,8 @@ const { requireString } = require('../../shared/validation');
 const { AppError } = require('../../shared/errors');
 const { getRuntimeEnv } = require('../../config/runtimeEnv');
 const APP_PATHS = require('../../../../shared/appPaths');
-const { sendWelcomeEmail, sendPasswordResetEmail } = require('../../shared/mailer');
+const { sendWelcomeEmail } = require('../../shared/mailer');
+const { issuePasswordResetForLocalUser } = require('../../shared/passwordReset');
 const {
   isLocalEmailVerified,
   isLocalUserPendingVerification,
@@ -368,29 +369,23 @@ router.post('/change-password', authMiddleware, async (req, res) => {
 router.post('/forgot-password', async (req, res) => {
   try {
     const email = requireString(req.body?.email, 'email', 'Email');
-    const user = await User.findOne({ email: email.trim().toLowerCase(), provider: 'local', accountStatus: 'active' }).select('+resetToken +resetTokenExpires');
+    const user = await User.findOne({
+      email: email.trim().toLowerCase(),
+      provider: 'local',
+      accountStatus: 'active',
+    }).select('+resetToken +resetTokenExpires email displayName provider accountStatus');
     if (!user) {
       return res.json({ success: true, message: 'Nếu email tồn tại, bạn sẽ nhận được link đặt lại mật khẩu.' });
     }
-    const token = crypto.randomBytes(32).toString('hex');
-    user.resetToken = token;
-    user.resetTokenExpires = new Date(Date.now() + 60 * 60 * 1000);
-    await user.save({ validateBeforeSave: false });
-    const clientUrl = getRuntimeEnv().clientUrl;
-    const resetLink = `${clientUrl}${APP_PATHS.resetPassword}?token=${token}`;
-    const emailResult = await sendPasswordResetEmail({
-      to: user.email,
-      displayName: user.displayName,
-      resetLink,
-    });
+    const issued = await issuePasswordResetForLocalUser(user);
     const payload = {
       success: true,
       message: 'Nếu email tồn tại, bạn sẽ nhận được link đặt lại mật khẩu.',
-      emailSent: !!emailResult.sent,
+      emailSent: issued.emailSent,
     };
-    if (!emailResult.sent && process.env.NODE_ENV !== 'production') {
-      payload.resetLink = resetLink;
-      payload.devHint = 'SMTP chưa cấu hình — link hiển thị để dev test.';
+    if (issued.resetLink) {
+      payload.resetLink = issued.resetLink;
+      payload.devHint = issued.devHint;
     }
     res.json(payload);
   } catch (err) {

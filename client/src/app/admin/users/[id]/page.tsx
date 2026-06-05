@@ -10,6 +10,7 @@ import {
   grantCatalogEnrollment,
   revokeCatalogEnrollment,
   revokeCohortEnrollment,
+  sendAdminUserPasswordReset,
   type AdminUserDetail,
 } from '@/features/admin/public'
 import { formatOrderAmount } from '@/lib/money'
@@ -101,6 +102,19 @@ export default function AdminUserDetailPage() {
     }
   }
 
+  const sendPasswordReset = async () => {
+    const email = detail?.user.email
+    if (!window.confirm(`Gửi email đặt lại mật khẩu tới ${email || 'user này'}?`)) return
+    const ok = await sendAdminUserPasswordReset(userId)
+    if (ok.success) {
+      let text = ok.message || 'Đã gửi link đặt lại mật khẩu.'
+      if (ok.resetLink) text += ` (dev: ${ok.resetLink})`
+      setMsg(text)
+    } else {
+      setMsg(ok.error || 'Không gửi được link đặt lại mật khẩu.')
+    }
+  }
+
   if (loading || !detail) {
     return (
       <AdminGate checked={checked} allowed={Boolean(user && canAccessAdminPath(user, '/admin/users'))}>
@@ -129,7 +143,15 @@ export default function AdminUserDetailPage() {
           <p className="text-xs text-gray-500 uppercase">Tài khoản</p>
           <p className="text-white mt-1">Vai trò: {labelUserRoleVi(u.role)}</p>
           <p className="text-gray-400 text-sm">Trạng thái: {labelAccountStatusVi(u.accountStatus)}</p>
+          <p className="text-gray-400 text-sm">
+            Đăng nhập: {u.provider === 'local' ? 'Email / mật khẩu' : u.provider || '—'}
+          </p>
           <p className="text-gray-400 text-sm">Tham gia: {formatOrderDateVi(u.createdAt)}</p>
+          {u.provider === 'local' && u.accountStatus === 'active' && (
+            <Button type="button" className="mt-3" onClick={() => void sendPasswordReset()}>
+              Gửi link đặt lại mật khẩu
+            </Button>
+          )}
         </Card>
         <Card className="p-4">
           <p className="text-xs text-gray-500 uppercase">Gem</p>

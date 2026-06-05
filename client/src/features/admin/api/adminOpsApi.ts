@@ -23,6 +23,7 @@ export type AdminUserDetail = {
     id: string
     email: string | null
     displayName: string
+    provider?: string
     role: string
     accountStatus: string
     createdAt: string

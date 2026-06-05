@@ -1,13 +1,9 @@
 'use client'
 
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { OnboardingIntentId } from '@/features/onboarding/public'
 import { ONBOARDING_LAUNCH_LINES } from '@/lib/onboardingLanding'
-import {
-  getOnboardingLaunchVideoLocalSrc,
-  getOnboardingLaunchVideoSrc,
-} from '@/lib/onboardingLaunchVideo'
 import { APP_DISPLAY_NAME } from '@/lib/appBrand'
 
 type Props = {
@@ -17,9 +13,20 @@ type Props = {
   onComplete: () => void
 }
 
-function WarpFallback() {
+/** Warp lines — thay video launch (tránh viền trắng / object-cover tràn). */
+function LaunchWarpBackdrop() {
   return (
     <div className="absolute inset-0 pointer-events-none overflow-hidden">
+      <div
+        className="absolute inset-0"
+        style={{
+          background: `
+            radial-gradient(ellipse 70% 55% at 50% 42%, rgba(6, 182, 212, 0.12) 0%, transparent 62%),
+            radial-gradient(ellipse 45% 35% at 18% 78%, rgba(244, 205, 118, 0.08) 0%, transparent 55%),
+            #02040a
+          `,
+        }}
+      />
       {Array.from({ length: 36 }).map((_, i) => (
         <motion.span
           key={i}
@@ -38,17 +45,16 @@ function WarpFallback() {
   )
 }
 
+const MIN_WARP_MS = 3200
+const MAX_WARP_MS = 9000
+
 export function OnboardingLaunchOverlay({ intent, gemsEarned, apiReady, onComplete }: Props) {
-  const videoRef = useRef<HTMLVideoElement>(null)
   const finishedRef = useRef(false)
-  const videoEndedRef = useRef(false)
+  const warpDoneRef = useRef(false)
   const lines = ONBOARDING_LAUNCH_LINES[intent]?.loading ?? ['Đang chuẩn bị tọa độ…']
   const doneLine = ONBOARDING_LAUNCH_LINES[intent]?.done ?? 'Đáp xuống an toàn!'
   const [lineIndex, setLineIndex] = useState(0)
-  const [phase, setPhase] = useState<'video' | 'done'>('video')
-  const [videoMode, setVideoMode] = useState<'loading' | 'playing' | 'error'>('loading')
-  const [videoSrc, setVideoSrc] = useState(() => getOnboardingLaunchVideoSrc())
-  const localSrc = getOnboardingLaunchVideoLocalSrc()
+  const [phase, setPhase] = useState<'warp' | 'done'>('warp')
 
   const finish = useCallback(() => {
     if (finishedRef.current) return
@@ -65,7 +71,7 @@ export function OnboardingLaunchOverlay({ intent, gemsEarned, apiReady, onComple
   )
 
   const maybeFinishSequence = useCallback(() => {
-    if (!videoEndedRef.current || !apiReady) return
+    if (!warpDoneRef.current || !apiReady) return
     goDone(gemsEarned > 0 ? 1200 : 700)
   }, [apiReady, gemsEarned, goDone])
 
@@ -81,89 +87,29 @@ export function OnboardingLaunchOverlay({ intent, gemsEarned, apiReady, onComple
     return () => timers.forEach(clearTimeout)
   }, [lines])
 
-  const attemptPlay = useCallback(() => {
-    const video = videoRef.current
-    if (!video) return
-
-    void video
-      .play()
-      .then(() => setVideoMode('playing'))
-      .catch(() => {
-        // play() often rejects with AbortError right after src/load changes — retry once.
-        window.setTimeout(() => {
-          void video
-            .play()
-            .then(() => setVideoMode('playing'))
-            .catch(() => {
-              if (videoSrc !== localSrc) {
-                setVideoSrc(localSrc)
-                setVideoMode('loading')
-                return
-              }
-              setVideoMode('error')
-            })
-        }, 200)
-      })
-  }, [videoSrc, localSrc])
-
-  useLayoutEffect(() => {
-    setVideoMode('loading')
-  }, [videoSrc])
-
-  const handleVideoError = useCallback(() => {
-    if (videoSrc !== localSrc) {
-      setVideoSrc(localSrc)
-      setVideoMode('loading')
-      return
-    }
-    setVideoMode('error')
-  }, [videoSrc, localSrc])
-
   useEffect(() => {
-    if (videoMode !== 'error') return
-    const markEnded = () => {
-      videoEndedRef.current = true
+    const minTimer = setTimeout(() => {
+      warpDoneRef.current = true
       maybeFinishSequence()
+    }, MIN_WARP_MS)
+    const maxTimer = setTimeout(() => {
+      warpDoneRef.current = true
+      maybeFinishSequence()
+    }, MAX_WARP_MS)
+    return () => {
+      clearTimeout(minTimer)
+      clearTimeout(maxTimer)
     }
-    const t = setTimeout(markEnded, 4200)
-    return () => clearTimeout(t)
-  }, [videoMode, maybeFinishSequence])
-
-  useEffect(() => {
-    const fallback = setTimeout(() => {
-      videoEndedRef.current = true
-      maybeFinishSequence()
-    }, 9000)
-    return () => clearTimeout(fallback)
   }, [maybeFinishSequence])
 
   return (
     <div
-      className="fixed inset-0 z-[100] overflow-hidden bg-black"
+      className="fixed inset-0 z-[100] overflow-hidden bg-[#02040a]"
       role="dialog"
       aria-live="polite"
       aria-label="Đang khởi hành"
     >
-      {videoMode !== 'error' ? (
-        <video
-          ref={videoRef}
-          className="absolute inset-0 h-full w-full object-cover"
-          src={videoSrc}
-          muted
-          playsInline
-          autoPlay
-          preload="auto"
-          onLoadedData={attemptPlay}
-          onPlaying={() => setVideoMode('playing')}
-          onEnded={() => {
-            videoEndedRef.current = true
-            maybeFinishSequence()
-          }}
-          onError={handleVideoError}
-        />
-      ) : (
-        <WarpFallback />
-      )}
+      <LaunchWarpBackdrop />
 
       <div
         className="absolute inset-0 pointer-events-none"
@@ -179,7 +125,7 @@ export function OnboardingLaunchOverlay({ intent, gemsEarned, apiReady, onComple
         </p>
 
         <AnimatePresence mode="wait">
-          {phase === 'video' ? (
+          {phase === 'warp' ? (
             <motion.p
               key={lineIndex}
               initial={{ opacity: 0, y: 10 }}

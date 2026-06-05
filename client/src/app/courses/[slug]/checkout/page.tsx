@@ -43,6 +43,7 @@ export default async function CourseCheckoutPage({
         slug={slug}
         courseId={outline.id}
         courseTitle={outline.title}
+        courseThumbnail={outline.thumbnail}
         initialCohortId={cohortId}
       />
     </Suspense>

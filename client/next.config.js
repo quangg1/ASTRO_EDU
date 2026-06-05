@@ -26,6 +26,10 @@ const UNIFIED_API_ROUTE_SEGMENTS = [
   'news',
   'admin',
   'agent',
+  'learning-state',
+  'community',
+  'messages',
+  'users',
   'onboarding',
 ];
 
@@ -124,6 +128,7 @@ const nextConfig = {
     remotePatterns: [
       { protocol: 'https', hostname: '**.amazonaws.com', pathname: '/**' },
       { protocol: 'https', hostname: '**.cloudfront.net', pathname: '/**' },
+      { protocol: 'https', hostname: '**.onrender.com', pathname: '/**' },
       { protocol: 'https', hostname: 'images.unsplash.com', pathname: '/**' },
     ],
   },

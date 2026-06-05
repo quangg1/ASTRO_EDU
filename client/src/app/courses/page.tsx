@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
 import { fetchCourses, type Course } from '@/features/courses/public'
 import { resolveMediaUrl } from '@/lib/apiConfig'
@@ -432,13 +432,21 @@ function CourseCard({ course, index }: { course: Course; index: number }) {
 export default function CoursesPage() {
   const [courses, setCourses] = useState<Course[]>([])
   const [loading, setLoading] = useState(true)
+  const [searchInput, setSearchInput] = useState('')
   const { time: localTime, zoneLabel } = useLiveClock()
 
-  useEffect(() => {
-    fetchCourses()
+  const loadCourses = useCallback((q: string) => {
+    setLoading(true)
+    fetchCourses(q.trim() ? { search: q.trim() } : undefined)
       .then(setCourses)
       .finally(() => setLoading(false))
   }, [])
+
+  useEffect(() => {
+    const delay = searchInput.trim() ? 300 : 0
+    const t = window.setTimeout(() => loadCourses(searchInput), delay)
+    return () => window.clearTimeout(t)
+  }, [searchInput, loadCourses])
 
   const totalCourses = courses.length
   const totalStr = String(totalCourses).padStart(2, '0')
@@ -553,6 +561,23 @@ export default function CoursesPage() {
           >
             Tham gia các khóa học và tương tác với mô phỏng 3D: Lịch sử Trái Đất, Hệ Mặt Trời và Thiên hà Milky Way.
           </p>
+
+          <label className="mt-6 block max-w-md" style={{ marginTop: 24 }}>
+            <span className="sr-only">Tìm khóa học</span>
+            <input
+              type="search"
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              placeholder="Tìm theo tên hoặc mô tả…"
+              aria-label="Tìm khóa học"
+              className="w-full rounded-xl border bg-transparent px-4 py-2.5 text-sm outline-none transition-colors focus:border-[var(--color-accent)]"
+              style={{
+                borderColor: 'var(--color-border)',
+                color: 'var(--color-text-primary)',
+                fontFamily: 'JetBrains Mono, monospace',
+              }}
+            />
+          </label>
         </header>
 
         {/* ② course grid ───────────────────────────────────────────────────── */}
@@ -573,7 +598,7 @@ export default function CoursesPage() {
                 fontSize: 13, color: 'var(--color-text-subtle)',
               }}
             >
-              // no courses found
+              {searchInput.trim() ? '// no courses match your search' : '// no courses found'}
             </p>
           </div>
         ) : (

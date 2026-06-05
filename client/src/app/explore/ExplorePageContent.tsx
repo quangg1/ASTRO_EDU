@@ -43,10 +43,18 @@ function ExplorePageInner() {
     ],
   )
 
+  const focusEarthShowcase = useCallback(() => {
+    explore.navigateExploreView('solar', 'planet-earth')
+  }, [explore])
+
   const returnToShowcaseForTour = useCallback(() => {
-    explore.setEarthHistoryOpen(false)
-    explore.closePlanetHistory()
-  }, [explore.setEarthHistoryOpen, explore.closePlanetHistory])
+    focusEarthShowcase()
+  }, [focusEarthShowcase])
+
+  const handleTourFinished = useCallback(() => {
+    setTourOpen(false)
+    focusEarthShowcase()
+  }, [focusEarthShowcase])
   const earthHistoryScene = usePlanetHistoryEarthScene(
     explore.planetHistoryOpen,
     explore.planetHistoryEntityId,
@@ -149,7 +157,7 @@ function ExplorePageInner() {
 
       <ExploreOnboardingTour
         open={tourOpen}
-        onClose={() => setTourOpen(false)}
+        onClose={handleTourFinished}
         context={tourContext}
         onRequestShowcase={returnToShowcaseForTour}
       />

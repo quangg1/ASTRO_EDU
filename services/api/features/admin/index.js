@@ -7,6 +7,7 @@ const {
   updateAdminUserScopes,
   updateAdminUserStatus,
   deleteAdminUserPermanently,
+  adminSendUserPasswordReset,
 } = require('./services/adminUserService');
 const {
   listApplicationsForAdmin,
@@ -239,6 +240,23 @@ router.patch('/users/:id/status', authMiddleware, requireAdminScope('users'), as
   } catch (err) {
     req.logger?.error('admin_update_status_failed', { error: err.message, targetUserId: req.params.id });
     res.status(err.status || 500).json({ success: false, code: err.code || 'ADMIN_USER_STATUS_UPDATE_FAILED', error: err.message || 'Lỗi cập nhật trạng thái tài khoản' });
+  }
+});
+
+router.post('/users/:id/send-password-reset', authMiddleware, requireAdminScope('users'), async (req, res) => {
+  try {
+    const result = await adminSendUserPasswordReset({
+      actorUserId: req.userId,
+      targetUserId: req.params.id,
+    });
+    res.json({ success: true, ...result });
+  } catch (err) {
+    req.logger?.error('admin_password_reset_failed', { error: err.message, targetUserId: req.params.id });
+    res.status(err.status || 500).json({
+      success: false,
+      code: err.code || 'ADMIN_PASSWORD_RESET_FAILED',
+      error: err.message || 'Không gửi được link đặt lại mật khẩu',
+    });
   }
 });
 

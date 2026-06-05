@@ -21,6 +21,7 @@ const UserProgress = require('../../learning-path/models/UserProgress');
 const LearningPathEvent = require('../../learning-path/models/LearningPathEvent');
 const { AppError } = require('../../../shared/errors');
 const { sendAccountDeletedEmail } = require('../../../shared/mailer');
+const { issuePasswordResetForLocalUser } = require('../../../shared/passwordReset');
 const { recordAdminAction } = require('../lib/recordAdminAction');
 const { normalizeAdminScopes, isFullAdmin } = require('../../../shared/adminScopes');
 
@@ -314,11 +315,25 @@ async function deleteAdminUserPermanently({ actorUserId, targetUserId, confirmEm
   return { deletedUserId: uid, email: user.email, emailSent, reason: reasonText };
 }
 
+async function adminSendUserPasswordReset({ actorUserId, targetUserId }) {
+  const result = await issuePasswordResetForLocalUser(targetUserId);
+  await recordAdminAction({
+    actorUserId,
+    action: 'user_password_reset_sent',
+    targetType: 'user',
+    targetId: String(targetUserId),
+    reason: 'Admin gửi link đặt lại mật khẩu',
+    payload: { email: result.email, emailSent: result.emailSent },
+  });
+  return result;
+}
+
 module.exports = {
   listAdminUsers,
   updateAdminUserRole,
   updateAdminUserScopes,
   updateAdminUserStatus,
   deleteAdminUserPermanently,
+  adminSendUserPasswordReset,
   ROLES,
 };

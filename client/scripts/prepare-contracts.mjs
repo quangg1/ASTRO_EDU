@@ -1,5 +1,5 @@
 /**
- * Render rootDir=client: đảm bảo packages/contracts có node_modules (zod) trước khi next build.
+ * Render rootDir=client: đảm bảo packages/contracts có node_modules + dist/ trước khi next build.
  * Chạy qua postinstall / prebuild — không cần sửa Build Command trên Dashboard.
  */
 import { execSync } from 'node:child_process';
@@ -14,14 +14,21 @@ if (!existsSync(path.join(contractsDir, 'package.json'))) {
   process.exit(0);
 }
 
+// Cần devDependencies (typescript) để `npm run build` → dist/index.js
 const env = { ...process.env, npm_config_production: 'false' };
+
+function run(cmd) {
+  execSync(cmd, { cwd: contractsDir, stdio: 'inherit', env });
+}
 
 try {
   if (existsSync(path.join(contractsDir, 'package-lock.json'))) {
-    execSync('npm ci --omit=dev', { cwd: contractsDir, stdio: 'inherit', env });
+    run('npm ci');
   } else {
-    execSync('npm install --omit=dev', { cwd: contractsDir, stdio: 'inherit', env });
+    run('npm install');
   }
 } catch {
-  execSync('npm install --omit=dev', { cwd: contractsDir, stdio: 'inherit', env });
+  run('npm install');
 }
+
+run('npm run build');

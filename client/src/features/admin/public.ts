@@ -19,6 +19,7 @@ export {
   updateUserRole,
   updateUserAdminScopes,
   updateUserStatus,
+  sendAdminUserPasswordReset,
   deleteUserPermanently,
 } from './api/adminUsersApi'
 export type {

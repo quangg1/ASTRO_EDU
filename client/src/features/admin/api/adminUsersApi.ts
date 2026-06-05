@@ -123,6 +123,43 @@ export async function updateUserStatus(
   return { success: false, error: data.error || 'Cập nhật trạng thái tài khoản thất bại' }
 }
 
+export async function sendAdminUserPasswordReset(
+  userId: string,
+): Promise<{
+  success: boolean
+  message?: string
+  emailSent?: boolean
+  resetLink?: string
+  devHint?: string
+  error?: string
+  code?: string
+}> {
+  const token = getToken()
+  if (!token) return { success: false, error: 'Not signed in' }
+  const res = await authFetch(
+    `${API_BASE}/admin/users/${encodeURIComponent(userId)}/send-password-reset`,
+    {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    },
+  )
+  const data = await res.json()
+  if (data.success) {
+    return {
+      success: true,
+      message: data.message,
+      emailSent: data.emailSent,
+      resetLink: data.resetLink,
+      devHint: data.devHint,
+    }
+  }
+  return {
+    success: false,
+    error: data.error || 'Không gửi được link đặt lại mật khẩu',
+    code: data.code,
+  }
+}
+
 export async function deleteUserPermanently(
   userId: string,
   confirmEmail: string,

@@ -64,7 +64,9 @@ describe('onboardingRecommendations', () => {
       modules: MOCK_MODULES,
     });
     assert.match(built.primaryHref, /^\/explore\?/);
-    assert.match(built.primaryHref, /entity=planet-jupiter/);
+    assert.match(built.primaryHref, /entity=planet-earth/);
+    assert.match(built.primaryHref, /view=solar/);
+    assert.doesNotMatch(built.primaryHref, /history=1/);
     assert.match(built.primaryHref, /from=onboarding/);
     assert.match(built.primaryHref, /tour=1/);
   });

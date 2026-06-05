@@ -22,7 +22,7 @@ Render → **New → Web Service** (không phải Static Site).
 | `MONGODB_URI` | Có | MongoDB Atlas |
 | `JWT_SECRET` | Có | Chuỗi bí mật dài |
 | `INTERNAL_API_SECRET` | Có | Chuỗi bí mật khác |
-| `CLIENT_URL` | Có | URL frontend **sau này** (vd. `https://astro-edu.onrender.com`), hoặc tạm URL dự kiến; sửa lại sau bước 2 |
+| `CLIENT_URL` | Có | URL frontend **sau này** (vd. `https://cosmo-learn-fr.onrender.com`), hoặc tạm URL dự kiến; sửa lại sau bước 2 |
 | `NODE_VERSION` | Khuyến nghị | `22` |
 | `VNPAY_*` | Nếu dùng thanh toán | Xem `SERVICES.md` |
 
@@ -56,7 +56,7 @@ Render → **New → Web Service**.
 | `MEDIA_SERVICE_URL` | Cùng URL API |
 | `NEXT_PUBLIC_FIREBASE_*` | Nếu dùng đăng nhập Google/Facebook |
 
-Deploy frontend → copy URL web (vd. `https://astro-edu.onrender.com`).
+Deploy frontend → copy URL web (vd. `https://cosmo-learn-fr.onrender.com`).
 
 Quay lại **service API** → sửa `CLIENT_URL` = URL frontend → **Redeploy API** (CORS).
 

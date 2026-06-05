@@ -74,7 +74,12 @@ async function buildOnboardingRecommendations(input) {
   if (intent === 'explore_3d' || intent === 'mixed') {
     recommendations.push({
       kind: 'explore',
-      href: appendQuery('/explore', { from: 'onboarding', tour: '1' }),
+      href: appendQuery('/explore', {
+        from: 'onboarding',
+        tour: '1',
+        view: 'solar',
+        entity: 'planet-earth',
+      }),
       labelVi: 'Mở Explore 3D',
       descriptionVi: 'Bay quanh hệ Mặt Trời và chạm vào từng thiên thể.',
     });
