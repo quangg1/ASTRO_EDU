@@ -12,7 +12,7 @@ from pathlib import Path
 
 import httpx
 
-EMBEDDING_URL = os.environ.get("EMBEDDING_URL", "http://localhost:5004")
+from embedding_client import EMBED_TIMEOUT_SEC, EMBEDDING_URL, embedding_request_headers
 RAG_INDEX_PATH = os.environ.get("RAG_INDEX_PATH", str(Path(__file__).parent / "data" / "rag_index.json"))
 KNOWLEDGE_CORPUS_DIR = os.environ.get(
     "KNOWLEDGE_CORPUS_DIR",
@@ -85,8 +85,9 @@ def collect_chunks_from_corpus(corpus_dir: str | Path) -> list[tuple[str, str]]:
 
 async def embed_one(client: httpx.AsyncClient, text: str) -> list[float] | None:
     r = await client.post(
-        f"{EMBEDDING_URL.rstrip('/')}/embed_one",
+        f"{EMBEDDING_URL}/embed_one",
         json={"text": text[:8000]},
+        headers=embedding_request_headers(),
     )
     if r.status_code != 200:
         return None
@@ -101,7 +102,7 @@ async def embed_texts_parallel(texts: list[str]) -> list[list[float] | None]:
 
     async def run_one(i: int, t: str) -> None:
         async with sem:
-            async with httpx.AsyncClient(timeout=60.0) as c:
+            async with httpx.AsyncClient(timeout=EMBED_TIMEOUT_SEC) as c:
                 results[i] = await embed_one(c, t)
 
     await asyncio.gather(*(run_one(i, t) for i, t in enumerate(texts)))
@@ -184,7 +185,7 @@ async def append_chunk(text: str, source: str) -> dict:
     if len(text) < 8:
         return {"ok": False, "error": "text too short"}
 
-    async with httpx.AsyncClient(timeout=60.0) as c:
+    async with httpx.AsyncClient(timeout=EMBED_TIMEOUT_SEC) as c:
         emb = await embed_one(c, text)
     if not emb:
         return {"ok": False, "error": "embedding failed"}

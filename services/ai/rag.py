@@ -9,7 +9,7 @@ from pathlib import Path
 import httpx
 import numpy as np
 
-EMBEDDING_URL = os.environ.get("EMBEDDING_URL", "http://localhost:5004")
+from embedding_client import EMBED_TIMEOUT_SEC, EMBEDDING_URL, embedding_request_headers
 RAG_TOP_K = int(os.environ.get("RAG_TOP_K", "4"))
 RAG_INDEX_PATH = os.environ.get("RAG_INDEX_PATH", str(Path(__file__).parent / "data" / "rag_index.json"))
 
@@ -42,10 +42,11 @@ def _load_index() -> list[dict]:
 async def embed_query(text: str) -> list[float] | None:
     """Embed một câu (query) qua embedding service."""
     try:
-        async with httpx.AsyncClient(timeout=15.0) as client:
+        async with httpx.AsyncClient(timeout=EMBED_TIMEOUT_SEC) as client:
             r = await client.post(
-                f"{EMBEDDING_URL.rstrip('/')}/embed_one",
+                f"{EMBEDDING_URL}/embed_one",
                 json={"text": text[:2000]},
+                headers=embedding_request_headers(),
             )
             if r.status_code != 200:
                 return None

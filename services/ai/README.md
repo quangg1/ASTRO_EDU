@@ -55,7 +55,9 @@ pip install -r requirements.txt
 | `GROQ_BASE_URL` | https://api.groq.com/openai/v1 | Base URL Groq |
 | `GROQ_MODEL` | llama-3.3-70b-versatile | Model Groq mặc định |
 | `GROQ_MODELS` | *(fallback `GROQ_MODEL`)* | Danh sách model CSV ghép với `GROQ_API_KEYS` |
-| `EMBEDDING_URL` | http://localhost:5004 | Embedding service (Flag BGE-M3) |
+| `EMBEDDING_URL` | http://localhost:5004 | Embedding service (Flag BGE-M3). HF Space: `https://user-space.hf.space` |
+| `EMBEDDING_API_KEY` | (trống) | Bearer token nếu Space public — xem `services/embedding/README.md` |
+| `EMBED_TIMEOUT_SEC` | 120 | Timeout HTTP embed (cold start HF Space) |
 | `USE_RAG` | 1 | Bật/tắt RAG (1 hoặc 0) |
 | `RAG_INDEX_PATH` | data/rag_index.json | Đường dẫn file index RAG |
 | `RAG_TOP_K` | 4 | Số đoạn lấy từ RAG |

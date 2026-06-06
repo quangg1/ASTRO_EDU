@@ -18,8 +18,12 @@ const { rebuildFullProjectRagIndex } = require('../features/agent/services/ragIn
 
 async function checkEmbedding() {
   const url = (process.env.EMBEDDING_URL || 'http://127.0.0.1:5004').replace(/\/$/, '');
+  const key = (process.env.EMBEDDING_API_KEY || '').trim();
+  const headers = key
+    ? { Authorization: `Bearer ${key}`, 'X-Embedding-Token': key }
+    : {};
   try {
-    const res = await fetch(`${url}/health`);
+    const res = await fetch(`${url}/health`, { headers });
     if (!res.ok) throw new Error(res.statusText);
     const data = await res.json().catch(() => ({}));
     console.log(`Embedding OK: ${url} — ${data.model || 'BGE'}`);
