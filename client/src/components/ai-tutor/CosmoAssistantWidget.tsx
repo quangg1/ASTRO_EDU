@@ -11,6 +11,7 @@ import { useAuthStore } from '@/features/auth/public'
 import { getAiChatUrl } from '@/lib/aiChatUrl'
 import {
   AgentChips,
+  AgentSuggestionsRail,
   buildSessionContext,
   useAgentPageContext,
 } from '@/features/agent/public'
@@ -762,49 +763,42 @@ function CosmoAssistantInner() {
                     </div>
                   </div>
 
-                  {canUseAI && chat.relatedLessons.length > 0 && (
-                    <AgentChips
-                      chips={chat.relatedLessons.map((l) => ({
-                        label: l.title,
-                        action: 'open_lp_lesson',
-                        lessonId: l.lessonId,
-                        moduleId: l.moduleId,
-                        nodeId: l.nodeId,
-                      }))}
-                      onChip={(c) => {
-                        chat.navigateLpLesson(c, closePanel)
-                      }}
-                      className="px-3 pb-2 sm:px-4"
-                    />
-                  )}
-
-                  {canUseAI && chat.communityThreads.length > 0 && (
-                    <AgentChips
-                      chips={chat.communityThreads.map((t) => ({
-                        label: t.title.length > 42 ? `${t.title.slice(0, 42)}…` : t.title,
-                        action: 'community_thread',
-                        href: t.href,
-                      }))}
-                      onChip={(c) => {
-                        if (c.href) {
-                          router.push(c.href)
-                          closePanel()
-                        }
-                      }}
-                      className="px-3 pb-2 sm:px-4"
-                    />
-                  )}
-
-                  {canUseAI && messages.length > 0 && chat.fallbackChips.length > 0 && (
-                    <AgentChips
-                      chips={chat.fallbackChips}
-                      onChip={(c) => {
-                        if (c.action === 'prompt') chat.setInput(c.label)
-                        else chat.handleChip(c)
-                      }}
-                      className="px-3 pb-2 sm:px-4"
-                    />
-                  )}
+                  {canUseAI &&
+                    (chat.relatedLessons.length > 0 ||
+                      chat.communityThreads.length > 0 ||
+                      chat.fallbackChips.length > 0) && (
+                      <AgentSuggestionsRail
+                        lessonChips={chat.relatedLessons.map((l) => ({
+                          label: l.title,
+                          action: 'open_lp_lesson',
+                          lessonId: l.lessonId,
+                          moduleId: l.moduleId,
+                          nodeId: l.nodeId,
+                        }))}
+                        communityChips={chat.communityThreads.map((t) => ({
+                          label: t.title.length > 42 ? `${t.title.slice(0, 42)}…` : t.title,
+                          action: 'community_thread',
+                          href: t.href,
+                        }))}
+                        fallbackChips={chat.fallbackChips}
+                        onChip={(c) => {
+                          if (c.action === 'prompt') {
+                            chat.setInput(c.label)
+                            return
+                          }
+                          if (c.action === 'community_thread' && c.href) {
+                            router.push(c.href)
+                            closePanel()
+                            return
+                          }
+                          if (c.action === 'open_lp_lesson') {
+                            chat.navigateLpLesson(c, closePanel)
+                            return
+                          }
+                          chat.handleChip(c)
+                        }}
+                      />
+                    )}
                   {inputBar}
                 </div>
               </div>

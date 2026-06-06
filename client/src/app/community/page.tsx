@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { fetchForums, fetchNews, fetchNewsCategories, type Forum, type Post } from '@/features/community/public'
+import { CommunitySearchBar } from '@/components/community/shared/CommunitySearchBar'
 import { NewsHeroSlider } from '@/components/community/NewsHeroSlider'
 import { NewsHotRow } from '@/components/community/NewsHotRow'
 import { NewsTopicChips } from '@/components/community/NewsTopicChips'
@@ -38,19 +39,12 @@ export default function CommunityPage() {
   return (
     <div className="relative z-10 pt-2 px-4 pb-24 max-w-6xl mx-auto">
 
-        {/* ── Page Head HUD Frame ── */}
-        <section className="relative mb-10">
-          <div className="cosmo-dark-panel relative overflow-hidden rounded-2xl p-6 md:p-8">
-            <div
-              className="pointer-events-none absolute inset-3 cosmo-dark-panel rounded-2xl"
-              style={{ border: '1px dashed rgba(126,231,255,0.1)' }}
-              aria-hidden
-            />
+        {/* ── Compact head + search ── */}
+        <section className="relative mb-8">
+          <div className="cosmo-dark-panel relative overflow-hidden rounded-2xl p-5 md:p-6">
             <CornerBrackets />
-
-            {/* Eyebrow */}
             <span
-              className="hud-mono hud-mono-md cosmo-dark-panel rounded-xl inline-flex items-center gap-2 px-3 py-1.5 mb-5"
+              className="hud-mono hud-mono-md cosmo-dark-panel mb-3 inline-flex items-center gap-2 rounded-xl px-3 py-1.5"
               style={{
                 background: 'rgba(126,231,255,0.08)',
                 border: '1px solid rgba(126,231,255,0.3)',
@@ -58,77 +52,27 @@ export default function CommunityPage() {
               }}
             >
               <span className="hud-status-dot-cyan" aria-hidden />
-              Cosmic Community Hub
+              Cộng đồng thiên văn
             </span>
 
             <h1
-              className="hud-em font-heading text-3xl md:text-4xl font-medium leading-tight tracking-tight text-white mb-4"
-              dangerouslySetInnerHTML={{ __html: 'Diễn đàn <em>thiên văn</em> cho người học nghiêm túc' }}
+              className="hud-em font-heading text-2xl md:text-3xl font-medium leading-tight tracking-tight text-white mb-2"
+              dangerouslySetInnerHTML={{ __html: 'Diễn đàn & <em>tin tức</em>' }}
             />
 
-            {/* Readout strip */}
-            <div
-              className="hud-mono hud-mono-sm flex flex-wrap items-center gap-x-4 gap-y-1 mb-6"
-              style={{ color: 'var(--color-text-muted)' }}
-            >
-              <span>SCOPE · <span style={{ color: 'var(--color-accent)' }}>COMMUNITY</span></span>
-              <span style={{ color: 'var(--color-border)' }}>—</span>
-              <span>CHANNELS · <span style={{ color: 'var(--color-accent)' }}>{forums.length}</span></span>
-              <span style={{ color: 'var(--color-border)' }}>—</span>
-              <span>POSTS · <span style={{ color: 'var(--color-accent)' }}>{totalPosts}</span></span>
-              <span style={{ color: 'var(--color-border)' }}>—</span>
-              <span className="inline-flex items-center gap-1.5">
-                <span
-                  className="inline-block w-1.5 h-1.5 rounded-full"
-                  style={{ background: '#6dffb0', boxShadow: '0 0 6px #6dffb0' }}
-                  aria-hidden
-                />
-                SIGNAL · <span style={{ color: '#6dffb0' }}>LIVE</span>
-              </span>
-            </div>
+            <p className="text-sm text-ds-muted mb-4 max-w-2xl">
+              Thảo luận, tin RSS và chủ đề — {forums.length} chuyên mục · {totalPosts} bài viết
+            </p>
 
-            {/* Stat cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              {[
-                { label: 'Chuyên mục', value: forums.length, code: '// 001' },
-                { label: 'Bài viết', value: totalPosts, code: '// 002' },
-                { label: 'Tin trong slider', value: Math.min(10, latest.length), code: '// 003' },
-              ].map((stat) => (
-                <div
-                  key={stat.code}
-                  className="cosmo-dark-panel rounded-xl px-4 py-3"
-                >
-                  <div className="flex items-start justify-between mb-1">
-                    <span className="hud-mono hud-mono-sm text-ds-subtle">
-                      {stat.label.toUpperCase()}
-                    </span>
-                    <span className="hud-mono hud-mono-sm text-ds-subtle">
-                      {stat.code}
-                    </span>
-                  </div>
-                  <p
-                    className="text-4xl font-light tabular-nums text-ds-amber"
-                    style={{ fontFamily: 'var(--font-mono)' }}
-                  >
-                    {stat.value}
-                  </p>
-                </div>
-              ))}
-            </div>
+            <CommunitySearchBar className="max-w-xl" />
           </div>
         </section>
 
         {/* Loading skeleton */}
         {loading ? (
           <div className="space-y-6">
-            <div
-              className="h-[380px] cosmo-dark-panel rounded-2xl animate-pulse"
-              style={{ background: 'var(--color-accent-soft)', border: '1px solid rgba(126,231,255,0.1)' }}
-            />
-            <div
-              className="h-48 cosmo-dark-panel rounded-xl animate-pulse"
-              style={{ background: 'rgba(126,231,255,0.04)', border: '1px solid rgba(126,231,255,0.08)' }}
-            />
+            <div className="h-52 animate-pulse rounded-2xl border border-cyan-400/10 bg-white/[0.03]" />
+            <div className="h-36 animate-pulse rounded-xl border border-cyan-400/10 bg-white/[0.02]" />
           </div>
         ) : (
           <div className="space-y-10">

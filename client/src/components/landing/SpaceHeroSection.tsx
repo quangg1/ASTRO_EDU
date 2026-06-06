@@ -5,6 +5,7 @@ import Link from 'next/link'
 import dynamic from 'next/dynamic'
 import { SpaceNumberedNav } from '@/components/space-premium'
 import { SiteLogo } from '@/components/ui/SiteLogo'
+import { CatalogSearchField } from '@/components/search/CatalogSearchField'
 
 const SolarSystemVisual = dynamic(() => import('./SolarSystemVisual').then((m) => m.SolarSystemVisual), {
   ssr: false,
@@ -75,6 +76,17 @@ export function SpaceHeroSection() {
             >
               Học thiên văn qua lộ trình có cấu trúc, mô phỏng 3D và cộng đồng — nền tảng giáo dục vũ trụ tại Việt Nam.
             </motion.p>
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.32, duration: 0.5 }}
+              className="mt-8 w-full max-w-md"
+            >
+              <CatalogSearchField
+                variant="hero"
+                placeholder="Tìm khóa học, bài lộ trình, chủ đề…"
+              />
+            </motion.div>
             <motion.div
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}

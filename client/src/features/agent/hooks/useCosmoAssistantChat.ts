@@ -305,17 +305,17 @@ export function useCosmoAssistantChat({
           }
           if (!tr.clientAction) continue
           if (tr.clientAction.type === 'show_related_lessons') {
-            setRelatedLessons(tr.clientAction.lessons)
+            setRelatedLessons(tr.clientAction.lessons.slice(0, 4))
             continue
           }
           if (tr.clientAction.type === 'suggest_community_thread') {
-            setCommunityThreads(tr.clientAction.threads)
+            setCommunityThreads(tr.clientAction.threads.slice(0, 4))
             continue
           }
           if (tr.clientAction.type === 'search_learning_content') {
             if (tr.clientAction.lpLessons?.length) {
               setRelatedLessons(
-                tr.clientAction.lpLessons.map((l) => ({
+                tr.clientAction.lpLessons.slice(0, 4).map((l) => ({
                   lessonId: l.lessonId,
                   title: l.title,
                   moduleId: l.moduleId,
@@ -324,7 +324,7 @@ export function useCosmoAssistantChat({
               )
             }
             if (tr.clientAction.communityThreads?.length) {
-              setCommunityThreads(tr.clientAction.communityThreads)
+              setCommunityThreads(tr.clientAction.communityThreads.slice(0, 4))
             }
             continue
           }

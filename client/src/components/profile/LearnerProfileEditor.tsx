@@ -132,7 +132,7 @@ export function LearnerProfileEditor() {
         value={profile.bio}
         onChange={(e) => setProfile({ ...profile, bio: e.target.value })}
         placeholder="Chia sẻ đam mê học thiên văn, mục tiêu học tập, điều bạn đang khám phá…"
-        className="w-full min-h-[120px] rounded-xl border border-ds-border bg-ds-elevated/80 px-4 py-3 text-sm text-white placeholder:text-ds-subtle focus:border-cyan-500/40 focus:outline-none"
+        className="cosmo-field w-full min-h-[120px] px-4 py-3 text-sm"
         maxLength={2000}
       />
 
@@ -144,7 +144,7 @@ export function LearnerProfileEditor() {
         value={profile.location}
         onChange={(e) => setProfile({ ...profile, location: e.target.value })}
         placeholder="Ví dụ: Hà Nội, Việt Nam"
-        className="w-full rounded-xl border border-ds-border bg-ds-elevated/80 px-4 py-2.5 text-sm text-white placeholder:text-ds-subtle"
+        className="cosmo-field w-full px-4 py-2.5 text-sm"
         maxLength={120}
       />
 
@@ -179,19 +179,19 @@ export function LearnerProfileEditor() {
               value={edu.school}
               onChange={(e) => updateEducation(i, { school: e.target.value })}
               placeholder="Trường / tổ chức"
-              className="rounded-lg border border-ds-border bg-ds-surface/70 px-3 py-2 text-sm text-white sm:col-span-2"
+              className="cosmo-field rounded-lg px-3 py-2 text-sm sm:col-span-2"
             />
             <input
               value={edu.degree}
               onChange={(e) => updateEducation(i, { degree: e.target.value })}
               placeholder="Bằng (VD: Cử nhân)"
-              className="rounded-lg border border-ds-border bg-ds-surface/70 px-3 py-2 text-sm text-white"
+              className="cosmo-field rounded-lg px-3 py-2 text-sm"
             />
             <input
               value={edu.field}
               onChange={(e) => updateEducation(i, { field: e.target.value })}
               placeholder="Chuyên ngành"
-              className="rounded-lg border border-ds-border bg-ds-surface/70 px-3 py-2 text-sm text-white"
+              className="cosmo-field rounded-lg px-3 py-2 text-sm"
             />
             <div className="flex gap-2 sm:col-span-2">
               <input
@@ -203,7 +203,7 @@ export function LearnerProfileEditor() {
                   })
                 }
                 placeholder="Năm tốt nghiệp"
-                className="flex-1 rounded-lg border border-ds-border bg-ds-surface/70 px-3 py-2 text-sm text-white"
+                className="cosmo-field flex-1 rounded-lg px-3 py-2 text-sm"
                 min={1950}
                 max={2100}
               />
@@ -257,7 +257,7 @@ export function LearnerProfileEditor() {
               }
             }}
             placeholder="Thêm sở thích và Enter"
-            className="flex-1 rounded-xl border border-ds-border bg-ds-elevated/80 px-3 py-2 text-sm text-white"
+            className="cosmo-field flex-1 px-3 py-2 text-sm"
           />
           <button
             type="button"

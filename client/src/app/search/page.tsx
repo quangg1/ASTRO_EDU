@@ -2,8 +2,11 @@
 
 import { useState, useEffect, useMemo, useRef } from 'react'
 import Link from 'next/link'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { fetchCourses, type Course } from '@/features/courses/public'
+import { searchCommunityPosts, newsPostHref, type Post } from '@/features/community/public'
 import { DEPTH_ORDER, LEARNING_MODULES } from '@/data/learningPathCurriculum'
+import { SearchParamsSuspense } from '@/components/layout/SearchParamsSuspense'
 
 function searchLearningPath(query: string) {
   const q = query.trim().toLowerCase()
@@ -121,24 +124,62 @@ function SectionHeader({ num, label, count, accent, accentRgb }: {
   )
 }
 
-export default function SearchPage() {
-  const [q, setQ] = useState('')
-  const [debouncedQ, setDebouncedQ] = useState('')
+function SearchPageContent() {
+  const searchParams = useSearchParams()
+  const router = useRouter()
+  const urlQuery = searchParams.get('q') ?? ''
+
+  const [q, setQ] = useState(urlQuery)
+  const [debouncedQ, setDebouncedQ] = useState(urlQuery)
   const [courses, setCourses] = useState<Course[]>([])
+  const [communityPosts, setCommunityPosts] = useState<Post[]>([])
   const [loading, setLoading] = useState(false)
+  const [communityLoading, setCommunityLoading] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
   const pathHits = useMemo(() => searchLearningPath(debouncedQ), [debouncedQ])
 
   useEffect(() => {
-    const t = setTimeout(() => setDebouncedQ(q), 300)
-    return () => clearTimeout(t)
-  }, [q])
+    setQ(urlQuery)
+    setDebouncedQ(urlQuery)
+  }, [urlQuery])
 
   useEffect(() => {
-    if (!debouncedQ.trim()) { setCourses([]); return }
+    if (q === urlQuery) return
+    const t = setTimeout(() => setDebouncedQ(q), 300)
+    return () => clearTimeout(t)
+  }, [q, urlQuery])
+
+  useEffect(() => {
+    const trimmed = debouncedQ.trim()
+    const current = (searchParams.get('q') ?? '').trim()
+    if (trimmed === current) return
+    const params = new URLSearchParams(searchParams.toString())
+    if (trimmed) params.set('q', trimmed)
+    else params.delete('q')
+    const qs = params.toString()
+    router.replace(qs ? `/search?${qs}` : '/search', { scroll: false })
+  }, [debouncedQ, router, searchParams])
+
+  useEffect(() => {
+    if (!debouncedQ.trim()) {
+      setCourses([])
+      return
+    }
     setLoading(true)
     fetchCourses(debouncedQ).then((c) => setCourses(c)).finally(() => setLoading(false))
+  }, [debouncedQ])
+
+  useEffect(() => {
+    const query = debouncedQ.trim()
+    if (query.length < 2) {
+      setCommunityPosts([])
+      return
+    }
+    setCommunityLoading(true)
+    searchCommunityPosts({ q: query, scope: 'all', limit: 6 })
+      .then((r) => setCommunityPosts(r.data))
+      .finally(() => setCommunityLoading(false))
   }, [debouncedQ])
 
   // ⌘K shortcut
@@ -154,14 +195,13 @@ export default function SearchPage() {
     return () => window.removeEventListener('keydown', handle)
   }, [])
 
-  const totalHits = courses.length + pathHits.length
+  const totalHits = courses.length + pathHits.length + communityPosts.length
 
   return (
     <div className="relative z-10 w-full overflow-hidden font-sans text-ds-text" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
 
       {/* ── Keyframes + hover CSS ── */}
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500&display=swap');
         @keyframes srch-scan  { from { transform: translateY(-4px) } to { transform: translateY(100vh) } }
         @keyframes srch-pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.25; } }
         @keyframes srch-glow  { 0%,100% { opacity: 0.7; transform: scale(1); } 50% { opacity: 1; transform: scale(1.12); } }
@@ -380,7 +420,7 @@ export default function SearchPage() {
         </div>
 
         {/* ── Results ── */}
-        {loading && (
+        {(loading || communityLoading) && debouncedQ.trim() && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '20px 0', fontFamily: "'JetBrains Mono',monospace", fontSize: 12, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--color-text-subtle)' }}>
             <span style={{ width: 6, height: 6, borderRadius: '50%', background: CYAN, display: 'inline-block', animation: 'srch-pulse 1s ease-in-out infinite' }} />
             Đang tìm kiếm…
@@ -572,8 +612,57 @@ export default function SearchPage() {
               </section>
             )}
 
+            {/* Section 03 — Community / news */}
+            {communityPosts.length > 0 && (
+              <section>
+                <SectionHeader num="03" label="Cộng đồng & tin" count={communityPosts.length} accent={CYAN} accentRgb="126,231,255" />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {communityPosts.map((p) => (
+                    <Link
+                      key={p._id}
+                      href={newsPostHref(p)}
+                      style={{ textDecoration: 'none', display: 'block' }}
+                    >
+                      <div
+                        className="srch-card"
+                        style={{
+                          '--c-rgb': '126,231,255',
+                          position: 'relative',
+                          display: 'flex',
+                          alignItems: 'center',
+                          background: 'linear-gradient(135deg,rgba(126,231,255,0.04) 0%,var(--color-panel-glass) 55%)',
+                          border: '1px solid var(--color-border)',
+                          clipPath: 'polygon(10px 0%,100% 0%,100% calc(100% - 10px),calc(100% - 10px) 100%,0% 100%,0% 10px)',
+                          overflow: 'hidden',
+                          padding: '14px 16px',
+                        } as React.CSSProperties}
+                      >
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <p style={{ margin: '0 0 4px', fontFamily: "'Space Grotesk',sans-serif", fontWeight: 600, fontSize: 16, color: 'var(--color-text-primary)', lineHeight: 1.35 }}>
+                            {highlight(p.title, debouncedQ)}
+                          </p>
+                          <span style={{
+                            display: 'inline-flex', alignItems: 'center', padding: '2px 8px',
+                            background: 'rgba(126,231,255,0.07)', border: '1px solid var(--color-border)',
+                            fontFamily: "'JetBrains Mono',monospace", fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: CYAN,
+                          }}>
+                            {p.forumIsNews ? 'Tin thiên văn' : 'Thảo luận'}
+                          </span>
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+                <p className="mt-3 text-xs text-ds-subtle">
+                  <Link href={`/community/search?q=${encodeURIComponent(debouncedQ.trim())}`} className="text-cyan-400/90 hover:text-ds-text">
+                    Xem thêm trong cộng đồng →
+                  </Link>
+                </p>
+              </section>
+            )}
+
             {/* Empty state */}
-            {!loading && courses.length === 0 && pathHits.length === 0 && (
+            {!loading && !communityLoading && courses.length === 0 && pathHits.length === 0 && communityPosts.length === 0 && (
               <div style={{
                 padding: '40px 32px',
                 clipPath: 'polygon(14px 0%,100% 0%,100% calc(100% - 14px),calc(100% - 14px) 100%,0% 100%,0% 14px)',
@@ -581,9 +670,12 @@ export default function SearchPage() {
                 border: '1px dashed var(--color-accent-soft)',
                 textAlign: 'center',
               }}>
-                <p style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 12, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--color-text-subtle)', margin: 0 }}>
+                <p style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 12, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--color-text-subtle)', margin: '0 0 8px' }}>
                   // Không tìm thấy kết quả cho <span style={{ color: 'var(--color-text-muted)' }}>"{debouncedQ}"</span>
                 </p>
+                <Link href={`/community/search?q=${encodeURIComponent(debouncedQ.trim())}`} style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 11, color: CYAN }}>
+                  Thử tìm trong cộng đồng →
+                </Link>
               </div>
             )}
 
@@ -618,5 +710,19 @@ export default function SearchPage() {
         )}
       </main>
     </div>
+  )
+}
+
+export default function SearchPage() {
+  return (
+    <SearchParamsSuspense
+      fallback={
+        <div className="relative z-10 px-4 py-16 text-center text-sm text-ds-subtle">
+          Đang tải tìm kiếm…
+        </div>
+      }
+    >
+      <SearchPageContent />
+    </SearchParamsSuspense>
   )
 }

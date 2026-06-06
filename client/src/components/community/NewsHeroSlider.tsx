@@ -97,8 +97,8 @@ export function NewsHeroSlider({
         </div>
       )}
 
-      {/* Header bar */}
-      <div className="relative z-10 px-4 pt-4 pb-3 md:px-6 md:pt-5">
+      {/* Header bar — desktop only; mobile dùng layout xếp chồng bên dưới */}
+      <div className="relative z-10 hidden px-4 pt-4 pb-3 md:block md:px-6 md:pt-5">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <p className="hud-mono hud-mono-md" style={{ color: 'var(--color-accent)' }}>{title.toUpperCase()}</p>
@@ -134,7 +134,97 @@ export function NewsHeroSlider({
       </div>
 
       {/* Slide area */}
-      <div className="relative aspect-[16/9] min-h-[260px] w-full md:aspect-[21/9] md:min-h-[300px]">
+      <div className="relative w-full md:aspect-[21/9] md:min-h-[280px]">
+        {/* Mobile: ảnh cố định + nội dung bên dưới — tránh khung đen trống */}
+        <div className="md:hidden">
+          <div className="relative h-[200px] w-full overflow-hidden">
+            {thumb ? (
+              <img
+                src={thumb}
+                alt=""
+                className="h-full w-full object-cover object-center"
+                referrerPolicy="no-referrer"
+              />
+            ) : (
+              <div
+                className="flex h-full w-full items-center justify-center text-5xl"
+                style={{ background: 'linear-gradient(135deg, #0c1a2e, #060d18)' }}
+              >
+                🌌
+              </div>
+            )}
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#050a14] via-transparent to-transparent" />
+            <span
+              className="absolute left-3 top-3 cosmo-dark-panel rounded-lg hud-mono hud-mono-sm px-2 py-0.5"
+              style={{ background: 'var(--color-brand-amber)', color: '#1a0e00' }}
+            >
+              {safeIndex + 1}/{n}
+            </span>
+          </div>
+          <div className="relative border-t border-cyan-400/10 px-4 py-4">
+            <p className="hud-mono hud-mono-sm text-ds-accent">{title.toUpperCase()}</p>
+            <AnimatePresence initial={false} mode="wait">
+              <motion.div
+                key={current._id}
+                initial={reduceMotion ? false : { opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={reduceMotion ? undefined : { opacity: 0 }}
+                transition={{ duration: reduceMotion ? 0 : 0.3 }}
+              >
+                <h3 className="mt-2 text-lg font-semibold leading-snug text-white">{current.title}</h3>
+                {excerpt ? (
+                  <p className="mt-2 line-clamp-2 text-sm text-ds-muted">{excerpt}</p>
+                ) : null}
+                <p className="hud-mono hud-mono-sm mt-2 text-ds-subtle">
+                  {current.sourceName || 'Nguồn'} · {formatDate(current.publishedAt || current.createdAt)}
+                </p>
+              </motion.div>
+            </AnimatePresence>
+            <div className="mt-3 flex items-center justify-between gap-2">
+              <div className="flex gap-1.5">
+                {slides.map((p, i) => (
+                  <button
+                    key={p._id}
+                    type="button"
+                    onClick={() => setIndex(i)}
+                    className={`h-1.5 rounded-full transition-all ${i === safeIndex ? 'w-6' : 'w-2'}`}
+                    style={{
+                      background: i === safeIndex ? 'var(--color-accent)' : 'rgba(255,255,255,0.25)',
+                    }}
+                    aria-label={`Slide ${i + 1}`}
+                  />
+                ))}
+              </div>
+              <div className="flex gap-1">
+                <button
+                  type="button"
+                  onClick={() => go(-1)}
+                  className="flex h-9 w-9 items-center justify-center rounded-lg border border-ds-border bg-black/40 text-white"
+                  aria-label="Bài trước"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => go(1)}
+                  className="flex h-9 w-9 items-center justify-center rounded-lg border border-ds-border bg-black/40 text-white"
+                  aria-label="Bài sau"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+            <NewsCardLink
+              post={current}
+              className="mt-3 inline-flex rounded-lg bg-amber-500/90 px-4 py-2 text-xs font-semibold text-[#1a0e00]"
+            >
+              Đọc bài →
+            </NewsCardLink>
+          </div>
+        </div>
+
+        {/* Desktop: overlay slide */}
+        <div className="relative hidden min-h-[280px] w-full md:block md:aspect-[21/9]">
         {/* Scan-line overlay on slide */}
         <div
           className="pointer-events-none absolute inset-0 z-[5]"
@@ -157,7 +247,7 @@ export function NewsHeroSlider({
               <img
                 src={thumb}
                 alt=""
-                className="h-full w-full object-cover"
+                className="h-full w-full object-cover object-center"
                 referrerPolicy="no-referrer"
               />
             ) : (
@@ -166,7 +256,7 @@ export function NewsHeroSlider({
                 🌌
               </div>
             )}
-            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/55 to-black/20 md:bg-gradient-to-r md:from-black/90 md:via-black/45 md:to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-black/10 md:bg-gradient-to-r md:from-black/90 md:via-black/45 md:to-transparent" />
           </motion.div>
         </AnimatePresence>
 
@@ -218,24 +308,24 @@ export function NewsHeroSlider({
             </div>
           </div>
         </div>
+        </div>
 
         <NewsCardLink
           post={current}
-          className="absolute inset-0 z-[20] cursor-pointer"
+          className="absolute inset-0 z-[20] hidden cursor-pointer md:block"
           aria-label={`Đọc: ${current.title}`}
         >
           <span className="sr-only">{current.title}</span>
         </NewsCardLink>
 
-        {/* Prev/next fade edges */}
-        <div className="pointer-events-none absolute inset-y-0 left-0 z-[35] w-14 bg-gradient-to-r from-black/50 to-transparent md:w-20" />
-        <div className="pointer-events-none absolute inset-y-0 right-0 z-[35] w-14 bg-gradient-to-l from-black/50 to-transparent md:w-20" />
+        {/* Prev/next — desktop only */}
+        <div className="pointer-events-none absolute inset-y-0 left-0 z-[35] hidden w-14 bg-gradient-to-r from-black/50 to-transparent md:block md:w-20" />
+        <div className="pointer-events-none absolute inset-y-0 right-0 z-[35] hidden w-14 bg-gradient-to-l from-black/50 to-transparent md:block md:w-20" />
 
-        {/* Prev button */}
         <button
           type="button"
           onClick={(e) => { e.stopPropagation(); go(-1) }}
-          className="absolute left-2 top-1/2 z-40 flex h-11 w-11 -translate-y-1/2 items-center justify-center cosmo-dark-panel rounded-xl text-white backdrop-blur-md transition-all hover:shadow-[0_0_12px_rgba(126,231,255,0.3)] md:left-4 md:h-12 md:w-12"
+          className="absolute left-2 top-1/2 z-40 hidden h-11 w-11 -translate-y-1/2 items-center justify-center cosmo-dark-panel rounded-xl text-white backdrop-blur-md transition-all hover:shadow-[0_0_12px_rgba(126,231,255,0.3)] md:flex md:left-4 md:h-12 md:w-12"
           style={{
             background: 'rgba(0,0,0,0.6)',
             border: '1px solid var(--color-border)',
@@ -249,7 +339,7 @@ export function NewsHeroSlider({
         <button
           type="button"
           onClick={(e) => { e.stopPropagation(); go(1) }}
-          className="absolute right-2 top-1/2 z-40 flex h-11 w-11 -translate-y-1/2 items-center justify-center cosmo-dark-panel rounded-xl text-white backdrop-blur-md transition-all hover:shadow-[0_0_12px_rgba(126,231,255,0.3)] md:right-4 md:h-12 md:w-12"
+          className="absolute right-2 top-1/2 z-40 hidden h-11 w-11 -translate-y-1/2 items-center justify-center cosmo-dark-panel rounded-xl text-white backdrop-blur-md transition-all hover:shadow-[0_0_12px_rgba(126,231,255,0.3)] md:flex md:right-4 md:h-12 md:w-12"
           style={{
             background: 'rgba(0,0,0,0.6)',
             border: '1px solid var(--color-border)',
@@ -259,8 +349,8 @@ export function NewsHeroSlider({
           <ChevronRight className="h-6 w-6" />
         </button>
 
-        {/* Dot indicators */}
-        <div className="absolute bottom-4 left-0 right-0 z-40 flex justify-center gap-1.5 px-4">
+        {/* Dot indicators — desktop */}
+        <div className="absolute bottom-4 left-0 right-0 z-40 hidden justify-center gap-1.5 px-4 md:flex">
           {slides.map((p, i) => (
             <button
               key={p._id}
