@@ -117,6 +117,15 @@ export function ShowcaseEntityPanel({
   const [panelCollapsed, setPanelCollapsed] = useState(false)
   const safeTab = tabs.some((t) => t.id === activeTab) ? activeTab : tabs[0]?.id ?? 'overview'
 
+  const tabCounts = useMemo(
+    () => ({
+      overview: (panelConfig?.overviewBlocks || []).length,
+      physical: (panelConfig?.physicalBlocks || []).length,
+      sky: (panelConfig?.skyBlocks || []).length,
+    }),
+    [panelConfig?.overviewBlocks, panelConfig?.physicalBlocks, panelConfig?.skyBlocks],
+  )
+
   useEffect(() => {
     setActiveTab('overview')
   }, [item?.id])
@@ -146,15 +155,6 @@ export function ShowcaseEntityPanel({
 
   const isEarth = item ? entityHasFossilsTab(item.id) : false
   const showDeepHistory = Boolean(hasDeepHistory && onOpenDeepHistory && item)
-
-  const tabCounts = useMemo(
-    () => ({
-      overview: (panelConfig?.overviewBlocks || []).length,
-      physical: (panelConfig?.physicalBlocks || []).length,
-      sky: (panelConfig?.skyBlocks || []).length,
-    }),
-    [panelConfig?.overviewBlocks, panelConfig?.physicalBlocks, panelConfig?.skyBlocks],
-  )
 
   return (
     <aside
