@@ -66,6 +66,52 @@ services:
         sync: false
       - key: MAIL_FROM
         sync: false
+      # Cosmo agent — Python AI service (deploy galaxies-ai trước hoặc cùng Blueprint)
+      - key: AI_SERVICE_URL
+        fromService:
+          type: web
+          name: galaxies-ai
+          envVarKey: RENDER_EXTERNAL_URL
+
+  - type: web
+    name: galaxies-ai
+    runtime: python
+    region: singapore
+    plan: starter
+    rootDir: services/ai
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn server:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11"
+      - key: USE_RAG
+        value: "1"
+      - key: USE_AGENT_TOOLS
+        value: "1"
+      - key: LLM_PROVIDER_ORDER
+        value: openrouter,groq
+      - key: EMBED_TIMEOUT_SEC
+        value: "120"
+      - key: OPENROUTER_BASE_URL
+        value: https://openrouter.ai/api/v1
+      - key: OPENROUTER_MODEL
+        value: openrouter/free
+      - key: OPENROUTER_APP_NAME
+        value: Galaxies Edu
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: EMBEDDING_URL
+        sync: false
+      - key: EMBEDDING_API_KEY
+        sync: false
+      - key: OPENROUTER_SITE_URL
+        sync: false
+      - key: KNOWLEDGE_ADMIN_TOKEN
+        sync: false
 
   - type: web
     name: galaxies-web

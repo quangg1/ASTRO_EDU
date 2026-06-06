@@ -77,4 +77,53 @@ Bước 2: Web  ──►  NEXT_PUBLIC_API_BASE_URL = URL API (lúc build)
 ## Local
 
 - API: `services/api/.env` ← `.env.example`
+- AI: `services/ai/.env` ← `example.env`
 - Client: `client/.env.local` ← `.env.local.example`
+
+---
+
+## Bước 3 — AI service (Cosmo + RAG)
+
+Service Python **nhẹ** (LLM qua OpenRouter/Groq; embedding qua Hugging Face Space). Starter ~512MB RAM đủ cho `rag_index.json`.
+
+Render → **New → Web Service** (hoặc Blueprint service `galaxies-ai` trong [`render.yaml`](../render.yaml)).
+
+| Ô | Giá trị |
+|---|--------|
+| **Root Directory** | `services/ai` |
+| **Runtime** | Python 3 |
+| **Build Command** | `pip install -r requirements.txt` |
+| **Start Command** | `uvicorn server:app --host 0.0.0.0 --port $PORT` |
+| **Health Check Path** | `/health` |
+
+### Environment (galaxies-ai)
+
+| Key | Bắt buộc | Ghi chú |
+|-----|----------|---------|
+| `OPENROUTER_API_KEY` | Có (hoặc `GROQ_API_KEY`) | **Không** dùng LM Studio trên Render |
+| `LLM_PROVIDER_ORDER` | Khuyến nghị | `openrouter,groq` |
+| `EMBEDDING_URL` | Có (RAG) | `https://quangminhchinhdai-embedding.hf.space` |
+| `EMBEDDING_API_KEY` | Có | Cùng secret trên HF Space |
+| `EMBED_TIMEOUT_SEC` | Khuyến nghị | `120` |
+| `USE_RAG` | | `1` |
+| `USE_AGENT_TOOLS` | | `1` |
+| `OPENROUTER_SITE_URL` | Khuyến nghị | URL frontend production |
+| `GROQ_API_KEY` | Tuỳ chọn | Fallback LLM |
+
+Kiểm tra: `https://<galaxies-ai>.onrender.com/health` → `"status":"ok"`, `"rag": true`.
+
+### Nối API → AI
+
+Trên **galaxies-api**:
+
+| Key | Value |
+|-----|--------|
+| `AI_SERVICE_URL` | `https://<galaxies-ai>.onrender.com` |
+
+Redeploy API → thử Cosmo.
+
+```text
+galaxies-web → galaxies-api → galaxies-ai → OpenRouter/Groq
+                                    ↓
+                        HF Space (BGE-M3 embedding)
+```
