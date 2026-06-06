@@ -35,6 +35,10 @@ import {
   loadExploreContextualQuizDoneToday,
   saveExploreContextualQuizDoneToday,
 } from '../lib/exploreQuizProgress'
+import {
+  loadExplorePanelReadComplete,
+  saveExplorePanelReadComplete,
+} from '../lib/explorePanelReadProgress'
 import { useToast } from '@/design-system'
 
 const FOCUS_DELAY_SEC = 3
@@ -77,14 +81,18 @@ export function useExploreLearningBridge({
   const toast = useToast()
   const [bridgeQuizPromptOpen, setBridgeQuizPromptOpen] = useState(false)
   const [bridgeQuizQuestions, setBridgeQuizQuestions] = useState<QuizQuestion[]>([])
-  const [exploreFocusReady, setExploreFocusReady] = useState(false)
+  const [panelReadComplete, setPanelReadComplete] = useState(false)
   const [entityQuizCompleted, setEntityQuizCompleted] = useState(false)
   const [bridgeDebugEntries, setBridgeDebugEntries] = useState<string[]>([])
   const [visited3DMap, setVisited3DMap] = useState<LessonVisited3DMap>({})
   const bridgeFocusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const bridgeQuizTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const bridgeQuizQuestionsRef = useRef<QuizQuestion[]>([])
+  const panelReadCompleteRef = useRef(false)
   const activeEntityRef = useRef(activeTargetId)
   activeEntityRef.current = activeTargetId
+  bridgeQuizQuestionsRef.current = bridgeQuizQuestions
+  panelReadCompleteRef.current = panelReadComplete
   const bridgeMode = exploreView === 'sky' ? 'sky' : 'showcase'
 
   const pushBridgeDebug = useCallback(
@@ -231,7 +239,7 @@ export function useExploreLearningBridge({
   }, [exploreView, activeSkyTarget, activeTargetId, activeResolved?.displayName])
 
   useEffect(() => {
-    setExploreFocusReady(false)
+    setPanelReadComplete(loadExplorePanelReadComplete(activeTargetId, userId ?? null))
     setEntityQuizCompleted(loadExploreContextualQuizDoneToday(activeTargetId, userId ?? null))
   }, [activeTargetId, userId])
 
@@ -242,7 +250,6 @@ export function useExploreLearningBridge({
     if (earthHistoryOpen || planetHistoryOpen || !activeTargetId) return
 
     bridgeFocusTimerRef.current = setTimeout(() => {
-      setExploreFocusReady(true)
       const focusEntityId = activeTargetId
       const conceptIds = effectiveConceptCards.map((c) => c.id)
       const lessonIds = effectiveLessonLinks.map((l) => l.lessonId)
@@ -346,6 +353,7 @@ export function useExploreLearningBridge({
           }
           if (focusEntityId !== activeEntityRef.current || contextual.length < 1) return
           setBridgeQuizQuestions(contextual)
+          if (!panelReadCompleteRef.current) return
           setBridgeQuizPromptOpen(true)
           trackLearningPathBehavior({
             eventName: 'scene_contextual_quiz_prompted',
@@ -381,6 +389,27 @@ export function useExploreLearningBridge({
     toast,
     focusDisplayName,
   ])
+
+  const markPanelReadComplete = useCallback(() => {
+    if (!activeTargetId || panelReadComplete) return
+    saveExplorePanelReadComplete(activeTargetId, userId ?? null)
+    setPanelReadComplete(true)
+    panelReadCompleteRef.current = true
+
+    if (
+      !loadExploreContextualQuizDoneToday(activeTargetId, userId ?? null) &&
+      bridgeQuizQuestionsRef.current.length > 0
+    ) {
+      setBridgeQuizPromptOpen(true)
+    }
+  }, [activeTargetId, panelReadComplete, userId])
+
+  const openBridgeQuiz = useCallback(() => {
+    if (!panelReadComplete) return false
+    if (bridgeQuizQuestions.length < 1) return false
+    setBridgeQuizPromptOpen(true)
+    return true
+  }, [panelReadComplete, bridgeQuizQuestions.length])
 
   const handleQuizComplete = useCallback(
     (result: { correct: number; total: number; allCorrect: boolean }) => {
@@ -453,7 +482,9 @@ export function useExploreLearningBridge({
     bridgeVisitedLessonsForEntity,
     museumLabelVi,
     handleQuizComplete,
-    exploreFocusReady,
+    panelReadComplete,
+    markPanelReadComplete,
+    openBridgeQuiz,
     entityQuizCompleted,
   }
 }

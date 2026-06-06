@@ -62,10 +62,21 @@ export function ExploreLearningSteps({ steps, onStepAction, loggedIn }: Props) {
       </button>
 
       {!expanded && current ? (
-        <p className="mt-1 truncate text-[10px] text-white/50">
-          Tiếp theo: <span className="text-white/75">{current.label}</span>
-          {!loggedIn ? <span className="text-white/35"> · đăng nhập để lưu mastery</span> : null}
-        </p>
+        <div className="mt-1 space-y-1">
+          <p className="truncate text-[10px] text-white/50">
+            Tiếp theo: <span className="text-white/75">{current.label}</span>
+            {!loggedIn ? <span className="text-white/35"> · đăng nhập để lưu mastery</span> : null}
+          </p>
+          {current.id === 'read' && current.status === 'current' ? (
+            <button
+              type="button"
+              onClick={() => onStepAction('read')}
+              className="w-full rounded-lg border border-ds-accent-strong/45 bg-ds-accent-soft/80 px-2 py-1.5 text-[10px] font-semibold text-ds-accent transition hover:bg-ds-accent-soft"
+            >
+              Đánh dấu đã đọc panel
+            </button>
+          ) : null}
+        </div>
       ) : null}
 
       {expanded ? (
@@ -74,7 +85,11 @@ export function ExploreLearningSteps({ steps, onStepAction, loggedIn }: Props) {
             const Icon = STEP_ICON[step.id]
             const isDone = step.status === 'done'
             const isCurrent = step.status === 'current'
-            const actionable = step.id === 'quiz' || step.id === 'lessons' || step.id === 'cosmo'
+            const actionable =
+              step.id === 'read' ||
+              step.id === 'quiz' ||
+              step.id === 'lessons' ||
+              step.id === 'cosmo'
 
             return (
               <li key={step.id}>
@@ -113,8 +128,10 @@ export function ExploreLearningSteps({ steps, onStepAction, loggedIn }: Props) {
                   <span className="min-w-0 flex-1 truncate text-[10px] font-medium text-white/85">
                     {step.label}
                   </span>
-                  {actionable && isCurrent ? (
-                    <span className="shrink-0 text-[9px] font-semibold uppercase text-ds-accent">Làm</span>
+                  {actionable && isCurrent && !isDone ? (
+                    <span className="shrink-0 text-[9px] font-semibold uppercase text-ds-accent">
+                      {step.id === 'read' ? 'Xong' : 'Làm'}
+                    </span>
                   ) : null}
                 </button>
               </li>

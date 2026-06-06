@@ -33,10 +33,11 @@ type Args = {
   conceptChips: ConceptChipInput[]
   lessonLinks: Array<{ lessonId: string; title: string; href: string }>
   modules: LearningModule[]
-  exploreFocusReady: boolean
+  panelReadComplete: boolean
   entityQuizCompleted: boolean
   bridgeQuizOpen: boolean
   onOpenBridgeQuiz: () => void
+  onMarkPanelRead: () => void
   visitedLessonCount: number
 }
 
@@ -46,10 +47,11 @@ export function useExplorePanelLearning({
   conceptChips,
   lessonLinks,
   modules,
-  exploreFocusReady,
+  panelReadComplete,
   entityQuizCompleted,
   bridgeQuizOpen,
   onOpenBridgeQuiz,
+  onMarkPanelRead,
   visitedLessonCount,
 }: Args) {
   const toast = useToast()
@@ -119,7 +121,7 @@ export function useExplorePanelLearning({
   const lessonsPartial = lessonTotal > 0 && visitedLessonCount > 0 && !lessonsDone
 
   const steps: ExploreStepView[] = useMemo(() => {
-    const readDone = exploreFocusReady
+    const readDone = panelReadComplete
     const quizDone = entityQuizCompleted
     const lessonDone = lessonsDone
 
@@ -127,7 +129,9 @@ export function useExplorePanelLearning({
       {
         id: 'read',
         label: 'Đọc panel',
-        hint: 'Xem tổng quan và các tab nội dung',
+        hint: readDone
+          ? 'Đã xác nhận đọc nội dung panel'
+          : 'Đọc tổng quan và các tab, rồi bấm «Đánh dấu đã đọc»',
         done: readDone,
       },
       {
@@ -137,7 +141,9 @@ export function useExplorePanelLearning({
           ? 'Đang làm quiz…'
           : quizDone
             ? 'Đã hoàn thành quiz cho thiên thể này'
-            : 'Dừng vài giây trên thiên thể để mở',
+            : readDone
+              ? 'Bấm «Làm» để mở quiz ngữ cảnh'
+              : 'Hoàn thành bước đọc panel trước',
         done: quizDone,
       },
       {
@@ -164,7 +170,7 @@ export function useExplorePanelLearning({
       return { ...row, status: 'todo' as const }
     })
   }, [
-    exploreFocusReady,
+    panelReadComplete,
     entityQuizCompleted,
     lessonsDone,
     lessonTotal,
@@ -208,6 +214,10 @@ export function useExplorePanelLearning({
 
   const onStepAction = useCallback(
     (stepId: ExploreStepId) => {
+      if (stepId === 'read') {
+        onMarkPanelRead()
+        return
+      }
       if (stepId === 'quiz') {
         onOpenBridgeQuiz()
         return
@@ -225,7 +235,7 @@ export function useExplorePanelLearning({
         })
       }
     },
-    [chipViews, entityDisplayName, lessonLinks, onOpenBridgeQuiz],
+    [chipViews, entityDisplayName, lessonLinks, onMarkPanelRead, onOpenBridgeQuiz],
   )
 
   const onConceptChipClick = useCallback(

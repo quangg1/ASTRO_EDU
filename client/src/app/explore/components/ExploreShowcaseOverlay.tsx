@@ -46,7 +46,9 @@ type Props = Pick<
   | 'handleQuizComplete'
   | 'mergedOrbitEntities'
   | 'modules'
-  | 'exploreFocusReady'
+  | 'panelReadComplete'
+  | 'markPanelReadComplete'
+  | 'openBridgeQuiz'
   | 'entityQuizCompleted'
   | 'exploreView'
   | 'navigateExploreView'
@@ -88,7 +90,9 @@ export function ExploreShowcaseOverlay(props: Props) {
     tourOpen,
     onOpenTour,
     modules,
-    exploreFocusReady,
+    panelReadComplete,
+    markPanelReadComplete,
+    openBridgeQuiz,
     entityQuizCompleted,
     exploreView,
     navigateExploreView,
@@ -99,12 +103,19 @@ export function ExploreShowcaseOverlay(props: Props) {
   const toast = useToast()
 
   const onOpenBridgeQuiz = useCallback(() => {
-    if (bridgeQuizQuestions.length > 0) {
-      setBridgeQuizPromptOpen(true)
+    if (!panelReadComplete) {
+      toast.show('Đọc panel và bấm «Xong» ở bước «Đọc panel» trước', { tone: 'info' })
       return
     }
-    toast.show('Giữ focus trên thiên thể vài giây để mở quiz ngữ cảnh', { tone: 'info' })
-  }, [bridgeQuizQuestions.length, setBridgeQuizPromptOpen, toast])
+    if (openBridgeQuiz()) return
+    toast.show('Giữ focus trên thiên thể vài giây để tải quiz ngữ cảnh', { tone: 'info' })
+  }, [panelReadComplete, openBridgeQuiz, toast])
+
+  const onMarkPanelRead = useCallback(() => {
+    if (panelReadComplete) return
+    markPanelReadComplete()
+    toast.show('Đã ghi nhận — bạn có thể làm quiz ngữ cảnh', { tone: 'success' })
+  }, [panelReadComplete, markPanelReadComplete, toast])
 
   const panelLearning = useExplorePanelLearning({
     userId: user?.id,
@@ -112,10 +123,11 @@ export function ExploreShowcaseOverlay(props: Props) {
     conceptChips: effectiveConceptCards,
     lessonLinks: effectiveLessonLinks,
     modules,
-    exploreFocusReady,
+    panelReadComplete,
     entityQuizCompleted,
     bridgeQuizOpen: bridgeQuizPromptOpen,
     onOpenBridgeQuiz,
+    onMarkPanelRead,
     visitedLessonCount: bridgeVisitedLessonsForEntity,
   })
 

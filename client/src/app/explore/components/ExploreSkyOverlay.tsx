@@ -34,7 +34,9 @@ type Props = Pick<
   | 'bridgeVisitedLessonsForEntity'
   | 'museumLabelVi'
   | 'modules'
-  | 'exploreFocusReady'
+  | 'panelReadComplete'
+  | 'markPanelReadComplete'
+  | 'openBridgeQuiz'
   | 'entityQuizCompleted'
   | 'bridgeQuizPromptOpen'
   | 'setBridgeQuizPromptOpen'
@@ -65,7 +67,9 @@ export function ExploreSkyOverlay(props: Props) {
     bridgeVisitedLessonsForEntity,
     museumLabelVi,
     modules,
-    exploreFocusReady,
+    panelReadComplete,
+    markPanelReadComplete,
+    openBridgeQuiz,
     entityQuizCompleted,
     bridgeQuizPromptOpen,
     setBridgeQuizPromptOpen,
@@ -87,12 +91,14 @@ export function ExploreSkyOverlay(props: Props) {
     conceptChips: effectiveConceptCards,
     lessonLinks: effectiveLessonLinks,
     modules,
-    exploreFocusReady,
+    panelReadComplete,
     entityQuizCompleted,
     bridgeQuizOpen: bridgeQuizPromptOpen,
     onOpenBridgeQuiz: () => {
-      if (bridgeQuizQuestions.length > 0) setBridgeQuizPromptOpen(true)
+      if (!panelReadComplete) return
+      openBridgeQuiz()
     },
+    onMarkPanelRead: markPanelReadComplete,
     visitedLessonCount: bridgeVisitedLessonsForEntity,
   })
 
