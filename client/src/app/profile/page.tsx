@@ -7,6 +7,9 @@ import { changePassword, deactivateMyAccount, updateProfile, useAuthStore } from
 import { canModerate } from '@/lib/roles'
 import { TeacherProfileEditor } from '@/components/profile/TeacherProfileEditor'
 import { LearnerProfileEditor } from '@/components/profile/LearnerProfileEditor'
+import { AvatarDecorationPicker } from '@/components/profile/AvatarDecorationPicker'
+import { AvatarWithDecoration } from '@/components/profile/AvatarWithDecoration'
+import { useEquippedDecoration } from '@/features/rewards/hooks/useEquippedDecoration'
 import { useLiveClock } from '@/hooks/useLiveClock'
 
 // ── Design primitives ──────────────────────────────────────────────────────────
@@ -83,6 +86,7 @@ function isStudentRole(role: string | undefined) {
 export default function ProfilePage() {
   const router = useRouter()
   const { user, checked } = useAuthStore()
+  const equippedOverlay = useEquippedDecoration()
 
   // form state — all logic unchanged
   const [displayName, setDisplayName] = useState('')
@@ -191,7 +195,6 @@ export default function ProfilePage() {
   }
 
   // ── Derived values ──
-  const initial = (user.displayName || user.email || 'U').charAt(0).toUpperCase()
   const roleColorMap: Record<string, string> = {
     admin: 'var(--color-brand-amber)', teacher: 'var(--color-accent)', moderator: '#ff5cd4', student: '#6dffb0',
   }
@@ -243,20 +246,13 @@ export default function ProfilePage() {
         }}>
           <Brackets s={16} o={12} />
           <div style={{ display: 'flex', alignItems: 'center', gap: 28 }}>
-            {/* Avatar orb */}
-            <div style={{
-              width: 80, height: 80, borderRadius: '50%', flexShrink: 0,
-              background: 'radial-gradient(circle at 35% 35%, rgba(126,231,255,0.55) 0%, rgba(77,210,255,0.18) 55%, rgba(0,0,0,0.5) 100%)',
-              border: '2px solid rgba(126,231,255,0.55)',
-              boxShadow: '0 0 22px rgba(126,231,255,0.28), inset 0 0 14px rgba(126,231,255,0.1)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 30, fontWeight: 700, color: 'var(--color-text-primary)', overflow: 'hidden',
-              ...grotesk,
-            }}>
-              {avatar
-                ? <img src={avatar} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                : initial}
-            </div>
+            <AvatarWithDecoration
+              avatarUrl={avatar || user.avatar}
+              displayName={user.displayName || user.email || 'User'}
+              email={user.email}
+              overlayUrl={equippedOverlay}
+              size="lg"
+            />
 
             <div>
               {/* eyebrow */}
@@ -361,6 +357,31 @@ export default function ProfilePage() {
         {/* ── Learning profile (public) ── */}
         <div style={{ marginBottom: 20 }}>
           <LearnerProfileEditor />
+        </div>
+
+        {/* ── Avatar decorations ── */}
+        <div style={{ ...card, marginBottom: 20 }}>
+          <Brackets s={12} o={9} />
+          <div style={{ display: 'flex', alignItems: 'center', marginBottom: 16 }}>
+            <span style={sectionNum('D', 'rgba(167,139,250,0.45)')}>D</span>
+            <div>
+              <h2 style={{ ...grotesk, margin: 0, fontSize: 18, fontWeight: 600, color: 'var(--color-text-primary)' }}>
+                Trang trí avatar
+              </h2>
+              <p style={{ ...grotesk, margin: '6px 0 0', fontSize: 13, color: 'var(--color-text-muted)', lineHeight: 1.5 }}>
+                Chỉ hiển thị trang trí đã mua — chọn và đeo tại đây. Mua thêm tại{' '}
+                <Link href="/gem-shop" style={{ color: 'var(--color-accent)', textDecoration: 'none' }}>
+                  Cửa hàng Gem
+                </Link>
+                .
+              </p>
+            </div>
+          </div>
+          <AvatarDecorationPicker
+            avatarUrl={avatar || user.avatar || ''}
+            displayName={user.displayName || 'User'}
+            email={user.email}
+          />
         </div>
 
         {/* ── 2-column: Details + Security ── */}

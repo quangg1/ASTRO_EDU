@@ -20,7 +20,6 @@ import {
 import {
   flatItemsFromSections,
   formatDecorationPrice,
-  sectionsFromDecorationResponse,
 } from '@/features/rewards/lib/decorationCatalog'
 import { Button, Card } from '@/design-system'
 
@@ -40,6 +39,51 @@ type Props = {
 
 function dispatchDecorationUpdated() {
   window.dispatchEvent(new Event(DECORATION_UPDATED_EVENT))
+}
+
+function renderDecorationThumbs({
+  items,
+  isProfile,
+  equippedSkuId,
+  previewSku,
+  setPreviewSku,
+  itemOwned,
+}: {
+  items: AvatarDecorationCatalogItem[]
+  isProfile: boolean
+  equippedSkuId: string | null
+  previewSku: string | null
+  setPreviewSku: (sku: string) => void
+  itemOwned?: (item: AvatarDecorationCatalogItem) => boolean
+}) {
+  return items.map((item) => {
+    const overlay = item.overlayUrl || item.previewUrl
+    if (!overlay) return null
+    const owned = itemOwned ? itemOwned(item) : true
+    const equipped = equippedSkuId === item.skuId
+    const selected = previewSku === item.skuId
+    return (
+      <div key={item.skuId} className="flex flex-col gap-1">
+        <DecorationOverlayThumb
+          overlayUrl={overlay}
+          selected={selected || (isProfile && equipped && !previewSku)}
+          equipped={isProfile && equipped}
+          onClick={() => setPreviewSku(item.skuId)}
+          onMouseEnter={() => setPreviewSku(item.skuId)}
+        />
+        <p className="text-[10px] text-ds-muted text-center line-clamp-1 px-0.5">
+          {item.nameVi}
+        </p>
+        {!isProfile && !owned ? (
+          <p className="text-[10px] text-center text-ds-accent/80">
+            {formatDecorationPrice(item.effectivePriceGem)}
+          </p>
+        ) : (
+          <p className="text-[10px] text-center text-emerald-400/90">Đã có</p>
+        )}
+      </div>
+    )
+  })
 }
 
 export function DecorationCatalogExperience({
@@ -74,8 +118,21 @@ export function DecorationCatalogExperience({
     setEquippedOverlay(data.equippedOverlayUrl)
     setOwnedSkus(new Set(data.ownedDecorationSkus))
     if (isProfile) {
+      const ownedIds = new Set(data.ownedDecorationSkus)
+      const ownedCatalog = data.catalog.filter((item) => ownedIds.has(item.skuId))
       setSections(
-        sectionsFromDecorationResponse(data.categories, data.catalog, fallbackSectionTitle),
+        ownedCatalog.length
+          ? [
+              {
+                slug: '_owned',
+                nameVi: 'Bộ sưu tập của bạn',
+                subtitleVi: '',
+                bannerUrl: '',
+                sortOrder: 0,
+                items: ownedCatalog,
+              },
+            ]
+          : [],
       )
     } else if (categoriesProp) {
       setSections(
@@ -140,6 +197,11 @@ export function DecorationCatalogExperience({
     [ownedSkus],
   )
 
+  const ownedItems = useMemo(
+    () => flatCatalog.filter((item) => itemOwned(item)),
+    [flatCatalog, itemOwned],
+  )
+
   const previewItem = useMemo(() => {
     if (previewSku) return flatCatalog.find((i) => i.skuId === previewSku) ?? null
     if (isProfile && equippedSkuId) {
@@ -167,7 +229,18 @@ export function DecorationCatalogExperience({
       const res = await purchaseAvatarDecoration(skuId)
       setGemBalance(res.gemBalance)
       setPreviewSku(skuId)
-      await refreshMe()
+      const data = await fetchMyDecorationState()
+      applyMeState(data)
+      if (!data.equippedDecorationSkuId) {
+        try {
+          const equipRes = await equipAvatarDecoration(skuId)
+          setEquippedSkuId(equipRes.equippedDecorationSkuId)
+          setEquippedOverlay(equipRes.equippedOverlayUrl)
+          setPreviewSku(null)
+        } catch {
+          /* user can equip manually from profile */
+        }
+      }
       dispatchDecorationUpdated()
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
@@ -197,22 +270,25 @@ export function DecorationCatalogExperience({
     return <p className="text-sm text-ds-subtle">Đang tải trang trí avatar…</p>
   }
 
-  if (!flatCatalog.length) {
+  if (isProfile && ownedItems.length === 0) {
     return (
       <Card className={`p-4 border-ds-border ${className}`}>
         <p className="text-sm text-ds-muted">
-          Chưa có trang trí.{' '}
-          {isProfile ? (
-            <>
-              Xem{' '}
-              <Link href="/gem-shop" className="text-cyan-400 hover:underline">
-                Cửa hàng Gem
-              </Link>{' '}
-              hoặc quản trị Kinh tế Gem.
-            </>
-          ) : (
-            'Quản trị có thể thêm tại Kinh tế Gem.'
-          )}
+          Bạn chưa có trang trí avatar nào.{' '}
+          <Link href="/gem-shop" className="text-cyan-400 hover:underline">
+            Mua tại Cửa hàng Gem
+          </Link>
+          .
+        </p>
+      </Card>
+    )
+  }
+
+  if (!isProfile && !flatCatalog.length) {
+    return (
+      <Card className={`p-4 border-ds-border ${className}`}>
+        <p className="text-sm text-ds-muted">
+          Chưa có trang trí. Quản trị có thể thêm tại Kinh tế Gem.
         </p>
       </Card>
     )
@@ -255,9 +331,11 @@ export function DecorationCatalogExperience({
                     {previewItem.nameVi || previewItem.skuId}
                   </p>
                   <p className={`text-sm mt-0.5 ${isProfile ? 'text-ds-muted' : 'text-ds-accent'}`}>
-                    {formatDecorationPrice(previewItem.effectivePriceGem)}
-                    {gemBalance !== null ? (
-                      <span className={isProfile ? 'text-slate-600' : 'text-ds-subtle'}>
+                    {isProfile || isPreviewOwned
+                      ? 'Đã sở hữu'
+                      : formatDecorationPrice(previewItem.effectivePriceGem)}
+                    {!isProfile && gemBalance !== null ? (
+                      <span className="text-ds-subtle">
                         {' '}
                         · Số dư {gemBalance} gem
                       </span>
@@ -280,7 +358,7 @@ export function DecorationCatalogExperience({
             ) : (
               <p className="text-sm text-ds-muted">
                 {isProfile
-                  ? 'Chưa đeo trang trí. Nhấn hoặc rê chuột lên một ô để xem trước trên avatar của bạn.'
+                  ? 'Chọn một trang trí đã mua bên dưới để xem trước và đeo.'
                   : 'Chọn một trang trí bên dưới.'}
               </p>
             )}
@@ -303,6 +381,28 @@ export function DecorationCatalogExperience({
 
       {sections.map((section) => {
         if (!section.items?.length) return null
+        if (isProfile && section.slug === '_owned') {
+          return (
+            <section key={section.slug} className="space-y-3">
+              <div>
+                <h3 className="text-sm font-medium text-white">{section.nameVi}</h3>
+                <p className="text-xs text-ds-muted mt-0.5">
+                  {section.items.length} trang trí — bấm để xem trước, «Đeo trang trí này» để áp dụng.
+                </p>
+              </div>
+              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2.5">
+                {renderDecorationThumbs({
+                  items: section.items,
+                  isProfile: true,
+                  equippedSkuId,
+                  previewSku,
+                  setPreviewSku,
+                })}
+              </div>
+            </section>
+          )
+        }
+        if (isProfile) return null
         return (
           <section key={section.slug} className="space-y-3">
             {isDecorCategoryBannerSlug(section.slug) ? (
@@ -316,44 +416,14 @@ export function DecorationCatalogExperience({
               <h3 className="text-sm font-medium text-ds-muted">{section.nameVi}</h3>
             )}
 
-            <div
-              className={`grid gap-2.5 ${
-                isProfile
-                  ? 'grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6'
-                  : 'grid-cols-3 sm:grid-cols-4 md:grid-cols-5'
-              }`}
-            >
-              {section.items.map((item) => {
-                const overlay = item.overlayUrl || item.previewUrl
-                if (!overlay) return null
-                const owned = itemOwned(item)
-                const equipped = equippedSkuId === item.skuId
-                const selected = previewSku === item.skuId
-                return (
-                  <div key={item.skuId} className="flex flex-col gap-1">
-                    <DecorationOverlayThumb
-                      overlayUrl={overlay}
-                      selected={selected || (isProfile && equipped && !previewSku)}
-                      equipped={isProfile && equipped}
-                      onClick={() => setPreviewSku(item.skuId)}
-                      onMouseEnter={() => setPreviewSku(item.skuId)}
-                    />
-                    <p className="text-[10px] text-ds-muted text-center line-clamp-1 px-0.5">
-                      {item.nameVi}
-                    </p>
-                    {(isProfile || !owned) && (
-                      <p className="text-[10px] text-center">
-                        {owned ? (
-                          <span className="text-emerald-400/90">Đã có</span>
-                        ) : (
-                          <span className="text-ds-accent/80">
-                            {formatDecorationPrice(item.effectivePriceGem)}
-                          </span>
-                        )}
-                      </p>
-                    )}
-                  </div>
-                )
+            <div className="grid gap-2.5 grid-cols-3 sm:grid-cols-4 md:grid-cols-5">
+              {renderDecorationThumbs({
+                items: section.items,
+                isProfile: false,
+                equippedSkuId,
+                previewSku,
+                setPreviewSku,
+                itemOwned,
               })}
             </div>
           </section>
@@ -429,24 +499,62 @@ function renderPreviewActions({
       )
     }
     return (
-      <p className="text-sm text-emerald-400/90">
-        Đã sở hữu —{' '}
-        <Link href="/profile" className="text-cyan-400 hover:underline">
-          đeo tại Hồ sơ
-        </Link>
-      </p>
+      <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
+        {!isPreviewEquipped ? (
+          <Button
+            type="button"
+            size="sm"
+            disabled={busySku !== null}
+            onClick={() => onEquip(previewItem.skuId)}
+          >
+            {busySku === previewItem.skuId ? '…' : 'Đeo ngay'}
+          </Button>
+        ) : (
+          <span className="text-sm text-emerald-400/90 py-1.5">Đang đeo trên hồ sơ & header</span>
+        )}
+        {equippedSkuId && !isPreviewEquipped ? (
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            className="text-ds-muted"
+            disabled={busySku !== null}
+            onClick={() => onEquip(null)}
+          >
+            Gỡ trang trí đang đeo
+          </Button>
+        ) : null}
+        {!isProfile ? (
+          <Link href="/profile" className="text-xs text-cyan-400 hover:underline self-center">
+            Quản lý tại Hồ sơ
+          </Link>
+        ) : null}
+      </div>
     )
   }
 
   return (
-    <Button
-      type="button"
-      size="sm"
-      variant={isProfile ? 'secondary' : 'primary'}
-      disabled={busySku !== null}
-      onClick={() => onPurchase(previewItem.skuId)}
-    >
-      {busySku === previewItem.skuId ? '…' : previewFree ? 'Nhận miễn phí' : 'Mua bằng Gem'}
-    </Button>
+    <p className="text-sm text-ds-muted">
+      {isProfile ? (
+        <>
+          Trang trí này chưa có trong bộ sưu tập.{' '}
+          <Link href="/gem-shop" className="text-cyan-400 hover:underline">
+            Mua tại Cửa hàng Gem
+          </Link>
+          .
+        </>
+      ) : null}
+      {!isProfile ? (
+        <Button
+          type="button"
+          size="sm"
+          variant="primary"
+          disabled={busySku !== null}
+          onClick={() => onPurchase(previewItem.skuId)}
+        >
+          {busySku === previewItem.skuId ? '…' : previewFree ? 'Nhận miễn phí' : 'Mua bằng Gem'}
+        </Button>
+      ) : null}
+    </p>
   )
 }
