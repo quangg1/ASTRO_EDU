@@ -1,5 +1,10 @@
 const AgentMessageFeedback = require('../models/AgentMessageFeedback');
 const LearnerAgentProfile = require('../models/LearnerAgentProfile');
+const {
+  invalidateCacheEntry,
+  invalidateByQuery,
+  recordCacheFeedback,
+} = require('./agentResponseCache');
 
 async function recordMessageFeedback(userId, body) {
   const rating = Number(body?.rating);
@@ -9,6 +14,10 @@ async function recordMessageFeedback(userId, body) {
     throw err;
   }
 
+  const cacheEntryId =
+    typeof body?.cacheEntryId === 'string' ? body.cacheEntryId.trim() : '';
+  const userQuery = typeof body?.userQuery === 'string' ? body.userQuery.trim() : '';
+
   const doc = await AgentMessageFeedback.create({
     userId: String(userId),
     sessionId: String(body?.sessionId || '').trim(),
@@ -17,7 +26,18 @@ async function recordMessageFeedback(userId, body) {
     comment: typeof body?.comment === 'string' ? body.comment.trim().slice(0, 500) : '',
     surface: typeof body?.surface === 'string' ? body.surface.trim() : '',
     lessonId: typeof body?.lessonId === 'string' ? body.lessonId.trim() : '',
+    cacheEntryId: cacheEntryId || undefined,
   });
+
+  if (cacheEntryId) {
+    if (rating === -1) {
+      await invalidateCacheEntry(cacheEntryId);
+    } else {
+      await recordCacheFeedback(cacheEntryId, rating);
+    }
+  } else if (rating === -1 && userQuery) {
+    await invalidateByQuery(userQuery, body?.surface);
+  }
 
   const inc =
     rating === 1

@@ -53,7 +53,8 @@ export type AgentStreamEvent =
   | { event: 'tool_calls'; data: { tool_calls: unknown } }
   | { event: 'tool_results'; data: { tool_results: AgentMessageResponse['tool_results'] } }
   | { event: 'fallback'; data: { chips?: Array<{ label: string; action: string }> } }
-  | { event: 'done'; data: { ok?: boolean; fallback?: boolean } }
+  | { event: 'cache_meta'; data: { source?: string; cacheEntryId?: string | null; kind?: string | null } }
+  | { event: 'done'; data: { ok?: boolean; fallback?: boolean; fast_path?: string } }
   | { event: 'error'; data: { error?: string } }
 
 /** Let the browser paint between SSE events (avoids one React commit for the whole reply). */
@@ -358,6 +359,8 @@ export async function postAgentMessageFeedback(body: {
   comment?: string
   surface?: string
   lessonId?: string
+  cacheEntryId?: string
+  userQuery?: string
 }): Promise<boolean> {
   const token = getToken()
   if (!token) return false

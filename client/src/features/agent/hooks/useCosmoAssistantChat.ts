@@ -25,6 +25,8 @@ export type CosmoChatMessage = {
   actions?: TutorAction[]
   streaming?: boolean
   imageAttachment?: { mediaType: string; base64: string }
+  cacheEntryId?: string
+  cacheSource?: string
 }
 
 type SendOptions = {
@@ -60,6 +62,7 @@ export function useCosmoAssistantChat({
   >([])
   const [communityThreads, setCommunityThreads] = useState<CommunityThreadSuggestion[]>([])
   const streamContentRef = useRef('')
+  const lastUserQueryRef = useRef('')
 
   const isContextual =
     sessionContext.surface === 'learning_path' ||
@@ -218,6 +221,7 @@ export function useCosmoAssistantChat({
       setCommunityThreads([])
       setRelatedLessons([])
       const userContent = trimmed || 'Giải thích hình ảnh này.'
+      lastUserQueryRef.current = userContent
       const userMsg: CosmoChatMessage = {
         id: `u-${Date.now()}`,
         role: 'user',
@@ -254,6 +258,19 @@ export function useCosmoAssistantChat({
             }
             if (ev.event === 'fallback' && ev.data.chips) {
               setFallbackChips(ev.data.chips)
+            }
+            if (ev.event === 'cache_meta') {
+              setMessages((m) =>
+                m.map((msg) =>
+                  msg.id === assistantId
+                    ? {
+                        ...msg,
+                        cacheEntryId: ev.data.cacheEntryId || undefined,
+                        cacheSource: ev.data.source || undefined,
+                      }
+                    : msg,
+                ),
+              )
             }
           },
         })
@@ -411,15 +428,18 @@ export function useCosmoAssistantChat({
   const submitFeedback = useCallback(
     async (messageId: string, rating: 1 | -1) => {
       if (!user) return false
+      const assistantMsg = messages.find((m) => m.id === messageId)
       return postAgentMessageFeedback({
         sessionId,
         messageId,
         rating,
         surface: sessionContext.surface,
         lessonId: sessionContext.lessonId ?? undefined,
+        cacheEntryId: assistantMsg?.cacheEntryId,
+        userQuery: lastUserQueryRef.current || undefined,
       })
     },
-    [user, sessionId, sessionContext.surface, sessionContext.lessonId],
+    [user, sessionId, sessionContext.surface, sessionContext.lessonId, messages],
   )
 
   const startNewConversation = useCallback(() => {

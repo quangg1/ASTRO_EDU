@@ -9,6 +9,7 @@ const agentMessageFeedbackSchema = new mongoose.Schema(
     comment: { type: String, trim: true, default: '', maxlength: 500 },
     surface: { type: String, default: '' },
     lessonId: { type: String, default: '' },
+    cacheEntryId: { type: String, default: '' },
   },
   { timestamps: true },
 );

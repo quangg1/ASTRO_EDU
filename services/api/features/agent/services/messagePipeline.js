@@ -34,6 +34,8 @@ function sanitizeAssistantContent(text) {
 const { getCachedContext } = require('./contextCache');
 const { assertAgentNotQuizLocked } = require('../lib/agentQuizLock');
 const { AppError } = require('../../../shared/errors');
+const { resolveAgentFastPath } = require('./agentFastPath');
+const { cacheAgentResponse } = require('./agentResponseCache');
 
 const STREAM_WORDS_PER_CHUNK = 3;
 const STREAM_CHUNK_DELAY_MS = 18;
@@ -67,6 +69,76 @@ async function writeTokenStream(res, text) {
 
 function logTurnMetrics(base, extra) {
   logAgentMetrics({ ...base, ...extra });
+}
+
+async function deliverFastPathTurn({
+  req,
+  res,
+  stream,
+  t0,
+  sessionMeta,
+  sessionId,
+  sessionContext,
+  userMessage,
+  fast,
+  effectiveTier,
+}) {
+  const content = sanitizeAssistantContent(fast.content);
+  const cacheMeta = {
+    source: fast.source,
+    cacheEntryId: fast.cacheEntryId || null,
+    kind: fast.kind || null,
+  };
+
+  await stepPersistSession(req.userId, sessionId, sessionMeta, null, {
+    sessionContext,
+    userContent: userMessage,
+    assistantContent: content,
+    hasImage: false,
+  });
+
+  logTurnMetrics(
+    {
+      sessionId,
+      tier: effectiveTier,
+      fast_path: fast.source,
+      fast_path_kind: fast.kind || null,
+      cache_entry_id: fast.cacheEntryId || null,
+      t_total_ms: Date.now() - t0,
+      t_first_token_ms: Date.now() - t0,
+      llm_skipped: true,
+    },
+    {},
+  );
+
+  if (stream) {
+    res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-cache, no-transform');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no');
+    writeSse(res, 'session', sessionMeta);
+    writeSse(res, 'status', { phase: 'streaming' });
+    flushSse(res);
+    await writeTokenStream(res, content);
+    writeSse(res, 'cache_meta', cacheMeta);
+    writeSse(res, 'done', {
+      ok: true,
+      quotaRemaining: sessionMeta.quotaRemaining,
+      quotaTurnUsed: sessionMeta.quotaTurnUsed,
+      fast_path: fast.source,
+    });
+    flushSse(res);
+    return res.end();
+  }
+
+  return res.json({
+    success: true,
+    session: sessionMeta,
+    message: { role: 'assistant', content },
+    tool_calls: [],
+    tool_results: [],
+    cache_meta: cacheMeta,
+  });
 }
 
 /**
@@ -131,6 +203,38 @@ async function runMessagePipeline(req, res) {
   const quotaMeter = await stepInitQuota(tier, req.userId, guestSessionId);
 
   if (!sessionId) sessionId = randomUUID();
+
+  const hasImage = Boolean(body.image_base64);
+
+  if (!hasImage && lastUserText.trim()) {
+    const fast = await resolveAgentFastPath({
+      userMessage: lastUserText,
+      sessionContext,
+      hasImage,
+    });
+    if (fast?.content) {
+      return deliverFastPathTurn({
+        req,
+        res,
+        stream,
+        t0,
+        sessionMeta: {
+          sessionId,
+          tier: effectiveTier,
+          trialExpired: tier === 'trial_expired',
+          quotaRemaining: quotaMeter.getRemaining(),
+          quotaTurnUsed: quotaMeter.getTurnConsumed(),
+          allowedTools: toolsForTier(effectiveTier),
+          guestSessionId: tier === 'guest' ? guestSessionId : undefined,
+        },
+        sessionId,
+        sessionContext,
+        userMessage: lastUserText,
+        fast,
+        effectiveTier,
+      });
+    }
+  }
 
   const prefetchHit = Boolean(
     req.userId && getCachedContext(req.userId, sessionContext || {}),
@@ -315,6 +419,19 @@ async function runMessagePipeline(req, res) {
     assistantContent: content,
     hasImage: Boolean(body.image_base64),
   });
+
+  if (
+    !body.image_base64 &&
+    rawToolCalls.length === 0 &&
+    content.length >= 40 &&
+    content.length <= 4000
+  ) {
+    void cacheAgentResponse({
+      query: userMessage,
+      answer: content,
+      surface: sessionContext?.surface || 'general',
+    }).catch(() => {});
+  }
 
   logTurnMetrics(
     {
