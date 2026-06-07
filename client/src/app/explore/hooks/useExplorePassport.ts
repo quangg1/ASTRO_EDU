@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { fetchExplorePassport } from '@/features/explore/api/explorePassportApi'
+import { fetchExplorePassport } from '@/features/explore/public'
 import { buildExplorePassportSummary } from '@/features/explore/lib/buildExplorePassportSummary'
 import type { ExplorePassportSummary } from '@/features/explore/lib/explorePassportTypes'
 

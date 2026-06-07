@@ -4,25 +4,21 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   fetchShowcaseGamificationCatalog,
   postShowcaseUnlock,
+  syncGemWallet,
   type ShowcaseCatalogEntryWithUnlocks,
-} from '@/features/rewards/api/showcaseGamificationApi'
+} from '@/features/rewards/public'
 import {
   NASA_SHOWCASE_STORIES,
-  type NasaStory,
-} from '@/features/content3d/showcase/lib/showcaseCatalogRuntime'
-import {
   entityNeedsOrbitUnlock,
   filterShowcaseOrbitsForUser,
-  resolveStoryUnlockEntityId,
-  type ShowcaseUnlockFlags,
-} from '@/features/content3d/showcase/lib/filterShowcaseOrbits'
-import {
   ORBIT_COST_GEM,
+  resolveStoryUnlockEntityId,
   STORY_COST_GEM,
+  type NasaStory,
+  type ShowcaseOrbitEntity,
   type ShowcaseStoryCampaign,
-} from '@/features/content3d/showcase/lib/showcaseStoryTypes'
-import type { ShowcaseOrbitEntity } from '@/features/content3d/showcase/lib/showcaseCatalogRuntime'
-import { syncGemWallet } from '@/features/rewards/public'
+  type ShowcaseUnlockFlags,
+} from '@/features/content3d/showcase/public'
 
 export type ShowcaseStoryViewModel = ShowcaseStoryCampaign & {
   unlockEntityId: string
