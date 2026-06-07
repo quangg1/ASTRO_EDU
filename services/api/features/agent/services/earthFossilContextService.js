@@ -41,7 +41,10 @@ function parseStageTimeMa(raw) {
 function shouldBuildEarthFossilContext(sessionContext) {
   if (sessionContext?.surface !== 'explore') return false;
   const planet = typeof sessionContext.planet === 'string' ? sessionContext.planet.trim() : '';
-  if (planet && planet !== 'earth') return false;
+  const entityId = typeof sessionContext.entityId === 'string' ? sessionContext.entityId.trim() : '';
+  const isEarth =
+    planet === 'earth' || planet === 'planet-earth' || entityId === 'planet-earth';
+  if (planet && !isEarth) return false;
   const stageTimeMa = parseStageTimeMa(sessionContext.stageTimeMa);
   if (stageTimeMa == null || stageTimeMa > 600) return false;
   return true;
@@ -122,6 +125,27 @@ async function buildEarthFossilContext(sessionContext) {
       generaCount: row.generaCount ?? 0,
     }));
 
+  const focusedName =
+    typeof sessionContext?.focusedFossilName === 'string'
+      ? sessionContext.focusedFossilName.trim()
+      : '';
+  const focusedPhylum =
+    typeof sessionContext?.focusedFossilPhylum === 'string'
+      ? sessionContext.focusedFossilPhylum.trim()
+      : '';
+  const focusedId =
+    typeof sessionContext?.focusedFossilId === 'string'
+      ? sessionContext.focusedFossilId.trim()
+      : '';
+  const selectedFossil =
+    focusedName || focusedId
+      ? {
+          id: focusedId || null,
+          name: focusedName || null,
+          phylum: focusedPhylum || null,
+        }
+      : null;
+
   return {
     stageTimeMa,
     stageName: stage?.name ?? null,
@@ -134,6 +158,7 @@ async function buildEarthFossilContext(sessionContext) {
     totalInDb,
     topPhyla,
     notableFossils: notableAgg || [],
+    selectedFossil,
     groundingNoteVi:
       'Chỉ nhắc tên loài/hóa thạch cụ thể nằm trong danh sách notableFossils hoặc ngạnh trong topPhyla; không bịa tên ngoài CSDL.',
   };

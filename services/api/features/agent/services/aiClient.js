@@ -98,6 +98,7 @@ function mapContextForAi(
     deep_history_disclaimer: agentContext?.narrativeContext?.confidenceDisclaimerVi ?? null,
     earth_fossil_context: agentContext?.earthFossilContext ?? null,
     showcase_context: agentContext?.showcaseContext ?? null,
+    explore_scene_context: agentContext?.exploreSceneContext ?? null,
     tutoring_style: agentContext?.tutoringStyle ?? 'balanced',
     learner_interests: agentContext?.learnerInterests?.length
       ? agentContext.learnerInterests

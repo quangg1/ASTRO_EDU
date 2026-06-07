@@ -455,6 +455,94 @@ def augment_system_with_agent_state(system: str, state: "AgentStateBody | None")
         note = earth_fossil.get("grounding_note_vi") or earth_fossil.get("groundingNoteVi")
         if isinstance(note, str) and note.strip():
             parts.append(note.strip())
+        selected = earth_fossil.get("selected_fossil") or earth_fossil.get("selectedFossil")
+        if isinstance(selected, dict):
+            sel_name = selected.get("name")
+            if isinstance(sel_name, str) and sel_name.strip():
+                sel_line = f"User đang chọn hóa thạch trên globe: {sel_name.strip()}"
+                sel_phylum = selected.get("phylum")
+                if isinstance(sel_phylum, str) and sel_phylum.strip():
+                    sel_line += f" (ngạnh {sel_phylum.strip()})"
+                parts.append(sel_line)
+    explore_scene = getattr(state, "explore_scene_context", None)
+    if isinstance(explore_scene, dict):
+        beat = explore_scene.get("narrative_beat") or explore_scene.get("narrativeBeat")
+        if isinstance(beat, dict):
+            bname = beat.get("name")
+            bma = beat.get("time_ma", beat.get("timeMa"))
+            age = beat.get("age_label_vi") or beat.get("ageLabelVi")
+            line = "Deep History — giai đoạn đang xem trên timeline"
+            if bname:
+                line += f": {bname}"
+            if bma is not None:
+                line += f" (~{bma} Ma)"
+            if age:
+                line += f" · {age}"
+            parts.append(line)
+        site = explore_scene.get("selected_site") or explore_scene.get("selectedSite")
+        if isinstance(site, dict):
+            sname = site.get("name_vi") or site.get("nameVi")
+            if sname:
+                skind = site.get("kind")
+                blurb = site.get("blurb_vi") or site.get("blurbVi") or ""
+                site_line = f"Địa điểm/pin đang chọn trên globe: {sname}"
+                if skind:
+                    site_line += f" ({skind})"
+                if isinstance(blurb, str) and blurb.strip():
+                    site_line += f" — {blurb.strip()[:200]}"
+                parts.append(site_line)
+        iconic = explore_scene.get("iconic_organisms") or explore_scene.get("iconicOrganisms")
+        if isinstance(iconic, list) and iconic:
+            org_lines = []
+            for row in iconic[:6]:
+                if not isinstance(row, dict):
+                    continue
+                label = row.get("name_vi") or row.get("nameVi") or row.get("name")
+                if not label:
+                    continue
+                desc = row.get("description") or ""
+                bit = str(label)
+                if row.get("has_model3d") or row.get("hasModel3d"):
+                    bit += " [có mô hình 3D trên UI]"
+                if desc:
+                    bit += f": {str(desc)[:100]}"
+                org_lines.append(bit)
+            if org_lines:
+                parts.append(
+                    "Sinh vật tiêu biểu giai đoạn (UI): " + "; ".join(org_lines)
+                )
+        sky = explore_scene.get("sky")
+        if isinstance(sky, dict):
+            pinned = sky.get("pinned_target_label") or sky.get("pinnedTargetLabel")
+            pinned_id = sky.get("pinned_target_id") or sky.get("pinnedTargetId")
+            kind = sky.get("pinned_target_kind") or sky.get("pinnedTargetKind")
+            sky_line = "La bàn / Sky Explore"
+            if pinned:
+                sky_line += f" — chòm/mục tiêu ghim: {pinned}"
+            elif pinned_id:
+                sky_line += f" — id ghim: {pinned_id}"
+            if kind:
+                sky_line += f" ({kind})"
+            highlight = sky.get("scene_highlight_label") or sky.get("sceneHighlightLabel")
+            if highlight:
+                sky_line += f"; đang highlight trên canvas: {highlight}"
+            loc = sky.get("observer_location_label") or sky.get("observerLocationLabel")
+            lat = sky.get("observer_lat_deg", sky.get("observerLatDeg"))
+            lon = sky.get("observer_lon_deg", sky.get("observerLonDeg"))
+            if loc:
+                sky_line += f"; vị trí quan sát: {loc}"
+            elif lat is not None and lon is not None:
+                sky_line += f"; lat/lon ~{lat}, {lon}"
+            obs_time = sky.get("observer_time_iso") or sky.get("observerTimeIso")
+            if obs_time:
+                sky_line += f"; thời điểm: {obs_time}"
+            pollution = sky.get("light_pollution") or sky.get("lightPollution")
+            if pollution:
+                sky_line += f"; ô nhiễm ánh sáng: {pollution}"
+            blurb = sky.get("museum_blurb_vi") or sky.get("museumBlurbVi")
+            if isinstance(blurb, str) and blurb.strip():
+                sky_line += f". {blurb.strip()[:180]}"
+            parts.append(sky_line)
     showcase = getattr(state, "showcase_context", None)
     if isinstance(showcase, dict):
         active_name = showcase.get("active_entity_name") or showcase.get("activeEntityName")
@@ -570,6 +658,7 @@ class AgentStateBody(BaseModel):
     deep_history_disclaimer: str | None = None
     earth_fossil_context: dict | None = None
     showcase_context: dict | None = None
+    explore_scene_context: dict | None = None
     tutoring_style: str | None = None
     learner_interests: list[str] | None = None
     current_concept_ids: list[str] | None = None

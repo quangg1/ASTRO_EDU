@@ -223,16 +223,7 @@ function FisheyeSky({
         if (!na || !nb) continue
         const va = equatorialToSceneVector(na.raDeg, na.decDeg, observer)
         const vb = equatorialToSceneVector(nb.raDeg, nb.decDeg, observer)
-        appendGreatCircleArcSegments(
-          va,
-          vb,
-          view,
-          fovDeg,
-          R,
-          positions,
-          14,
-          true,
-        )
+        appendGreatCircleArcSegments(va, vb, R, positions, 14, true)
       }
       if (positions.length >= 6) {
         const geom = new THREE.BufferGeometry()
@@ -241,7 +232,7 @@ function FisheyeSky({
       }
     }
     return lines
-  }, [targets, observer, activeConstellationId, view, fovDeg])
+  }, [targets, observer, activeConstellationId])
 
   const solarBillboards = useMemo(() => {
     return ephemerisBodies.map((b) => {
@@ -537,9 +528,16 @@ export function SkyPlanetariumScene(props: Props) {
   const focusTargetId = props.sceneHighlightId ?? props.pinnedTargetId
 
   const observerFocusKey = `${props.observer.latDeg}|${props.observer.lonDeg}|${props.observer.at.getTime()}`
+  const focusSnapKeyRef = useRef<string | null>(null)
 
   useEffect(() => {
-    if (!focusTargetId) return
+    if (!focusTargetId) {
+      focusSnapKeyRef.current = null
+      return
+    }
+    const snapKey = `${focusTargetId}|${observerFocusKey}`
+    if (focusSnapKeyRef.current === snapKey) return
+
     const dir = resolveSkyTargetSceneDirection(focusTargetId, {
       targets: props.targets,
       ephemerisBodies: props.ephemerisBodies,
@@ -547,8 +545,10 @@ export function SkyPlanetariumScene(props: Props) {
       observer: props.observer,
     })
     if (!dir) return
+
+    focusSnapKeyRef.current = snapKey
     setView(skyViewStateFromSceneDirection(dir))
-  }, [focusTargetId, observerFocusKey, props.targets, props.ephemerisBodies, catalogLabeled])
+  }, [focusTargetId, observerFocusKey, props.targets, props.ephemerisBodies, catalogLabeled, props.observer])
 
   const labelCandidates = useMemo((): LabelCandidate[] => {
     const active = focusTargetId

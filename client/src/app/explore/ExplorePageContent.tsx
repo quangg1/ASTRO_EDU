@@ -2,10 +2,13 @@
 
 import { Suspense, useCallback, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { AgentPageProvider, buildSessionContext } from '@/features/agent/public'
+import { AgentPageProvider } from '@/features/agent/public'
+import { useEarthHistoryStore, useSceneCommandStore } from '@/features/content3d/earth/public'
+import { usePlanetNarrativeStore } from '@/features/content3d/narrative/public'
 import { parseOnboardingLanding } from '@/lib/onboardingLanding'
 import { useExplorePage } from './hooks/useExplorePage'
 import { usePlanetHistoryEarthScene } from './hooks/usePlanetHistoryEarthScene'
+import { buildExploreAgentSessionContext } from './lib/buildExploreAgentSessionContext'
 import { ExploreSceneCanvas } from './components/ExploreSceneCanvas'
 import { ExploreEarthOverlay } from './components/ExploreEarthOverlay'
 import { ExplorePlanetHistoryOverlay } from './components/ExplorePlanetHistoryOverlay'
@@ -20,6 +23,13 @@ function ExplorePageInner() {
   const searchParams = useSearchParams()
   const landing = parseOnboardingLanding(searchParams)
   const [tourOpen, setTourOpen] = useState(false)
+
+  const focusedFossil = useSceneCommandStore((s) => s.focusedFossil)
+  const narrativeEntityId = usePlanetNarrativeStore((s) => s.entityId)
+  const currentBeat = usePlanetNarrativeStore((s) => s.currentBeat)
+  const selectedSiteId = usePlanetNarrativeStore((s) => s.selectedSiteId)
+  const narrativeSites = usePlanetNarrativeStore((s) => s.sites)
+  const earthStage = useEarthHistoryStore((s) => s.currentStage)
 
   useEffect(() => {
     if (shouldAutoOpenExploreTour(landing.fromOnboarding, landing.tour)) {
@@ -59,38 +69,56 @@ function ExplorePageInner() {
     explore.planetHistoryOpen,
     explore.planetHistoryEntityId,
   )
+
   const agentSessionContext = useMemo(
     () =>
-      buildSessionContext({
+      buildExploreAgentSessionContext({
         pathname: explore.pathname || '/explore',
-        surface: 'explore',
-        routeLabel: 'Khám phá',
-        planet: explore.exploreView === 'sky'
-          ? 'sky'
-          : explore.earthHistoryOpen
-            ? 'earth'
-            : explore.planetHistoryEntityId || explore.showcaseActiveItemId || 'showcase',
-        stageTimeMa: explore.stageTime,
-        entityId:
-          explore.exploreView === 'sky'
-            ? explore.skyActiveTargetId
-            : explore.planetHistoryEntityId || explore.showcaseActiveItemId || null,
-        narrativeKey: explore.exploreView === 'sky'
-          ? `sky:${explore.skyActiveTargetId}`
-          : explore.planetHistoryEntityId
-            ? `planet:${explore.planetHistoryEntityId}`
-            : explore.stageTime != null
-              ? `earth:${explore.stageTime}`
-              : null,
+        exploreView: explore.exploreView,
+        earthHistoryOpen: explore.earthHistoryOpen,
+        planetHistoryOpen: explore.planetHistoryOpen,
+        planetHistoryEntityId: explore.planetHistoryEntityId,
+        showcaseActiveItemId: explore.showcaseActiveItemId,
+        stageTimeFromUrl: explore.stageTime,
+        skyActiveTargetId: explore.skyActiveTargetId,
+        skySceneHighlightId: explore.skySceneHighlightId,
+        skyTargets: explore.skyTargets,
+        activeSkyTarget: explore.activeSkyTarget,
+        observer: explore.observer,
+        locationLabel: explore.locationLabel,
+        narrativeEntityId,
+        currentBeat,
+        selectedSiteId,
+        sites: narrativeSites,
+        earthStageId: earthStage?.id ?? null,
+        earthStageTime: earthStage?.time ?? null,
+        focusedFossilId: focusedFossil?._id ?? null,
+        focusedFossilName: focusedFossil?.name ?? null,
+        focusedFossilPhylum: focusedFossil?.phylum ?? null,
       }),
     [
       explore.pathname,
       explore.exploreView,
       explore.earthHistoryOpen,
+      explore.planetHistoryOpen,
       explore.planetHistoryEntityId,
       explore.showcaseActiveItemId,
-      explore.skyActiveTargetId,
       explore.stageTime,
+      explore.skyActiveTargetId,
+      explore.skySceneHighlightId,
+      explore.skyTargets,
+      explore.activeSkyTarget,
+      explore.observer,
+      explore.locationLabel,
+      narrativeEntityId,
+      currentBeat,
+      selectedSiteId,
+      narrativeSites,
+      earthStage?.id,
+      earthStage?.time,
+      focusedFossil?._id,
+      focusedFossil?.name,
+      focusedFossil?.phylum,
     ],
   )
 

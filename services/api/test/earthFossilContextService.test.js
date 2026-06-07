@@ -28,6 +28,10 @@ test('shouldBuildEarthFossilContext requires explore earth with stage', () => {
     true,
   );
   assert.equal(
+    shouldBuildEarthFossilContext({ surface: 'explore', planet: 'planet-earth', stageTimeMa: 320 }),
+    true,
+  );
+  assert.equal(
     shouldBuildEarthFossilContext({ surface: 'explore', planet: 'mars', stageTimeMa: 250 }),
     false,
   );

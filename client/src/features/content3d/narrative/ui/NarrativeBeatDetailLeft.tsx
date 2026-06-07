@@ -1,6 +1,7 @@
 'use client'
 
 import { clsx } from 'clsx'
+import { FeaturedOrganisms } from '@/features/content3d/earth/ui/FeaturedOrganisms'
 import { usePlanetNarrativeStore } from '@/features/content3d/narrative/stores/planetNarrativeStore'
 import {
   CONFIDENCE_VI,
@@ -12,8 +13,11 @@ import {
   WATER_VI,
 } from '@/features/content3d/narrative/ui/narrativeDetailShared'
 
+const EARTH_ENTITY_ID = 'planet-earth'
+
 export function NarrativeBeatDetailLeft({ entityLabel }: { entityLabel: string }) {
   const beat = usePlanetNarrativeStore((s) => s.currentBeat)
+  const entityId = usePlanetNarrativeStore((s) => s.entityId)
   const showInfoPanel = usePlanetNarrativeStore((s) => s.showInfoPanel)
   const accent = beat.accentColor || '#ea580c'
 
@@ -78,6 +82,12 @@ export function NarrativeBeatDetailLeft({ entityLabel }: { entityLabel: string }
         <p className="text-[12px] leading-relaxed text-ds-muted">{beat.panel.descriptionVi}</p>
         {beat.panel.compareNoteVi ? (
           <p className="mt-2 text-[11px] italic leading-snug text-ds-subtle">{beat.panel.compareNoteVi}</p>
+        ) : null}
+
+        {entityId === EARTH_ENTITY_ID ? (
+          <div className="mt-4 border-t border-ds-border pt-3">
+            <FeaturedOrganisms stageId={beat.id} variant="compact" />
+          </div>
         ) : null}
       </div>
     </DetailShell>

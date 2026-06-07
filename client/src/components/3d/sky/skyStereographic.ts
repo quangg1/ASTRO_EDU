@@ -52,23 +52,26 @@ export function slerpUnitDirection(
 export function appendGreatCircleArcSegments(
   dirA: [number, number, number],
   dirB: [number, number, number],
-  view: SkyViewState,
-  fovDeg: number,
   radius: number,
   out: number[],
   steps = 14,
   revealBelowHorizon = false,
+  /** Clip trên CPU — chỉ dùng khi cần; mặc định để shader stereographic clip (tránh giật khi pan). */
+  view?: SkyViewState,
+  fovDeg?: number,
 ): void {
   const ok = (d: [number, number, number]) =>
     revealBelowHorizon || isAboveSceneHorizon(d)
   if (!ok(dirA) && !ok(dirB)) return
+
+  const clipFov = view != null && fovDeg != null
 
   const samples: [number, number, number][] = []
   for (let i = 0; i <= steps; i++) {
     const t = i / steps
     const d = slerpUnitDirection(dirA, dirB, t)
     if (!ok(d)) continue
-    if (!unitDirInStereoFov(d, view, fovDeg)) continue
+    if (clipFov && !unitDirInStereoFov(d, view, fovDeg)) continue
     samples.push(d)
   }
 

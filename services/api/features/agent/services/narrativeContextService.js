@@ -4,10 +4,25 @@ const {
   confidenceDisclaimerVi,
 } = require('./agentContextEnrichment');
 
-function pickBeat(beats, stageTimeMa) {
+function pickBeat(beats, sessionContext) {
   const list = Array.isArray(beats) ? beats : [];
   if (!list.length) return null;
-  const ma = Number(stageTimeMa);
+
+  const beatIdRaw = sessionContext?.narrativeBeatId;
+  if (beatIdRaw != null && beatIdRaw !== '') {
+    const beatId = typeof beatIdRaw === 'number' ? beatIdRaw : parseInt(String(beatIdRaw), 10);
+    if (Number.isFinite(beatId)) {
+      const byId = list.find((b) => {
+        const id = b?.id ?? b?.beatId;
+        return id != null && Number(id) === beatId;
+      });
+      if (byId) return byId;
+    }
+  }
+
+  const maRaw =
+    sessionContext?.narrativeBeatTimeMa ?? sessionContext?.stageTimeMa ?? null;
+  const ma = Number(maRaw);
   if (Number.isNaN(ma)) return list[0];
   let best = list[0];
   let bestDist = Infinity;
@@ -73,7 +88,7 @@ async function buildNarrativeContext(sessionContext = {}) {
   }
 
   const beats = doc.beats?.length ? doc.beats : doc.stages || [];
-  const beat = pickBeat(beats, sessionContext.stageTimeMa);
+  const beat = pickBeat(beats, sessionContext);
   const beatTitle = beat?.title || beat?.label || beat?.name || null;
   const beatSummary = excerpt(
     beat?.summary || beat?.description || beat?.body || beat?.narrative || '',

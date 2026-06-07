@@ -58,8 +58,23 @@ function contextTag(sessionContext: SessionContext): string | null {
     return `🤖 Đang trợ lý cho bài: ${sessionContext.lessonTitle}`
   }
   if (sessionContext.surface === 'explore') {
-    if (sessionContext.planet === 'earth' && sessionContext.stageTimeMa != null) {
-      return `🤖 Khám phá · Trái Đất ${sessionContext.stageTimeMa} Ma`
+    if (sessionContext.planet === 'sky' && sessionContext.skyContext?.pinnedTargetLabel) {
+      return `🤖 La bàn · ${sessionContext.skyContext.pinnedTargetLabel}`
+    }
+    if (sessionContext.planet === 'earth') {
+      const ma =
+        sessionContext.narrativeBeatTimeMa ??
+        sessionContext.stageTimeMa
+      const beat = sessionContext.narrativeBeatName
+      const fossil = sessionContext.focusedFossilName
+      const site = sessionContext.selectedSite?.nameVi
+      if (ma != null) {
+        let tag = `🤖 Khám phá · Trái Đất ${ma} Ma`
+        if (beat) tag += ` · ${beat}`
+        if (fossil) tag += ` · ${fossil}`
+        else if (site) tag += ` · ${site}`
+        return tag
+      }
     }
     return '🤖 Khám phá · ngữ cảnh hiện tại'
   }

@@ -20,6 +20,21 @@ export type SessionContext = {
   planet?: string | null
   stageTimeMa?: number | null
   entityId?: string | null
+  /** Hóa thạch user đang chọn trên globe Deep History (nếu có). */
+  focusedFossilId?: string | null
+  focusedFossilName?: string | null
+  focusedFossilPhylum?: string | null
+  /** Beat timeline Deep History đang xem (sync từ dock, không chỉ URL ?stage=). */
+  narrativeBeatId?: number | null
+  narrativeBeatName?: string | null
+  narrativeBeatTimeMa?: number | null
+  narrativeBeatAgeLabel?: string | null
+  /** Ghim địa điểm narrative trên globe (nếu có). */
+  selectedSite?: ExploreNarrativeSiteContext | null
+  /** Sinh vật tiêu biểu của giai đoạn Trái Đất. */
+  iconicOrganisms?: ExploreIconicOrganismContext[] | null
+  /** La bàn / planetarium (view=sky). */
+  skyContext?: ExploreSkyContext | null
   /** Chỉ bật coach Socratic sau khi vừa trượt quiz trong phiên này — không suy từ dữ liệu cũ. */
   coachTrigger?: 'quiz_failed' | null
   /** Có quiz ôn cho bài hiện tại (client biết từ LP). */
@@ -30,6 +45,34 @@ export type SessionContext = {
   activeSectionId?: string | null
   activeSectionTitle?: string | null
   activeSectionExcerpt?: string | null
+}
+
+export type ExploreNarrativeSiteContext = {
+  siteId: string
+  nameVi: string
+  kind: string
+  blurbVi: string
+}
+
+export type ExploreIconicOrganismContext = {
+  nameVi: string
+  name: string
+  description: string
+  hasModel3d: boolean
+}
+
+export type ExploreSkyContext = {
+  pinnedTargetId: string
+  pinnedTargetLabel: string
+  pinnedTargetKind: 'body' | 'constellation' | 'star'
+  sceneHighlightId: string | null
+  sceneHighlightLabel: string | null
+  observerLatDeg: number
+  observerLonDeg: number
+  observerTimeIso: string
+  observerLocationLabel: string
+  lightPollution: string
+  museumBlurbVi: string | null
 }
 
 export type SpacedReviewLesson = {

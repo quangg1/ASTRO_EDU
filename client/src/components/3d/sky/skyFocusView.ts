@@ -27,10 +27,10 @@ export function skyViewStateFromSceneDirection(dir: [number, number, number]): S
   const y = Math.max(-1, Math.min(1, dir[1]))
   const altRad = Math.asin(y)
   const cosAlt = Math.cos(altRad)
-  let azRad = 0
-  if (Math.abs(cosAlt) > 1e-5) {
-    azRad = Math.atan2(dir[0], -dir[2])
-  }
+  const azRad =
+    Math.abs(cosAlt) > 1e-5
+      ? Math.atan2(dir[0], -dir[2])
+      : Math.atan2(dir[0] || 0, -(dir[2] || 0))
 
   const viewAltRad =
     altRad >= 0

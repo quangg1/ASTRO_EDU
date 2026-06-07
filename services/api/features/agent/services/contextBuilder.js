@@ -16,6 +16,7 @@ const {
   buildEarthFossilContext,
   shouldBuildEarthFossilContext,
 } = require('./earthFossilContextService');
+const { buildExploreSceneContext } = require('./exploreSceneContextService');
 const { buildShowcaseAgentContext } = require('./showcaseNavigationService');
 const UserReward = require('../../rewards/models/UserReward');
 const { getWalletLearnerMeta } = require('../../rewards/services/learnerTierService');
@@ -144,6 +145,7 @@ async function buildAgentContext(userId, sessionContext, learnerSnapshot, userRo
     narrativeContext,
     earthFossilContext,
     showcaseContext,
+    exploreSceneContext: buildExploreSceneContext(sessionContext || {}),
     spacedReviewDue,
     depthSuggestion,
     progress: {

@@ -1,4 +1,9 @@
-import type { SessionContext } from '../types'
+import type {
+  ExploreIconicOrganismContext,
+  ExploreNarrativeSiteContext,
+  ExploreSkyContext,
+  SessionContext,
+} from '../types'
 
 type BuildParams = {
   pathname: string
@@ -13,6 +18,16 @@ type BuildParams = {
   planet?: string
   stageTimeMa?: number | null
   entityId?: string | null
+  focusedFossilId?: string | null
+  focusedFossilName?: string | null
+  focusedFossilPhylum?: string | null
+  narrativeBeatId?: number | null
+  narrativeBeatName?: string | null
+  narrativeBeatTimeMa?: number | null
+  narrativeBeatAgeLabel?: string | null
+  selectedSite?: ExploreNarrativeSiteContext | null
+  iconicOrganisms?: ExploreIconicOrganismContext[] | null
+  skyContext?: ExploreSkyContext | null
   narrativeKey?: string | null
   coachTrigger?: 'quiz_failed' | null
   recallQuizAvailable?: boolean
@@ -38,6 +53,16 @@ export function buildSessionContext(params: BuildParams): SessionContext {
     planet: params.planet ?? null,
     stageTimeMa: params.stageTimeMa ?? null,
     entityId: params.entityId ?? null,
+    focusedFossilId: params.focusedFossilId ?? null,
+    focusedFossilName: params.focusedFossilName ?? null,
+    focusedFossilPhylum: params.focusedFossilPhylum ?? null,
+    narrativeBeatId: params.narrativeBeatId ?? null,
+    narrativeBeatName: params.narrativeBeatName ?? null,
+    narrativeBeatTimeMa: params.narrativeBeatTimeMa ?? null,
+    narrativeBeatAgeLabel: params.narrativeBeatAgeLabel ?? null,
+    selectedSite: params.selectedSite ?? null,
+    iconicOrganisms: params.iconicOrganisms ?? null,
+    skyContext: params.skyContext ?? null,
     coachTrigger: params.coachTrigger ?? null,
     recallQuizAvailable: params.recallQuizAvailable ?? false,
     quizLock: params.quizLock ?? null,

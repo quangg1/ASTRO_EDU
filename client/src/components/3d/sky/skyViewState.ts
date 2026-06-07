@@ -60,7 +60,8 @@ export function viewRotationMatrix3(view: SkyViewState, out = _mat3): THREE.Matr
   const cosAlt = Math.cos(view.viewAltRad)
 
   if (Math.abs(cosAlt) < 0.02) {
-    _east.set(1, 0, 0)
+    // Gần thiên/nadir đỉnh: giữ roll theo viewAzRad — tránh khóa (1,0,0) gây lật ngược khi pan ngang.
+    _east.set(Math.cos(view.viewAzRad), 0, Math.sin(view.viewAzRad))
   } else {
     _east.set(
       cosAlt * Math.cos(view.viewAzRad),

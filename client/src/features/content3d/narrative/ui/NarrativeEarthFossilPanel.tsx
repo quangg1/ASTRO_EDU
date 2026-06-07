@@ -120,10 +120,12 @@ export function NarrativeEarthFossilPanel() {
         <div className="relative mt-3">
           <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-ds-subtle" />
           <input
+            type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Tìm tên, ngành, vùng…"
-            className="w-full rounded-lg border border-ds-border bg-ds-elevated/80 py-2 pl-8 pr-3 text-[12px] text-slate-100 placeholder:text-ds-subtle focus:border-white/25 focus:outline-none"
+            className="w-full rounded-lg border border-white/20 bg-white/10 py-2 pl-8 pr-3 text-[12px] text-white placeholder:text-gray-500 focus:border-cyan-400/50 focus:outline-none focus:ring-1 focus:ring-cyan-400/40"
+            aria-label="Tìm kiếm hóa thạch"
           />
         </div>
       </div>
