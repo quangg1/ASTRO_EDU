@@ -46,23 +46,52 @@ export async function fetchJplShowcaseOrbits(whenIso?: string): Promise<Showcase
   }
 }
 
+export type SyncShowcaseOrbitFromJplInput = {
+  entityId: string
+  whenIso?: string
+  /** Giá trị form Studio hiện tại — dùng trước khi user bấm Lưu. */
+  horizonsId?: string
+  orbitAround?: string
+  parentId?: string
+  parentPlanetName?: string
+  horizonsCommand?: string
+  horizonsCenter?: string
+}
+
 export async function syncShowcaseOrbitEntityFromJpl(
   token: string,
   entityId: string,
-  whenIso?: string,
-): Promise<{ ok: boolean; item?: ShowcaseJplOrbitDTO; error?: string }> {
+  whenIsoOrOpts?: string | Omit<SyncShowcaseOrbitFromJplInput, 'entityId'>,
+): Promise<{ ok: boolean; item?: ShowcaseJplOrbitDTO; whenUsed?: string | null; error?: string }> {
   try {
+    const opts =
+      typeof whenIsoOrOpts === 'string' || whenIsoOrOpts == null
+        ? { whenIso: whenIsoOrOpts || undefined }
+        : whenIsoOrOpts
     const res = await fetch(`${API}/sync-entity`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ entityId, when: whenIso || undefined }),
+      body: JSON.stringify({
+        entityId,
+        when: opts.whenIso || undefined,
+        horizonsId: opts.horizonsId?.trim() || undefined,
+        orbitAround: opts.orbitAround?.trim() || undefined,
+        parentId: opts.parentId?.trim() || undefined,
+        parentPlanetName: opts.parentPlanetName?.trim() || undefined,
+        horizonsCommand: opts.horizonsCommand?.trim() || undefined,
+        horizonsCenter: opts.horizonsCenter?.trim() || undefined,
+      }),
     })
     const data = await res.json()
     if (data.success && data.data?.item) {
-      return { ok: true, item: data.data.item as ShowcaseJplOrbitDTO }
+      return {
+        ok: true,
+        item: data.data.item as ShowcaseJplOrbitDTO,
+        whenUsed: data.data.whenUsed ?? null,
+      }
     }
     return { ok: false, error: data.error || 'Sync failed' }
   } catch (e) {

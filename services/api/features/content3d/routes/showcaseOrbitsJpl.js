@@ -7,6 +7,47 @@ const HORIZONS_BASE = 'https://ssd.jpl.nasa.gov/api/horizons.api';
 const CACHE_MS = 6 * 60 * 60 * 1000;
 const cache = new Map();
 const AU_TO_SIM_UNITS = 26;
+/** Horizons chỉ có ephemeris mission trong cửa sổ bay — không có ở ngày hiện tại. */
+const HORIZONS_WHEN_FALLBACK_BY_COMMAND = {
+  '-1024': '2026-04-08',
+  1024: '2026-04-08',
+  'ARTEMIS II': '2026-04-08',
+};
+
+function formatHorizonsDate(whenIso) {
+  const d = whenIso ? new Date(`${String(whenIso).trim().slice(0, 10)}T12:00:00Z`) : new Date();
+  if (!Number.isFinite(d.getTime())) return null;
+  const y = d.getUTCFullYear();
+  const mo = String(d.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(d.getUTCDate()).padStart(2, '0');
+  return `${y}-${mo}-${day}`;
+}
+
+function formatHorizonsUtc(date) {
+  return formatHorizonsDate(date.toISOString().slice(0, 10));
+}
+
+function normalizeHorizonsCommandKey(command) {
+  return String(command || '')
+    .trim()
+    .replace(/^['"]|['"]$/g, '')
+    .toUpperCase();
+}
+
+function resolveHorizonsWhenAttempts(command, whenIso) {
+  const attempts = [];
+  const add = (value) => {
+    const s = String(value || '').trim();
+    if (!s || attempts.includes(s)) return;
+    attempts.push(s);
+  };
+  add(whenIso);
+  add(new Date().toISOString().slice(0, 10));
+  const raw = String(command || '').trim();
+  add(HORIZONS_WHEN_FALLBACK_BY_COMMAND[raw]);
+  add(HORIZONS_WHEN_FALLBACK_BY_COMMAND[normalizeHorizonsCommandKey(raw)]);
+  return attempts;
+}
 
 function parseElementValue(result, key) {
   const re = new RegExp(`\\b${key}\\s*=\\s*([+-]?\\d+(?:\\.\\d+)?(?:[Ee][+-]?\\d+)?)`);
@@ -92,18 +133,19 @@ function parsePhysicalData(result) {
 }
 
 function buildHorizonsUrl(command, center, whenIso, mode, objData) {
-  const startDate = new Date(whenIso || Date.now());
+  const startStr = formatHorizonsDate(whenIso) || formatHorizonsDate(new Date().toISOString().slice(0, 10));
+  const startDate = new Date(`${startStr}T12:00:00Z`);
   if (!Number.isFinite(startDate.getTime())) return null;
   const stopDate = new Date(startDate.getTime() + 24 * 60 * 60 * 1000);
-  const fmt = (d) => d.toISOString().slice(0, 19);
+  const stopStr = formatHorizonsUtc(stopDate);
   const q = new URLSearchParams({
     format: 'json',
     MAKE_EPHEM: 'YES',
     EPHEM_TYPE: mode,
     CENTER: center || '500@10',
     COMMAND: command,
-    START_TIME: fmt(startDate),
-    STOP_TIME: fmt(stopDate),
+    START_TIME: startStr,
+    STOP_TIME: stopStr,
     STEP_SIZE: '1d',
     REF_SYSTEM: 'ICRF',
     REF_PLANE: 'ECLIPTIC',
@@ -119,10 +161,50 @@ function buildHorizonsUrl(command, center, whenIso, mode, objData) {
   return `${HORIZONS_BASE}?${q.toString()}`;
 }
 
-async function fetchEntityOrbitFromJpl(entity, whenIso) {
-  const command = String(entity?.horizonsId || entity?.horizonsCommand || '').trim();
-  if (!command) return null;
-  const center = String(entity?.horizonsCenter || entity?.orbitAround || '500@10').trim();
+function pickFirstNonEmpty(...values) {
+  for (const v of values) {
+    const s = String(v ?? '').trim();
+    if (s) return s;
+  }
+  return '';
+}
+
+function mergeEntityForJplSync(entity, catalogRow, overrides = {}) {
+  const next = { ...(entity || {}) };
+  const hid = pickFirstNonEmpty(
+    overrides.horizonsId,
+    overrides.horizonsCommand,
+    next.horizonsId,
+    next.horizonsCommand,
+    catalogRow?.horizonsId,
+  );
+  next.horizonsId = hid;
+  next.horizonsCommand = pickFirstNonEmpty(
+    overrides.horizonsCommand,
+    overrides.horizonsId,
+    next.horizonsCommand,
+    next.horizonsId,
+    catalogRow?.horizonsId,
+  );
+  next.orbitAround = pickFirstNonEmpty(
+    overrides.orbitAround,
+    overrides.horizonsCenter,
+    next.orbitAround,
+    next.horizonsCenter,
+    catalogRow?.orbitAround,
+  );
+  next.horizonsCenter = next.orbitAround;
+  next.parentId = pickFirstNonEmpty(overrides.parentId, next.parentId, catalogRow?.parentId);
+  next.parentPlanetName = pickFirstNonEmpty(
+    overrides.parentPlanetName,
+    next.parentPlanetName,
+    catalogRow?.parentPlanetName,
+    catalogRow?.linkedPlanetName,
+  );
+  return next;
+}
+
+async function fetchEntityOrbitFromJplOnce(entity, command, center, whenIso) {
   const cacheKey = `${entity.id}|${command}|${center}|${String(whenIso || '').slice(0, 10)}`;
   const hit = cache.get(cacheKey);
   if (hit && hit.expiresAt > Date.now()) return hit.value;
@@ -131,18 +213,30 @@ async function fetchEntityOrbitFromJpl(entity, whenIso) {
   const elemUrl = buildHorizonsUrl(command, center, whenIso, 'ELEMENTS', 'NO');
   if (!vecUrl || !elemUrl) return null;
   const [vecRes, elemRes] = await Promise.all([fetch(vecUrl), fetch(elemUrl)]);
-  if (!vecRes.ok || !elemRes.ok) return null;
+  if (!vecRes.ok) return null;
   const vecData = await vecRes.json().catch(() => null);
-  const elemData = await elemRes.json().catch(() => null);
+  const elemData = elemRes.ok ? await elemRes.json().catch(() => null) : null;
   const vecResult = vecData?.result || '';
   const elemResult = elemData?.result || '';
   const vectors = parseHorizonsVectors(vecResult);
   if (!vectors) return null;
   const elements = parseHorizonsElements(elemResult);
   const physical = parsePhysicalData(vecResult);
-  const parsed = { vectors, elements, physical };
+  const parsed = { vectors, elements, physical, whenUsed: String(whenIso || '').trim() };
   cache.set(cacheKey, { value: parsed, expiresAt: Date.now() + CACHE_MS });
   return parsed;
+}
+
+async function fetchEntityOrbitFromJpl(entity, whenIso) {
+  const command = String(entity?.horizonsId || entity?.horizonsCommand || '').trim();
+  if (!command) return null;
+  const center = String(entity?.horizonsCenter || entity?.orbitAround || '500@10').trim();
+  const attempts = resolveHorizonsWhenAttempts(command, whenIso);
+  for (const when of attempts) {
+    const parsed = await fetchEntityOrbitFromJplOnce(entity, command, center, when);
+    if (parsed) return parsed;
+  }
+  return null;
 }
 
 function applyJplToEntity(entity, jpl) {
@@ -281,7 +375,8 @@ router.post('/sync-entity', authMiddleware, requireRole('teacher', 'admin'), asy
       idx = orbits.length - 1;
       byId.set(entityId, idx);
     }
-    const entity = { ...(orbits[idx] || {}) };
+    const catalogRow = catalog.find((c) => String(c?.id || '').trim() === entityId) || null;
+    let entity = mergeEntityForJplSync(orbits[idx] || {}, catalogRow, req.body || {});
     const parentId = String(entity.parentId || '').trim();
     if (!entity.orbitAround && parentId) {
       const pIdx = byId.get(parentId);
@@ -289,11 +384,27 @@ router.post('/sync-entity', authMiddleware, requireRole('teacher', 'admin'), asy
       const ph = String(parent?.horizonsId || '').trim();
       if (ph) entity.orbitAround = `500@${ph}`;
     }
+    const command = String(entity.horizonsId || entity.horizonsCommand || '').trim();
+    if (!command) {
+      return res.status(400).json({
+        success: false,
+        error: 'Thiếu Horizons ID. Nhập ID JPL (vd. -1024 cho Artemis II) rồi bấm Sync lại.',
+      });
+    }
     const parsed = await fetchEntityOrbitFromJpl(entity, when);
     if (!parsed) {
-      return res.status(400).json({ success: false, error: 'Không lấy được dữ liệu từ JPL. Kiểm tra horizonsId/orbitAround' });
+      const cmd = command;
+      const artemisHint =
+        normalizeHorizonsCommandKey(cmd) === '-1024' || normalizeHorizonsCommandKey(cmd) === 'ARTEMIS II'
+          ? ' Artemis II chỉ có ephemeris trong cửa sổ mission (vd. 2026-04-08).'
+          : '';
+      return res.status(400).json({
+        success: false,
+        error: `Không lấy được dữ liệu từ JPL cho COMMAND=${cmd}, CENTER=${entity.orbitAround || '500@10'}.${artemisHint}`,
+      });
     }
     const applied = applyJplToEntity(entity, parsed);
+    if (parsed.whenUsed) applied.horizonsWhenUsed = parsed.whenUsed;
     const nextOrbit = {
       ...orbits[idx],
       horizonsId: applied.horizonsId || orbits[idx].horizonsId || '',
@@ -330,7 +441,7 @@ router.post('/sync-entity', authMiddleware, requireRole('teacher', 'admin'), asy
       { $set: { orbits, catalog } },
       { upsert: true },
     );
-    return res.json({ success: true, data: { item: applied } });
+    return res.json({ success: true, data: { item: applied, whenUsed: parsed.whenUsed || when || null } });
   } catch (err) {
     console.error('POST showcase-orbits/sync-entity error:', err);
     res.status(500).json({ success: false, error: 'Lỗi máy chủ' });

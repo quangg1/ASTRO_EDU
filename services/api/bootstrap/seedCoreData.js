@@ -158,6 +158,194 @@ function enrichOrbitRelations(orbits) {
   });
 }
 
+function mergeStoriesFromSeed(dbStories, seedStories) {
+  if (!Array.isArray(seedStories) || seedStories.length === 0) {
+    return Array.isArray(dbStories) ? dbStories : [];
+  }
+  const byId = new Map((Array.isArray(dbStories) ? dbStories : []).map((s) => [String(s?.id || '').trim(), s]));
+  return seedStories.map((seed) => {
+    const id = String(seed?.id || '').trim();
+    const existing = byId.get(id);
+    if (!existing) return seed;
+    const seedWp = Array.isArray(seed?.waypoints) ? seed.waypoints : [];
+    const dbWp = Array.isArray(existing?.waypoints) ? existing.waypoints : [];
+    if (seedWp.length > 0 && dbWp.length === 0) {
+      return { ...existing, ...seed, waypoints: seedWp };
+    }
+    if (seedWp.length > dbWp.length) {
+      return { ...existing, ...seed, waypoints: seedWp };
+    }
+    if (seedWp.length > 0 && dbWp.length > 0) {
+      let patched = false;
+      const mergedWp = dbWp.map((wp, i) => {
+        const seedStep = seedWp[i];
+        if (!seedStep?.camera || wp?.camera) return wp;
+        patched = true;
+        return { ...wp, camera: seedStep.camera };
+      });
+      if (patched) {
+        return { ...existing, ...seed, waypoints: mergedWp };
+      }
+    }
+    return existing;
+  });
+}
+
+async function syncShowcaseStoriesFromSeed() {
+  const sc = readShowcaseCatalogSeed();
+  if (!Array.isArray(sc?.stories) || sc.stories.length === 0) return;
+  const bundle = await ShowcaseCatalogBundle.findOne({ slug: 'main' }).lean();
+  if (!bundle) return;
+  const merged = mergeStoriesFromSeed(bundle.stories, sc.stories);
+  if (JSON.stringify(merged) !== JSON.stringify(bundle.stories || [])) {
+    await ShowcaseCatalogBundle.updateOne({ slug: 'main' }, { $set: { stories: merged } });
+  }
+}
+
+function patchCatalogEntryFromSeed(existing, seed) {
+  const out = { ...existing };
+  if (!String(out.name || '').trim() && seed.name) out.name = seed.name;
+  if (!String(out.group || '').trim() && seed.group) out.group = seed.group;
+  if (!String(out.linkedPlanetName || '').trim() && seed.linkedPlanetName) {
+    out.linkedPlanetName = seed.linkedPlanetName;
+  }
+  const hasCmsMedia =
+    String(out.diffuseMapUrl || out.textureUrl || '').trim() ||
+    String(out.modelUrl || '').trim();
+  if (!hasCmsMedia && !String(out.texturePath || '').trim() && seed.texturePath) {
+    out.texturePath = seed.texturePath;
+  }
+  if (out.published === undefined) out.published = seed.published !== false;
+  return out;
+}
+
+function mergeCatalogFromSeed(dbCatalog, seedCatalog) {
+  if (!Array.isArray(seedCatalog) || seedCatalog.length === 0) {
+    return { catalog: Array.isArray(dbCatalog) ? dbCatalog : [], changed: false };
+  }
+  const catalog = Array.isArray(dbCatalog) ? [...dbCatalog] : [];
+  const byId = new Map(catalog.map((c) => [String(c?.id || '').trim(), c]));
+  let changed = false;
+  for (const seed of seedCatalog) {
+    const id = String(seed?.id || '').trim();
+    if (!id) continue;
+    const existing = byId.get(id);
+    if (!existing) {
+      catalog.push(seed);
+      byId.set(id, seed);
+      changed = true;
+      continue;
+    }
+    const patched = patchCatalogEntryFromSeed(existing, seed);
+    if (JSON.stringify(patched) !== JSON.stringify(existing)) {
+      const idx = catalog.findIndex((c) => String(c?.id || '').trim() === id);
+      if (idx >= 0) catalog[idx] = patched;
+      byId.set(id, patched);
+      changed = true;
+    }
+  }
+  return { catalog, changed };
+}
+
+function patchOrbitEntryFromSeed(existing, seed) {
+  const out = { ...existing };
+  const fillStr = (key) => {
+    if (!String(out[key] || '').trim() && seed[key]) out[key] = seed[key];
+  };
+  fillStr('name');
+  fillStr('parentPlanetName');
+  fillStr('parentId');
+  fillStr('parentShowcaseEntityId');
+  fillStr('orbitColor');
+  fillStr('color');
+  fillStr('modelPath');
+  fillStr('texturePath');
+  for (const key of ['distance', 'period', 'size', 'modelScale']) {
+    const v = Number(out[key]);
+    if ((!Number.isFinite(v) || v <= 0) && seed[key] != null && Number.isFinite(Number(seed[key]))) {
+      out[key] = Number(seed[key]);
+    }
+  }
+  if (!Array.isArray(out.modelRotationDeg) && Array.isArray(seed.modelRotationDeg)) {
+    out.modelRotationDeg = seed.modelRotationDeg;
+  }
+  for (const key of ['phaseDeg', 'inclinationDeg', 'ascendingNodeDeg']) {
+    if (out[key] == null && seed[key] != null && Number.isFinite(Number(seed[key]))) {
+      out[key] = Number(seed[key]);
+    }
+  }
+  return out;
+}
+
+function mergeOrbitsFromSeed(dbOrbits, seedOrbits) {
+  if (!Array.isArray(seedOrbits) || seedOrbits.length === 0) {
+    return { orbits: Array.isArray(dbOrbits) ? dbOrbits : [], changed: false };
+  }
+  const orbits = Array.isArray(dbOrbits) ? [...dbOrbits] : [];
+  const byId = new Map(orbits.map((o) => [String(o?.id || '').trim(), o]));
+  let changed = false;
+  for (const seed of seedOrbits) {
+    const id = String(seed?.id || '').trim();
+    if (!id) continue;
+    const existing = byId.get(id);
+    if (!existing) {
+      orbits.push(seed);
+      byId.set(id, seed);
+      changed = true;
+      continue;
+    }
+    const patched = patchOrbitEntryFromSeed(existing, seed);
+    if (JSON.stringify(patched) !== JSON.stringify(existing)) {
+      const idx = orbits.findIndex((o) => String(o?.id || '').trim() === id);
+      if (idx >= 0) orbits[idx] = patched;
+      byId.set(id, patched);
+      changed = true;
+    }
+  }
+  return { orbits, changed };
+}
+
+function syncCatalogHorizonsFromOrbits(catalog, orbits) {
+  const orbitById = new Map(
+    (Array.isArray(orbits) ? orbits : []).map((o) => [String(o?.id || '').trim(), o]),
+  );
+  return (Array.isArray(catalog) ? catalog : []).map((c) => {
+    const id = String(c?.id || '').trim();
+    const linked = orbitById.get(id);
+    if (!linked) return c;
+    return {
+      ...c,
+      horizonsId: String(c.horizonsId || linked.horizonsId || '').trim(),
+      parentId: String(c.parentId || linked.parentId || '').trim(),
+      orbitAround: String(c.orbitAround || linked.orbitAround || '').trim(),
+      horizonsCommand: String(c.horizonsCommand || linked.horizonsCommand || '').trim(),
+      horizonsCenter: String(c.horizonsCenter || linked.horizonsCenter || '').trim(),
+    };
+  });
+}
+
+async function syncShowcaseCatalogFromSeed() {
+  const sc = readShowcaseCatalogSeed();
+  const seedCatalog = Array.isArray(sc?.catalog) ? sc.catalog : [];
+  const seedOrbits = Array.isArray(sc?.orbits) ? sc.orbits : [];
+  if (seedCatalog.length === 0 && seedOrbits.length === 0) return;
+
+  const bundle = await ShowcaseCatalogBundle.findOne({ slug: 'main' }).lean();
+  if (!bundle) return;
+
+  const { catalog: mergedCatalog, changed: catalogChanged } = mergeCatalogFromSeed(bundle.catalog, seedCatalog);
+  const { orbits: mergedOrbits, changed: orbitsChanged } = mergeOrbitsFromSeed(bundle.orbits, seedOrbits);
+  if (!catalogChanged && !orbitsChanged) return;
+
+  const nextOrbits = enrichOrbitRelations(mergedOrbits);
+  const nextCatalog = syncCatalogHorizonsFromOrbits(mergedCatalog, nextOrbits);
+
+  await ShowcaseCatalogBundle.updateOne(
+    { slug: 'main' },
+    { $set: { catalog: nextCatalog, orbits: nextOrbits } },
+  );
+}
+
 async function bootstrapCoreData() {
   const seed = readLearningPathSeed();
 
@@ -213,6 +401,9 @@ async function bootstrapCoreData() {
       );
     }
   }
+
+  await syncShowcaseStoriesFromSeed();
+  await syncShowcaseCatalogFromSeed();
 
   // One-time migration path: merge legacy showcaseentitycontents into unified bundle.catalog.
   const freshBundle = await ShowcaseCatalogBundle.findOne({ slug: 'main' }).lean();

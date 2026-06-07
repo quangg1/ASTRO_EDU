@@ -19,8 +19,20 @@ export type ShowcaseSatellitePickerItem = {
   active: boolean
 }
 
+import type { ShowcaseStoryViewModel } from '@/app/explore/hooks/useExploreShowcaseGamification'
+
 export type ShowcaseGamificationStrip = {
   gemBalance: number
+  storyCost?: number
+  orbitCost?: number
+  storyUnlocked?: boolean
+  orbitUnlocked?: boolean
+  planetStories?: ShowcaseStoryViewModel[]
+  unlockPending?: 'story' | 'orbit' | null
+  showOrbitUnlock?: boolean
+  onUnlockStory?: (unlockEntityId: string) => void
+  onUnlockOrbit?: (entityId: string) => void
+  onPlayStory?: (storyId: string) => void
 }
 
 const TAB_META: Record<
@@ -355,7 +367,7 @@ export function ShowcaseEntityPanel({
       </section>
 
       {gamification && item ? (
-        <div className="shrink-0 space-y-2 border-t border-white/[0.06] px-5 py-3">
+        <div className="shrink-0 space-y-2.5 border-t border-white/[0.06] px-5 py-3">
           <div className="flex items-center justify-between text-[11px] text-white/45">
             <span className="inline-flex items-center gap-1.5">
               <Sparkles className="h-3 w-3 text-ds-accent" strokeWidth={1.75} />
@@ -363,6 +375,58 @@ export function ShowcaseEntityPanel({
             </span>
             <span className="tabular-nums font-semibold text-ds-accent">{gamification.gemBalance}</span>
           </div>
+
+          {gamification.showOrbitUnlock && gamification.orbitUnlocked === false ? (
+            <button
+              type="button"
+              disabled={gamification.unlockPending === 'orbit'}
+              onClick={() => gamification.onUnlockOrbit?.(item.id)}
+              className="flex w-full items-center justify-center gap-2 rounded-xl border border-amber-400/35 bg-amber-950/30 px-3 py-2.5 text-[10px] font-bold uppercase tracking-[0.14em] text-amber-100 transition hover:bg-amber-900/35 disabled:opacity-50"
+            >
+              <Orbit className="h-3.5 w-3.5" strokeWidth={1.75} />
+              Mở quỹ đạo · {gamification.orbitCost ?? 55} gem
+            </button>
+          ) : null}
+
+          {gamification.planetStories && gamification.planetStories.length > 0 ? (
+            <div className="space-y-2">
+              <p className="text-[9px] font-medium uppercase tracking-[0.16em] text-white/40">
+                Story tour
+              </p>
+              {gamification.planetStories.map((story) => (
+                <div
+                  key={story.id}
+                  className="rounded-xl border border-white/[0.08] bg-ds-surface/40 px-3 py-2.5"
+                >
+                  <p className="text-[11px] font-semibold text-white">{story.title}</p>
+                  <p className="mt-0.5 line-clamp-2 text-[10px] text-white/45">{story.detail}</p>
+                  {story.storyUnlocked ? (
+                    <button
+                      type="button"
+                      disabled={!story.hasWaypoints}
+                      onClick={() => gamification.onPlayStory?.(story.id)}
+                      className="mt-2 inline-flex items-center gap-1.5 rounded-lg border border-ds-accent-strong bg-ds-accent-soft px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-ds-accent transition hover:brightness-110 disabled:opacity-40"
+                    >
+                      <BookOpen className="h-3 w-3" strokeWidth={1.75} />
+                      {story.hasWaypoints ? 'Phát tour' : 'Sắp có'}
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled={
+                        gamification.unlockPending === 'story' || !story.hasWaypoints
+                      }
+                      onClick={() => gamification.onUnlockStory?.(story.unlockEntityId)}
+                      className="mt-2 inline-flex items-center gap-1.5 rounded-lg border border-white/15 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-white/75 transition hover:bg-white/[0.06] disabled:opacity-40"
+                    >
+                      <Sparkles className="h-3 w-3 text-ds-accent" strokeWidth={1.75} />
+                      Mở story · {story.storyCost} gem
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : null}
         </div>
       ) : null}
 

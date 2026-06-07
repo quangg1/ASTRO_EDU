@@ -416,7 +416,14 @@ function StudioShowcaseEntitiesPage() {
     if (!token) return
     setSyncingJpl(true)
     setMessage('')
-    const r = await syncShowcaseOrbitEntityFromJpl(token, selected.entityId)
+    const r = await syncShowcaseOrbitEntityFromJpl(token, selected.entityId, {
+      horizonsId: selected.horizonsId,
+      orbitAround: selected.orbitAround,
+      parentId: selected.parentId,
+      parentPlanetName: selected.parentPlanetName,
+      horizonsCommand: selected.horizonsCommand,
+      horizonsCenter: selected.horizonsCenter,
+    })
     setSyncingJpl(false)
     if (!r.ok || !r.item) {
       setMessage(r.error || 'Sync JPL thất bại')
@@ -438,7 +445,11 @@ function StudioShowcaseEntitiesPage() {
       horizonsCommand: item.horizonsId || selected.horizonsCommand,
       horizonsCenter: item.orbitAround || selected.horizonsCenter,
     })
-    setMessage('Đã sync dữ liệu JPL cho entity hiện tại. Bấm Lưu để ghi DB.')
+    setMessage(
+      r.whenUsed
+        ? `Đã sync JPL (ephemeris ngày ${r.whenUsed}). Bấm Lưu để ghi DB.`
+        : 'Đã sync dữ liệu JPL cho entity hiện tại. Bấm Lưu để ghi DB.',
+    )
   }
 
   const refreshAfterEntityCrud = async (nextSelectedId?: string) => {

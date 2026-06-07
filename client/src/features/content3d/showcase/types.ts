@@ -9,3 +9,9 @@ export type ShowcaseCameraState = {
   az: number
   el: number
 }
+
+export type ShowcaseCameraSpherical = {
+  distance: number
+  az: number
+  el: number
+}

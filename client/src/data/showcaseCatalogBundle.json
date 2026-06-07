@@ -2,31 +2,167 @@
   "stories": [
     {
       "id": "story-artemis",
-      "title": "Artemis Program",
-      "subtitle": "Mission Campaign",
-      "detail": "Moon exploration architecture",
-      "targetPlanetName": "Earth"
+      "title": "Chương trình Artemis",
+      "subtitle": "Chiến dịch Mặt Trăng",
+      "detail": "Kiến trúc SLS · Orion · quỹ đạo tàu",
+      "targetPlanetName": "Earth",
+      "unlockEntityId": "planet-earth",
+      "waypoints": [
+        {
+          "entityId": "planet-earth",
+          "captionVi": "Artemis là thế hệ tiếp theo sau Apollo — không chỉ «đi và về», mà xây dựng sự hiện diện bền vững quanh Mặt Trăng.",
+          "durationSec": 9
+        },
+        {
+          "entityId": "moon-luna",
+          "camera": { "distance": 2.8, "az": 38, "el": 11 },
+          "captionVi": "Mục tiêu cốt lõi: Mặt Trăng — bãi hạ cánh cực Nam, tài nguyên băng, và bài test công nghệ cho sao Hỏa.",
+          "durationSec": 9
+        },
+        {
+          "entityId": "sc-artemis1",
+          "camera": { "distance": 0.42, "az": 44, "el": 14 },
+          "captionVi": "Artemis I (2022): Orion bay không người quanh Mặt Trăng — kiểm tra tàu và hệ thống trước khi đưa phi hành gia.",
+          "durationSec": 8
+        },
+        {
+          "entityId": "sc-artemis2",
+          "camera": { "distance": 0.42, "az": 48, "el": 16 },
+          "captionVi": "Artemis II sẽ là chuyến bay có người vòng quanh Mặt Trăng — bước đệm trước hạ cánh trên bề mặt.",
+          "durationSec": 8
+        },
+        {
+          "entityId": "sc-iss",
+          "camera": { "distance": 0.38, "az": 32, "el": 10 },
+          "captionVi": "Trạm ISS cho thấy cách con người sống và làm việc trên quỹ đạo — kinh nghiệm nền cho Gateway quanh Mặt Trăng.",
+          "durationSec": 8
+        },
+        {
+          "entityId": "planet-earth",
+          "camera": { "distance": 42, "az": 38, "el": 16 },
+          "captionVi": "Từ Trái Đất nhìn ra: Artemis nối khoa học, công nghệ và hợp tác quốc tế — chuẩn bị cho thập kỷ khám phá tiếp theo.",
+          "durationSec": 10
+        }
+      ]
     },
     {
       "id": "story-jupiter",
-      "title": "Jupiter Moons",
-      "subtitle": "Galilean Worlds",
-      "detail": "Io • Europa • Ganymede • Callisto",
-      "targetPlanetName": "Jupiter"
+      "title": "Các mặt trăng Jupiter",
+      "subtitle": "Thế giới Galileo",
+      "detail": "Io · Europa · Ganymede · Callisto",
+      "targetPlanetName": "Jupiter",
+      "unlockEntityId": "planet-jupiter",
+      "waypoints": [
+        {
+          "entityId": "planet-jupiter",
+          "captionVi": "Jupiter chi phối hệ Mặt Trời nội — khí khổng lồ, từ trường mạnh, và hàng chục mặt trăng trong «mini hệ» riêng.",
+          "durationSec": 9
+        },
+        {
+          "entityId": "moon-io",
+          "captionVi": "Io: núi lửa liên tục — lực hấp dẫn giữa Jupiter và các mặt trăng lớn «bẻ cong» vỏ, giải phóng nhiệt khổng lồ.",
+          "durationSec": 8
+        },
+        {
+          "entityId": "moon-europa",
+          "captionVi": "Europa: lớp băng che đại dương ẩn — một trong những ứng viên hàng đầu tìm dấu hiệu sự sống ngoài Trái Đất.",
+          "durationSec": 9
+        },
+        {
+          "entityId": "sc-galileo",
+          "captionVi": "Tàu Galileo (1995–2003) làm rõ cấu trúc các mặt trăng Galileo và từ trường Jupiter — nền tảng cho Europa Clipper.",
+          "durationSec": 8
+        },
+        {
+          "entityId": "moon-ganymede",
+          "captionVi": "Ganymede: mặt trăng lớn nhất hệ Mặt Trời, có từ trường riêng — thế giới «lai» giữa hành tinh và vệ tinh.",
+          "durationSec": 8
+        },
+        {
+          "entityId": "moon-callisto",
+          "captionVi": "Callisto: bề mặt cổ xưa, ít biến động — «bảo tàng va chạm» giúp đọc lịch sử bom bard hệ Mặt Trời sơ khai.",
+          "durationSec": 8
+        }
+      ]
     },
     {
       "id": "story-saturn",
-      "title": "Saturn Rings",
-      "subtitle": "Ring Dynamics",
-      "detail": "A-B-C rings and shepherd moons",
-      "targetPlanetName": "Saturn"
+      "title": "Vành đai Saturn",
+      "subtitle": "Động lực học vành đai",
+      "detail": "Vành A–B–C và mặt trăng chăn sóc",
+      "targetPlanetName": "Saturn",
+      "unlockEntityId": "planet-saturn",
+      "waypoints": [
+        {
+          "entityId": "planet-saturn",
+          "camera": { "distance": 14, "az": 22, "el": 12 },
+          "captionVi": "Saturn nổi tiếng với hệ vành đai — không phải một đĩa đặc mà hàng nghìn vòng băng và bụi trong cộng hưởng quỹ đạo.",
+          "durationSec": 9
+        },
+        {
+          "entityId": "moon-mimas",
+          "captionVi": "Mimas và các mặt trăng nhỏ tạo «khe Cassini» — lực hấp dẫn dọn dẹp vật liệu, giữ vành đai sắc nét qua thời gian.",
+          "durationSec": 8
+        },
+        {
+          "entityId": "moon-enceladus",
+          "captionVi": "Enceladus phun tia nước từ cực nam — bằng chứng đại dương dưới băng và nguồn nhiệt nội tại bất ngờ.",
+          "durationSec": 9
+        },
+        {
+          "entityId": "sc-cassini",
+          "captionVi": "Cassini–Huygens (2004–2017) đo vành đai, khí quyển Titan, và cơ chế Enceladus — một trong những sứ mệnh giàu dữ liệu nhất.",
+          "durationSec": 8
+        },
+        {
+          "entityId": "moon-titan",
+          "captionVi": "Titan: khí quyển dày, sông hồ hydrocarbon — thế giới duy nhất ngoài Trái Đất có chất lỏng ổn định trên bề mặt.",
+          "durationSec": 9
+        },
+        {
+          "entityId": "planet-saturn",
+          "camera": { "distance": 28, "az": -18, "el": 20 },
+          "captionVi": "Nhìn từ xa: vành đai là phòng thí nghiệm tự nhiên về hình thành hệ hành tinh — và Saturn vẫn còn nhiều bí ẩn.",
+          "durationSec": 9
+        }
+      ]
     },
     {
       "id": "story-mars",
-      "title": "Mars Evolution",
-      "subtitle": "Atmosphere Loss",
-      "detail": "Surface geology and climate history",
-      "targetPlanetName": "Mars"
+      "title": "Tiến hóa sao Hỏa",
+      "subtitle": "Mất khí quyển",
+      "detail": "Địa chất bề mặt và khí hậu cổ",
+      "targetPlanetName": "Mars",
+      "unlockEntityId": "planet-mars",
+      "waypoints": [
+        {
+          "entityId": "planet-mars",
+          "captionVi": "Hôm nay Mars khô và lạnh — nhưng khe núi, delta cổ, và khoáng sét cho thấy từng có nước chảy và khí quyển dày hơn.",
+          "durationSec": 9
+        },
+        {
+          "entityId": "moon-phobos",
+          "captionVi": "Phobos quỹ đạo thấp, sẽ va vào Mars trong vài chục triệu năm — manh mối về lịch sử capture vệ tinh.",
+          "durationSec": 7
+        },
+        {
+          "entityId": "moon-deimos",
+          "captionVi": "Deimos nhỏ và xa hơn — cùng Phobos gợi ý Mars từng «bắt» các tiểu thiên thể thành vệ tinh.",
+          "durationSec": 7
+        },
+        {
+          "entityId": "planet-mars",
+          "camera": { "distance": 9, "az": 55, "el": 8 },
+          "captionVi": "Mất khí quyển: từ trường yếu, bão Mặt Trời, và trọng lực thấp khiến khí thoát dần — chuyển từ «xanh xanh» sang sa mạc đỏ.",
+          "durationSec": 10
+        },
+        {
+          "entityId": "planet-mars",
+          "camera": { "distance": 22, "az": -30, "el": 14 },
+          "captionVi": "Các sứ mệnh hiện tại tìm dấu sự sống cổ và chuẩn bị mẫu trả về — Mars là bài học về số phận hành tinh có thể sống.",
+          "durationSec": 9
+        }
+      ]
     }
   ],
   "catalog": [

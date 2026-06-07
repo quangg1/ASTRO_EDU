@@ -159,6 +159,28 @@ export function resolvePlanetHeliocentricDistance(
   return Math.max(planet.distance, sunR * 4.75)
 }
 
+function studioSatelliteOrbitRadius(
+  entity: ShowcaseOrbitEntity,
+  pr: number,
+  meshRadius: number,
+  parentRadiusKm: number | undefined,
+): number | null {
+  if (entity.orbitSource !== 'jpl-horizons' || !hasUsableOrbitalElements(entity.orbitalElements)) {
+    return null
+  }
+  const oe = entity.orbitalElements
+  const aAu = Number(entity.semiMajorAxisAu ?? oe?.a ?? 0)
+  if (!Number.isFinite(aAu) || aAu <= 0) return null
+  const minOrbit = satelliteMinOrbitRadius(pr, meshRadius)
+  const maxOrbit = Math.max(minOrbit + 0.35, pr * 7.5)
+  if (parentRadiusKm && parentRadiusKm > 0) {
+    const inParentRadii = (aAu * AU_IN_KM) / parentRadiusKm
+    const fromStudio = inParentRadii * pr * SATELLITE_ORBIT_SCENE_PER_PARENT_RADIUS
+    return THREE.MathUtils.clamp(fromStudio, minOrbit, maxOrbit)
+  }
+  return THREE.MathUtils.clamp(aAu * pr * SATELLITE_ORBIT_SCENE_PER_PARENT_RADIUS, minOrbit, maxOrbit)
+}
+
 function satelliteRadiusFromCatalog(
   entity: ShowcaseOrbitEntity,
   pr: number,
@@ -168,6 +190,11 @@ function satelliteRadiusFromCatalog(
 ): number {
   const minOrbit = satelliteMinOrbitRadius(pr, meshRadius)
   const maxOrbit = Math.max(minOrbit + 0.35, pr * 7.5)
+  const parentName = resolveShowcaseOrbitParentPlanetName(entity)
+  const parentRadiusKm = parentName ? PLANET_RADIUS_KM[parentName] : undefined
+  const fromStudio = studioSatelliteOrbitRadius(entity, pr, meshRadius, parentRadiusKm)
+  if (fromStudio != null) return fromStudio
+
   let catalogDistance = Number(entity.distance)
   if (!Number.isFinite(catalogDistance) || catalogDistance <= 0) catalogDistance = minOrbit
 
@@ -175,23 +202,6 @@ function satelliteRadiusFromCatalog(
     const t = count <= 1 ? 0 : index / Math.max(1, count - 1)
     const spread = 0.22 * catalogDistance * t
     catalogDistance = catalogDistance + spread
-  }
-
-  const parentName = resolveShowcaseOrbitParentPlanetName(entity)
-  const parentRadiusKm = parentName ? PLANET_RADIUS_KM[parentName] : undefined
-  const oe = entity.orbitalElements
-  const aAu = Number(entity.semiMajorAxisAu ?? oe?.a ?? 0)
-  if (
-    entity.orbitSource === 'jpl-horizons' &&
-    Number.isFinite(aAu) &&
-    aAu > 0 &&
-    aAu < 0.12 &&
-    parentRadiusKm &&
-    parentRadiusKm > 0
-  ) {
-    const inParentRadii = (aAu * AU_IN_KM) / parentRadiusKm
-    const fromJpl = inParentRadii * pr * SATELLITE_ORBIT_SCENE_PER_PARENT_RADIUS
-    return THREE.MathUtils.clamp(Math.max(catalogDistance, fromJpl), minOrbit, maxOrbit)
   }
 
   return THREE.MathUtils.clamp(catalogDistance, minOrbit, maxOrbit)

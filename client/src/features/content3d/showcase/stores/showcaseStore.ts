@@ -1,6 +1,12 @@
 import * as THREE from 'three'
 import { create } from 'zustand'
 import type { RefObject } from 'react'
+import type { ShowcaseCameraSpherical } from '@/features/content3d/showcase/types'
+
+export type StoryTourCameraFrame = ShowcaseCameraSpherical & {
+  entityId: string
+  stepKey: string
+}
 
 type ShowcaseStoreState = {
   preloadGroup: string | null
@@ -21,6 +27,18 @@ type ShowcaseStoreState = {
   setFocusedEntity: (id: string | null) => void
   studioLightRef: RefObject<THREE.PointLight> | null
   setStudioLightRef: (r: RefObject<THREE.PointLight> | null) => void
+  /** Story tour đang chạy — khóa OrbitControls. */
+  storyTourActive: boolean
+  setStoryTourActive: (v: boolean) => void
+  /** Preset camera cho waypoint story tour (góc / khoảng cách tùy biến). */
+  storyTourCameraFrame: StoryTourCameraFrame | null
+  setStoryTourCameraFrame: (v: StoryTourCameraFrame | null) => void
+  /** Bumped mỗi waypoint để camera re-frame cùng entity. */
+  storyTourStepKey: string
+  setStoryTourStepKey: (k: string) => void
+  /** Entity ids hiện trong story tour — tạm hiện quỹ đạo dù chưa unlock orbit. */
+  storyTourAllowOrbitIds: string[]
+  setStoryTourAllowOrbitIds: (ids: string[]) => void
 }
 
 export const useShowcaseStore = create<ShowcaseStoreState>((set) => ({
@@ -36,4 +54,12 @@ export const useShowcaseStore = create<ShowcaseStoreState>((set) => ({
   setFocusedEntity: (id) => set({ focusedEntity: id }),
   studioLightRef: null,
   setStudioLightRef: (r) => set({ studioLightRef: r }),
+  storyTourActive: false,
+  setStoryTourActive: (v) => set({ storyTourActive: v }),
+  storyTourCameraFrame: null,
+  setStoryTourCameraFrame: (v) => set({ storyTourCameraFrame: v }),
+  storyTourStepKey: '',
+  setStoryTourStepKey: (k) => set({ storyTourStepKey: k }),
+  storyTourAllowOrbitIds: [],
+  setStoryTourAllowOrbitIds: (ids) => set({ storyTourAllowOrbitIds: ids }),
 }))

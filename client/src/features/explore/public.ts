@@ -15,7 +15,9 @@ export {
   emptySkyTargetEditorRow,
   type SkyTargetEditorRow,
 } from './api/skyTargetsEditorApi'
-export { mergeSkyTargetContent, type SkyTargetContentDTO } from './lib/mergeSkyTargetContent'
+export type { ExplorePassportSummary, PassportStamp, PassportStampKind } from './lib/explorePassportTypes'
+export { fetchExplorePassport } from './api/explorePassportApi'
+export { buildExplorePassportSummary } from './lib/buildExplorePassportSummary'
 export { SKY_EXPLORE_SEED, SKY_EXPLORE_SEED_VERSION } from './data/skyExploreSeed'
 export {
   DEFAULT_WESTERN_SKY_TARGET_ID,

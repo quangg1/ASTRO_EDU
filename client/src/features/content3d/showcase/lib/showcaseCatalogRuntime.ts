@@ -11,13 +11,9 @@ export type NasaCatalogItem = {
   texturePath?: string
 }
 
-export type NasaStory = {
-  id: string
-  title: string
-  subtitle: string
-  detail: string
-  targetPlanetName: string
-}
+import type { ShowcaseStoryCampaign } from './showcaseStoryTypes'
+
+export type NasaStory = ShowcaseStoryCampaign
 
 /** 3D showcase layer — positions updated in ShowcaseEntityLayer. */
 export type ShowcaseOrbitEntity = {
@@ -107,6 +103,18 @@ export function getNasaCatalogItemById(id: string): NasaCatalogItem | undefined 
   return NASA_SHOWCASE_ITEMS.find((i) => i.id === id)
 }
 
+export function listShowcaseStoriesForPlanet(planetName: string): NasaStory[] {
+  const key = String(planetName || '').trim().toLowerCase()
+  if (!key) return []
+  return NASA_SHOWCASE_STORIES.filter((s) => String(s.targetPlanetName || '').trim().toLowerCase() === key)
+}
+
+export function getShowcaseStoryById(storyId: string): NasaStory | undefined {
+  const id = String(storyId || '').trim()
+  if (!id) return undefined
+  return NASA_SHOWCASE_STORIES.find((s) => s.id === id)
+}
+
 /**
  * Tên hành tinh trong `planetsData` (vd. "Jupiter") — dùng khi orbit chỉ có `parentId` (planet-jupiter)
  * mà không có `parentPlanetName`, vì mesh hành tinh không nằm trong `groupsRef` của showcase layer.
@@ -177,13 +185,23 @@ function isCatalogScenePeriod(value: number): boolean {
   return Number.isFinite(value) && value >= 2 && value <= 120
 }
 
+function studioAuthoredPeriodDays(entity: ShowcaseOrbitEntity): number {
+  if (entity.orbitSource !== 'jpl-horizons') return 0
+  const pd = Number(entity.orbitalElements?.periodDays ?? entity.periodDays ?? 0)
+  return Number.isFinite(pd) && pd > 0 ? pd : 0
+}
+
 /** Chu kỳ quỹ đạo trong scene (giây cho một vòng) — khớp `ShowcaseEntityLayer`. */
 export function resolveShowcaseOrbitPeriodSeconds(entity: ShowcaseOrbitEntity): number {
   const catalogPeriod = Number(entity.period ?? 0)
-  const periodDays = Number(entity.orbitalElements?.periodDays ?? entity.periodDays ?? 0)
+  const periodDays = studioAuthoredPeriodDays(entity) || Number(entity.periodDays ?? 0)
   const isSat = isShowcaseSatelliteEntity(entity)
+  const studioOrbit = entity.orbitSource === 'jpl-horizons' && studioAuthoredPeriodDays(entity) > 0
 
   if (isSat) {
+    if (studioOrbit && periodDays > 0 && periodDays < 400) {
+      return Math.min(90, Math.max(3, periodDays * SCENE_SECONDS_PER_ORBIT_DAY))
+    }
     if (isCatalogScenePeriod(catalogPeriod)) return catalogPeriod
     if (periodDays > 0 && periodDays < 400) {
       return Math.min(90, Math.max(3, periodDays * SCENE_SECONDS_PER_ORBIT_DAY))

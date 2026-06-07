@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { parseExploreView, buildExploreHref, mergeExplorePreservedParams, normalizeSkyTargetId } from '@/features/explore/public'
+import { useShowcaseStore } from '@/features/content3d/showcase/public'
 import { DEFAULT_WESTERN_SKY_TARGET_ID } from '@/features/explore/lib/westernSkyCulture'
 import type { ExploreSceneMode } from './types'
 
@@ -56,7 +57,7 @@ export function useExploreModeState() {
     if (historyEntityFromUrl) {
       setShowcaseActiveItemId(historyEntityFromUrl)
     }
-    if (entityFromUrl && exploreView === 'solar') {
+    if (entityFromUrl && exploreView === 'solar' && !useShowcaseStore.getState().storyTourActive) {
       setShowcaseActiveItemId(entityFromUrl)
     }
     if (targetFromUrl && exploreView === 'sky') {

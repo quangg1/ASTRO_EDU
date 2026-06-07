@@ -80,6 +80,7 @@ function ShowcaseSceneContent({
   showcaseContent?: ShowcaseEntityContentDTO[]
 }) {
   const showcaseCatalogGen = useShowcaseCatalogGen()
+  const storyTourActive = useShowcaseStore((s) => s.storyTourActive)
   const controlsRef = useRef<OrbitControlsImpl | null>(null)
   const controlsTargetRef = useRef<[number, number, number]>([0, 0, 0])
   const programmaticMoveRef = useRef(false)
@@ -388,6 +389,7 @@ function ShowcaseSceneContent({
         selectedIndex={effectiveSelectedIndex}
         focusPlanetName={contextPlanetName}
         focusParentSystem={false}
+        orbitById={orbitById}
         initialSpherical={initialSpherical ?? undefined}
         onCameraSettled={onCameraSettled}
         onProgrammaticMoveChange={(v) => {
@@ -401,9 +403,9 @@ function ShowcaseSceneContent({
 
       <OrbitControls
         ref={controlsRef}
-        enablePan
-        enableZoom
-        enableRotate
+        enablePan={!storyTourActive}
+        enableZoom={!storyTourActive}
+        enableRotate={!storyTourActive}
         minDistance={0.2}
         maxDistance={dynamicMaxDistance}
         target={controlsTargetRef.current}

@@ -33,6 +33,10 @@ import {
   satelliteOrbitDisplayRadius,
   type SatelliteOrbitLayout,
 } from '@/features/content3d/showcase/lib/showcaseOrbitLayout'
+import {
+  resolveCraftModelBodySceneSize,
+  showcaseEntityHasModel,
+} from '@/features/content3d/showcase/lib/showcaseCameraFraming'
 
 const AU_IN_KM = 149_597_870.7
 /** BASE scale: 1 AU = BASE_AU scene units (single source of truth). */
@@ -841,14 +845,21 @@ function ShowcaseEntityRow({
       : undefined
 
   const anchorRef = useRef<THREE.Group | null>(null)
+  const storyTourActive = useShowcaseStore((s) => s.storyTourActive)
   const isSatelliteAroundPlanet = Boolean(parentPlanetResolved)
-  const useProportionalChildSize = systemFocusMode && active && isSatelliteAroundPlanet
-  const bodySceneSize = useProportionalChildSize
-    ? resolveSatelliteBodySceneSize(entity, parentPlanetResolved!)
-    : resolveShowcaseEntityBodySceneSize(entity, orbitDistanceScaleAu)
+  const hasModel = showcaseEntityHasModel(entity)
+  const useProportionalChildSize =
+    systemFocusMode && active && isSatelliteAroundPlanet && !hasModel
+  const bodySceneSize =
+    active && hasModel
+      ? resolveCraftModelBodySceneSize(entity)
+      : useProportionalChildSize
+        ? resolveSatelliteBodySceneSize(entity, parentPlanetResolved!)
+        : resolveShowcaseEntityBodySceneSize(entity, orbitDistanceScaleAu)
   const meshR = useProportionalChildSize
     ? resolveSatelliteMeshRadius(entity, parentPlanetResolved!)
-    : resolveShowcaseEntityMeshRadius(entity, orbitDistanceScaleAu)
+    : resolveShowcaseEntityMeshRadius({ ...entity, size: bodySceneSize }, orbitDistanceScaleAu)
+  const hideOrbitForTourModelCloseup = storyTourActive && active && hasModel
   const nametagLift = meshR * 1.58
   const rowRevealAlpha = !selectedPlanetName && parentPlanetResolved ? revealAlpha : 1
   const parentSceneRadius =
@@ -879,7 +890,7 @@ function ShowcaseEntityRow({
               interactive={false}
               proximityFade={heliocentricProximityFade}
             />
-      ) : parentPos && showSatelliteOrbit ? (
+      ) : parentPos && showSatelliteOrbit && !hideOrbitForTourModelCloseup ? (
         <FadedLocalEllipticOrbit
           entity={entity}
           getAnchor={() => parentPos}

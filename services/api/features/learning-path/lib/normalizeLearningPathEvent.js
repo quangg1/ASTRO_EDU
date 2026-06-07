@@ -19,6 +19,7 @@ const ALLOWED_EVENT_NAMES = new Set([
   'scene_entity_discovered',
   'deep_history_beat_dwell',
   'deep_history_site_opened',
+  'story_tour_completed',
 ]);
 
 function normalizeClient(raw) {

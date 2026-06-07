@@ -9,6 +9,7 @@ const {
 const { planetNarrativeRouter } = require('./planet-narrative');
 const exploreContextualQuizRouter = require('./routes/exploreContextualQuiz');
 const exploreSkyTargetsRouter = require('./routes/exploreSkyTargets');
+const explorePassportRouter = require('./routes/explorePassport');
 
 module.exports = {
   showcaseEntitiesRouter,
@@ -16,6 +17,7 @@ module.exports = {
   showcaseOrbitsJplRouter,
   exploreContextualQuizRouter,
   exploreSkyTargetsRouter,
+  explorePassportRouter,
   earthHistoryRouter,
   fossilsRouter,
   phylaRouter,

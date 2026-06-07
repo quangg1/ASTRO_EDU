@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useCallback } from 'react'
 import { useToast } from '@/design-system'
 import type { ShowcaseGamificationStrip } from '@/components/3d/showcase/ShowcaseEntityPanel'
 import { syncGemWallet } from '@/features/rewards/public'
@@ -35,5 +35,10 @@ export function useExploreRewards(userId: string | undefined) {
     return { gemBalance }
   }, [userId, gemBalance])
 
-  return { gemBalance, gamificationStrip }
+  const refreshGemBalance = useCallback(() => {
+    if (!userId) return
+    void syncGemWallet(userId).then((w) => setGemBalance(w.balance))
+  }, [userId])
+
+  return { gemBalance, gamificationStrip, refreshGemBalance }
 }

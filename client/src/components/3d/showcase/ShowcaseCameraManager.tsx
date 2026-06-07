@@ -7,8 +7,11 @@ import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib'
 import { NASA_SHOWCASE_ITEMS, SHOWCASE_ORBIT_ENTITIES } from '@/lib/showcaseEntities'
 import { planetsData } from '@/lib/solarSystemData'
 import { useShowcaseStore } from '@/features/content3d/showcase/public'
+import { resolveShowcaseEntityCloseupDistance } from '@/features/content3d/showcase/lib/showcaseCameraFraming'
 
-export type ShowcaseCameraSpherical = { distance: number; az: number; el: number }
+import type { ShowcaseCameraSpherical } from '@/features/content3d/showcase/types'
+
+export type { ShowcaseCameraSpherical }
 
 function cameraOffsetToSpherical(c: OrbitControlsImpl): ShowcaseCameraSpherical | null {
   const off = new THREE.Vector3().subVectors(c.object.position, c.target)
@@ -34,13 +37,22 @@ function sanitizeControlsCamera(c: OrbitControlsImpl) {
   }
 }
 
+function entityUsesOrbitalPosition(
+  aid: string | null,
+  orbitEnt: import('@/lib/showcaseEntities').ShowcaseOrbitEntity | null | undefined,
+): boolean {
+  if (!aid) return false
+  if (aid.startsWith('moon-') || aid.startsWith('sc-') || aid.startsWith('comet-')) return true
+  return Boolean(orbitEnt?.parentPlanetName || orbitEnt?.parentShowcaseEntityId)
+}
+
 function isFiniteVec(v: THREE.Vector3) {
   return Number.isFinite(v.x) && Number.isFinite(v.y) && Number.isFinite(v.z)
 }
 
 /** Scripted framing stops after this long even if the focus point keeps moving (orbits). */
 const MAX_TRANSITION_SEC = 0.9
-const CAMERA_URL_MIN_DIST = 0.8
+const CAMERA_URL_MIN_DIST = 0.35
 const CAMERA_URL_MAX_DIST = 2600
 
 function validateInitialSpherical(
@@ -72,6 +84,7 @@ type Props = {
   selectedIndex: number | null
   focusPlanetName?: string | null
   focusParentSystem?: boolean
+  orbitById?: Map<string, import('@/lib/showcaseEntities').ShowcaseOrbitEntity>
   /** Initial URL-driven camera (optional) */
   initialSpherical?: { distance: number; az: number; el: number } | null
   /** Fires once per focus target when framing reaches FOCUSED (for URL sync). */
@@ -92,6 +105,7 @@ export function ShowcaseCameraManager({
   selectedIndex,
   focusPlanetName = null,
   focusParentSystem = false,
+  orbitById: orbitByIdProp,
   initialSpherical,
   onCameraSettled,
   onProgrammaticMoveChange,
@@ -115,10 +129,15 @@ export function ShowcaseCameraManager({
     () => new Map(NASA_SHOWCASE_ITEMS.map((i) => [String(i.id || '').trim(), i] as const)),
     [],
   )
-  const orbitById = useMemo(
-    () => new Map(SHOWCASE_ORBIT_ENTITIES.map((e) => [String(e.id || '').trim(), e] as const)),
-    [],
-  )
+  const orbitById = useMemo(() => {
+    if (orbitByIdProp && orbitByIdProp.size > 0) return orbitByIdProp
+    return new Map(SHOWCASE_ORBIT_ENTITIES.map((e) => [String(e.id || '').trim(), e] as const))
+  }, [orbitByIdProp])
+
+  const craftCameraDistance = (entityId: string) => {
+    const ent = orbitById.get(entityId)
+    return resolveShowcaseEntityCloseupDistance(ent, 'craft')
+  }
 
   useEffect(() => {
     appliedUrlRef.current = false
@@ -134,7 +153,7 @@ export function ShowcaseCameraManager({
       prevDistRef.current = distToSun
     }
 
-    const settleKey = `${activeItemId ?? ''}`
+    const settleKey = `${activeItemId ?? ''}|${useShowcaseStore.getState().storyTourStepKey}`
     if (focusKeyRef.current !== settleKey) {
       focusKeyRef.current = settleKey
       settledKeyEmittedRef.current = ''
@@ -152,6 +171,11 @@ export function ShowcaseCameraManager({
     const focus = focusScratchRef.current
     let hasFocus = false
     let wantDist = 5.8
+
+    const tourFrame = useShowcaseStore.getState().storyTourCameraFrame
+    const storyTourActive = useShowcaseStore.getState().storyTourActive
+    const tourSpherical =
+      tourFrame && aid && tourFrame.entityId === aid ? validateInitialSpherical(tourFrame) : null
 
     const catalog = aid ? catalogById.get(aid) : null
     const orbitEnt = aid ? orbitById.get(aid) : null
@@ -177,7 +201,7 @@ export function ShowcaseCameraManager({
         const isPlanet = aid.startsWith('planet-')
         const isCraft = aid.startsWith('sc-')
         const isComet = aid.startsWith('comet-')
-        wantDist = isPlanet ? 6.8 : isCraft ? 2.85 : isComet ? 4.0 : 4.8
+        wantDist = isPlanet ? 6.8 : isCraft ? craftCameraDistance(aid) : isComet ? 4.0 : 4.8
       }
     }
 
@@ -203,7 +227,12 @@ export function ShowcaseCameraManager({
         const span = par.distanceTo(self)
         wantDist = THREE.MathUtils.clamp(Math.max(1.1, span * 0.7), 1.1, 3.8)
       }
-    } else if (!hasFocus && (catalog?.linkedPlanetName || aid?.startsWith('planet-'))) {
+    } else if (
+      !hasFocus &&
+      !storyTourActive &&
+      !entityUsesOrbitalPosition(aid, orbitEnt) &&
+      (catalog?.linkedPlanetName || aid?.startsWith('planet-'))
+    ) {
       const linkedName =
         catalog?.linkedPlanetName ||
         (aid?.startsWith('planet-')
@@ -226,7 +255,7 @@ export function ShowcaseCameraManager({
         hasFocus = true
         const isCraft = aid.startsWith('sc-')
         const isComet = aid.startsWith('comet-')
-        wantDist = isCraft ? 2.85 : isComet ? 4.0 : 4.8
+        wantDist = isCraft ? craftCameraDistance(aid) : isComet ? 4.0 : 4.8
       }
     }
 
@@ -245,6 +274,24 @@ export function ShowcaseCameraManager({
     if (studioLightRef?.current) {
       studioLightRef.current.position.set(focus.x + 2.2, focus.y + 1.4, focus.z + 2.2)
       studioLightRef.current.intensity = 0.55
+    }
+
+    if (tourSpherical) {
+      wantDist = tourSpherical.distance
+    }
+
+    if (
+      (storyTourActive && tourSpherical) ||
+      (tourSpherical && aid?.startsWith('sc-'))
+    ) {
+      const distNow = c.object.position.distanceTo(c.target)
+      if (
+        (phaseRef.current === 'focused' || phaseRef.current === 'free') &&
+        Math.abs(distNow - wantDist) > 0.1
+      ) {
+        phaseRef.current = 'transitioning'
+        transitionStartRef.current = performance.now()
+      }
     }
 
     if (userOverride && phaseRef.current !== 'idle') {
@@ -282,9 +329,15 @@ export function ShowcaseCameraManager({
     const elapsed = (performance.now() - transitionStartRef.current) / 1000
     const timedOut = elapsed >= MAX_TRANSITION_SEC
 
-    const safeInitial = validateInitialSpherical(initialSpherical)
+    const safeInitial =
+      storyTourActive || tourSpherical
+        ? tourSpherical
+        : validateInitialSpherical(initialSpherical)
     const urlDistTooWideForFocus =
-      safeInitial != null && aid != null && safeInitial.distance > wantDist * 2.8
+      !tourSpherical &&
+      safeInitial != null &&
+      aid != null &&
+      safeInitial.distance > wantDist * 2.8
     if (
       !appliedUrlRef.current &&
       safeInitial &&
@@ -294,6 +347,7 @@ export function ShowcaseCameraManager({
       onProgrammaticMoveChange?.(true)
       appliedUrlRef.current = true
       const { distance, az, el } = safeInitial
+      wantDist = distance
       const azR = THREE.MathUtils.degToRad(az)
       const elR = THREE.MathUtils.degToRad(el)
       const offset = new THREE.Vector3(

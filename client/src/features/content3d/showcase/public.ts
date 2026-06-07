@@ -1,6 +1,6 @@
 /** Showcase 3D catalog / orbit experience surface. */
 export { useShowcaseStore } from './stores/showcaseStore'
-export type { ShowcaseCameraState, ShowcaseEntityRef } from './types'
+export type { ShowcaseCameraState, ShowcaseCameraSpherical, ShowcaseEntityRef } from './types'
 export { fetchExploreContextualQuiz } from './api/exploreContextualQuizApi'
 export type { ExploreContextualQuizResponse } from './api/exploreContextualQuizApi'
 export { buildExploreContextualQuiz } from './lib/buildExploreContextualQuiz'
@@ -45,10 +45,33 @@ export {
 export {
   NASA_SHOWCASE_ITEMS,
   SHOWCASE_ORBIT_ENTITIES,
+  NASA_SHOWCASE_STORIES,
   hydrateShowcaseCatalogBundle,
   getNasaCatalogItemById,
+  getShowcaseStoryById,
+  listShowcaseStoriesForPlanet,
   resolveShowcaseOrbitParentPlanetName,
 } from './lib/showcaseCatalogRuntime'
+export {
+  filterShowcaseOrbitsForUser,
+  entityNeedsOrbitUnlock,
+  expandVisibleOrbitEntitiesForFocus,
+  isShowcaseOrbitAlwaysVisible,
+  resolveStoryUnlockEntityId,
+} from './lib/filterShowcaseOrbits'
+export type { ShowcaseUnlockFlags } from './lib/filterShowcaseOrbits'
+export type {
+  ShowcaseStoryCampaign,
+  ShowcaseStoryWaypoint,
+  ShowcaseStoryCamera,
+} from './lib/showcaseStoryTypes'
+export { DEFAULT_STORY_WAYPOINT_SEC, STORY_COST_GEM, ORBIT_COST_GEM } from './lib/showcaseStoryTypes'
+export {
+  resolveCraftModelBodySceneSize,
+  resolveShowcaseEntityCloseupDistance,
+  resolveStoryTourCameraForWaypoint,
+  showcaseEntityHasModel,
+} from './lib/showcaseCameraFraming'
 export type { NasaCatalogItem, NasaStory, ShowcaseOrbitEntity } from './lib/showcaseCatalogRuntime'
 export {
   mergeNasaCatalog,

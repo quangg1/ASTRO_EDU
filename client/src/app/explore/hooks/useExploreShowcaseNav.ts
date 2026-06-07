@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { planetsData } from '@/lib/solarSystemData'
 import { getNasaCatalogItemById } from '@/lib/showcaseEntities'
-import { resolvePlanetAccent } from '@/features/content3d/showcase/public'
+import { resolvePlanetAccent, useShowcaseStore } from '@/features/content3d/showcase/public'
 import { trackLearningPathBehavior } from '@/features/learning-path/public'
 import type { ShowcaseCameraSpherical } from '@/components/3d/showcase/ShowcaseCameraManager'
 import type { ResolvedNasaCatalogItem } from '@/lib/mergeShowcaseCatalog'
@@ -92,6 +92,7 @@ export function useExploreShowcaseNav({
 
   const handleShowcaseCameraSettled = useCallback(
     (sph: ShowcaseCameraSpherical) => {
+      if (useShowcaseStore.getState().storyTourActive) return
       if (showcaseCameraUrlTimerRef.current) clearTimeout(showcaseCameraUrlTimerRef.current)
       showcaseCameraUrlTimerRef.current = setTimeout(() => {
         showcaseCameraUrlTimerRef.current = null
@@ -116,6 +117,7 @@ export function useExploreShowcaseNav({
   )
 
   useEffect(() => {
+    if (useShowcaseStore.getState().storyTourActive) return
     const entityParam = searchParams.get('entity')?.trim()
     if (!entityParam) return
     if (getNasaCatalogItemById(entityParam)) {
@@ -127,6 +129,7 @@ export function useExploreShowcaseNav({
   useEffect(() => {
     if (exploreView !== 'solar') return
     if (earthHistoryOpen || searchParams.get('history') === '1') return
+    if (useShowcaseStore.getState().storyTourActive) return
 
     const entityParam = searchParams.get('entity')?.trim()
     if (entityParam && entityParam !== showcaseActiveItemId) return

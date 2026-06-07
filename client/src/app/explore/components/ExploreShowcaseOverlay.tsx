@@ -1,21 +1,28 @@
 'use client'
 
-import { useCallback, useMemo } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { ShowcaseEntityPanel } from '@/components/3d/showcase/ShowcaseEntityPanel'
 import {
   listShowcaseSatellitesForPlanet,
   resolveExplorePanelConfig,
   resolveShowcaseHostPlanetName,
+  getShowcaseStoryById,
 } from '@/features/content3d/showcase/public'
+import { entityNeedsOrbitUnlock } from '@/features/content3d/showcase/lib/filterShowcaseOrbits'
 import { useToast } from '@/design-system'
 import type { ExplorePageModel } from '../hooks/useExplorePage'
 import { useExplorePanelLearning } from '../hooks/useExplorePanelLearning'
 import { ExploreShowcaseMenu } from './ExploreShowcaseMenu'
 import { ExploreViewToggle } from './ExploreViewToggle'
-import { isSkyOnlyTarget } from '@/features/explore/public'
+import { isSkyOnlyTarget, mergeExplorePreservedParams } from '@/features/explore/public'
 import { ExploreBridgeQuiz } from './ExploreBridgeQuiz'
 import { ExploreLearningSteps } from './ExploreLearningSteps'
 import { ExploreConceptChips } from './ExploreConceptChips'
+import { ExploreStoryTourOverlay } from './ExploreStoryTourOverlay'
+import { ExploreStoryTourPicker } from './ExploreStoryTourPicker'
+import { ExplorePassportOverlay } from './ExplorePassportOverlay'
+import { completeStoryTour } from '@/features/explore/lib/explorePassportActions'
+import { resolveStoryUnlockEntityId } from '@/features/content3d/showcase/lib/filterShowcaseOrbits'
 
 type Props = Pick<
   ExplorePageModel,
@@ -40,6 +47,19 @@ type Props = Pick<
   | 'effectiveConceptCards'
   | 'activeContentRow'
   | 'gamificationStrip'
+  | 'storyViewModels'
+  | 'unlockStory'
+  | 'unlockOrbit'
+  | 'isOrbitUnlocked'
+  | 'unlockPending'
+  | 'orbitCost'
+  | 'storyCost'
+  | 'refreshGemBalance'
+  | 'visibleOrbitEntities'
+  | 'summary'
+  | 'router'
+  | 'pathname'
+  | 'searchParams'
   | 'bridgeQuizPromptOpen'
   | 'setBridgeQuizPromptOpen'
   | 'bridgeQuizQuestions'
@@ -82,6 +102,19 @@ export function ExploreShowcaseOverlay(props: Props) {
     effectiveConceptCards,
     activeContentRow,
     gamificationStrip,
+    storyViewModels,
+    unlockStory,
+    unlockOrbit,
+    isOrbitUnlocked,
+    unlockPending,
+    orbitCost,
+    storyCost,
+    refreshGemBalance,
+    visibleOrbitEntities,
+    summary,
+    router,
+    pathname,
+    searchParams,
     bridgeQuizPromptOpen,
     setBridgeQuizPromptOpen,
     bridgeQuizQuestions,
@@ -101,6 +134,14 @@ export function ExploreShowcaseOverlay(props: Props) {
   } = props
 
   const toast = useToast()
+  const [activeStoryId, setActiveStoryId] = useState<string | null>(null)
+  const [storyPickerOpen, setStoryPickerOpen] = useState(false)
+  const [passportOpen, setPassportOpen] = useState(false)
+
+  const activeStory = useMemo(
+    () => (activeStoryId ? getShowcaseStoryById(activeStoryId) : null),
+    [activeStoryId],
+  )
 
   const onOpenBridgeQuiz = useCallback(() => {
     if (!panelReadComplete) {
@@ -140,8 +181,21 @@ export function ExploreShowcaseOverlay(props: Props) {
   )
 
   const onMenuSelect = (entityId: string, source: string, syncPlanet?: boolean) => {
+    const orbitLocked =
+      Boolean(user) &&
+      source !== 'story-tour' &&
+      entityNeedsOrbitUnlock(entityId) &&
+      !isOrbitUnlocked(entityId)
+
     handleShowcaseEntityClicked(entityId, source)
     if (syncPlanet) syncSelectedPlanetFromItem(entityId)
+
+    if (orbitLocked) {
+      toast.show(
+        'Đã mở panel — bấm Mở quỹ đạo (gem) bên dưới để xem thiên thể này trong scene 3D.',
+        { tone: 'info' },
+      )
+    }
   }
 
   const hostPlanetName = useMemo(
@@ -151,12 +205,12 @@ export function ExploreShowcaseOverlay(props: Props) {
 
   const satelliteChildren = useMemo(() => {
     if (!hostPlanetName) return []
-    return listShowcaseSatellitesForPlanet(mergedOrbitEntities, hostPlanetName).map((e) => ({
+    return listShowcaseSatellitesForPlanet(visibleOrbitEntities, hostPlanetName).map((e) => ({
       id: e.id,
       name: e.name,
       active: showcaseActiveItemId === e.id,
     }))
-  }, [hostPlanetName, mergedOrbitEntities, showcaseActiveItemId])
+  }, [hostPlanetName, visibleOrbitEntities, showcaseActiveItemId])
 
   const effectivePanelConfig = useMemo(
     () =>
@@ -167,6 +221,81 @@ export function ExploreShowcaseOverlay(props: Props) {
         museumLabelVi,
       ),
     [activeResolved, activeOrbitEntity, activeContentRow?.panelConfig, museumLabelVi],
+  )
+
+  const planetStories = useMemo(() => {
+    if (!hostPlanetName) return []
+    const key = hostPlanetName.toLowerCase()
+    return storyViewModels.filter((s) => s.targetPlanetName.toLowerCase() === key)
+  }, [hostPlanetName, storyViewModels])
+
+  const enrichedGamification = useMemo(() => {
+    if (!gamificationStrip || !activeResolved) return gamificationStrip
+    return {
+      ...gamificationStrip,
+      storyCost,
+      orbitCost,
+      orbitUnlocked: isOrbitUnlocked(activeResolved.id),
+      showOrbitUnlock: entityNeedsOrbitUnlock(activeResolved.id),
+      planetStories,
+      unlockPending,
+      onUnlockStory: async (unlockEntityId: string) => {
+        const res = await unlockStory(unlockEntityId)
+        if (res.ok) {
+          refreshGemBalance()
+          toast.show('Đã mở story tour — bấm Phát tour để xem', { tone: 'success' })
+        } else {
+          toast.show(res.error || 'Không mở được story', { tone: 'danger' })
+        }
+      },
+      onUnlockOrbit: async (entityId: string) => {
+        const res = await unlockOrbit(entityId)
+        if (res.ok) {
+          refreshGemBalance()
+          toast.show('Đã mở quỹ đạo trong scene 3D', { tone: 'success' })
+          handleShowcaseEntityClicked(entityId, 'post-orbit-unlock')
+          syncSelectedPlanetFromItem(entityId)
+        } else {
+          toast.show(res.error || 'Không mở được quỹ đạo', { tone: 'danger' })
+        }
+      },
+      onPlayStory: (storyId: string) => setActiveStoryId(storyId),
+    }
+  }, [
+    gamificationStrip,
+    activeResolved,
+    storyCost,
+    orbitCost,
+    isOrbitUnlocked,
+    planetStories,
+    unlockPending,
+    unlockStory,
+    unlockOrbit,
+    refreshGemBalance,
+    toast,
+    handleShowcaseEntityClicked,
+    syncSelectedPlanetFromItem,
+  ])
+
+  const navigateExploreHref = useCallback(
+    (href: string) => {
+      router.replace(mergeExplorePreservedParams(href, searchParams), { scroll: false })
+      setPassportOpen(false)
+    },
+    [router, searchParams],
+  )
+
+  const handleStoryPickerUnlock = useCallback(
+    async (unlockEntityId: string) => {
+      const res = await unlockStory(unlockEntityId)
+      if (res.ok) {
+        refreshGemBalance()
+        toast.show('Đã mở story — bấm Phát tour', { tone: 'success' })
+      } else {
+        toast.show(res.error || 'Không mở được story', { tone: 'danger' })
+      }
+    },
+    [unlockStory, refreshGemBalance, toast],
   )
 
   return (
@@ -217,6 +346,20 @@ export function ExploreShowcaseOverlay(props: Props) {
                 Hướng dẫn
               </button>
             ) : null}
+            <button
+              type="button"
+              onClick={() => setStoryPickerOpen(true)}
+              className="rounded border border-violet-400/30 px-2 py-1 text-[10px] uppercase tracking-wider text-violet-100 hover:bg-violet-500/15"
+            >
+              Story tour
+            </button>
+            <button
+              type="button"
+              onClick={() => setPassportOpen(true)}
+              className="rounded border border-amber-400/30 px-2 py-1 text-[10px] uppercase tracking-wider text-amber-100 hover:bg-amber-500/10 tabular-nums"
+            >
+              Sổ thám hiểm · {summary.counts.total}
+            </button>
             <button
               type="button"
               data-explore-tour="explore-catalog-btn"
@@ -270,7 +413,7 @@ export function ExploreShowcaseOverlay(props: Props) {
           conceptChips={effectiveConceptCards}
           learningLinks={effectiveLessonLinks}
           panelConfig={effectivePanelConfig ?? undefined}
-          gamification={gamificationStrip}
+          gamification={enrichedGamification}
           hasDeepHistory={Boolean(activeResolved && activeEntityHasDeepHistory)}
           onOpenDeepHistory={
             activeResolved && activeEntityHasDeepHistory
@@ -325,6 +468,48 @@ export function ExploreShowcaseOverlay(props: Props) {
         loggedIn={Boolean(user)}
         onDismiss={() => setBridgeQuizPromptOpen(false)}
         onComplete={onBridgeQuizComplete}
+      />
+
+      {activeStory && activeStory.waypoints && activeStory.waypoints.length > 0 ? (
+        <ExploreStoryTourOverlay
+          story={activeStory}
+          orbitEntities={mergedOrbitEntities}
+          onClose={() => setActiveStoryId(null)}
+          onFocusEntity={(entityId) => onMenuSelect(entityId, 'story-tour', true)}
+          onFinished={() => {
+            completeStoryTour({
+              userId: user?.id ?? null,
+              storyId: activeStory.id,
+              storyTitle: activeStory.title,
+              unlockEntityId: resolveStoryUnlockEntityId(activeStory),
+            })
+            toast.show('Đã thêm stamp story tour vào sổ thám hiểm', { tone: 'success' })
+          }}
+        />
+      ) : null}
+
+      <ExploreStoryTourPicker
+        open={storyPickerOpen}
+        stories={storyViewModels}
+        loggedIn={Boolean(user)}
+        unlockPending={unlockPending}
+        onClose={() => setStoryPickerOpen(false)}
+        onPlay={setActiveStoryId}
+        onUnlock={(id) => void handleStoryPickerUnlock(id)}
+        onFocusPlanet={(entityId) => {
+          onMenuSelect(entityId, 'story-picker', true)
+          setStoryPickerOpen(false)
+        }}
+      />
+
+      <ExplorePassportOverlay
+        open={passportOpen}
+        summary={summary}
+        loggedIn={Boolean(user)}
+        userDisplayName={user?.displayName}
+        userId={user?.id}
+        onClose={() => setPassportOpen(false)}
+        onNavigate={navigateExploreHref}
       />
     </>
   )

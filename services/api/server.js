@@ -22,6 +22,7 @@ const {
   planetNarrativeRouter,
   exploreContextualQuizRouter,
   exploreSkyTargetsRouter,
+  explorePassportRouter,
 } = require('./features/content3d');
 const { gemsRouter, showcaseGamificationRouter } = require('./features/rewards');
 const paymentRouter = require('./features/payment');
@@ -63,6 +64,7 @@ app.use('/api/showcase-catalog', showcaseCatalogRouter);
 app.use('/api/showcase-orbits', showcaseOrbitsJplRouter);
 app.use('/api/explore/contextual-quiz', exploreContextualQuizRouter);
 app.use('/api/explore/sky-targets', exploreSkyTargetsRouter);
+app.use('/api/explore/passport', explorePassportRouter);
 app.use('/api/gems', gemsRouter);
 app.use('/api/showcase', showcaseGamificationRouter);
 app.use('/api/earth-history', earthHistoryRouter);

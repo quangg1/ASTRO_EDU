@@ -42,7 +42,7 @@ Runtime client
 | Panel trái Explore | `ShowcaseEntityContent.panelConfig` | Studio → Panel content |
 | Deep History beats | `PlanetNarrative` per entity | Studio → Narrative |
 | Bài LP gắn entity | `sceneContext` + `linkedLessonIds` | LP editor + narrative CMS |
-| Story campaigns | `ShowcaseCatalogBundle.stories` | **Data có, UI chưa** |
+| Story campaigns | `ShowcaseCatalogBundle.stories` (+ `waypoints[]`) | Studio catalog / seed JSON |
 
 ---
 
@@ -70,10 +70,10 @@ Panel hiển thị:
 | Khám phá entity mới (focus 3s) | +5 | ✅ |
 | Deep History — xem beat ≥30s | +4 | ✅ (`useDeepHistoryGemRewards`) |
 | Deep History — mở site/pin | +2 | ✅ (planet có sites; Earth hóa thạch chưa map) |
-| Unlock story | −40 | ⚠️ Economy có, **nội dung/UI chưa** |
-| Unlock orbit | −55 | ⚠️ Economy có, **3D chưa khóa** |
+| Unlock story | −40 | ✅ Story tour player + unlock UI |
+| Unlock orbit | −55 | ✅ Orbit gate 3D (hành tinh + moon-luna free) |
 
-Nút story/orbit trên panel tạm **gỡ khỏi UI** (API `showcaseGamificationApi` giữ cho Phase B).
+Nút story/orbit trên panel đã **khôi phục** (`ShowcaseEntityPanel` + `showcaseGamificationApi`).
 
 ---
 
@@ -117,10 +117,10 @@ Client: `useDeepHistoryGemRewards` → `trackLearningPathBehavior` → `POST /le
 
 ### Phase B — Showcase premium (story + orbit gate)
 
-- [ ] **Story viewer:** UI đọc `NASA_SHOWCASE_STORIES` + CMS; campaign theo `targetPlanetName`
-- [ ] **Orbit gate:** filter `mergedOrbitEntities` khi `!orbitUnlocked` (giữ hành tinh cha + Moon cơ bản)
-- [ ] Khôi phục UI mở khóa story/orbit trên `ShowcaseEntityPanel` (dùng `showcaseGamificationApi`)
-- [ ] Post-unlock: camera preset / highlight entity mới mở
+- [x] **Story viewer:** UI đọc `NASA_SHOWCASE_STORIES` + CMS; campaign theo `targetPlanetName`
+- [x] **Orbit gate:** filter `mergedOrbitEntities` khi `!orbitUnlocked` (giữ hành tinh cha + Moon cơ bản)
+- [x] Khôi phục UI mở khóa story/orbit trên `ShowcaseEntityPanel` (dùng `showcaseGamificationApi`)
+- [x] Post-unlock: camera preset / highlight entity mới mở
 
 ### Phase C — Lộ trình nội dung theo module LP
 
@@ -162,6 +162,9 @@ Hai entry Earth (`?stage=` fossil vs `?history=1` Lịch sử sâu) — cân nh�
 | Scene showcase | `components/3d/showcase/ShowcaseScene.tsx` |
 | DH overlay | `app/explore/components/ExplorePlanetHistoryOverlay.tsx` |
 | DH gem client | `app/explore/hooks/useDeepHistoryGemRewards.ts` |
+| Story tour UI | `app/explore/components/ExploreStoryTourOverlay.tsx` |
+| Showcase gamification hook | `app/explore/hooks/useExploreShowcaseGamification.ts` |
+| Orbit gate | `features/content3d/showcase/lib/filterShowcaseOrbits.ts` |
 | Gem unlock API | `services/api/features/rewards/routes/showcaseGamification.js` |
 | Reward engine | `services/api/features/rewards/services/rewardEngine.js` |
 | Studio CMS | `app/studio/showcase-entities/` |

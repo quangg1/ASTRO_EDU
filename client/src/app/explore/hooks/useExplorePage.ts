@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo } from 'react'
 import { useAuthStore } from '@/features/auth/public'
+import { useShowcaseStore } from '@/features/content3d/showcase/public'
 import { useExploreModeState } from './useExploreModeState'
 import { useExploreShowcaseCatalog } from './useExploreShowcaseCatalog'
 import { useExploreEarthMode } from './useExploreEarthMode'
@@ -9,11 +10,14 @@ import { useExplorePlanetHistoryMode } from './useExplorePlanetHistoryMode'
 import { useExploreRewards } from './useExploreRewards'
 import { useExploreLearningBridge } from './useExploreLearningBridge'
 import { useExploreShowcaseNav } from './useExploreShowcaseNav'
+import { useExploreShowcaseGamification } from './useExploreShowcaseGamification'
 import { useActiveEntityDeepHistoryAvailable } from './useActiveEntityDeepHistoryAvailable'
+import { useExplorePassport } from './useExplorePassport'
 import { useExploreSkyCatalog } from './useExploreSkyCatalog'
 import { useExploreViewNavigation } from './useExploreViewNavigation'
 import { useExploreSkyObserver } from './useExploreSkyObserver'
 import { preloadHipBrightCatalog } from '@/features/explore/lib/hipBrightCatalogCache'
+import { expandVisibleOrbitEntitiesForFocus } from '@/features/content3d/showcase/lib/filterShowcaseOrbits'
 import {
   isConstellationTargetId,
   resolveSolarEntityIdForTarget,
@@ -110,7 +114,21 @@ export function useExplorePage() {
   })
 
   const rewards = useExploreRewards(userId)
+  const showcaseGamification = useExploreShowcaseGamification(userId)
+  const explorePassport = useExplorePassport(userId)
+  const storyTourAllowOrbitIds = useShowcaseStore((s) => s.storyTourAllowOrbitIds)
   const activeEntityHasDeepHistory = useActiveEntityDeepHistoryAvailable(mode.showcaseActiveItemId)
+
+  const visibleOrbitEntities = useMemo(() => {
+    const gated = showcaseGamification.filterOrbits(catalog.mergedOrbitEntities)
+    if (!storyTourAllowOrbitIds.length) return gated
+    return expandVisibleOrbitEntitiesForFocus(
+      catalog.mergedOrbitEntities,
+      gated,
+      null,
+      storyTourAllowOrbitIds,
+    )
+  }, [catalog.mergedOrbitEntities, showcaseGamification, storyTourAllowOrbitIds])
 
   const nav = useExploreShowcaseNav({
     pathname: mode.pathname,
@@ -141,6 +159,9 @@ export function useExplorePage() {
     ...planet,
     ...bridge,
     ...rewards,
+    ...showcaseGamification,
+    ...explorePassport,
+    visibleOrbitEntities,
     ...nav,
     bridgeEntityId,
     activeResolved,

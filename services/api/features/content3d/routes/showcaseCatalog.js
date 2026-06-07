@@ -60,6 +60,35 @@ function normalizeCatalogEntry(raw) {
   return out;
 }
 
+function normalizeStoryWaypoint(raw) {
+  if (!raw || typeof raw !== 'object') return null;
+  const captionVi = String(raw.captionVi || raw.caption || '').trim();
+  if (!captionVi) return null;
+  const out = { captionVi: captionVi.slice(0, 2000) };
+  const entityId = String(raw.entityId || '').trim();
+  if (entityId) out.entityId = entityId.slice(0, 120);
+  const focusPlanetName = String(raw.focusPlanetName || '').trim();
+  if (focusPlanetName) out.focusPlanetName = focusPlanetName.slice(0, 80);
+  if (raw.camera && typeof raw.camera === 'object') {
+    const distance = Number(raw.camera.distance);
+    const az = Number(raw.camera.az);
+    const el = Number(raw.camera.el);
+    if (Number.isFinite(distance) && Number.isFinite(az) && Number.isFinite(el)) {
+      out.camera = {
+        distance: Math.min(2600, Math.max(0.8, distance)),
+        az,
+        el: Math.max(-89, Math.min(89, el)),
+      };
+    }
+  }
+  const durationSec = Number(raw.durationSec);
+  if (Number.isFinite(durationSec) && durationSec >= 2 && durationSec <= 120) {
+    out.durationSec = durationSec;
+  }
+  if (!out.entityId && !out.focusPlanetName) return null;
+  return out;
+}
+
 function normalizeStory(raw) {
   if (!raw || typeof raw !== 'object') return null;
   const id = String(raw.id || '').trim();
@@ -68,13 +97,20 @@ function normalizeStory(raw) {
   const detail = String(raw.detail || '').trim();
   const targetPlanetName = String(raw.targetPlanetName || '').trim();
   if (!id || id.length > 120 || !title || !targetPlanetName) return null;
-  return {
+  const out = {
     id,
     title: title.slice(0, 200),
     subtitle: subtitle.slice(0, 300),
     detail: detail.slice(0, 2000),
     targetPlanetName: targetPlanetName.slice(0, 80),
   };
+  const unlockEntityId = String(raw.unlockEntityId || '').trim();
+  if (unlockEntityId) out.unlockEntityId = unlockEntityId.slice(0, 120);
+  const waypoints = Array.isArray(raw.waypoints)
+    ? raw.waypoints.map(normalizeStoryWaypoint).filter(Boolean)
+    : [];
+  if (waypoints.length > 0) out.waypoints = waypoints.slice(0, 30);
+  return out;
 }
 
 function normalizeOrbit(raw) {

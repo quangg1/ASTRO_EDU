@@ -27,9 +27,10 @@ export function ShowcaseModelEntityMesh({
     const size = new THREE.Vector3()
     bbox.getSize(size)
     const maxAxis = Math.max(size.x, size.y, size.z, 1e-6)
-    const targetDiameter = entity.size * 2.4
+    const minDiameter = active ? 0.42 : 0
+    const targetDiameter = Math.max(entity.size * 2.4, minDiameter)
     return targetDiameter / maxAxis
-  }, [model, entity.size])
+  }, [model, entity.size, active])
   const userScale = entity.modelScale ?? 1
   const rot = entity.modelRotationDeg ?? [0, 0, 0]
   useEffect(() => {

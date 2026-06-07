@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { getNasaCatalogItemById, NASA_SHOWCASE_ITEMS, SHOWCASE_ORBIT_ENTITIES } from '@/lib/showcaseEntities'
 import {
   buildPlanetGlobeEntity,
+  hasUsableOrbitalElements,
   mergeNasaCatalog,
   mergeOrbitEntities,
   mergeOrbitalElementsPreferUsable,
@@ -73,6 +74,9 @@ export function useExploreShowcaseCatalog(planetHistoryEntityId: string | null) 
     return merged.map((e) => {
       const j = byId.get(e.id)
       if (!j) return e
+      const orbitalElements = mergeOrbitalElementsPreferUsable(j, e)
+      const studioHasElements = hasUsableOrbitalElements(e.orbitalElements)
+      const liveHasElements = hasUsableOrbitalElements(orbitalElements)
       return {
         ...e,
         horizonsId: j.horizonsId || e.horizonsId,
@@ -83,14 +87,20 @@ export function useExploreShowcaseCatalog(planetHistoryEntityId: string | null) 
         rotRateRadS: j.rotRateRadS || e.rotRateRadS,
         vectorAu: j.vectorAu || e.vectorAu,
         vectorSim: j.vectorSim || e.vectorSim,
-        orbitalElements: mergeOrbitalElementsPreferUsable(j, e),
-        orbitEccentricity: j.orbitEccentricity,
-        inclinationDeg: j.inclinationDeg,
-        ascendingNodeDeg: j.ascendingNodeDeg,
-        phaseDeg: j.phaseDeg,
-        period: j.period,
-        periodDays: j.periodDays ?? undefined,
-        semiMajorAxisAu: j.semiMajorAxisAu ?? undefined,
+        orbitalElements,
+        orbitEccentricity: liveHasElements ? j.orbitEccentricity : e.orbitEccentricity ?? j.orbitEccentricity,
+        inclinationDeg: liveHasElements ? j.inclinationDeg : e.inclinationDeg ?? j.inclinationDeg,
+        ascendingNodeDeg: liveHasElements
+          ? j.ascendingNodeDeg
+          : e.ascendingNodeDeg ?? j.ascendingNodeDeg,
+        phaseDeg: liveHasElements ? j.phaseDeg : e.phaseDeg ?? j.phaseDeg,
+        period: studioHasElements && !liveHasElements ? e.period : j.period,
+        periodDays: liveHasElements
+          ? (j.periodDays ?? undefined)
+          : (e.periodDays ?? j.periodDays ?? undefined),
+        semiMajorAxisAu: liveHasElements
+          ? (j.semiMajorAxisAu ?? undefined)
+          : (e.semiMajorAxisAu ?? j.semiMajorAxisAu ?? undefined),
         orbitSource: 'jpl-horizons' as const,
       }
     })

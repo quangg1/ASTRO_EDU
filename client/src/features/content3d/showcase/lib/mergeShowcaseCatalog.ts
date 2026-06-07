@@ -47,6 +47,28 @@ export function mergeOrbitalElementsPreferUsable<
   return jj ?? ee
 }
 
+/** Studio đã sync/lưu orbital elements — Explore ưu tiên hơn distance/period catalog mặc định. */
+export function applyStudioOrbitAuthoring(
+  entity: MergedShowcaseOrbitEntity,
+  row: ShowcaseEntityContentDTO,
+): MergedShowcaseOrbitEntity {
+  const oe = row.orbitalElements
+  if (!oe || typeof oe !== 'object' || !hasUsableOrbitalElements(oe)) return entity
+  const a = Number(oe.a)
+  const periodDays = Number(oe.periodDays)
+  return {
+    ...entity,
+    orbitalElements: { ...oe },
+    orbitSource: 'jpl-horizons',
+    semiMajorAxisAu: Number.isFinite(a) && a > 0 ? a : entity.semiMajorAxisAu,
+    periodDays: Number.isFinite(periodDays) && periodDays > 0 ? periodDays : entity.periodDays,
+    orbitEccentricity: Number.isFinite(Number(oe.e)) ? Number(oe.e) : entity.orbitEccentricity,
+    inclinationDeg: Number.isFinite(Number(oe.i)) ? Number(oe.i) : entity.inclinationDeg,
+    ascendingNodeDeg: Number.isFinite(Number(oe.om)) ? Number(oe.om) : entity.ascendingNodeDeg,
+    phaseDeg: Number.isFinite(Number(oe.m)) ? Number(oe.m) : entity.phaseDeg,
+  }
+}
+
 function effectiveDiffuseUrl(row: ShowcaseEntityContentDTO | undefined, pub: boolean): string {
   if (!row || !pub) return ''
   const d = row.diffuseMapUrl?.trim() || ''
@@ -134,9 +156,7 @@ export function mergeOrbitEntities(
     if (hc) next = { ...next, horizonsCommand: hc }
     const hz = row.horizonsCenter?.trim()
     if (hz) next = { ...next, horizonsCenter: hz }
-    if (row.orbitalElements && typeof row.orbitalElements === 'object' && hasUsableOrbitalElements(row.orbitalElements)) {
-      next = { ...next, orbitalElements: { ...row.orbitalElements } }
-    }
+    next = applyStudioOrbitAuthoring(next, row)
 
     const pidOnly = String(next.parentId || '').trim()
     if (!String(next.parentPlanetName || '').trim() && pidOnly) {

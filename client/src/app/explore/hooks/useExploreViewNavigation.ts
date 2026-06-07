@@ -2,6 +2,9 @@
 
 import { useCallback } from 'react'
 import type { AppRouterInstance } from 'next/dist/shared/lib/app-router-context.shared-runtime'
+import { useAuthStore } from '@/features/auth/public'
+import { dispatchExplorePassportChanged } from '@/features/explore/lib/explorePassportActions'
+import { markPassportSkyTarget } from '@/features/explore/lib/explorePassportStorage'
 import {
   buildExploreHref,
   isSkyOnlyTarget,
@@ -75,6 +78,8 @@ export function useExploreViewNavigation({
       if (!id) return
       setSkySceneHighlightId(null)
       setSkyActiveTargetId(id)
+      markPassportSkyTarget(useAuthStore.getState().user?.id ?? null, id)
+      dispatchExplorePassportChanged()
       replaceExploreUrl(buildExploreHref({ view: 'sky', targetId: id }))
     },
     [replaceExploreUrl, setSkyActiveTargetId, setSkySceneHighlightId],

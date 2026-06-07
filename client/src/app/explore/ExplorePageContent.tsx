@@ -142,7 +142,7 @@ function ExplorePageInner() {
         earthHistoryStage={earthHistoryScene.earthHistoryStage}
         earthHistoryFossils={earthHistoryScene.earthHistoryFossils}
         planetGlobeEntity={explore.planetGlobeEntity}
-        mergedOrbitEntities={explore.mergedOrbitEntities}
+        mergedOrbitEntities={explore.visibleOrbitEntities}
         showcaseContent={explore.showcaseContent}
         showcaseActiveItemId={explore.showcaseActiveItemId}
         selectedSolarPlanetIndex={explore.selectedSolarPlanetIndex}

@@ -13,8 +13,10 @@ import {
   saveBridgeVisitedEntityMap,
   saveDiscoveryMap,
 } from '@/features/content3d/showcase/public'
+import { dispatchExplorePassportChanged } from '@/features/explore/lib/explorePassportActions'
+import { markPassportSkyTarget } from '@/features/explore/lib/explorePassportStorage'
 import type { ExploreView, SkyExploreTarget } from '@/features/explore/public'
-import { getSkyTargetLabel } from '@/features/explore/public'
+import { getSkyTargetLabel, isSkyOnlyTarget } from '@/features/explore/public'
 import {
   loadLessonVisited3D,
   pushVisited3DLessonIdsMerge,
@@ -293,8 +295,13 @@ export function useExploreLearningBridge({
         saveBridgeVisitedEntityMap(nextVisited, userId ?? null)
         const discovered = loadDiscoveryMap(userId ?? null)
         if (!discovered[activeTargetId]) {
-          const nextDiscovered = { ...discovered, [activeTargetId]: true }
-          saveDiscoveryMap(nextDiscovered, userId ?? null)
+          if (isSkyOnlyTarget(activeTargetId)) {
+            markPassportSkyTarget(userId ?? null, activeTargetId)
+          } else {
+            const nextDiscovered = { ...discovered, [activeTargetId]: true }
+            saveDiscoveryMap(nextDiscovered, userId ?? null)
+          }
+          dispatchExplorePassportChanged()
           const rarity = guessEntityRarity(activeTargetId)
           toast.show(`Khám phá mới: ${focusDisplayName}`, { tone: 'info' })
           const discLsId = `explore_disc_${activeTargetId}_${Date.now()}`
