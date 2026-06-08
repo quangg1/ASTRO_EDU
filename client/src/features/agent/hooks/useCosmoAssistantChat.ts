@@ -14,7 +14,7 @@ import {
   fetchAgentSessionDetail,
 } from '../api/agentApi'
 import { executeAgentClientAction, mergeAgentToolCalls } from '../lib/executeToolCall'
-import { sanitizeAssistantContent } from '../lib/sanitizeAssistantContent'
+import { normalizeAssistantMarkdown } from '../lib/normalizeAssistantMarkdown'
 import type { AgentChip } from '../ui/AgentChips'
 import type { CommunityThreadSuggestion, LearnerSnapshot, SessionContext } from '../types'
 
@@ -247,7 +247,7 @@ export function useCosmoAssistantChat({
             if (ev.event === 'token') {
               setLoading(false)
               streamContentRef.current += ev.data.content || ''
-              const streamed = sanitizeAssistantContent(streamContentRef.current)
+              const streamed = normalizeAssistantMarkdown(streamContentRef.current)
               setMessages((m) =>
                 m.map((msg) =>
                   msg.id === assistantId
@@ -296,7 +296,7 @@ export function useCosmoAssistantChat({
         if (res.chips?.length) setFallbackChips(res.chips)
 
         const actions = mergeAgentToolCalls(res.tool_calls, res.tool_results)
-        const content = sanitizeAssistantContent(
+        const content = normalizeAssistantMarkdown(
           res.message?.content || streamContentRef.current,
         )
 
@@ -461,7 +461,14 @@ export function useCosmoAssistantChat({
       detail.messages.map((m, i) => ({
         id: `h-${detail.sessionId}-${i}`,
         role: m.role,
-        content: m.hasImage && !m.content.trim() ? '📷 Ảnh đính kèm' : m.content,
+        content:
+          m.role === 'assistant'
+            ? normalizeAssistantMarkdown(
+                m.hasImage && !m.content.trim() ? '📷 Ảnh đính kèm' : m.content,
+              )
+            : m.hasImage && !m.content.trim()
+              ? '📷 Ảnh đính kèm'
+              : m.content,
       })),
     )
     setInput('')

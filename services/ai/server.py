@@ -136,6 +136,9 @@ def build_system_general() -> str:
         "Khám phá 3D, khóa học/lộ trình.\n"
         'Khi user nhờ "giới thiệu bài" / "có bài nào về …": nội dung trong app — dùng RAG hoặc search_learning_content.\n'
         "Quy tắc: Tiếng Việt khi user viết tiếng Việt; ngắn gọn, dễ hiểu.\n"
+        "Định dạng: Dùng Markdown khi liệt kê/so sánh (tiêu đề ##, danh sách -, bảng GFM). "
+        "Bảng: mỗi hàng trên một dòng riêng (header, dòng |---|---|, rồi từng hàng dữ liệu); "
+        "không gộp nhiều hàng bảng trên cùng một dòng.\n"
         + GROUNDING_RULES_VI
         + "\n"
         + REFUSAL_INSTRUCTION_VI

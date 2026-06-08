@@ -21,6 +21,7 @@ export { useAgentCoach } from './hooks/useAgentCoach'
 export type { AgentChip } from './ui/AgentChips'
 export type { AgentStreamEvent } from './api/agentApi'
 export { buildSessionContext } from './lib/buildSessionContext'
+export { normalizeAssistantMarkdown } from './lib/normalizeAssistantMarkdown'
 export {
   postAgentMessage,
   prefetchAgentContext,

@@ -3,17 +3,23 @@
 import clsx from 'clsx'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import { normalizeAssistantMarkdown } from '@/features/agent/public'
+
+const linkCls = 'text-cyan-400 underline underline-offset-2 hover:text-ds-accent'
 
 export function AssistantMarkdown({ source }: { source: string }) {
+  const normalized = normalizeAssistantMarkdown(source)
+
   return (
     <div
       className={clsx(
         'tutor-md text-[14px] leading-[1.65] text-gray-200/95',
         'space-y-2.5 [&>*:first-child]:mt-0',
         '[&_p]:mb-2 [&_p:last-child]:mb-0 [&_li]:my-0.5',
-        '[&_table]:my-3 [&_table]:block [&_table]:w-full [&_table]:overflow-x-auto [&_table]:rounded-lg [&_table]:border [&_table]:border-white/10',
-        '[&_th]:whitespace-nowrap [&_th]:bg-white/5 [&_th]:px-3 [&_th]:py-2 [&_th]:text-left [&_th]:text-[13px] [&_th]:font-semibold [&_th]:text-white',
-        '[&_td]:px-3 [&_td]:py-2 [&_td]:align-top [&_td]:text-[13px] [&_td]:text-gray-200/90 [&_td]:border-t [&_td]:border-white/8',
+        '[&_div:has(>table)]:my-3 [&_div:has(>table)]:overflow-x-auto [&_div:has(>table)]:rounded-lg [&_div:has(>table)]:border [&_div:has(>table)]:border-white/10',
+        '[&_table]:w-full [&_table]:min-w-[280px] [&_table]:border-collapse [&_table]:text-left [&_table]:text-[13px]',
+        '[&_th]:whitespace-nowrap [&_th]:bg-white/5 [&_th]:px-3 [&_th]:py-2 [&_th]:font-semibold [&_th]:text-white [&_th]:border [&_th]:border-white/10',
+        '[&_td]:px-3 [&_td]:py-2 [&_td]:align-top [&_td]:text-gray-200/90 [&_td]:border [&_td]:border-white/8',
         '[&_strong]:text-white [&_strong]:font-semibold [&_b]:text-white',
         '[&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5',
         '[&_h1]:text-base [&_h1]:font-bold [&_h1]:text-white [&_h1]:mt-3 [&_h1]:mb-2',
@@ -25,7 +31,21 @@ export function AssistantMarkdown({ source }: { source: string }) {
         '[&_a]:text-cyan-400 [&_a]:underline [&_a]:underline-offset-2 hover:[&_a]:text-ds-accent',
       )}
     >
-      <ReactMarkdown remarkPlugins={[remarkGfm]}>{source}</ReactMarkdown>
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        components={{
+          a: ({ className, ...props }) => (
+            <a {...props} className={clsx(linkCls, className)} target="_blank" rel="noopener noreferrer" />
+          ),
+          table: ({ children, ...props }) => (
+            <div className="overflow-x-auto">
+              <table {...props}>{children}</table>
+            </div>
+          ),
+        }}
+      >
+        {normalized}
+      </ReactMarkdown>
     </div>
   )
 }

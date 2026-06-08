@@ -20,17 +20,11 @@ const { runReactAgentTurn } = require('./reactLoop');
 const { extractLessonSearchQuery } = require('./lessonSearchIntent');
 const { isToolAllowedForTier } = require('../lib/toolSchema');
 
-const ASSISTANT_LEAK_RE = /<\/?\s*assistant\s*>|<\|[^|>]{1,40}\|>/gi;
+const { sanitizeAssistantContent } = require('../lib/assistantContentSanitize');
 const MAX_USER_MESSAGE_CHARS = Math.max(
   500,
   parseInt(process.env.AGENT_MAX_USER_MESSAGE_CHARS || '6000', 10) || 6000,
 );
-
-function sanitizeAssistantContent(text) {
-  return String(text || '')
-    .replace(ASSISTANT_LEAK_RE, '')
-    .trim();
-}
 const { getCachedContext } = require('./contextCache');
 const { assertAgentNotQuizLocked } = require('../lib/agentQuizLock');
 const { AppError } = require('../../../shared/errors');
