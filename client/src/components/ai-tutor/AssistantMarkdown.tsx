@@ -8,9 +8,12 @@ export function AssistantMarkdown({ source }: { source: string }) {
   return (
     <div
       className={clsx(
-        'tutor-md text-[13.5px] leading-relaxed text-gray-200/95',
+        'tutor-md text-[14px] leading-[1.65] text-gray-200/95',
         'space-y-2.5 [&>*:first-child]:mt-0',
         '[&_p]:mb-2 [&_p:last-child]:mb-0 [&_li]:my-0.5',
+        '[&_table]:my-3 [&_table]:block [&_table]:w-full [&_table]:overflow-x-auto [&_table]:rounded-lg [&_table]:border [&_table]:border-white/10',
+        '[&_th]:whitespace-nowrap [&_th]:bg-white/5 [&_th]:px-3 [&_th]:py-2 [&_th]:text-left [&_th]:text-[13px] [&_th]:font-semibold [&_th]:text-white',
+        '[&_td]:px-3 [&_td]:py-2 [&_td]:align-top [&_td]:text-[13px] [&_td]:text-gray-200/90 [&_td]:border-t [&_td]:border-white/8',
         '[&_strong]:text-white [&_strong]:font-semibold [&_b]:text-white',
         '[&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5',
         '[&_h1]:text-base [&_h1]:font-bold [&_h1]:text-white [&_h1]:mt-3 [&_h1]:mb-2',

@@ -351,8 +351,8 @@ function CosmoAssistantInner() {
   }, [showHero])
 
   const panelHeight = isContextual
-    ? 'h-[min(480px,52vh)]'
-    : 'h-[min(560px,calc(100vh-8rem))]'
+    ? 'h-[min(640px,72vh)]'
+    : 'h-[min(680px,calc(100vh-5rem))]'
 
   const panelShellClass =
     'flex w-full flex-col overflow-hidden rounded-2xl animate-slide-up-fade pointer-events-auto shrink-0'
@@ -468,11 +468,11 @@ function CosmoAssistantInner() {
             data-cosmo-assistant-panel
             className={clsx(panelShellClass, panelHeight, 'relative')}
             style={{
-              width: 'min(440px, calc(100vw - 12px - env(safe-area-inset-right, 0px)))',
-              minHeight: isContextual ? 'min(360px, 48vh)' : 'min(420px, 55vh)',
+              width: 'min(560px, calc(100vw - 16px - env(safe-area-inset-right, 0px)))',
+              minHeight: isContextual ? 'min(480px, 62vh)' : 'min(520px, 68vh)',
               maxHeight:
-                'min(560px, calc(100vh - 5rem - env(safe-area-inset-bottom, 0px)))',
-              transform: pos.x || pos.y ? `translate(${-pos.x}px, ${-pos.y}px)` : undefined,
+                'min(720px, calc(100vh - 3.5rem - env(safe-area-inset-bottom, 0px)))',
+              transform: pos.x || pos.y ? `translate(${pos.x}px, ${pos.y}px)` : undefined,
               background:
                 'linear-gradient(180deg, rgba(10, 25, 47, 0.97) 0%, rgba(6, 22, 42, 0.98) 100%)',
               boxShadow: '0 0 0 1px rgba(6, 182, 212, 0.25), 0 24px 48px rgba(0,0,0,0.5)',
@@ -685,10 +685,11 @@ function CosmoAssistantInner() {
               <div key={m.id} className={clsx('flex', m.role === 'user' ? 'justify-end' : 'justify-start')}>
                 <div
                   className={clsx(
-                    'max-w-[90%] rounded-2xl text-sm',
+                    'rounded-2xl text-sm',
+                    m.role === 'user' ? 'max-w-[88%]' : 'max-w-[min(100%,42rem)] w-full',
                     m.role === 'user'
                       ? 'border border-cyan-400/30 bg-cyan-500/25 px-3 py-2.5 text-cyan-50'
-                      : 'border border-ds-border bg-white/5 px-4 py-3 text-gray-100',
+                      : 'border border-ds-border bg-white/5 px-4 py-3.5 text-gray-100',
                   )}
                 >
                   {m.role === 'assistant' ? (
