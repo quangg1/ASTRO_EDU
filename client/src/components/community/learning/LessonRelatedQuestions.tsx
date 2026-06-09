@@ -10,6 +10,7 @@ import {
 import { DEFAULT_COURSE_QUESTION_FORUM, composeForumUrl } from '@/features/community/lib/forumKinds'
 import { plainTextExcerpt } from '@/features/community/lib/postContent'
 import { CommunityAskButton } from '@/components/community/learning/CommunityAskButton'
+import { useT } from '@/i18n/public'
 
 const PREVIEW_LIMIT = 5
 
@@ -18,17 +19,18 @@ type Props = {
   className?: string
 }
 
-function formatRelativeDate(date?: string): string {
+function formatRelativeDate(date: string | undefined, t: (key: string, vars?: Record<string, string | number>) => string): string {
   if (!date) return ''
   const d = new Date(date)
   const diff = Date.now() - d.getTime()
   const days = Math.floor(diff / 86400000)
-  if (days < 1) return 'Hôm nay'
-  if (days < 7) return `${days} ngày trước`
+  if (days < 1) return t('community.today')
+  if (days < 7) return t('community.daysAgo', { days })
   return d.toLocaleDateString('vi-VN')
 }
 
 export function LessonRelatedQuestions({ context, className = '' }: Props) {
+  const { t } = useT()
   const [posts, setPosts] = useState<Post[]>([])
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(true)
@@ -77,14 +79,17 @@ export function LessonRelatedQuestions({ context, className = '' }: Props) {
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-4">
         <div>
           <h2 id="lesson-related-questions-heading" className="text-base font-semibold text-white">
-            Câu hỏi về bài này
+            {t('community.lessonQuestions')}
           </h2>
           <p className="mt-1 text-xs text-ds-muted leading-relaxed">
-            Cộng đồng trả lời trong{' '}
-            <Link href={`/community/${DEFAULT_COURSE_QUESTION_FORUM}`} className="text-ds-accent hover:text-violet-200 underline">
-              Hỏi đáp học tập
+            {t('community.lessonQuestionsLead')}{' '}
+            <Link
+              href={`/community/${DEFAULT_COURSE_QUESTION_FORUM}`}
+              className="text-ds-accent hover:text-violet-200 underline"
+            >
+              {t('community.learningQa')}
             </Link>
-            {total > 0 ? ` · ${total} câu hỏi` : ''}
+            {total > 0 ? t('community.lessonQuestionsCount', { count: total }) : ''}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2 shrink-0">
@@ -94,7 +99,7 @@ export function LessonRelatedQuestions({ context, className = '' }: Props) {
               href={viewAllHref}
               className="inline-flex items-center justify-center rounded-lg border border-ds-border bg-white/5 px-3 py-1.5 text-xs text-slate-200 hover:bg-white/10 transition-colors"
             >
-              Xem tất cả
+              {t('community.viewAllPosts')}
             </Link>
           )}
         </div>
@@ -107,8 +112,9 @@ export function LessonRelatedQuestions({ context, className = '' }: Props) {
         </div>
       ) : posts.length === 0 ? (
         <p className="text-sm text-ds-muted rounded-xl border border-dashed border-violet-500/30 bg-ds-surface/50 px-4 py-5 text-center">
-          Chưa có câu hỏi nào cho bài này. Bấm <strong className="text-violet-200 font-medium">Hỏi về bài này</strong> để
-          đặt câu hỏi đầu tiên.
+          {t('community.emptyLessonQuestionsPrefix')}{' '}
+          <strong className="text-violet-200 font-medium">{t('community.askThisLesson')}</strong>{' '}
+          {t('community.emptyLessonQuestionsSuffix')}
         </p>
       ) : (
         <ul className="space-y-2">
@@ -123,7 +129,9 @@ export function LessonRelatedQuestions({ context, className = '' }: Props) {
                   <p className="mt-1 text-xs text-ds-muted line-clamp-2">{plainTextExcerpt(p.content, 140)}</p>
                 ) : null}
                 <p className="mt-2 text-[11px] text-ds-subtle">
-                  {p.commentCount} bình luận · {p.voteCount} vote · {formatRelativeDate(p.createdAt)}
+                  {t('community.commentCount', { count: p.commentCount })} ·{' '}
+                  {t('community.voteCount', { count: p.voteCount })} ·{' '}
+                  {formatRelativeDate(p.createdAt, t)}
                 </p>
               </Link>
             </li>
@@ -136,7 +144,7 @@ export function LessonRelatedQuestions({ context, className = '' }: Props) {
           href={viewAllHref}
           className="mt-3 inline-block text-xs text-ds-accent hover:text-cyan-200 underline"
         >
-          Xem thêm {total - posts.length} câu hỏi →
+          {t('community.viewMoreQuestions', { count: total - posts.length })}
         </Link>
       )}
     </section>

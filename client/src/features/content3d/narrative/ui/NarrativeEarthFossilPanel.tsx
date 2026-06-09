@@ -135,7 +135,7 @@ export function NarrativeEarthFossilPanel() {
           <p className="text-[11px] text-ds-subtle">Đang tải hóa thạch thời kỳ…</p>
         ) : !fossilStats || fossilStats.total <= 0 ? (
           <p className="text-[11px] leading-relaxed text-ds-subtle">
-            Chưa có mẫu hóa thạch rõ trong khoảng thời gian này. Thử kéo timeline sang kỷ Phanerozoic.
+            Chưa có mẫu hóa thạch rõ trong khoảng thời gian này. Thử kéo timeline sang đại Hiển Sinh.
           </p>
         ) : (
           <>

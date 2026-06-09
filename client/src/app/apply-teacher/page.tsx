@@ -7,6 +7,7 @@ import { useAuthStore } from '@/features/auth/public'
 import { ApplyTeacherForm } from '@/components/auth/ApplyTeacherForm'
 import { fetchMyTeacherApplicationStatus, type TeacherApplication } from '@/features/auth/public'
 import { useLiveClock } from '@/hooks/useLiveClock'
+import { useT } from '@/i18n/public'
 
 const chamfer = (cut = 14) => ({
   clipPath: `polygon(${cut}px 0,100% 0,100% calc(100% - ${cut}px),calc(100% - ${cut}px) 100%,0 100%,0 ${cut}px)`,
@@ -27,6 +28,7 @@ function Brackets({ c = 'var(--color-accent)', s = 12, o = 6 }: { c?: string; s?
 }
 
 export default function ApplyTeacherPage() {
+  const { t } = useT()
   const router = useRouter()
   const { user, checked } = useAuthStore()
   const [loading, setLoading] = useState(true)
@@ -82,7 +84,7 @@ export default function ApplyTeacherPage() {
           textTransform: 'uppercase',
         }}
       >
-        <span style={{ color: 'var(--color-accent)' }}>●</span>&nbsp;&nbsp;Đang tải hệ thống…
+        <span style={{ color: 'var(--color-accent)' }}>●</span>&nbsp;&nbsp;{t('applyTeacher.loadingSystem')}
       </div>
     )
   }
@@ -97,7 +99,7 @@ export default function ApplyTeacherPage() {
 
         <div className="cosmo-dark-panel relative mb-6 flex items-center justify-between rounded-xl px-4 py-2.5">
           <span style={{ ...mono, fontSize: 10, letterSpacing: '0.18em', color: 'var(--color-accent)', textTransform: 'uppercase' }}>
-            // 01 · application · teacher-access
+            {t('applyTeacher.eyebrowAccess')}
           </span>
           <span style={{ ...mono, fontSize: 10, letterSpacing: '0.12em', color: 'var(--color-text-subtle)' }}>
             {zoneLabel} · <span style={{ color: 'var(--color-text-muted)' }}>{localTime}</span>
@@ -123,20 +125,20 @@ export default function ApplyTeacherPage() {
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M19 12H5M12 5l-7 7 7 7"/>
           </svg>
-          Bảng điều khiển
+          {t('dashboard.overview')}
         </Link>
 
         {/* Page title */}
         <div style={{ marginBottom: 28 }}>
           <div style={{ ...mono, fontSize: 10, letterSpacing: '0.20em', color: 'var(--color-text-subtle)', marginBottom: 10, textTransform: 'uppercase' }}>
-            // 02 · request · instructor-role
+            {t('applyTeacher.eyebrowRequest')}
           </div>
-          <h1 style={{ fontSize: 'clamp(26px, 4vw, 44px)', fontWeight: 500, lineHeight: 1.05, letterSpacing: '-0.03em', color: 'var(--color-text-primary)', marginBottom: 10 }}>
-            Xin quyền{' '}
-            <em style={{ fontStyle: 'italic', fontWeight: 300, color: 'var(--color-brand-amber)' }}>giảng viên</em>
-          </h1>
+          <h1
+            style={{ fontSize: 'clamp(26px, 4vw, 44px)', fontWeight: 500, lineHeight: 1.05, letterSpacing: '-0.03em', color: 'var(--color-text-primary)', marginBottom: 10 }}
+            dangerouslySetInnerHTML={{ __html: t('applyTeacher.titleHtml') }}
+          />
           <p style={{ fontSize: 14, color: 'var(--color-text-muted)', lineHeight: 1.65, maxWidth: 500 }}>
-            Sau khi được duyệt, bạn có thể tạo và quản lý nội dung trong Studio. Quản trị viên xem đơn và có thể gán quyền trực tiếp trong bảng quản trị nếu cần.
+            {t('applyTeacher.lede')}
           </p>
         </div>
 
@@ -155,13 +157,13 @@ export default function ApplyTeacherPage() {
           >
             <Brackets c="var(--color-brand-amber)" s={11} o={7} />
             <div style={{ ...mono, fontSize: 9.5, letterSpacing: '0.18em', color: 'var(--color-brand-amber)', marginBottom: 8, textTransform: 'uppercase' }}>
-              ● Trạng thái · Đang chờ duyệt
+              {t('applyTeacher.statusPending')}
             </div>
             <p style={{ fontSize: 14, fontWeight: 500, color: 'var(--color-text-primary)', marginBottom: 4 }}>
-              Đơn của bạn đang trong hàng đợi
+              {t('applyTeacher.pendingTitle')}
             </p>
             <p style={{ fontSize: 13, color: 'var(--color-text-muted)', lineHeight: 1.6 }}>
-              Gửi lúc {new Date(pending.createdAt).toLocaleString('vi-VN')}. Sau khi được duyệt, mở lại tab hoặc tải trang — hệ thống sẽ cập nhật vai trò giảng viên tự động.
+              {t('applyTeacher.pendingDesc', { date: new Date(pending.createdAt).toLocaleString('vi-VN') })}
             </p>
           </div>
         )}
@@ -178,16 +180,16 @@ export default function ApplyTeacherPage() {
           >
             <Brackets c="#ff5cd4" s={11} o={7} />
             <div style={{ ...mono, fontSize: 9.5, letterSpacing: '0.18em', color: '#ff5cd4', marginBottom: 8, textTransform: 'uppercase' }}>
-              ✕ Trạng thái · Đã bị từ chối
+              {t('applyTeacher.statusRejected')}
             </div>
             <p style={{ fontSize: 14, fontWeight: 500, color: 'var(--color-text-primary)', marginBottom: 4 }}>
-              Đơn trước đã bị từ chối
+              {t('applyTeacher.rejectedTitle')}
             </p>
             {last.reviewNote && (
               <p style={{ fontSize: 13, color: 'var(--color-text-muted)', lineHeight: 1.6, marginBottom: 8 }}>{last.reviewNote}</p>
             )}
             <p style={{ ...mono, fontSize: 10, color: 'var(--color-text-subtle)', letterSpacing: '0.1em' }}>
-              → Bạn có thể gửi đơn mới bên dưới.
+              {t('applyTeacher.rejectedResubmit')}
             </p>
           </div>
         )}
@@ -204,7 +206,7 @@ export default function ApplyTeacherPage() {
             <Brackets c="var(--color-accent)" s={13} o={8} />
             {message === 'ok' ? (
               <p className="text-sm text-emerald-300 mb-4 font-mono text-[11px] tracking-wide">
-                Đã gửi đơn — bạn sẽ nhận email khi có kết quả.
+                {t('applyTeacher.submitOk')}
               </p>
             ) : null}
             <ApplyTeacherForm
@@ -236,8 +238,8 @@ export default function ApplyTeacherPage() {
             justifyContent: 'space-between',
           }}
         >
-          <span>Access Level · Student</span>
-          <span>Role · Pending Review</span>
+          <span>{t('applyTeacher.footerAccess')}</span>
+          <span>{t('applyTeacher.footerRole')}</span>
         </div>
       </main>
     </div>

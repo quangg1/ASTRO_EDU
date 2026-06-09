@@ -1,5 +1,6 @@
 import { parseCourseEditorListResponse } from '@galaxies/contracts'
 import { getToken } from '@/features/auth/public'
+import { apiClientHeaders } from '@/lib/apiClientHeaders'
 import { getApiPathBase, getUploadBase } from '@/lib/apiConfig'
 import type { QuizQuestion } from '@/shared/types/quizQuestion'
 import type { VideoTranscript } from '@/features/courses/lib/videoTranscript'
@@ -9,10 +10,7 @@ export type { QuizQuestion }
 const COURSES_BASE = getApiPathBase()
 
 function authHeaders(): HeadersInit {
-  const token = getToken()
-  const h: HeadersInit = { 'Content-Type': 'application/json' }
-  if (token) (h as Record<string, string>)['Authorization'] = `Bearer ${token}`
-  return h
+  return apiClientHeaders()
 }
 
 export type SectionType = 'richtext' | 'text' | 'image' | 'video' | 'code' | 'embed' | '3d' | 'callout' | 'divider' | 'gif' | 'math' | 'chart' | 'slider' | 'observable'

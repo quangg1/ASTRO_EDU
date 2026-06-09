@@ -1,13 +1,11 @@
 import { getToken } from '@/features/auth/api/authApi'
 import { getApiPathBase } from '@/lib/apiConfig'
+import { apiClientHeaders } from '@/lib/apiClientHeaders'
 
 const BASE = `${getApiPathBase()}/admin/promo-codes`
 
 function authHeaders(): HeadersInit {
-  const token = getToken()
-  const h: HeadersInit = { 'Content-Type': 'application/json' }
-  if (token) (h as Record<string, string>)['Authorization'] = `Bearer ${token}`
-  return h
+  return apiClientHeaders()
 }
 
 export interface PromoCodeAdmin {

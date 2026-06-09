@@ -1,4 +1,5 @@
 import { getApiPathBase } from '@/lib/apiConfig'
+import { apiClientHeaders } from '@/lib/apiClientHeaders'
 const API = `${getApiPathBase()}/tutorials`
 
 export interface TutorialCategory {

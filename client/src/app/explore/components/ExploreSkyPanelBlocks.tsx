@@ -1,6 +1,5 @@
 'use client'
 
-import Image from 'next/image'
 import type { ShowcasePanelBlockDTO } from '@/features/content3d/showcase/public'
 
 export function ExploreSkyPanelBlocks({ blocks }: { blocks: ShowcasePanelBlockDTO[] }) {
@@ -18,9 +17,11 @@ function SkyPanelBlock({ block }: { block: ShowcasePanelBlockDTO }) {
   if (block.type === 'image' && block.imageUrl) {
     return (
       <figure className="overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.03]">
-        <div className="relative aspect-[4/3] w-full">
-          <Image src={block.imageUrl} alt={block.title || ''} fill className="object-cover" sizes="21rem" />
-        </div>
+        <img
+          src={block.imageUrl}
+          alt={block.title || ''}
+          className="mx-auto w-full max-h-[min(320px,45vh)] bg-black/20 object-contain"
+        />
         {block.title ? (
           <figcaption className="px-3 py-2 text-[11px] text-slate-400">{block.title}</figcaption>
         ) : null}

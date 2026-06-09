@@ -11,18 +11,27 @@ import { groupNodesByTopic } from '@/lib/topicPathMapping'
 import { parseOnboardingLanding, lessonHrefWithDepth } from '@/lib/onboardingLanding'
 import { OnboardingWelcomeBanner } from '@/components/onboarding/OnboardingWelcomeBanner'
 import { fetchOnboardingStatus } from '@/features/onboarding/public'
+import { useT } from '@/i18n/public'
 
 type Props = { slug: string }
 
-function weightLabel(w: number): string {
-  if (w >= 0.85) return 'Liên quan chính'
-  if (w >= 0.5) return 'Liên quan'
-  return 'Tham khảo'
-}
-
 export function TopicExploreView({ slug }: Props) {
+  const { t } = useT()
   const searchParams = useSearchParams()
+
+  const weightLabel = (w: number): string => {
+    if (w >= 0.85) return t('learningPath.weightPrimary')
+    if (w >= 0.5) return t('learningPath.weightRelated')
+    return t('learningPath.weightReference')
+  }
+
   const landing = parseOnboardingLanding(searchParams)
+  const depthLabel =
+    landing.depth === 'researcher'
+      ? t('learningPath.depthDeep')
+      : landing.depth === 'explorer'
+        ? t('learningPath.depthMechanism')
+        : t('learningPath.depthBasic')
   const topic = getTopicBySlug(slug)
   const [modules, setModules] = useState<LearningModule[] | null>(null)
   const [loading, setLoading] = useState(true)
@@ -59,25 +68,27 @@ export function TopicExploreView({ slug }: Props) {
           className="inline-flex items-center gap-1.5 text-sm text-ds-accent hover:text-ds-text mb-8"
         >
           <ArrowLeft className="w-4 h-4" />
-          Trang chủ
+          {t('common.home')}
         </Link>
 
         {landing.fromOnboarding ? (
           <OnboardingWelcomeBanner
             dismissKey={`onboarding-topic-${slug}`}
-            title={`Lộ trình được lọc theo «${topic.labelVi}»`}
-            description={`Mức gợi ý: ${landing.depth === 'researcher' ? 'Sâu' : landing.depth === 'explorer' ? 'Cơ chế' : 'Cơ bản'}. Các node liên quan chủ đề được ưu tiên — mở toàn bộ lộ trình bất cứ lúc nào.`}
+            title={t('learningPath.topicOnboardingTitle', { label: topic.labelVi })}
+            description={t('learningPath.topicOnboardingDesc', { depth: depthLabel })}
           />
         ) : null}
 
         <header className="mb-10">
-          <p className="text-[10px] uppercase tracking-[0.2em] text-amber-400/90 mb-2">Chủ đề landing</p>
+          <p className="text-[10px] uppercase tracking-[0.2em] text-amber-400/90 mb-2">{t('learningPath.topicLanding')}</p>
           <h1 className="text-3xl sm:text-4xl font-bold text-ds-text font-heading tracking-tight">{topic.labelVi}</h1>
           <p className="text-ds-muted mt-3 text-sm leading-relaxed">{topic.descriptionVi}</p>
           <p className="text-xs text-ds-subtle mt-4">
-            Các <strong className="text-ds-subtle">chủ đề (node)</strong> trong lộ trình được gắn trọng số — hiển thị theo module, không thay thế thứ tự học đầy đủ.{' '}
+            {t('learningPath.topicLandingDescLead')}{' '}
+            <strong className="text-ds-subtle">{t('learningPath.topicNodesLabel')}</strong>{' '}
+            {t('learningPath.topicLandingDescTail')}{' '}
             <Link href="/tutorial" className="text-ds-accent hover:underline">
-              Mở toàn bộ lộ trình →
+              {t('learningPath.openFullPath')}
             </Link>
           </p>
         </header>
@@ -91,7 +102,7 @@ export function TopicExploreView({ slug }: Props) {
             }}
           >
             <p className="text-[10px] uppercase tracking-wider text-cyan-400 mb-1 flex items-center gap-1">
-              <Rocket className="w-3 h-3" /> Chặng xuất phát
+              <Rocket className="w-3 h-3" /> {t('learningPath.departureLeg')}
             </p>
             <p className="text-sm text-ds-text font-medium">{firstNode.node.titleVi}</p>
             <div className="flex flex-wrap gap-3 mt-3">
@@ -99,11 +110,11 @@ export function TopicExploreView({ slug }: Props) {
                 href={`/tutorial/${grouped[0].module.id}/${firstNode.node.id}?from=onboarding&depth=${landing.depth}`}
                 className="text-xs font-medium text-ds-accent hover:text-white"
               >
-                Mở node →
+                {t('learningPath.openNode')}
               </Link>
               {starterHref ? (
                 <Link href={starterHref} className="text-xs font-medium text-amber-300 hover:text-amber-100">
-                  Bài starter ({landing.depth}) →
+                  {t('learningPath.starterLesson')} ({landing.depth}) →
                 </Link>
               ) : firstNode.node.depths?.[landing.depth as keyof typeof firstNode.node.depths]?.[0] ? (
                 <Link
@@ -115,7 +126,7 @@ export function TopicExploreView({ slug }: Props) {
                   )}
                   className="text-xs font-medium text-amber-300 hover:text-amber-100"
                 >
-                  Bài đầu ({landing.depth}) →
+                  {t('learningPath.firstLesson')} ({landing.depth}) →
                 </Link>
               ) : null}
             </div>
@@ -123,15 +134,15 @@ export function TopicExploreView({ slug }: Props) {
         ) : null}
 
         {loading ? (
-          <p className="text-ds-subtle text-sm">Đang tải lộ trình…</p>
+          <p className="text-ds-subtle text-sm">{t('learningPath.topicLoadingPath')}</p>
         ) : grouped.length === 0 ? (
           <div className="rounded-ds-card border border-ds-border bg-white/[0.03] p-8 text-center">
             <p className="text-ds-muted text-sm">
-              Chưa có node nào gắn chủ đề này (hoặc API chưa đồng bộ). Biên tập trong{' '}
+              {t('learningPath.topicEmptyNodes', { studio: '{studio}' }).split('{studio}')[0]}
               <Link href="/studio/learning-path" className="text-ds-accent hover:underline">
-                Learning Path Studio
+                {t('learningPath.topicStudioLink')}
               </Link>
-              , hoặc chạy script sync JSON → MongoDB.
+              {t('learningPath.topicEmptyNodes', { studio: '{studio}' }).split('{studio}')[1]}
             </p>
           </div>
         ) : (
@@ -152,9 +163,9 @@ export function TopicExploreView({ slug }: Props) {
                   </span>
                   <div>
                     <p className="text-[10px] uppercase tracking-wider text-ds-subtle flex items-center gap-1">
-                      <Layers className="w-3 h-3" /> Module {mod.order}
+                      <Layers className="w-3 h-3" /> {t('learningPath.moduleLabel', { order: mod.order })}
                       {landing.fromOnboarding && sectionIdx === 0 ? (
-                        <span className="text-cyan-400 ml-2">· Ưu tiên</span>
+                        <span className="text-cyan-400 ml-2">· {t('learningPath.priority')}</span>
                       ) : null}
                     </p>
                     <h2 className="text-lg font-semibold text-ds-text mt-0.5">{mod.titleVi}</h2>

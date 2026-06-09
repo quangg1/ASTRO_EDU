@@ -5,6 +5,7 @@ import { useAuthStore } from '@/features/auth/public'
 import { submitConceptQuiz } from '@/features/agent/public'
 import type { RecallQuizDeliveryQuestion, RecallQuizSubmitResult } from '@/features/learning-path/public'
 import { LessonRecallQuizOverlay } from '@/components/learning-path/LessonRecallQuizOverlay'
+import { useT } from '@/i18n/public'
 
 export type ConceptQuizOpenDetail = {
   quizSessionId: string
@@ -15,6 +16,7 @@ export type ConceptQuizOpenDetail = {
 }
 
 export function CosmoConceptQuizHost() {
+  const { t } = useT()
   const { user } = useAuthStore()
   const [open, setOpen] = useState(false)
   const [passed, setPassed] = useState(false)
@@ -44,11 +46,11 @@ export function CosmoConceptQuizHost() {
   const onSubmit = useCallback(
     async (answers: Record<string, number>): Promise<RecallQuizSubmitResult> => {
       if (!detail?.quizSessionId) {
-        throw new Error('Phiên quiz không hợp lệ')
+        throw new Error(t('learningPath.invalidQuizSession'))
       }
       const res = await submitConceptQuiz(detail.quizSessionId, answers)
       if (!res.ok || !res.data) {
-        throw new Error(res.error || 'Nộp bài thất bại')
+        throw new Error(res.error || t('learningPath.recallSubmitFailed'))
       }
       const data = res.data
       return {
@@ -60,7 +62,7 @@ export function CosmoConceptQuizHost() {
         lessonId: data.lessonId || detail.lessonId || '',
       }
     },
-    [detail],
+    [detail, t],
   )
 
   if (!user) return null
@@ -69,13 +71,13 @@ export function CosmoConceptQuizHost() {
     <LessonRecallQuizOverlay
       open={open}
       onClose={onClose}
-      lessonTitle={detail?.conceptTitle || 'Concept'}
+      lessonTitle={detail?.conceptTitle || t('learningPath.conceptFallback')}
       questions={detail?.questions ?? []}
       passed={passed}
       onPassed={() => setPassed(true)}
       onSubmit={onSubmit}
-      headerEyebrow="Quiz theo concept"
-      headerSubtitle={detail?.conceptId ? `ID: ${detail.conceptId}` : undefined}
+      headerEyebrow={t('learningPath.conceptQuizTitle')}
+      headerSubtitle={detail?.conceptId ? t('learningPath.conceptQuizId', { id: detail.conceptId }) : undefined}
     />
   )
 }

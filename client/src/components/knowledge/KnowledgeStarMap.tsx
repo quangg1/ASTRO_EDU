@@ -21,14 +21,10 @@ import {
 } from '@/features/concepts/public'
 import type { LearningConcept } from '@/data/learningPathCurriculum'
 import { ArrowLeft, Orbit, ScanSearch, Sparkles } from 'lucide-react'
+import { useT } from '@/i18n/public'
 
 type GraphPayload = { nodes: StarMapNode[]; links: StarMapLink[] }
 type ViewMode = 'focus' | 'full'
-const DIFFICULTY_LABELS: Record<0 | 1 | 2, string> = {
-  0: 'Beginner',
-  1: 'Explorer',
-  2: 'Researcher',
-}
 
 function linkEndpointIds(link: { source?: unknown; target?: unknown }): [string, string] {
   const s = link.source
@@ -39,6 +35,16 @@ function linkEndpointIds(link: { source?: unknown; target?: unknown }): [string,
 }
 
 export default function KnowledgeStarMap() {
+  const { t } = useT()
+  const difficultyLabels = useMemo(
+    () =>
+      ({
+        0: t('learningPath.depthBeginner'),
+        1: t('learningPath.depthExplorer'),
+        2: t('learningPath.depthResearcher'),
+      }) as Record<0 | 1 | 2, string>,
+    [t],
+  )
   const pathname = usePathname()
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -405,28 +411,28 @@ export default function KnowledgeStarMap() {
             <Link
               href="/tutorial"
               className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-ds-border text-ds-muted hover:bg-white/10"
-              aria-label="Về Learning Path"
+              aria-label={t('learningPath.starMapBackAria')}
             >
               <ArrowLeft className="h-4 w-4" />
             </Link>
             <div>
               <div className="inline-flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.16em] text-ds-accent/90">
                 <Sparkles className="h-3.5 w-3.5" />
-                Knowledge star map
+                {t('learningPath.starMapTitle')}
                 <Orbit className="h-3.5 w-3.5 opacity-80" />
               </div>
               <h1
                 className="mt-1 text-2xl font-bold tracking-tight text-white sm:text-3xl"
                 style={{ fontFamily: 'var(--font-heading), Space Grotesk, sans-serif' }}
               >
-                Bản đồ tri thức
+                {t('learningPath.starMapHeading')}
               </h1>
               <p className="mt-1 max-w-2xl text-sm text-ds-muted">
-                Chọn một điểm kiến thức để xem <strong className="text-ds-muted">cần học trước gì</strong> và{' '}
-                <strong className="text-ds-muted">mở khóa được gì</strong>.{' '}
-                {studioMode
-                  ? 'Bạn đang ở chế độ kỹ thuật để kiểm tra graph.'
-                  : 'Các điểm màu vàng là phần bạn đã đủ điều kiện để học tiếp.'}
+                {t('learningPath.starMapDescLead', {
+                  prereq: t('learningPath.starMapPrereqBold'),
+                  unlock: t('learningPath.starMapUnlockBold'),
+                })}{' '}
+                {studioMode ? t('learningPath.starMapStudioHint') : t('learningPath.starMapLearnerHint')}
               </p>
             </div>
           </div>
@@ -437,7 +443,7 @@ export default function KnowledgeStarMap() {
         <div className="mb-4 flex flex-col gap-3 rounded-2xl border border-ds-border bg-ds-surface/70 p-4 backdrop-blur-sm lg:flex-row lg:flex-wrap lg:items-end">
           {studioMode ? (
             <div className="flex flex-wrap gap-2">
-              <span className="w-full text-[10px] uppercase tracking-wide text-ds-subtle lg:w-auto">Góc nhìn</span>
+              <span className="w-full text-[10px] uppercase tracking-wide text-ds-subtle lg:w-auto">{t('learningPath.starMapViewLabel')}</span>
               <div className="flex rounded-lg border border-ds-border p-0.5">
                 <button
                   type="button"
@@ -458,7 +464,7 @@ export default function KnowledgeStarMap() {
                     viewMode === 'focus' ? 'bg-cyan-600/40 text-cyan-50' : 'text-ds-muted hover:text-white'
                   }`}
                 >
-                  Xem quanh concept này
+                  {t('learningPath.starMapViewAround')}
                 </button>
                 <button
                   type="button"
@@ -479,7 +485,7 @@ export default function KnowledgeStarMap() {
                     viewMode === 'full' ? 'bg-violet-600/40 text-violet-50' : 'text-ds-muted hover:text-white'
                   }`}
                 >
-                  Xem tất cả
+                  {t('learningPath.starMapViewAll')}
                 </button>
               </div>
             </div>
@@ -487,7 +493,7 @@ export default function KnowledgeStarMap() {
 
           {studioMode && viewMode === 'focus' ? (
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-[10px] uppercase tracking-wide text-ds-subtle">Mức mở rộng</span>
+              <span className="text-[10px] uppercase tracking-wide text-ds-subtle">{t('learningPath.starMapExpansion')}</span>
               {[1, 2, 3].map((h) => (
                 <button
                   key={h}
@@ -510,7 +516,7 @@ export default function KnowledgeStarMap() {
                       : 'border-ds-border text-ds-muted hover:border-white/20'
                   }`}
                 >
-                  {h} lớp
+                  {t('learningPath.starMapHops', { h })}
                 </button>
               ))}
             </div>
@@ -518,7 +524,7 @@ export default function KnowledgeStarMap() {
 
           {studioMode ? (
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-[10px] uppercase tracking-wide text-ds-subtle">Chủ đề</span>
+              <span className="text-[10px] uppercase tracking-wide text-ds-subtle">{t('learningPath.starMapDomain')}</span>
               <select
                 value={domain}
                 onChange={(e) => {
@@ -542,7 +548,7 @@ export default function KnowledgeStarMap() {
                 }}
                 className="rounded-lg border border-ds-border bg-black/50 px-3 py-2 text-sm text-slate-200 outline-none focus:ring-2 focus:ring-ds-accent/40"
               >
-                <option value="all">Tất cả ({concepts.length})</option>
+                <option value="all">{t('learningPath.starMapDomainAll', { count: concepts.length })}</option>
                 {domains.map((d) => (
                   <option key={d} value={d}>
                     {d}
@@ -552,7 +558,7 @@ export default function KnowledgeStarMap() {
             </div>
           ) : (
             <div className="flex items-center gap-2">
-              <p className="text-[11px] text-ds-text/90">Chế độ học tập: tập trung quanh concept hiện tại.</p>
+              <p className="text-[11px] text-ds-text/90">{t('learningPath.starMapLearnerMode')}</p>
               <button
                 type="button"
                 onClick={() =>
@@ -569,7 +575,7 @@ export default function KnowledgeStarMap() {
                 }
                 className="rounded-md border border-white/20 px-2.5 py-1 text-[11px] text-slate-200 hover:bg-white/10"
               >
-                {viewMode === 'focus' ? 'Xem toàn bộ (nâng cao)' : 'Quay lại chế độ tập trung'}
+                {viewMode === 'focus' ? t('learningPath.starMapViewFull') : t('learningPath.starMapViewFocus')}
               </button>
             </div>
           )}
@@ -593,11 +599,11 @@ export default function KnowledgeStarMap() {
                 }
                 className="rounded border-white/20 bg-ds-elevated/80"
               />
-              Chỉ hiện đường nối khi rê chuột (dễ nhìn hơn)
+              {t('learningPath.starMapSparseLinks')}
             </label>
           ) : studioMode ? (
             <p className="text-[11px] text-ds-subtle">
-              Trung tâm:{' '}
+              {t('learningPath.starMapFocusCenter')}{' '}
               <span className="font-medium text-cyan-200/90">
                 {focusConcept ? focusConcept.title || focusId : '—'}
               </span>
@@ -609,7 +615,7 @@ export default function KnowledgeStarMap() {
               <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-                placeholder="Tìm kiến thức theo tên hoặc mã..."
+                placeholder={t('learningPath.starMapSearchPlaceholder')}
               className="w-full rounded-lg border border-ds-border bg-black/50 py-2 pl-8 pr-3 text-sm text-slate-200 outline-none placeholder:text-ds-subtle focus:ring-2 focus:ring-ds-accent/35"
             />
             {search.trim() && searchHits.length > 0 ? (
@@ -637,26 +643,28 @@ export default function KnowledgeStarMap() {
             onClick={() => fgRef.current?.zoomToFit?.(400, 48)}
             className="rounded-lg border border-ds-border bg-white/5 px-3 py-2 text-xs text-slate-200 hover:bg-white/10"
           >
-            Đưa bản đồ vào khung nhìn
+            {t('learningPath.starMapFitView')}
           </button>
         </div>
 
         <div className="mb-2 flex flex-wrap gap-4 text-xs text-ds-subtle">
           <span>
-            Bạn đã khám phá <strong className="text-ds-muted">{encounteredCount}</strong>/
-            <strong className="text-ds-muted">{fullGraph.nodes.length}</strong> concept
+            {t('learningPath.starMapExplored', {
+              encountered: encounteredCount,
+              total: fullGraph.nodes.length,
+            })}
           </span>
           <span>
-            Gợi ý học tiếp ngay: <strong className="text-amber-300">{frontierCount}</strong> concept (màu vàng)
+            {t('learningPath.starMapFrontierHint', { count: frontierCount })}
           </span>
           {viewMode === 'full' ? (
             <span>
-              Đang xem tổng thể trong chủ đề hiện tại
+              {t('learningPath.starMapViewingDomain')}
             </span>
           ) : null}
-          {!loaded ? <span>Đang tải…</span> : null}
+          {!loaded ? <span>{t('learningPath.starMapLoading')}</span> : null}
           {viewMode === 'full' && sparseFullLinks ? (
-            <span className="text-amber-200/80">Di chuột lên một node để xem cạnh nối nó.</span>
+            <span className="text-amber-200/80">{t('learningPath.starMapHoverLinks')}</span>
           ) : null}
         </div>
 
@@ -667,9 +675,9 @@ export default function KnowledgeStarMap() {
           >
             {displayGraph.nodes.length === 0 ? (
               <div className="flex h-full flex-col items-center justify-center gap-2 px-4 text-center text-sm text-ds-subtle">
-              <p>Không có dữ liệu để hiển thị.</p>
+              <p>{t('learningPath.starMapNoData')}</p>
                 {viewMode === 'focus' ? (
-                  <p className="text-xs">Thử đổi nhóm kiến thức hoặc chọn điểm trung tâm khác.</p>
+                  <p className="text-xs">{t('learningPath.starMapTryOther')}</p>
                 ) : null}
               </div>
             ) : (
@@ -718,7 +726,7 @@ export default function KnowledgeStarMap() {
                     if (zoomScale >= 1) {
                       ctx.fillStyle = idx === 0 ? 'rgba(16,185,129,0.75)' : idx === 1 ? 'rgba(56,189,248,0.75)' : 'rgba(167,139,250,0.75)'
                       ctx.font = '11px Inter, sans-serif'
-                      ctx.fillText(DIFFICULTY_LABELS[idx as 0 | 1 | 2], centerX + 8, centerY - r + 14)
+                      ctx.fillText(difficultyLabels[idx as 0 | 1 | 2], centerX + 8, centerY - r + 14)
                     }
                   })
                   ctx.restore()
@@ -756,11 +764,11 @@ export default function KnowledgeStarMap() {
 
           <aside className="flex max-h-[min(72vh,720px)] min-h-[280px] flex-col rounded-2xl border border-ds-border bg-ds-surface/95 p-4 backdrop-blur-sm lg:min-h-[400px]">
             {!selectedConcept ? (
-              <p className="text-sm text-ds-subtle">Chọn một điểm để xem kiến thức cần học trước và kiến thức mở rộng.</p>
+              <p className="text-sm text-ds-subtle">{t('learningPath.starMapPickPoint')}</p>
             ) : (
               <>
                 <div className="border-b border-ds-border pb-3">
-                  <p className="text-[10px] uppercase tracking-wide text-ds-subtle">Điểm kiến thức</p>
+                  <p className="text-[10px] uppercase tracking-wide text-ds-subtle">{t('learningPath.starMapPointLabel')}</p>
                   <h2 className="mt-1 text-base font-semibold leading-snug text-white">
                     {selectedConcept.title || selectedConcept.id}
                   </h2>
@@ -772,17 +780,17 @@ export default function KnowledgeStarMap() {
                     </span>
                     {seen.has(selectedConcept.id) ? (
                       <span className="rounded border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-emerald-200/90">
-                        Đã học qua
+                        {t('learningPath.starMapSeen')}
                       </span>
                     ) : (
-                      <span className="rounded border border-ds-border px-2 py-0.5 text-ds-subtle">Chưa học</span>
+                      <span className="rounded border border-ds-border px-2 py-0.5 text-ds-subtle">{t('learningPath.starMapNotSeen')}</span>
                     )}
                     <span className="rounded border border-ds-border bg-white/5 px-2 py-0.5 text-ds-muted">
                       {selectedConcept.difficulty_level === 0
-                        ? 'Beginner'
+                        ? t('learningPath.depthBeginner')
                         : selectedConcept.difficulty_level === 2
-                          ? 'Researcher'
-                          : 'Explorer'}
+                          ? t('learningPath.depthResearcher')
+                          : t('learningPath.depthExplorer')}
                     </span>
                   </div>
                   {selectedConcept.short_description ? (
@@ -793,11 +801,11 @@ export default function KnowledgeStarMap() {
                 <div className="min-h-0 flex-1 space-y-4 overflow-y-auto pt-4">
                   <section>
                     <h3 className="text-[11px] font-medium uppercase tracking-wide text-cyan-200/90">
-                      Học trước ({prereqConcepts.length})
+                      {t('learningPath.starMapLearnBefore', { count: prereqConcepts.length })}
                     </h3>
-                    <p className="mt-1 text-[11px] text-ds-subtle">Những kiến thức nên học trước điểm hiện tại.</p>
+                    <p className="mt-1 text-[11px] text-ds-subtle">{t('learningPath.starMapPrereqHint')}</p>
                     {prereqConcepts.length === 0 ? (
-                      <p className="mt-2 text-xs text-ds-subtle">Không có kiến thức tiền đề trực tiếp.</p>
+                      <p className="mt-2 text-xs text-ds-subtle">{t('learningPath.starMapNoPrereq')}</p>
                     ) : (
                       <ul className="mt-2 space-y-1">
                         {prereqConcepts.map((c) => (
@@ -818,11 +826,11 @@ export default function KnowledgeStarMap() {
 
                   <section>
                     <h3 className="text-[11px] font-medium uppercase tracking-wide text-violet-200/90">
-                      Làm nền cho ({dependentConcepts.length})
+                      {t('learningPath.starMapFoundation', { count: dependentConcepts.length })}
                     </h3>
-                    <p className="mt-1 text-[11px] text-ds-subtle">Ưu tiên hiển thị concept bạn đã đủ điều kiện học trước.</p>
+                    <p className="mt-1 text-[11px] text-ds-subtle">{t('learningPath.starMapDependentsHint')}</p>
                     {dependentConcepts.length === 0 ? (
-                      <p className="mt-2 text-xs text-ds-subtle">Chưa có kiến thức phụ thuộc trực tiếp.</p>
+                      <p className="mt-2 text-xs text-ds-subtle">{t('learningPath.starMapNoDependents')}</p>
                     ) : (
                       <ul className="mt-2 space-y-1">
                         {visibleDependentConcepts.map((c) => {
@@ -838,7 +846,7 @@ export default function KnowledgeStarMap() {
                                 {c.title || c.id}{' '}
                                 {ready ? (
                                   <span className="ml-1 rounded border border-amber-400/35 bg-amber-500/15 px-1.5 py-0.5 text-[10px] text-amber-200">
-                                    Sẵn sàng học
+                                    {t('learningPath.starMapReady')}
                                   </span>
                                 ) : null}
                               </span>
@@ -855,7 +863,9 @@ export default function KnowledgeStarMap() {
                         onClick={() => setShowAllDependents((v) => !v)}
                         className="mt-2 text-[11px] text-violet-200/85 hover:text-violet-100"
                       >
-                        {showAllDependents ? 'Thu gọn danh sách' : `Xem thêm ${dependentConcepts.length - 8} concept`}
+                        {showAllDependents
+                          ? t('learningPath.starMapCollapseList')
+                          : t('learningPath.starMapShowMore', { count: dependentConcepts.length - 8 })}
                       </button>
                     ) : null}
                   </section>
@@ -866,7 +876,7 @@ export default function KnowledgeStarMap() {
                       onClick={() => jumpToConcept(selectedConcept)}
                       className="w-full rounded-lg border border-cyan-500/40 bg-cyan-600/25 py-2.5 text-xs font-medium text-ds-text hover:bg-cyan-600/35"
                     >
-                      Thu gọn quanh điểm này
+                      {t('learningPath.starMapFocusHere')}
                     </button>
                   ) : null}
                 </div>

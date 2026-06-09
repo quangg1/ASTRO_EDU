@@ -6,6 +6,7 @@ import {
   type ComposeLearningContext,
 } from '@/features/community/lib/composeContext'
 import { composeForumUrl, DEFAULT_COURSE_QUESTION_FORUM } from '@/features/community/lib/forumKinds'
+import { useT } from '@/i18n/public'
 
 type Props = {
   context: ComposeLearningContext
@@ -31,8 +32,13 @@ export function CommunityAskButton({
   children,
   variant = 'outline',
 }: Props) {
+  const { t } = useT()
   const href = composeForumUrl(forumSlug, composeContextToParams(context))
-  const label = children ?? (context.lessonTitle || context.learningLessonId ? 'Hỏi về bài này' : 'Hỏi cộng đồng')
+  const label =
+    children ??
+    (context.lessonTitle || context.learningLessonId
+      ? t('community.askThisLesson')
+      : t('community.askCommunity'))
 
   return (
     <Link href={href} className={`${variantClass[variant]} ${className}`}>

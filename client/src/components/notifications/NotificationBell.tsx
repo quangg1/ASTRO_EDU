@@ -15,8 +15,10 @@ import { useNotificationRealtime } from '@/features/notifications/hooks/useNotif
 import { PromoNotificationsSection } from '@/components/promotions/PromoNotificationsSection'
 import { fetchActivePromotions } from '@/features/promotions/api/promoApi'
 import { undismissedPromos } from '@/features/promotions/lib/promoDismiss'
+import { useT } from '@/i18n/public'
 
 export function NotificationBell() {
+  const { t } = useT()
   const { user } = useAuthStore()
   const [open, setOpen] = useState(false)
   const [unread, setUnread] = useState(0)
@@ -121,24 +123,24 @@ export function NotificationBell() {
         type="button"
         onClick={() => setOpen((v) => !v)}
         className="relative p-2 rounded-lg text-ds-muted hover:text-white hover:bg-white/5 transition-colors"
-        aria-label={unread > 0 ? `${unread} thông báo chưa đọc` : 'Thông báo'}
+        aria-label={unread > 0 ? t('notifications.unreadAria', { count: unread }) : t('notifications.bellAria')}
       >
         <Bell className="h-5 w-5" />
         {connected && (
           <span
             className="absolute top-1.5 left-1.5 h-1.5 w-1.5 rounded-full bg-emerald-400"
-            title="Realtime đang bật"
+            title={t('notifications.realtimeOn')}
             aria-hidden
           />
         )}
         {unread > 0 ? (
           <span className="absolute top-1 right-1 min-w-[16px] h-4 px-1 rounded-full bg-rose-500 text-[10px] font-bold text-white flex items-center justify-center">
-            {unread > 9 ? '9+' : unread}
+            {unread > 9 ? t('notifications.badgeOverflow') : unread}
           </span>
         ) : activePromoCount > 0 ? (
           <span
             className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-violet-400 ring-2 ring-[#070a10]"
-            title="Có ưu đãi đang diễn ra"
+            title={t('notifications.promoActive')}
             aria-hidden
           />
         ) : null}
@@ -148,9 +150,9 @@ export function NotificationBell() {
         <div className="absolute right-0 top-full mt-2 w-[min(100vw-2rem,360px)] rounded-xl border border-ds-border bg-ds-surface shadow-xl z-50 overflow-hidden">
           <div className="flex items-center justify-between px-3 py-2 border-b border-ds-border">
             <span className="text-xs font-semibold text-ds-text">
-              Thông báo
+              {t('notifications.title')}
               {connected ? (
-                <span className="ml-1.5 text-[10px] font-normal text-emerald-400">Live</span>
+                <span className="ml-1.5 text-[10px] font-normal text-emerald-400">{t('notifications.live')}</span>
               ) : null}
             </span>
             {unread > 0 && (
@@ -159,15 +161,15 @@ export function NotificationBell() {
                 onClick={() => void onReadAll()}
                 className="text-[11px] text-ds-accent hover:text-ds-text"
               >
-                Đánh dấu đã đọc
+                {t('notifications.markRead')}
               </button>
             )}
           </div>
           <div className="max-h-[320px] overflow-y-auto">
             <PromoNotificationsSection onNavigate={() => setOpen(false)} />
-            {loading && <p className="px-3 py-4 text-xs text-ds-muted">Đang tải…</p>}
+            {loading && <p className="px-3 py-4 text-xs text-ds-muted">{t('notifications.loading')}</p>}
             {!loading && items.length === 0 && (
-              <p className="px-3 py-6 text-xs text-ds-muted text-center">Chưa có thông báo khác</p>
+              <p className="px-3 py-6 text-xs text-ds-muted text-center">{t('notifications.emptyMore')}</p>
             )}
             {items.map((n) => {
               const inner = (
@@ -200,7 +202,7 @@ export function NotificationBell() {
             className="block text-center text-xs text-ds-accent py-2.5 border-t border-ds-border hover:bg-white/5"
             onClick={() => setOpen(false)}
           >
-            Xem tất cả
+            {t('notifications.viewAll')}
           </Link>
         </div>
       )}

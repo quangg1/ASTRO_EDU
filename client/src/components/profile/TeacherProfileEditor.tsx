@@ -8,8 +8,10 @@ import {
   type PublicTeacherProfile,
 } from '@/features/auth/public'
 import { resolveMediaUrl } from '@/lib/apiConfig'
+import { useT } from '@/i18n/public'
 
 export function TeacherProfileEditor() {
+  const { t } = useT()
   const [profile, setProfile] = useState<PublicTeacherProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -22,7 +24,7 @@ export function TeacherProfileEditor() {
     })
   }, [])
 
-  if (loading) return <p className="text-sm text-ds-subtle">Đang tải hồ sơ giáo viên…</p>
+  if (loading) return <p className="text-sm text-ds-subtle">{t('teacherProfile.loading')}</p>
   if (!profile) return null
 
   const save = async (patch: Partial<PublicTeacherProfile>) => {
@@ -32,19 +34,21 @@ export function TeacherProfileEditor() {
     setSaving(false)
     if (res.success && res.profile) {
       setProfile(res.profile)
-      setMessage('Đã lưu hồ sơ giáo viên.')
+      setMessage(t('teacherProfile.saved'))
     } else {
-      setMessage(res.error || 'Lưu thất bại')
+      setMessage(res.error || t('teacherProfile.saveFailed'))
     }
   }
 
   return (
     <div className="space-y-4 mt-6 pt-6 border-t border-ds-border">
-      <h3 className="text-sm font-semibold text-cyan-200 uppercase tracking-wide">Hồ sơ giáo viên (công khai trên khóa học)</h3>
+      <h3 className="text-sm font-semibold text-cyan-200 uppercase tracking-wide">
+        {t('teacherProfile.titlePublic')}
+      </h3>
       {message ? <p className="text-xs text-ds-muted">{message}</p> : null}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <label className="text-xs text-ds-muted block">
-          Họ tên hiển thị
+          {t('teacherProfile.displayName')}
           <input
             className="mt-1 w-full rounded border border-ds-border bg-ds-elevated/80 px-3 py-2 text-sm text-white"
             value={profile.fullName}
@@ -53,7 +57,7 @@ export function TeacherProfileEditor() {
           />
         </label>
         <label className="text-xs text-ds-muted block">
-          Tiêu đề ngắn
+          {t('teacherProfile.headlineShort')}
           <input
             className="mt-1 w-full rounded border border-ds-border bg-ds-elevated/80 px-3 py-2 text-sm text-white"
             value={profile.headline}
@@ -63,7 +67,7 @@ export function TeacherProfileEditor() {
         </label>
       </div>
       <label className="text-xs text-ds-muted block">
-        Tiểu sử (học viên đọc trên trang khóa)
+        {t('teacherProfile.bioCourse')}
         <textarea
           className="mt-1 w-full min-h-[100px] rounded border border-ds-border bg-ds-elevated/80 px-3 py-2 text-sm text-white"
           value={profile.bio}
@@ -72,7 +76,7 @@ export function TeacherProfileEditor() {
         />
       </label>
       <label className="text-xs text-ds-muted block">
-        Lĩnh vực (phân cách bằng dấu phẩy)
+        {t('teacherProfile.expertiseComma')}
         <input
           className="mt-1 w-full rounded border border-ds-border bg-ds-elevated/80 px-3 py-2 text-sm text-white"
           value={profile.expertise.join(', ')}
@@ -106,7 +110,7 @@ export function TeacherProfileEditor() {
           }}
         />
       </div>
-      {saving ? <p className="text-[10px] text-slate-600">Đang lưu…</p> : null}
+      {saving ? <p className="text-[10px] text-slate-600">{t('teacherProfile.saving')}</p> : null}
     </div>
   )
 }

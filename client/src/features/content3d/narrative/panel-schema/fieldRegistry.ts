@@ -54,10 +54,10 @@ export const NARRATIVE_FIELD_REGISTRY: Record<string, NarrativeFieldRegistryEntr
   timeMa: { path: 'timeMa', kind: 'number', defaultLabelVi: 'Tuổi đại diện (Ma, max)' },
   timeMaEnd: { path: 'timeMaEnd', kind: 'number', defaultLabelVi: 'Tuổi kết thúc (Ma, min)', hideWhenEmpty: true },
 
-  'environment.eon': { path: 'environment.eon', kind: 'text', defaultLabelVi: 'Eon', hideWhenEmpty: true },
-  'environment.era': { path: 'environment.era', kind: 'text', defaultLabelVi: 'Era', hideWhenEmpty: true },
-  'environment.period': { path: 'environment.period', kind: 'text', defaultLabelVi: 'Period', hideWhenEmpty: true },
-  'environment.epoch': { path: 'environment.epoch', kind: 'text', defaultLabelVi: 'Epoch', hideWhenEmpty: true },
+  'environment.eon': { path: 'environment.eon', kind: 'text', defaultLabelVi: 'Đại', hideWhenEmpty: true },
+  'environment.era': { path: 'environment.era', kind: 'text', defaultLabelVi: 'Kỷ', hideWhenEmpty: true },
+  'environment.period': { path: 'environment.period', kind: 'text', defaultLabelVi: 'Kỳ', hideWhenEmpty: true },
+  'environment.epoch': { path: 'environment.epoch', kind: 'text', defaultLabelVi: 'Tầng', hideWhenEmpty: true },
 
   'panel.descriptionVi': {
     path: 'panel.descriptionVi',

@@ -97,6 +97,19 @@ export function viewNadirLookAmount(view: SkyViewState): number {
   return 1 - viewLandscapeOpacity(view)
 }
 
+/**
+ * Độ đục landscape trên màn — khi ghim chòm, làm mờ thêm để lộ sao/đường nối dưới chân trời
+ * (Stellarium: nhìn xuyên mặt đất khi chọn thiên thể đã lặn).
+ */
+export function effectiveLandscapeOpacity(
+  view: SkyViewState,
+  constellationActive: boolean,
+): number {
+  const base = viewLandscapeOpacity(view)
+  if (!constellationActive) return base
+  return Math.min(base, 0.42)
+}
+
 /** Kéo dọc: dy > 0 (kéo xuống) → hạ tầm nhìn về chân trời / xuyên đất. */
 export function applyViewDrag(
   view: SkyViewState,

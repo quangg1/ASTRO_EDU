@@ -1,4 +1,7 @@
+'use client'
+
 import { cn } from '@/lib/cn'
+import { useT } from '@/i18n/public'
 
 export type LearnerTierId =
   | 'observer'
@@ -116,10 +119,11 @@ export function LearnerTierBadge({
   showTooltip = true,
   title,
 }: Props) {
+  const { t } = useT()
   const id = String(tierId || 'observer').toLowerCase()
   const meta = TIER_META[id] ?? TIER_META.observer
   const px = SIZE_PX[size]
-  const tip = title || `Hạng ${meta.label}`
+  const tip = title || t('tiers.rankTooltip', { label: meta.label })
 
   return (
     <span

@@ -1,10 +1,11 @@
 'use client'
 
 import { Clock, ThumbsUp, TrendingUp } from 'lucide-react'
+import { useT } from '@/i18n/public'
 
 type Sort = 'newest' | 'hot' | 'top'
 
-type Option = { value: Sort; label: string; icon: typeof Clock }
+type Option = { value: Sort; labelKey: string; icon: typeof Clock }
 
 type Props = {
   sort: Sort
@@ -13,22 +14,24 @@ type Props = {
 }
 
 export function PostSortBar({ sort, onSortChange, variant = 'discussion' }: Props) {
+  const { t } = useT()
+
   const options: Option[] =
     variant === 'news'
       ? [
-          { value: 'newest', label: 'Mới nhất', icon: Clock },
-          { value: 'hot', label: 'Đang được xem', icon: TrendingUp },
-          { value: 'top', label: 'Nhiều tương tác', icon: ThumbsUp },
+          { value: 'newest', labelKey: 'community.sortNewest', icon: Clock },
+          { value: 'hot', labelKey: 'community.sortHot', icon: TrendingUp },
+          { value: 'top', labelKey: 'community.sortEngagement', icon: ThumbsUp },
         ]
       : [
-          { value: 'newest', label: 'Mới nhất', icon: Clock },
-          { value: 'hot', label: 'Nổi bật', icon: TrendingUp },
-          { value: 'top', label: 'Top vote', icon: ThumbsUp },
+          { value: 'newest', labelKey: 'community.sortNewest', icon: Clock },
+          { value: 'hot', labelKey: 'community.sortFeatured', icon: TrendingUp },
+          { value: 'top', labelKey: 'community.sortTopVote', icon: ThumbsUp },
         ]
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <span className="text-xs uppercase tracking-wide text-ds-subtle">Sắp xếp:</span>
+      <span className="text-xs uppercase tracking-wide text-ds-subtle">{t('community.sortLabel')}</span>
       {options.map((option) => {
         const Icon = option.icon
         const active = sort === option.value
@@ -44,7 +47,7 @@ export function PostSortBar({ sort, onSortChange, variant = 'discussion' }: Prop
             }`}
           >
             <Icon className="h-3.5 w-3.5" aria-hidden />
-            {option.label}
+            {t(option.labelKey)}
           </button>
         )
       })}

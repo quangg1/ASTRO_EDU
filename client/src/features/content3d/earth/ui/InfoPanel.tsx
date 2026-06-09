@@ -11,6 +11,7 @@ import type {
   Lifeform,
   MajorEvent,
 } from '@/features/content3d/earth/lib/earthHistoryTypes'
+import { formatGeologicLabelVi } from '@/features/content3d/narrative/lib/geologicTimeVi'
 
 const EVENT_TYPE_LABELS: Record<string, { label: string; icon: string }> = {
   volcanic: { label: 'Núi lửa', icon: '🌋' },
@@ -168,9 +169,9 @@ function HeroCard({ stage, onClose }: { stage: EarthStage; onClose: () => void }
           </h2>
           <p className="text-xs text-ds-muted mt-0.5">
             {stage.timeDisplay}
-            {stage.eon && <span className="text-ds-subtle"> · {stage.eon}</span>}
-            {stage.era && <span className="text-ds-subtle"> · {stage.era}</span>}
-            {stage.period && <span className="text-ds-subtle"> · {stage.period}</span>}
+            {formatGeologicLabelVi(stage) ? (
+              <span className="text-ds-subtle"> · {formatGeologicLabelVi(stage)}</span>
+            ) : null}
           </p>
         </div>
       </div>

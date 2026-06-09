@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { BookOpen, Clock } from 'lucide-react'
 import { resolveMediaUrl } from '@/lib/apiConfig'
 import { courseLevelLabel, courseRequiresPayment, formatCatalogPrice } from './courseCatalogMeta'
+import { useT } from '@/i18n/public'
 
 export type CourseCatalogCardData = {
   slug: string
@@ -28,11 +29,10 @@ export function CourseCatalogCard({
 }: {
   course: CourseCatalogCardData
   href: string
-  /** Khi có — hiển thị tiến độ (trang Khóa học của tôi). */
   progress?: { percent: number; completed: number; total: number }
-  /** Nhãn ưu đãi (VD: Giảm 20%). */
   promoLabel?: string | null
 }) {
+  const { t } = useT()
   const thumbSrc = course.thumbnail ? resolveMediaUrl(course.thumbnail) : null
   const levelLabel = courseLevelLabel(course.level)
   const paid = courseRequiresPayment(course)
@@ -80,7 +80,7 @@ export function CourseCatalogCard({
             )}
             {paid && (
               <span className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-amber-500/90 text-amber-950">
-                Trả phí
+                {t('courses.catalogPaid')}
               </span>
             )}
           </div>
@@ -93,9 +93,9 @@ export function CourseCatalogCard({
             className="h-7 w-7 shrink-0 rounded-md bg-ds-accent-soft border border-ds-border flex items-center justify-center text-[10px] font-bold text-ds-accent"
             aria-hidden
           >
-            CL
+            {t('courses.catalogBrandShort')}
           </div>
-          <span className="text-xs text-ds-muted truncate">Cosmo Learn</span>
+          <span className="text-xs text-ds-muted truncate">{t('courses.catalogBrand')}</span>
         </div>
 
         <h2 className="font-semibold text-ds-text text-[15px] leading-snug line-clamp-2 group-hover:text-ds-accent transition-colors mb-1.5">
@@ -105,18 +105,18 @@ export function CourseCatalogCard({
         {course.description ? (
           <p className="text-xs text-ds-subtle line-clamp-2 mb-3 leading-relaxed">{course.description}</p>
         ) : (
-          <p className="text-xs text-ds-subtle mb-3">Khóa học thiên văn tương tác</p>
+          <p className="text-xs text-ds-subtle mb-3">{t('courses.catalogDefaultDesc')}</p>
         )}
 
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-ds-muted mb-3">
           <span className="inline-flex items-center gap-1">
             <BookOpen className="h-3 w-3 shrink-0" aria-hidden />
-            {lessons} bài
+            {t('courses.lessons', { count: lessons })}
           </span>
           {course.durationWeeks != null && course.durationWeeks > 0 && (
             <span className="inline-flex items-center gap-1">
               <Clock className="h-3 w-3 shrink-0" aria-hidden />
-              {course.durationWeeks} tuần
+              {t('courses.weeks', { count: course.durationWeeks })}
             </span>
           )}
         </div>
@@ -124,9 +124,7 @@ export function CourseCatalogCard({
         {progress ? (
           <div className="mt-auto pt-3 border-t border-ds-border">
             <div className="flex justify-between text-[11px] text-ds-muted mb-1.5">
-              <span>
-                {progress.completed}/{progress.total} bài
-              </span>
+              <span>{t('courses.lessonProgress', { completed: progress.completed, total: progress.total })}</span>
               <span className="tabular-nums text-ds-accent font-medium">{progress.percent}%</span>
             </div>
             <div className="h-1.5 rounded-full bg-white/10 overflow-hidden">
@@ -139,7 +137,7 @@ export function CourseCatalogCard({
         ) : (
           <div className="mt-auto pt-3 border-t border-ds-border flex items-center justify-between gap-2">
             <span className="text-[11px] font-medium text-ds-accent">{priceLabel}</span>
-            <span className="text-[10px] uppercase tracking-wide text-ds-subtle">Khóa học</span>
+            <span className="text-[10px] uppercase tracking-wide text-ds-subtle">{t('courses.catalogCourse')}</span>
           </div>
         )}
       </div>

@@ -20,6 +20,7 @@ import {
 import { useAuthStore } from '@/features/auth/public'
 import { suggestExploreTargetsForLesson } from '@/features/content3d/showcase/public'
 import { useSavedItems } from '@/features/saved/public'
+import { useT } from '@/i18n/public'
 
 type Props = {
   module: LearningModule
@@ -28,10 +29,10 @@ type Props = {
 
 const CYAN = 'var(--color-accent)'
 
-const DEPTH_STYLE: Record<DepthLevel, { label: string; labelVi: string; orbColor: string }> = {
-  beginner:   { label: 'Beginner',   labelVi: 'Cơ bản', orbColor: '#3ddc84' },
-  explorer:   { label: 'Explorer',   labelVi: 'Cơ chế', orbColor: '#3b82f6' },
-  researcher: { label: 'Researcher', labelVi: 'Sâu',    orbColor: '#ef4444' },
+const DEPTH_ORB: Record<DepthLevel, string> = {
+  beginner: '#3ddc84',
+  explorer: '#3b82f6',
+  researcher: '#ef4444',
 }
 
 // RGB tuples for CSS custom property (used inside rgba())
@@ -60,7 +61,17 @@ function CornerBrackets({ color, size = 10, thickness = 1, glow }: {
 }
 
 export default function NodeDepthPanel({ module, node }: Props) {
+  const { t } = useT()
   const userId = useAuthStore((s) => s.user?.id ?? null)
+  const depthStyle = useMemo(
+    () =>
+      ({
+        beginner: { label: t('learningPath.depthBeginner'), labelVi: t('learningPath.depthBasic'), orbColor: DEPTH_ORB.beginner },
+        explorer: { label: t('learningPath.depthExplorer'), labelVi: t('learningPath.depthMechanism'), orbColor: DEPTH_ORB.explorer },
+        researcher: { label: t('learningPath.depthResearcher'), labelVi: t('learningPath.depthDeep'), orbColor: DEPTH_ORB.researcher },
+      }) satisfies Record<DepthLevel, { label: string; labelVi: string; orbColor: string }>,
+    [t],
+  )
   const depths = useMemo(() => DEPTH_ORDER.filter((d) => (node.depths[d]?.length ?? 0) > 0), [node])
   const [active, setActive] = useState<DepthLevel>(depths[0] ?? 'beginner')
   const [completion, setCompletion] = useState<LessonCompletionMap>({})
@@ -117,17 +128,19 @@ export default function NodeDepthPanel({ module, node }: Props) {
             color: favoritesOnly ? '#fecdd3' : 'var(--color-text-muted)',
           }}
         >
-          {favoritesOnly ? `♥ Yêu thích (${savedItems.length})` : '♡ Chỉ yêu thích'}
+          {favoritesOnly
+            ? t('learningPath.depthFavoritesActive', { count: savedItems.length })
+            : t('learningPath.depthFavoritesOnly')}
         </button>
         {favoritesOnly && visibleLessons.length === 0 ? (
-          <span className="text-[11px] text-ds-subtle">Chưa lưu bài nào ở cấp độ này</span>
+          <span className="text-[11px] text-ds-subtle">{t('learningPath.depthNoFavorites')}</span>
         ) : null}
       </div>
 
       {/* ── Level tabs ── */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }} role="tablist">
         {depths.map((d) => {
-          const ds = DEPTH_STYLE[d]
+          const ds = depthStyle[d]
           const isOn = active === d
           const isHov = hoveredTab === d && !isOn
           const count = node.depths[d]?.length ?? 0
@@ -255,8 +268,17 @@ export default function NodeDepthPanel({ module, node }: Props) {
               fontFamily: "'Space Grotesk',sans-serif",
               fontSize: 13, color: 'var(--color-text-subtle)', lineHeight: 1.6,
             }}>
-              Chọn một bài để đọc nội dung chi tiết — mỗi dòng là một{' '}
-              <span style={{ color: CYAN, fontWeight: 500 }}>trang học riêng</span>.
+              {(() => {
+                const page = t('learningPath.depthLessonPage')
+                const [before, after] = t('learningPath.depthPickLesson', { page }).split(page)
+                return (
+                  <>
+                    {before}
+                    <span style={{ color: CYAN, fontWeight: 500 }}>{page}</span>
+                    {after}
+                  </>
+                )
+              })()}
             </p>
             <span style={{
               flexShrink: 0,
@@ -268,7 +290,7 @@ export default function NodeDepthPanel({ module, node }: Props) {
               fontSize: 9, letterSpacing: '0.18em', textTransform: 'uppercase',
               color: 'rgba(var(--lv-bleed-rgb),1)',
             }}>
-              Level · {DEPTH_STYLE[active].label}
+              {t('learningPath.depthLevel', { label: depthStyle[active].label })}
             </span>
           </div>
 
@@ -332,7 +354,7 @@ export default function NodeDepthPanel({ module, node }: Props) {
                         fontSize: 10, letterSpacing: '0.14em', textTransform: 'uppercase',
                         color: '#3a4a6a', flexShrink: 0, whiteSpace: 'nowrap',
                       }}>
-                        L · {lessonNum}
+                        {t('learningPath.depthLessonNum', { num: lessonNum })}
                       </span>
 
                       <span style={{ color: '#263042', fontSize: 10, flexShrink: 0 }}>·</span>
@@ -364,7 +386,7 @@ export default function NodeDepthPanel({ module, node }: Props) {
                     {exploreTargets.showcase || exploreTargets.history ? (
                       <div style={{ margin: '0 12px 12px', padding: '10px 12px', borderTop: '1px solid rgba(126,231,255,0.08)' }}>
                         <p style={{ margin: '0 0 8px', fontSize: 11, color: visitedScene ? '#6ee7b7' : '#fcd34d' }}>
-                          {visitedScene ? 'Đã khám phá 3D liên quan' : 'Khám phá 3D / Deep History liên quan bài này'}
+                          {visitedScene ? t('learningPath.depthExploredRelated') : t('learningPath.depthExploreRelated')}
                         </p>
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                           {exploreTargets.showcase && !visitedScene ? (
@@ -394,7 +416,7 @@ export default function NodeDepthPanel({ module, node }: Props) {
                                 textDecoration: 'none',
                               }}
                             >
-                              Showcase 3D
+                              {t('learningPath.depthShowcase')}
                             </Link>
                           ) : null}
                           {exploreTargets.history ? (
@@ -425,7 +447,7 @@ export default function NodeDepthPanel({ module, node }: Props) {
                                 textDecoration: 'none',
                               }}
                             >
-                              {lesson.sceneContext?.historyFocus?.labelVi?.trim() || 'Deep History'}
+                              {lesson.sceneContext?.historyFocus?.labelVi?.trim() || t('learningPath.depthDeepHistory')}
                             </Link>
                           ) : null}
                         </div>

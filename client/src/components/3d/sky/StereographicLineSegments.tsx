@@ -42,7 +42,7 @@ export function StereographicLineSegments({
       void main() {
         vec2 ndc = stereographicNdc(position);
         if (!stereographicVisible(ndc)) {
-          gl_Position = vec4(3.0, 3.0, 2.0, 1.0);
+          gl_Position = vec4(0.0, 0.0, -2.0, 1.0);
         } else {
           gl_Position = vec4(ndc, 0.0, 1.0);
         }

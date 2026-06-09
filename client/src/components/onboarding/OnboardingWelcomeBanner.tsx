@@ -46,7 +46,6 @@ export function OnboardingWelcomeBanner({ title, description, dismissKey = 'onbo
     </div>
   )
 }
-
 export function shouldShowOnboardingBanner(dismissKey: string): boolean {
   if (typeof window === 'undefined') return true
   try {
@@ -55,3 +54,4 @@ export function shouldShowOnboardingBanner(dismissKey: string): boolean {
     return true
   }
 }
+

@@ -3,6 +3,7 @@
 import { clsx } from 'clsx'
 import { FeaturedOrganisms } from '@/features/content3d/earth/ui/FeaturedOrganisms'
 import { usePlanetNarrativeStore } from '@/features/content3d/narrative/stores/planetNarrativeStore'
+import { formatGeologicLabelVi } from '@/features/content3d/narrative/lib/geologicTimeVi'
 import {
   CONFIDENCE_VI,
   DetailShell,
@@ -23,15 +24,13 @@ export function NarrativeBeatDetailLeft({ entityLabel }: { entityLabel: string }
 
   if (!showInfoPanel) return null
 
-  const geoLabel = [beat.environment.eon, beat.environment.era, beat.environment.period]
-    .filter(Boolean)
-    .join(' · ')
+  const geoLabel = formatGeologicLabelVi(beat.environment)
 
   return (
     <DetailShell accent={accent}>
       <div className="shrink-0 border-b border-ds-border px-4 py-3">
         <p className="text-[10px] uppercase tracking-[0.2em]" style={{ color: accent }}>
-          Deep History · Telemetry
+          Lịch sử sâu · Thông số
         </p>
         <div className="mt-2 flex items-start gap-3">
           <span className="text-3xl leading-none">{beat.icon}</span>

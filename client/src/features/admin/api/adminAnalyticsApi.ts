@@ -10,6 +10,7 @@
  * exception used in `adminUsersApi.ts`.
  */
 import { getApiPathBase } from '@/lib/apiConfig'
+import { apiClientHeaders } from '@/lib/apiClientHeaders'
 import { getToken } from '@/features/auth/api/authApi'
 
 const API_BASE = getApiPathBase()

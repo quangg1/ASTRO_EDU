@@ -1,14 +1,12 @@
 import { getToken } from '@/features/auth/public'
 import { getApiPathBase } from '@/lib/apiConfig'
+import { apiClientHeaders } from '@/lib/apiClientHeaders'
 import type { Comment, Post } from '@/features/community/api/communityApi'
 
 const BASE = getApiPathBase()
 
 function authHeaders(): HeadersInit {
-  const token = getToken()
-  const h: HeadersInit = { 'Content-Type': 'application/json' }
-  if (token) (h as Record<string, string>)['Authorization'] = `Bearer ${token}`
-  return h
+  return apiClientHeaders()
 }
 
 export type ReportReason = 'spam' | 'harassment' | 'off-topic' | 'misinformation' | 'copyright' | 'other'

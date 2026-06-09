@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { CheckCircle2, ChevronLeft, ChevronRight, Sparkles, XCircle } from 'lucide-react'
 import type { RecallQuizDeliveryQuestion, RecallQuizSubmitResult } from '@/features/learning-path/public'
+import { useT } from '@/i18n/public'
 
 type Props = {
   questions: RecallQuizDeliveryQuestion[]
@@ -28,6 +29,7 @@ export function LessonRecallQuiz({
   variant = 'card',
   onContinue,
 }: Props) {
+  const { t } = useT()
   const isOverlay = variant === 'overlay'
   const [step, setStep] = useState(0)
   const [answers, setAnswers] = useState<Record<string, number>>({})
@@ -66,10 +68,19 @@ export function LessonRecallQuiz({
           >
             <CheckCircle2 className="h-8 w-8 text-emerald-300" />
           </motion.div>
-          <h2 className="text-lg font-semibold text-ds-text">Đã nắm nội dung</h2>
+          <h2 className="text-lg font-semibold text-ds-text">{t('learningPath.recallMasteredTitle')}</h2>
           <p className="mt-2 max-w-md text-sm text-violet-100/90">
-            Bạn đã vượt kiểm tra nhanh. Trạng thái <strong className="text-ds-text">Đã nắm (mastery)</strong> đã được ghi nhận — tách
-            biệt với &quot;Đã đọc&quot;.
+            {(() => {
+              const mastery = t('learningPath.mastered')
+              const [before, after] = t('learningPath.recallMasteredBody', { mastery }).split(mastery)
+              return (
+                <>
+                  {before}
+                  <strong className="text-ds-text">{mastery}</strong>
+                  {after}
+                </>
+              )
+            })()}
           </p>
           {onContinue ? (
             <button
@@ -77,7 +88,7 @@ export function LessonRecallQuiz({
               onClick={onContinue}
               className="mt-6 rounded-2xl border border-violet-400/40 bg-gradient-to-r from-violet-600/90 to-fuchsia-600/70 px-8 py-3 text-sm font-semibold text-white shadow-[0_0_24px_rgba(139,92,246,0.25)] hover:from-violet-500 hover:to-fuchsia-500"
             >
-              Tiếp tục
+              {t('common.continue')}
             </button>
           ) : null}
         </motion.div>
@@ -105,7 +116,7 @@ export function LessonRecallQuiz({
       }
     } catch (e) {
       setPhase('idle')
-      setSubmitError(e instanceof Error ? e.message : 'Không nộp được bài kiểm tra')
+      setSubmitError(e instanceof Error ? e.message : t('learningPath.recallSubmitFailed'))
     }
   }
 
@@ -138,13 +149,13 @@ export function LessonRecallQuiz({
                 <Sparkles className="h-4 w-4 text-cyan-200" />
               </span>
               <div>
-                <h2 className="text-base font-semibold tracking-tight text-ds-text">Kiểm tra nhanh</h2>
-                <p className="text-[11px] text-ds-subtle">Studio · {total} câu · chấm trên máy chủ</p>
+                <h2 className="text-base font-semibold tracking-tight text-ds-text">{t('learningPath.recallTitle')}</h2>
+                <p className="text-[11px] text-ds-subtle">{t('learningPath.recallStudioMeta', { total })}</p>
               </div>
             </div>
           ) : (
             <p className="w-full text-center text-[11px] font-medium uppercase tracking-[0.14em] text-ds-accent">
-              {total} câu · chấm trên máy chủ
+              {t('learningPath.recallGradingServer', { total })}
             </p>
           )}
           <div className={`flex gap-1.5 ${isOverlay ? 'w-full justify-center' : ''}`}>
@@ -163,7 +174,7 @@ export function LessonRecallQuiz({
                   className={`h-2.5 w-2.5 rounded-full transition-all ${
                     active ? 'w-7 bg-ds-accent shadow-[0_0_10px_rgba(34,211,238,0.5)]' : filled ? 'bg-emerald-500/70' : 'bg-white/15 hover:bg-white/25'
                   }`}
-                  aria-label={`Câu ${i + 1}`}
+                  aria-label={t('learningPath.recallQuestionAria', { n: i + 1 })}
                 />
               )
             })}
@@ -174,13 +185,13 @@ export function LessonRecallQuiz({
       <div className={`relative flex-1 px-5 py-5 md:px-8 md:py-6 ${isOverlay ? 'min-h-[240px]' : 'min-h-[280px]'}`}>
         {phase === 'wrong' ? (
           <div className="mb-4 rounded-xl border border-rose-400/30 bg-rose-500/10 px-4 py-3 text-center text-xs text-rose-100">
-            <p className="font-medium">Chưa đúng hết — xem từng câu và giải thích, rồi làm lại. Trợ lý AI chỉ bật sau khi đóng bài kiểm tra.</p>
+            <p className="font-medium">{t('learningPath.recallWrongHint')}</p>
             <button
               type="button"
               onClick={retry}
               className="mt-2 rounded-lg border border-ds-border-strong bg-white/5 px-4 py-1.5 text-sm text-ds-text hover:bg-white/10"
             >
-              Làm lại từ đầu
+              {t('learningPath.recallRetry')}
             </button>
           </div>
         ) : null}
@@ -195,7 +206,7 @@ export function LessonRecallQuiz({
               className="max-w-xl mx-auto"
             >
               <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-ds-accent mb-2">
-                Câu {step + 1} / {total}
+                {t('learningPath.recallQuestionProgress', { current: step + 1, total })}
               </p>
               <h3 className="text-lg md:text-xl font-medium text-slate-100 leading-snug">{current.question}</h3>
               <div className="mt-6 grid gap-3">
@@ -257,7 +268,11 @@ export function LessonRecallQuiz({
                           >
                             <span className="mb-1 inline-flex items-center gap-1 font-semibold">
                               {isCorrectOption ? <CheckCircle2 className="h-3.5 w-3.5" /> : selected ? <XCircle className="h-3.5 w-3.5" /> : null}
-                              {isCorrectOption ? 'Đúng' : selected ? 'Chưa đúng' : 'Giải thích'}
+                              {isCorrectOption
+                                ? t('learningPath.recallCorrect')
+                                : selected
+                                  ? t('learningPath.recallIncorrect')
+                                  : t('learningPath.recallExplain')}
                             </span>
                             <span className="block">{row.explanation}</span>
                           </span>
@@ -285,7 +300,7 @@ export function LessonRecallQuiz({
           className="inline-flex items-center gap-1.5 rounded-xl border border-ds-border px-4 py-2 text-sm text-ds-muted hover:bg-white/5 disabled:opacity-30"
         >
           <ChevronLeft className="h-4 w-4" />
-          Trước
+          {t('learningPath.recallPrev')}
         </button>
         {step < total - 1 ? (
           <button
@@ -294,7 +309,7 @@ export function LessonRecallQuiz({
             onClick={() => setStep((s) => Math.min(total - 1, s + 1))}
             className="inline-flex items-center gap-1.5 rounded-xl border border-ds-accent-strong bg-gradient-to-r from-cyan-600/80 to-cyan-500/60 px-5 py-2 text-sm font-semibold text-white shadow-[0_0_20px_rgba(34,211,238,0.2)] hover:from-cyan-500 hover:to-cyan-400 disabled:cursor-not-allowed disabled:opacity-35"
           >
-            Tiếp
+            {t('learningPath.recallNext')}
             <ChevronRight className="h-4 w-4" />
           </button>
         ) : (
@@ -304,7 +319,7 @@ export function LessonRecallQuiz({
             onClick={() => void goCheck()}
             className="inline-flex items-center gap-2 rounded-xl border border-violet-400/40 bg-gradient-to-r from-violet-600/90 to-fuchsia-600/70 px-6 py-2 text-sm font-semibold text-white shadow-[0_0_24px_rgba(139,92,246,0.25)] hover:from-violet-500 hover:to-fuchsia-500 disabled:cursor-not-allowed disabled:opacity-35"
           >
-            {phase === 'checking' ? 'Đang chấm…' : 'Nộp bài kiểm tra'}
+            {phase === 'checking' ? t('learningPath.recallGrading') : t('learningPath.recallSubmit')}
           </button>
         )}
       </div>

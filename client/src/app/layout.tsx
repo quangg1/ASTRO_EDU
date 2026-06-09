@@ -13,6 +13,7 @@ import { RuntimePublicConfigScript } from '@/components/system/RuntimePublicConf
 import { LayoutChromeProvider } from '@/components/layout/LayoutChromeContext'
 import { ShowcaseCatalogProvider } from '@/components/showcase/ShowcaseCatalogProvider'
 import { ToastProvider } from '@/design-system'
+import { LocaleProvider } from '@/i18n/public'
 
 export const metadata: Metadata = {
   title: { default: 'Cosmo Learn – Học thiên văn tương tác 3D', template: '%s | Cosmo Learn' },
@@ -53,6 +54,7 @@ export default function RootLayout({
         </Suspense>
         <ChunkLoadRecovery />
         <AuthProvider>
+          <LocaleProvider>
           <ShowcaseCatalogProvider>
             <LayoutChromeProvider>
               <ToastProvider>
@@ -66,6 +68,7 @@ export default function RootLayout({
               </ToastProvider>
             </LayoutChromeProvider>
           </ShowcaseCatalogProvider>
+          </LocaleProvider>
         </AuthProvider>
       </body>
     </html>

@@ -20,6 +20,7 @@ export type ShowcaseSatellitePickerItem = {
 }
 
 import type { ShowcaseStoryViewModel } from '@/app/explore/hooks/useExploreShowcaseGamification'
+import { useT } from '@/i18n/public'
 
 export type ShowcaseGamificationStrip = {
   gemBalance: number
@@ -35,36 +36,52 @@ export type ShowcaseGamificationStrip = {
   onPlayStory?: (storyId: string) => void
 }
 
-const TAB_META: Record<
-  TabId,
-  { icon: typeof BookOpen; hint: (ctx: { blocks: number; concepts: number; lessons: number }) => string }
-> = {
-  overview: {
-    icon: BookOpen,
-    hint: ({ blocks, concepts }) =>
-      concepts > 0 ? `${concepts} khái niệm` : blocks > 0 ? `${blocks} mục` : 'Tổng quan',
-  },
-  physical: {
-    icon: Weight,
-    hint: ({ blocks }) => (blocks > 0 ? `${blocks} chỉ số` : 'Vật lý'),
-  },
-  sky: {
-    icon: Stars,
-    hint: ({ blocks, lessons }) =>
-      lessons > 0 ? `${lessons} bài học` : blocks > 0 ? `${blocks} mục` : 'Bầu trời',
-  },
+function tabHint(
+  t: (key: string, vars?: Record<string, string | number>) => string,
+  tab: TabId,
+  ctx: { blocks: number; concepts: number; lessons: number },
+): string {
+  if (tab === 'overview') {
+    if (ctx.concepts > 0) return `${ctx.concepts} ${t('explore.showcaseTabConcepts')}`
+    if (ctx.blocks > 0) return t('explore.showcaseHintItems', { count: ctx.blocks })
+    return t('explore.showcaseTabOverview')
+  }
+  if (tab === 'physical') {
+    if (ctx.blocks > 0) return `${ctx.blocks} ${t('explore.showcaseTabMetrics')}`
+    return t('explore.showcaseTabPhysics')
+  }
+  if (ctx.lessons > 0) return `${ctx.lessons} ${t('explore.showcaseTabLessons')}`
+  if (ctx.blocks > 0) return t('explore.showcaseHintItems', { count: ctx.blocks })
+  return t('explore.showcaseTabSky')
 }
 
-const GROUP_LABEL_VI: Record<string, string> = {
-  planets_moons: 'HÀNH TINH · VỆ TINH',
-  dwarf_asteroids: 'HÀNH TINH LÙN · TIỂU HÀNH TINH',
-  comets: 'SAO CHỔI',
-  spacecraft: 'TÀU VŨ TRỤ',
+const TAB_ICONS: Record<TabId, typeof BookOpen> = {
+  overview: BookOpen,
+  physical: Weight,
+  sky: Stars,
 }
 
-function formatGroupLabel(group: string | undefined): string {
-  if (!group) return 'THỰC THỂ SHOWCASE'
-  return GROUP_LABEL_VI[group] || group.replace(/_/g, ' · ').toUpperCase()
+function formatGroupLabel(
+  group: string | undefined,
+  t: (key: string, vars?: Record<string, string | number>) => string,
+): string {
+  if (!group) return t('explore.showcaseEntityLabel')
+  const map: Record<string, string> = {
+    planets_moons: t('explore.showcaseGroupPlanetsMoons'),
+    dwarf_asteroids: t('explore.showcaseGroupDwarfAsteroids'),
+    comets: t('explore.showcaseGroupCometsUpper'),
+    spacecraft: t('explore.showcaseGroupSpacecraftUpper'),
+  }
+  return map[group] || group.replace(/_/g, ' · ').toUpperCase()
+}
+
+function blockHasRenderableContent(block: ShowcasePanelBlockDTO): boolean {
+  return Boolean(
+    String(block.body || '').trim() ||
+      String(block.title || '').trim() ||
+      String(block.imageUrl || '').trim() ||
+      (Array.isArray(block.points) && block.points.length > 0),
+  )
 }
 
 function firstTextBlock(blocks: ShowcasePanelBlockDTO[] | undefined): { title?: string; body?: string } | null {
@@ -114,16 +131,17 @@ export function ShowcaseEntityPanel({
   /** Explore: chuyển sang La bàn chòm sao / hệ Mặt Trời. */
   crossViewSlot?: ReactNode
 }) {
+  const { t } = useT()
   const tabs = useMemo(() => {
     const next: Array<{ id: TabId; label: string }> = []
     const wanted = Array.isArray(panelConfig?.tabs) ? panelConfig?.tabs : null
     const include = (id: TabId) => !!wanted && wanted.includes(id)
     const lbl = panelConfig?.tabLabels || {}
-    if (include('overview')) next.push({ id: 'overview', label: String(lbl.overview || 'Tổng quan') })
-    if (include('physical')) next.push({ id: 'physical', label: String(lbl.physical || 'Vật lý') })
-    if (include('sky')) next.push({ id: 'sky', label: String(lbl.sky || 'Bầu trời') })
+    if (include('overview')) next.push({ id: 'overview', label: String(lbl.overview || t('explore.showcaseTabOverview')) })
+    if (include('physical')) next.push({ id: 'physical', label: String(lbl.physical || t('explore.showcaseTabPhysics')) })
+    if (include('sky')) next.push({ id: 'sky', label: String(lbl.sky || t('explore.showcaseTabSky')) })
     return next
-  }, [panelConfig?.tabs, panelConfig?.tabLabels])
+  }, [panelConfig?.tabs, panelConfig?.tabLabels, t])
 
   const [activeTab, setActiveTab] = useState<TabId>('overview')
   const [panelCollapsed, setPanelCollapsed] = useState(false)
@@ -149,8 +167,8 @@ export function ShowcaseEntityPanel({
         data-explore-tour="explore-panel-expand"
         onClick={() => setPanelCollapsed(false)}
         className="fixed left-4 top-24 z-[24] flex h-10 w-10 items-center justify-center rounded-lg border border-white/[0.12] bg-[rgba(8,10,16,0.88)] text-white/70 shadow-[0_8px_24px_rgba(0,0,0,0.45)] backdrop-blur-md transition hover:border-white/25 hover:bg-white/[0.08] hover:text-white"
-        aria-label="Mở panel thông tin"
-        title="Mở panel"
+        aria-label={t('explore.showcaseOpenPanel')}
+        title={t('explore.showcaseOpenPanelTitle')}
       >
         <ChevronsRight className="h-5 w-5" strokeWidth={1.75} />
       </button>
@@ -158,12 +176,18 @@ export function ShowcaseEntityPanel({
   }
 
   const badge = String(panelConfig?.stateBadge || '').trim()
-  const overviewLead = firstTextBlock(panelConfig?.overviewBlocks)
+  const overviewBlocks = panelConfig?.overviewBlocks || []
+  const hasOverviewBlocks = overviewBlocks.some(blockHasRenderableContent)
+  const overviewLead = firstTextBlock(overviewBlocks)
   const subtitle = badge || museumLabelVi || overviewLead?.title || ''
-  const description =
-    item?.museumBlurbVi?.trim() ||
-    overviewLead?.body ||
-    (safeTab === 'overview' ? '' : '')
+  const museumBlurb = item?.museumBlurbVi?.trim() || ''
+  const leadBody = overviewLead?.body?.trim() || ''
+  /** Đoạn lead — không lặp body của overviewBlocks (CMS đã render qua PanelBlock). */
+  const description = hasOverviewBlocks
+    ? museumBlurb && museumBlurb !== leadBody
+      ? museumBlurb
+      : ''
+    : museumBlurb || leadBody
 
   const isEarth = item ? entityHasFossilsTab(item.id) : false
   const showDeepHistory = Boolean(hasDeepHistory && onOpenDeepHistory && item)
@@ -177,11 +201,11 @@ export function ShowcaseEntityPanel({
         <div className="flex items-center gap-2">
           <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-ds-accent shadow-[0_0_10px_var(--color-accent)]" />
           <p className="truncate text-[10px] font-medium uppercase tracking-[0.22em] text-ds-accent">
-            {formatGroupLabel(item?.group)}
+            {formatGroupLabel(item?.group, t)}
           </p>
         </div>
         <h2 className="mt-2 font-[family-name:var(--font-heading)] text-[2rem] font-bold uppercase leading-[0.95] tracking-tight text-white">
-          {item?.displayName || 'Chưa chọn'}
+          {item?.displayName || t('explore.showcaseNoneSelected')}
         </h2>
         {subtitle ? (
           <p className="mt-1.5 line-clamp-2 text-sm text-white/50">{subtitle}</p>
@@ -193,7 +217,7 @@ export function ShowcaseEntityPanel({
           <div className="mb-1.5 flex items-center gap-2">
             <Orbit className="h-3.5 w-3.5 text-ds-accent" strokeWidth={1.75} />
             <p className="text-[9px] font-medium uppercase tracking-[0.18em] text-white/45">
-              {hostPlanetName} · vệ tinh
+              {t('explore.showcaseSatellitesOf', { planet: hostPlanetName })}
             </p>
           </div>
           <div className="flex max-h-[4.25rem] flex-wrap gap-1 overflow-y-auto pr-0.5">
@@ -229,8 +253,8 @@ export function ShowcaseEntityPanel({
               type="button"
               onClick={() => setPanelCollapsed(true)}
               className="flex h-8 w-8 items-center justify-center rounded-md border border-white/[0.1] text-white/50 transition hover:border-white/20 hover:bg-white/[0.06] hover:text-white/85"
-              aria-label="Thu gọn panel"
-              title="Thu panel"
+              aria-label={t('explore.showcaseCollapse')}
+              title={t('explore.showcaseCollapseTitle')}
             >
               <ChevronsLeft className="h-4 w-4" strokeWidth={1.75} />
             </button>
@@ -243,9 +267,8 @@ export function ShowcaseEntityPanel({
           >
             {tabs.map((tab) => {
               const active = tab.id === safeTab
-              const meta = TAB_META[tab.id]
-              const Icon = meta.icon
-              const hint = meta.hint({
+              const Icon = TAB_ICONS[tab.id]
+              const hint = tabHint(t, tab.id, {
                 blocks: tabCounts[tab.id],
                 concepts: conceptChips.length,
                 lessons: learningLinks.length,
@@ -292,8 +315,8 @@ export function ShowcaseEntityPanel({
               type="button"
               onClick={() => setPanelCollapsed(true)}
               className="flex h-8 w-8 items-center justify-center rounded-md border border-white/[0.1] text-white/50 transition hover:border-white/20 hover:bg-white/[0.06] hover:text-white/85"
-              aria-label="Thu gọn panel"
-              title="Thu panel"
+              aria-label={t('explore.showcaseCollapse')}
+              title={t('explore.showcaseCollapseTitle')}
             >
               <ChevronsLeft className="h-4 w-4" strokeWidth={1.75} />
             </button>
@@ -360,9 +383,7 @@ export function ShowcaseEntityPanel({
         !(panelConfig?.physicalBlocks || []).length &&
         !(panelConfig?.skyBlocks || []).length &&
         !description ? (
-          <p className="text-[12px] text-white/45">
-            Chưa có nội dung panel. Thêm trong Studio → Panel content.
-          </p>
+          <p className="text-[12px] text-white/45">{t('explore.showcaseEmptyPanel')}</p>
         ) : null}
       </section>
 
@@ -371,7 +392,7 @@ export function ShowcaseEntityPanel({
           <div className="flex items-center justify-between text-[11px] text-white/45">
             <span className="inline-flex items-center gap-1.5">
               <Sparkles className="h-3 w-3 text-ds-accent" strokeWidth={1.75} />
-              Gem của bạn
+              {t('explore.showcaseYourGems')}
             </span>
             <span className="tabular-nums font-semibold text-ds-accent">{gamification.gemBalance}</span>
           </div>
@@ -384,14 +405,14 @@ export function ShowcaseEntityPanel({
               className="flex w-full items-center justify-center gap-2 rounded-xl border border-amber-400/35 bg-amber-950/30 px-3 py-2.5 text-[10px] font-bold uppercase tracking-[0.14em] text-amber-100 transition hover:bg-amber-900/35 disabled:opacity-50"
             >
               <Orbit className="h-3.5 w-3.5" strokeWidth={1.75} />
-              Mở quỹ đạo · {gamification.orbitCost ?? 55} gem
+              {t('explore.showcaseUnlockOrbit', { cost: gamification.orbitCost ?? 55 })}
             </button>
           ) : null}
 
           {gamification.planetStories && gamification.planetStories.length > 0 ? (
             <div className="space-y-2">
               <p className="text-[9px] font-medium uppercase tracking-[0.16em] text-white/40">
-                Story tour
+                {t('explore.showcaseStoryTour')}
               </p>
               {gamification.planetStories.map((story) => (
                 <div
@@ -408,7 +429,7 @@ export function ShowcaseEntityPanel({
                       className="mt-2 inline-flex items-center gap-1.5 rounded-lg border border-ds-accent-strong bg-ds-accent-soft px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-ds-accent transition hover:brightness-110 disabled:opacity-40"
                     >
                       <BookOpen className="h-3 w-3" strokeWidth={1.75} />
-                      {story.hasWaypoints ? 'Phát tour' : 'Sắp có'}
+                      {story.hasWaypoints ? t('explore.playTour') : t('explore.comingSoon')}
                     </button>
                   ) : (
                     <button
@@ -420,7 +441,7 @@ export function ShowcaseEntityPanel({
                       className="mt-2 inline-flex items-center gap-1.5 rounded-lg border border-white/15 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-white/75 transition hover:bg-white/[0.06] disabled:opacity-40"
                     >
                       <Sparkles className="h-3 w-3 text-ds-accent" strokeWidth={1.75} />
-                      Mở story · {story.storyCost} gem
+                      {t('explore.showcaseUnlockStory', { cost: story.storyCost })}
                     </button>
                   )}
                 </div>
@@ -439,11 +460,11 @@ export function ShowcaseEntityPanel({
             className="flex w-full items-center justify-center gap-2 rounded-xl bg-ds-accent px-4 py-3 text-[11px] font-bold uppercase tracking-[0.16em] text-ds-accent-fg shadow-[0_8px_28px_color-mix(in_srgb,var(--color-accent)_35%,transparent)] transition hover:brightness-110 active:scale-[0.99]"
           >
             <History className="h-4 w-4" strokeWidth={2} />
-            Lịch sử sâu
+            {t('explore.showcaseDeepHistory')}
           </button>
           {isEarth ? (
             <p className="mt-2 text-center text-[10px] leading-snug text-white/40">
-              Hóa thạch theo từng thời kỳ — mở cùng timeline, không tách riêng.
+              {t('explore.showcaseEarthFossilsHint')}
             </p>
           ) : null}
         </div>
@@ -491,12 +512,12 @@ function PanelBlock({ block }: { block: ShowcasePanelBlockDTO }) {
     return (
       <div className={`${baseClass} ${textAlignClass}`} style={style}>
         {block.title ? <p className="mb-2 text-[10px] uppercase tracking-wider text-white/45">{block.title}</p> : null}
+        {block.body ? <p className="mb-2 text-[12px] leading-relaxed text-white/60">{block.body}</p> : null}
         <img
           src={block.imageUrl}
           alt={block.title || 'panel image'}
-          className="h-32 w-full rounded-lg border border-white/[0.08] object-cover"
+          className="mx-auto w-full max-h-[min(320px,45vh)] rounded-lg border border-white/[0.08] bg-black/25 object-contain"
         />
-        {block.body ? <p className="mt-2 text-[12px] leading-relaxed text-white/60">{block.body}</p> : null}
       </div>
     )
   }

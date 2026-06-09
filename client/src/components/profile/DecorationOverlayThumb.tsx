@@ -1,6 +1,7 @@
 'use client'
 
 import { resolveMediaUrl } from '@/lib/apiConfig'
+import { useT } from '@/i18n/public'
 
 type Props = {
   overlayUrl: string
@@ -20,6 +21,7 @@ export function DecorationOverlayThumb({
   onMouseEnter,
   className = '',
 }: Props) {
+  const { t } = useT()
   const src = resolveMediaUrl(overlayUrl)
   return (
     <button
@@ -42,7 +44,10 @@ export function DecorationOverlayThumb({
         )}
       </div>
       {equipped ? (
-        <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-emerald-400 ring-2 ring-[#12101a]" title="Đang đeo" />
+        <span
+          className="absolute top-1 right-1 w-2 h-2 rounded-full bg-emerald-400 ring-2 ring-[#12101a]"
+          title={t('decorations.equipped')}
+        />
       ) : null}
     </button>
   )

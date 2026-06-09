@@ -1,6 +1,7 @@
 'use client'
 
 import { resolveMediaUrl } from '@/lib/apiConfig'
+import { useT } from '@/i18n/public'
 
 type Props = {
   nameVi: string
@@ -21,6 +22,7 @@ export function DecorationCategoryBanner({
   variant = 'lg',
   className = '',
 }: Props) {
+  const { t } = useT()
   const src = bannerUrl
     ? bannerUrl.startsWith('blob:')
       ? bannerUrl
@@ -68,9 +70,7 @@ export function DecorationCategoryBanner({
             {subtitleVi}
           </p>
         ) : null}
-        {!src ? (
-          <p className="text-[11px] text-ds-subtle mt-2">Chưa có ảnh banner nhóm — quản trị có thể tải lên.</p>
-        ) : null}
+        {!src ? <p className="text-[11px] text-ds-subtle mt-2">{t('decorations.noBannerAdmin')}</p> : null}
       </div>
     </div>
   )

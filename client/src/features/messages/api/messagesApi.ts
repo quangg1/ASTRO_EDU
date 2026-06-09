@@ -1,4 +1,5 @@
 import { getApiPathBase } from '@/lib/apiConfig'
+import { apiClientHeaders } from '@/lib/apiClientHeaders'
 import { getToken } from '@/features/auth/public'
 import type { LearnerTierPublic } from '@/features/rewards/api/learnerTiersApi'
 

@@ -2,6 +2,7 @@
  * Seed Deep History mẫu theo entityId — chỉ dùng Studio «Nhập legacy» khi chưa có DB.
  */
 import { narrativeVisualForBeatId } from '@/features/content3d/narrative/lib/defaultVisual'
+import { MARS_BEAT_GEO_VI } from '@/features/content3d/narrative/lib/geologicTimeVi'
 import type {
   NarrativeBeat,
   NarrativeBeatEnvironment,
@@ -144,7 +145,7 @@ export const LEGACY_BEATS_PLANET_MARS: LegacySeedBeat[] = [
     environmentNoteVi: 'Bức xạ mặt trời chưa giảm như sau này; từ quyển yếu nên bảo vệ bề mặc kém hơn Trái Đất.',
     majorEvents: [
       {
-        title: 'Bombardment sớm',
+        title: 'Bắn phá thiên thạch sớm',
         summary: 'Nhiều hố va chạm khổng lồ được giữ lại trên bề mặc cổ — như “album ảnh” của thời kỳ hỗn loạn.',
         tone: 'highlight',
       },
@@ -152,8 +153,8 @@ export const LEGACY_BEATS_PLANET_MARS: LegacySeedBeat[] = [
   },
   {
     id: 2,
-    name: 'Noachian · thời cổ “ướt hơn”?',
-    ageLabelVi: 'Khoảng 4,1–3,7 tỷ năm trước · kỷ địa chất Noachian (sớm)',
+    name: 'Kỷ Noachian — thời cổ ẩm hơn?',
+    ageLabelVi: 'Khoảng 4,1–3,7 tỷ năm trước · kỷ Noachian (sớm)',
     icon: '💧',
     accentColor: '#4a9eff',
     confidence: 'consensus',
@@ -182,7 +183,7 @@ export const LEGACY_BEATS_PLANET_MARS: LegacySeedBeat[] = [
   },
   {
     id: 3,
-    name: 'Noachian muộn · hồ và lớp bùn',
+    name: 'Kỷ Noachian muộn — hồ và lớp bùn',
     ageLabelVi: 'Khoảng 3,7–3,5 tỷ năm trước',
     icon: '🪨',
     accentColor: '#b45309',
@@ -205,7 +206,7 @@ export const LEGACY_BEATS_PLANET_MARS: LegacySeedBeat[] = [
   },
   {
     id: 4,
-    name: 'Hesperian · núi lửa và dòng dung nham',
+    name: 'Kỷ Hesperian — núi lửa và dung nham',
     ageLabelVi: 'Khoảng 3,7–3,0 tỷ năm trước',
     icon: '🌋',
     accentColor: '#dc2626',
@@ -235,8 +236,8 @@ export const LEGACY_BEATS_PLANET_MARS: LegacySeedBeat[] = [
   },
   {
     id: 5,
-    name: 'Hesperian · lũ và kênh đổ ra',
-    ageLabelVi: 'Cùng Hesperian · một số “sự kiện lũ” nổi bật',
+    name: 'Kỷ Hesperian — lũ và kênh dòng chảy',
+    ageLabelVi: 'Cùng kỷ Hesperian · một số sự kiện lũ nổi bật',
     icon: '🌊',
     accentColor: '#0ea5e9',
     confidence: 'consensus',
@@ -265,7 +266,7 @@ export const LEGACY_BEATS_PLANET_MARS: LegacySeedBeat[] = [
   },
   {
     id: 6,
-    name: 'Amazonian · sa mạc siêu khô',
+    name: 'Kỷ Amazonian — sa mạc siêu khô',
     ageLabelVi: 'Khoảng 3 tỷ năm trước đến nay',
     icon: '🏜️',
     accentColor: '#c2410c',
@@ -336,15 +337,15 @@ export const LEGACY_BEATS_PLANET_MARS: LegacySeedBeat[] = [
     environmentNoteVi: 'Kỷ nguyên dữ liệu mở (PDS) giúp cả học sinh cũng có thể tải và xem một phần hình và phổ.',
     majorEvents: [
       {
-        title: 'MARCI, HiRISE, CRISM…',
-        summary: 'Các camera và phổ kế trên MRO và các tàu khác là “đôi mắt hiện đại” của bản đồ SIM 3292.',
+        title: 'Vệ tinh MRO và các cảm biến quỹ đạo',
+        summary: 'Camera MARCI, HiRISE, CRISM trên MRO và các tàu khác là “đôi mắt hiện đại” của bản đồ SIM 3292.',
         tone: 'info',
       },
     ],
   },
   {
     id: 9,
-    name: 'Curiosity · miệng núi lửa Gale',
+    name: 'Curiosity tại miệng Gale',
     ageLabelVi: '2012 đến nay · rover trên bề mặt',
     icon: '🤖',
     accentColor: '#38bdf8',
@@ -374,7 +375,7 @@ export const LEGACY_BEATS_PLANET_MARS: LegacySeedBeat[] = [
   },
   {
     id: 10,
-    name: 'Perseverance · Jezero và tương lai MSR',
+    name: 'Perseverance tại Jezero',
     ageLabelVi: '2021 đến nay · săn vi ký sinh và mẫu đá',
     icon: '🛸',
     accentColor: '#10b981',
@@ -408,7 +409,7 @@ export const LEGACY_BEATS_PLANET_MARS: LegacySeedBeat[] = [
 export const LEGACY_SITES_PLANET_MARS: LegacySeedSite[] = [
   {
     id: 'olympus',
-    nameVi: 'Olympus Mons',
+    nameVi: 'Núi lửa Olympus Mons',
     nameEn: 'Olympus Mons',
     kind: 'volcano',
     lat: 18.65,
@@ -420,7 +421,7 @@ export const LEGACY_SITES_PLANET_MARS: LegacySeedSite[] = [
   },
   {
     id: 'valles',
-    nameVi: 'Valles Marineris',
+    nameVi: 'Hẻm núi Marineris',
     nameEn: 'Valles Marineris',
     kind: 'canyon',
     lat: -14,
@@ -597,6 +598,7 @@ function seedBeatToNarrative(
     LEGACY_VISUALS_PLANET_MARS[stage.id] ??
     narrativeVisualForBeatId(stage.id)
 
+  const marsGeo = MARS_BEAT_GEO_VI[stage.id]
   const env: NarrativeBeatEnvironment = {
     confidence: stage.confidence,
     liquidWater: stage.liquidWater,
@@ -608,6 +610,9 @@ function seedBeatToNarrative(
     surfacePressureHighPa: stage.surfacePressureHighPa,
     surfacePressureBasis: stage.surfacePressureBasis,
     dustActivity: stage.dustActivity,
+    eon: marsGeo?.eon,
+    era: marsGeo?.era ?? null,
+    period: marsGeo?.period ?? null,
   }
 
   const panel: NarrativeBeatPanel = {

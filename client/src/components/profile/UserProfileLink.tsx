@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { AvatarWithDecoration } from '@/components/profile/AvatarWithDecoration'
 import { LearnerTierBadge } from '@/components/profile/LearnerTierBadge'
 import { cn } from '@/lib/cn'
+import { useT } from '@/i18n/public'
 
 type Size = 'sm' | 'md'
 
@@ -48,6 +49,7 @@ export function UserProfileLink({
   nameClassName = '',
   stopPropagation = false,
 }: Props) {
+  const { t } = useT()
   const id = String(userId || '').trim()
   if (!id) {
     return (
@@ -90,7 +92,7 @@ export function UserProfileLink({
         <LearnerTierBadge
           tierId={tierId}
           size="xs"
-          title={learnerTier?.nameVi ? `Hạng ${learnerTier.nameVi}` : undefined}
+          title={learnerTier?.nameVi ? t('tiers.profileTooltip', { name: learnerTier.nameVi }) : undefined}
         />
       )}
     </Link>

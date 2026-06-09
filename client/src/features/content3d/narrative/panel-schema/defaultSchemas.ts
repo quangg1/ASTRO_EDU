@@ -34,10 +34,10 @@ export const EARTH_PANEL_SCHEMA: NarrativePanelSchema = {
       titleVi: 'Phân loại địa chất (Earth)',
       placement: 'identity',
       fields: [
-        slot('environment.eon', 'Eon', { showInPreview: 'subtitle' }),
-        slot('environment.era', 'Era'),
-        slot('environment.period', 'Period'),
-        slot('environment.epoch', 'Epoch'),
+        slot('environment.eon', 'Đại', { showInPreview: 'subtitle' }),
+        slot('environment.era', 'Kỷ'),
+        slot('environment.period', 'Kỳ'),
+        slot('environment.epoch', 'Tầng'),
       ],
     },
     {
@@ -87,7 +87,7 @@ export const EARTH_PANEL_SCHEMA: NarrativePanelSchema = {
 /** Hành tinh đá — áp suất / nước / bụi (không dùng Eon/Era Earth). */
 export const PLANETARY_PANEL_SCHEMA: NarrativePanelSchema = {
   version: 1,
-  timelineTitleVi: 'Deep History',
+  timelineTitleVi: 'Dòng thời gian',
   addBeatLabelVi: 'Thời kỳ',
   previewHeroSubtitlePath: 'ageLabelVi',
   sections: [
@@ -115,6 +115,16 @@ export const PLANETARY_PANEL_SCHEMA: NarrativePanelSchema = {
         slot('panel.environmentNoteVi', 'Môi trường bề mặt', { rows: 2 }),
         slot('panel.pressureCitationVi', 'Nguồn & trích dẫn áp suất', { rows: 3 }),
         slot('panel.surfaceTempNoteVi', 'Ghi chú nhiệt độ', { rows: 2 }),
+      ],
+    },
+    {
+      id: 'geology',
+      titleVi: 'Phân vị địa chất (Sao Hỏa)',
+      placement: 'identity',
+      fields: [
+        slot('environment.eon', 'Hành tinh / đại', { showInPreview: 'subtitle' }),
+        slot('environment.era', 'Kỷ / thời đại'),
+        slot('environment.period', 'Kỳ / giai đoạn'),
       ],
     },
     {

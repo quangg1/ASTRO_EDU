@@ -3,10 +3,19 @@
 import { motion } from 'framer-motion'
 import type { LearningModule } from '@/data/learningPathCurriculum'
 import { SpaceMissionCard } from '@/components/space-premium'
+import { useT } from '@/i18n/public'
 
-const BADGES = ['Beginner', 'Explorer', 'Researcher', 'Beginner', 'Explorer', 'Advanced']
+const BADGE_KEYS = [
+  'landing.lpBadgeBeginner',
+  'landing.lpBadgeExplorer',
+  'landing.lpBadgeResearcher',
+  'landing.lpBadgeBeginner',
+  'landing.lpBadgeExplorer',
+  'landing.lpBadgeAdvanced',
+] as const
 
 export function SpaceLpPreviewSection({ modules }: { modules: LearningModule[] }) {
+  const { t } = useT()
   const slice = modules.slice(0, 6)
 
   return (
@@ -14,13 +23,13 @@ export function SpaceLpPreviewSection({ modules }: { modules: LearningModule[] }
       <div className="container mx-auto px-4 sm:px-6 max-w-[1440px]">
         <header className="mb-12 md:mb-16 flex flex-col md:flex-row md:items-end md:justify-between gap-6">
           <div>
-            <p className="sp-display-thin text-[11px] text-white/40 mb-3">Lộ trình</p>
+            <p className="sp-display-thin text-[11px] text-white/40 mb-3">{t('landing.lpPreviewPath')}</p>
             <h2 className="sp-title-massive text-3xl sm:text-4xl md:text-5xl text-white uppercase">
-              Chọn module
+              {t('landing.lpPreviewChoose')}
             </h2>
           </div>
           <p className="max-w-sm text-sm text-white/40 font-light leading-relaxed border-l border-ds-border pl-4">
-            Chọn chương trình phù hợp — mỗi module là một hành trình qua nhiều chủ đề và bài học.
+            {t('landing.lpPreviewDescAlt')}
           </p>
         </header>
 
@@ -44,10 +53,10 @@ export function SpaceLpPreviewSection({ modules }: { modules: LearningModule[] }
             >
               <SpaceMissionCard
                 title={mod.titleVi}
-                metaPrimary={`${mod.nodes.length} chủ đề`}
-                metaSecondary={`Module ${mod.order}`}
-                badge={BADGES[i % BADGES.length]}
-                progressLabel="Vào module"
+                metaPrimary={t('landing.lpPreviewTopics', { count: mod.nodes.length })}
+                metaSecondary={t('landing.lpModuleOrder', { order: mod.order })}
+                badge={t(BADGE_KEYS[i % BADGE_KEYS.length])}
+                progressLabel={t('landing.lpPreviewEnter')}
                 href={`/tutorial/${mod.id}`}
                 moduleId={mod.id}
                 emoji={mod.emoji}

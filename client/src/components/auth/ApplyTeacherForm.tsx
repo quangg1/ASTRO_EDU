@@ -9,17 +9,18 @@ import {
 } from '@/features/auth/public'
 import { resolveMediaUrl } from '@/lib/apiConfig'
 import { UniversitySearchField } from '@/components/auth/UniversitySearchField'
+import { useT } from '@/i18n/public'
 
 const BIO_MIN = 30
 
-const TEACHING_LEVELS = [
-  'Mầm non',
-  'Tiểu học',
-  'THCS',
-  'THPT',
-  'Đại học',
-  'Sau đại học',
-  'Công chúng / đào tạo ngắn',
+const TEACHING_LEVEL_KEYS = [
+  'levelPreschool',
+  'levelPrimary',
+  'levelMiddle',
+  'levelHigh',
+  'levelUniversity',
+  'levelPostgrad',
+  'levelPublic',
 ] as const
 
 const fieldStyle: React.CSSProperties = {
@@ -48,6 +49,7 @@ export function ApplyTeacherForm({
   defaultEmail?: string | null
   onSubmitted: () => void
 }) {
+  const { t } = useT()
   const [step, setStep] = useState(1)
   const [fullName, setFullName] = useState(defaultName || '')
   const [phone, setPhone] = useState('')
@@ -73,9 +75,11 @@ export function ApplyTeacherForm({
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
 
-  const toggleLevel = (level: string) => {
+  const stepLabels = [t('applyTeacher.stepContact'), t('applyTeacher.stepBio'), t('applyTeacher.stepCv')]
+
+  const toggleLevel = (levelKey: string) => {
     setTeachingLevels((prev) =>
-      prev.includes(level) ? prev.filter((x) => x !== level) : [...prev, level],
+      prev.includes(levelKey) ? prev.filter((x) => x !== levelKey) : [...prev, levelKey],
     )
   }
 
@@ -100,7 +104,7 @@ export function ApplyTeacherForm({
       setCvUrl(res.url)
       setCvFileName(res.filename || file.name)
     } else {
-      setError(res.error || 'Tải CV thất bại')
+      setError(res.error || t('applyTeacher.uploadCvFailed'))
     }
   }
 
@@ -114,7 +118,7 @@ export function ApplyTeacherForm({
       setCertificateUrl(res.url)
       setCertificateFileName(res.filename || file.name)
     } else {
-      setError(res.error || 'Tải giấy tờ thất bại')
+      setError(res.error || t('applyTeacher.uploadCertFailed'))
     }
   }
 
@@ -127,7 +131,7 @@ export function ApplyTeacherForm({
     if (res.success && res.url) {
       setAvatarUrl(res.url)
     } else {
-      setError(res.error || 'Tải ảnh thất bại')
+      setError(res.error || t('applyTeacher.uploadAvatarFailed'))
     }
   }
 
@@ -141,7 +145,7 @@ export function ApplyTeacherForm({
       city: city.trim(),
       organization: organization.trim(),
       organizationRole: organizationRole.trim(),
-      teachingLevels,
+      teachingLevels: teachingLevels.map((key) => t(`applyTeacher.${key}`)),
       expertise: expertise.trim(),
       education: education.trim(),
       yearsExperience: yearsExperience.trim() ? Number(yearsExperience) : undefined,
@@ -158,14 +162,14 @@ export function ApplyTeacherForm({
     if (res.success) {
       onSubmitted()
     } else {
-      setError(res.error || 'Gửi đơn thất bại')
+      setError(res.error || t('applyTeacher.submitFailed'))
     }
   }
 
   return (
     <div className="space-y-6">
       <div className="flex gap-2 text-[10px] font-mono uppercase tracking-wider text-ds-subtle">
-        {['Liên hệ & nghề', 'Giới thiệu', 'Hồ sơ & CV'].map((label, i) => (
+        {stepLabels.map((label, i) => (
           <span
             key={label}
             className={`px-2 py-1 rounded border ${
@@ -182,10 +186,7 @@ export function ApplyTeacherForm({
       </div>
 
       {defaultEmail ? (
-        <p className="text-xs text-ds-subtle font-mono">
-          Đăng nhập bằng: <span className="text-ds-muted">{defaultEmail}</span> — khi duyệt bạn dùng
-          cùng tài khoản này, không cần mật khẩu mới.
-        </p>
+        <p className="text-xs text-ds-subtle font-mono">{t('applyTeacher.signedInAs', { email: defaultEmail })}</p>
       ) : null}
 
       {error ? <p className="text-sm text-red-300">{error}</p> : null}
@@ -193,38 +194,38 @@ export function ApplyTeacherForm({
       {step === 1 && (
         <div className="space-y-4">
           <label className="block text-xs text-ds-muted">
-            Họ tên đầy đủ <span className="text-pink-400">*</span>
+            {t('applyTeacher.fullName')} <span className="text-pink-400">*</span>
             <input className="mt-1 w-full" style={fieldStyle} value={fullName} onChange={(e) => setFullName(e.target.value)} />
           </label>
           <label className="block text-xs text-ds-muted">
-            Số điện thoại <span className="text-pink-400">*</span>
+            {t('applyTeacher.phone')} <span className="text-pink-400">*</span>
             <input
               className="mt-1 w-full"
               style={fieldStyle}
               type="tel"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              placeholder="VD: 09xxxxxxxx"
+              placeholder={t('applyTeacher.phonePlaceholder')}
             />
           </label>
           <label className="block text-xs text-ds-muted">
-            Chức danh / mô tả ngắn <span className="text-pink-400">*</span>
+            {t('applyTeacher.headline')} <span className="text-pink-400">*</span>
             <input
               className="mt-1 w-full"
               style={fieldStyle}
               value={headline}
               onChange={(e) => setHeadline(e.target.value)}
-              placeholder="VD: Giảng viên Vật lý THPT, TS. Thiên văn học"
+              placeholder={t('applyTeacher.headlinePlaceholder')}
             />
           </label>
           <label className="block text-xs text-ds-muted">
-            Thành phố / tỉnh
+            {t('applyTeacher.city')}
             <input
               className="mt-1 w-full"
               style={fieldStyle}
               value={city}
               onChange={(e) => setCity(e.target.value)}
-              placeholder="VD: Hồ Chí Minh"
+              placeholder={t('applyTeacher.cityPlaceholder')}
             />
           </label>
           <UniversitySearchField
@@ -233,56 +234,56 @@ export function ApplyTeacherForm({
             defaultCountry="Vietnam"
           />
           <label className="block text-xs text-ds-muted">
-            Vai trò tại cơ quan / trường
+            {t('applyTeacher.orgRole')}
             <input
               className="mt-1 w-full"
               style={fieldStyle}
               value={organizationRole}
               onChange={(e) => setOrganizationRole(e.target.value)}
-              placeholder="VD: Giảng viên chính, Trợ giảng, Nghiên cứu viên"
+              placeholder={t('applyTeacher.orgRolePlaceholder')}
             />
           </label>
           <label className="block text-xs text-ds-muted">
-            Lĩnh vực / môn giảng dạy <span className="text-pink-400">*</span>
+            {t('applyTeacher.expertise')} <span className="text-pink-400">*</span>
             <input
               className="mt-1 w-full"
               style={fieldStyle}
               value={expertise}
               onChange={(e) => setExpertise(e.target.value)}
-              placeholder="Ví dụ: Thiên văn học, Vật lý THPT (phân cách bằng dấu phẩy)"
+              placeholder={t('applyTeacher.expertisePlaceholder')}
             />
           </label>
           <div>
-            <p className="text-xs text-ds-muted mb-2">Cấp đang / muốn giảng dạy</p>
+            <p className="text-xs text-ds-muted mb-2">{t('applyTeacher.teachingLevels')}</p>
             <div className="flex flex-wrap gap-2">
-              {TEACHING_LEVELS.map((level) => (
+              {TEACHING_LEVEL_KEYS.map((levelKey) => (
                 <button
-                  key={level}
+                  key={levelKey}
                   type="button"
-                  onClick={() => toggleLevel(level)}
+                  onClick={() => toggleLevel(levelKey)}
                   className={`text-[11px] px-2.5 py-1 rounded-full border transition-colors ${
-                    teachingLevels.includes(level)
+                    teachingLevels.includes(levelKey)
                       ? 'border-cyan-500/50 bg-cyan-500/15 text-cyan-200'
                       : 'border-ds-border text-ds-subtle hover:border-white/20'
                   }`}
                 >
-                  {level}
+                  {t(`applyTeacher.${levelKey}`)}
                 </button>
               ))}
             </div>
           </div>
           <label className="block text-xs text-ds-muted">
-            Học vấn (bằng cao nhất) <span className="text-pink-400">*</span>
+            {t('applyTeacher.education')} <span className="text-pink-400">*</span>
             <input
               className="mt-1 w-full"
               style={fieldStyle}
               value={education}
               onChange={(e) => setEducation(e.target.value)}
-              placeholder="VD: Thạc sĩ Vật lý, Tiến sĩ Thiên văn"
+              placeholder={t('applyTeacher.educationPlaceholder')}
             />
           </label>
           <label className="block text-xs text-ds-muted">
-            Số năm kinh nghiệm giảng dạy
+            {t('applyTeacher.yearsExp')}
             <input
               type="number"
               min={0}
@@ -295,22 +296,22 @@ export function ApplyTeacherForm({
           </label>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <label className="block text-xs text-ds-muted">
-              Website
+              {t('applyTeacher.website')}
               <input className="mt-1 w-full" style={fieldStyle} value={website} onChange={(e) => setWebsite(e.target.value)} />
             </label>
             <label className="block text-xs text-ds-muted">
-              LinkedIn
+              {t('applyTeacher.linkedin')}
               <input className="mt-1 w-full" style={fieldStyle} value={linkedin} onChange={(e) => setLinkedin(e.target.value)} />
             </label>
           </div>
           <label className="block text-xs text-ds-muted">
-            Ảnh đại diện (khuyến nghị — hiển thị trên khóa học)
+            {t('applyTeacher.avatar')}
             <div className="mt-2 flex items-center gap-4">
               <div className="w-16 h-16 rounded-lg border border-ds-border overflow-hidden bg-ds-elevated/80 flex items-center justify-center">
                 {avatarUrl ? (
                   <img src={resolveMediaUrl(avatarUrl)} alt="" className="w-full h-full object-cover" />
                 ) : (
-                  <span className="text-slate-600 text-xs">Chưa có</span>
+                  <span className="text-slate-600 text-xs">{t('applyTeacher.noAvatar')}</span>
                 )}
               </div>
               <input
@@ -328,7 +329,7 @@ export function ApplyTeacherForm({
             onClick={() => setStep(2)}
             className="w-full py-2.5 rounded-lg bg-cyan-600 text-white text-sm font-medium disabled:opacity-40"
           >
-            Tiếp: Giới thiệu
+            {t('applyTeacher.nextBio')}
           </button>
         </div>
       )}
@@ -336,19 +337,21 @@ export function ApplyTeacherForm({
       {step === 2 && (
         <div className="space-y-4">
           <label className="block text-xs text-ds-muted">
-            Giới thiệu &amp; lý do muốn giảng dạy <span className="text-pink-400">*</span>
+            {t('applyTeacher.bioLabel')} <span className="text-pink-400">*</span>
             <textarea
               className="mt-1 w-full min-h-[180px]"
               style={{ ...fieldStyle, resize: 'vertical' }}
               value={bio}
               onChange={(e) => setBio(e.target.value)}
-              placeholder={`Tối thiểu ${BIO_MIN} ký tự: kinh nghiệm, phương pháp, khóa học bạn muốn mở…`}
+              placeholder={t('applyTeacher.bioPlaceholder', { min: BIO_MIN })}
             />
-            <span className="text-[10px] text-slate-600">{bio.trim().length} / {BIO_MIN}+ ký tự</span>
+            <span className="text-[10px] text-slate-600">
+              {t('applyTeacher.charCount', { count: bio.trim().length, min: BIO_MIN })}
+            </span>
           </label>
           <div className="flex gap-2">
             <button type="button" onClick={() => setStep(1)} className="flex-1 py-2 border border-ds-border rounded-lg text-sm text-ds-muted">
-              Quay lại
+              {t('applyTeacher.back')}
             </button>
             <button
               type="button"
@@ -356,7 +359,7 @@ export function ApplyTeacherForm({
               onClick={() => setStep(3)}
               className="flex-1 py-2.5 rounded-lg bg-cyan-600 text-white text-sm font-medium disabled:opacity-40"
             >
-              Tiếp: CV &amp; giấy tờ
+              {t('applyTeacher.nextCv')}
             </button>
           </div>
         </div>
@@ -366,9 +369,9 @@ export function ApplyTeacherForm({
         <div className="space-y-4">
           <div>
             <p className="text-sm text-ds-muted font-medium">
-              CV (PDF) <span className="text-pink-400">*</span>
+              {t('applyTeacher.cvRequired')} <span className="text-pink-400">*</span>
             </p>
-            <p className="text-xs text-ds-subtle mt-0.5">Ban quản trị xem CV trước khi duyệt.</p>
+            <p className="text-xs text-ds-subtle mt-0.5">{t('applyTeacher.cvHint')}</p>
             <input
               type="file"
               accept="application/pdf,.pdf"
@@ -377,14 +380,12 @@ export function ApplyTeacherForm({
               className="mt-2 text-sm text-ds-muted"
             />
             {cvUrl ? (
-              <p className="text-xs text-emerald-300 mt-1">Đã tải: {cvFileName || 'cv.pdf'}</p>
+              <p className="text-xs text-emerald-300 mt-1">{t('applyTeacher.cvUploaded', { name: cvFileName || 'cv.pdf' })}</p>
             ) : null}
           </div>
           <div>
-            <p className="text-sm text-ds-muted font-medium">Giấy tờ xác nhận (tuỳ chọn)</p>
-            <p className="text-xs text-ds-subtle mt-0.5">
-              Quyết định bổ nhiệm, thẻ giảng viên, hợp đồng… — PDF hoặc ảnh.
-            </p>
+            <p className="text-sm text-ds-muted font-medium">{t('applyTeacher.certOptional')}</p>
+            <p className="text-xs text-ds-subtle mt-0.5">{t('applyTeacher.certHint')}</p>
             <input
               type="file"
               accept="application/pdf,.pdf,image/jpeg,image/png,image/webp"
@@ -393,12 +394,14 @@ export function ApplyTeacherForm({
               className="mt-2 text-sm text-ds-muted"
             />
             {certificateUrl ? (
-              <p className="text-xs text-emerald-300 mt-1">Đã tải: {certificateFileName || 'certificate'}</p>
+              <p className="text-xs text-emerald-300 mt-1">
+                {t('applyTeacher.cvUploaded', { name: certificateFileName || 'certificate' })}
+              </p>
             ) : null}
           </div>
           <div className="flex gap-2">
             <button type="button" onClick={() => setStep(2)} className="flex-1 py-2 border border-ds-border rounded-lg text-sm text-ds-muted">
-              Quay lại
+              {t('applyTeacher.back')}
             </button>
             <button
               type="button"
@@ -406,7 +409,7 @@ export function ApplyTeacherForm({
               onClick={() => void handleSubmit()}
               className="flex-1 py-2.5 rounded-lg bg-emerald-600 text-white text-sm font-medium disabled:opacity-40"
             >
-              {submitting ? 'Đang gửi…' : 'Gửi đơn ứng tuyển'}
+              {submitting ? t('applyTeacher.submitting') : t('applyTeacher.submit')}
             </button>
           </div>
         </div>

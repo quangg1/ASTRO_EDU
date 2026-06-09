@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { Tag } from 'lucide-react'
 import type { CoursePromoBanner as PromoBannerData } from '@/features/promotions/api/promoApi'
+import { useT } from '@/i18n/public'
 
 export function CoursePromoBanner({
   banner,
@@ -11,6 +12,7 @@ export function CoursePromoBanner({
   banner: PromoBannerData
   checkoutHref: string
 }) {
+  const { t } = useT()
   const accent = banner.bannerAccentColor?.startsWith('#')
     ? banner.bannerAccentColor
     : '#06b6d4'
@@ -24,7 +26,7 @@ export function CoursePromoBanner({
         background: `linear-gradient(135deg, ${accent}18 0%, transparent 60%)`,
       }}
       role="region"
-      aria-label="Khuyến mãi"
+      aria-label={t('courses.promoTitle')}
     >
       <div className="flex items-start gap-3 flex-1 min-w-0">
         <span
@@ -44,7 +46,7 @@ export function CoursePromoBanner({
             {banner.endsAt ? (
               <>
                 {' '}
-                · Hết hạn{' '}
+                · {t('courses.promoExpires')}{' '}
                 {new Date(banner.endsAt).toLocaleDateString('vi-VN', {
                   day: 'numeric',
                   month: 'short',
@@ -59,7 +61,7 @@ export function CoursePromoBanner({
         className="shrink-0 inline-flex items-center justify-center px-4 py-2 rounded-lg text-xs font-semibold text-white transition-opacity hover:opacity-90"
         style={{ backgroundColor: accent }}
       >
-        Dùng mã {banner.code}
+        {t('courses.promoUseCode', { code: banner.code })}
       </Link>
     </div>
   )

@@ -22,6 +22,7 @@ import {
   formatDecorationPrice,
 } from '@/features/rewards/lib/decorationCatalog'
 import { Button, Card } from '@/design-system'
+import { useT } from '@/i18n/public'
 
 export type DecorationCatalogMode = 'profile' | 'shop'
 
@@ -48,6 +49,7 @@ function renderDecorationThumbs({
   previewSku,
   setPreviewSku,
   itemOwned,
+  t,
 }: {
   items: AvatarDecorationCatalogItem[]
   isProfile: boolean
@@ -55,6 +57,7 @@ function renderDecorationThumbs({
   previewSku: string | null
   setPreviewSku: (sku: string) => void
   itemOwned?: (item: AvatarDecorationCatalogItem) => boolean
+  t: (key: string, vars?: Record<string, string | number>) => string
 }) {
   return items.map((item) => {
     const overlay = item.overlayUrl || item.previewUrl
@@ -79,7 +82,7 @@ function renderDecorationThumbs({
             {formatDecorationPrice(item.effectivePriceGem)}
           </p>
         ) : (
-          <p className="text-[10px] text-center text-emerald-400/90">Đã có</p>
+          <p className="text-[10px] text-center text-emerald-400/90">{t('decorations.owned')}</p>
         )}
       </div>
     )
@@ -92,9 +95,11 @@ export function DecorationCatalogExperience({
   displayName,
   email,
   categories: categoriesProp,
-  fallbackSectionTitle = 'Trang trí avatar',
+  fallbackSectionTitle,
   className = '',
 }: Props) {
+  const { t } = useT()
+  const sectionTitle = fallbackSectionTitle ?? t('decorations.fallbackTitle')
   const isProfile = mode === 'profile'
   const loggedIn = Boolean(getToken())
 
@@ -125,7 +130,7 @@ export function DecorationCatalogExperience({
           ? [
               {
                 slug: '_owned',
-                nameVi: 'Bộ sưu tập của bạn',
+                nameVi: t('decorations.yourCollection'),
                 subtitleVi: '',
                 bannerUrl: '',
                 sortOrder: 0,
@@ -145,7 +150,7 @@ export function DecorationCatalogExperience({
         })),
       )
     }
-  }, [isProfile, categoriesProp, fallbackSectionTitle])
+  }, [isProfile, categoriesProp, sectionTitle, t])
 
   const refreshMe = useCallback(async () => {
     if (!loggedIn) {
@@ -267,16 +272,16 @@ export function DecorationCatalogExperience({
   }
 
   if (loading) {
-    return <p className="text-sm text-ds-subtle">Đang tải trang trí avatar…</p>
+    return <p className="text-sm text-ds-subtle">{t('decorations.loading')}</p>
   }
 
   if (isProfile && ownedItems.length === 0) {
     return (
       <Card className={`p-4 border-ds-border ${className}`}>
         <p className="text-sm text-ds-muted">
-          Bạn chưa có trang trí avatar nào.{' '}
+          {t('decorations.emptyOwned')}{' '}
           <Link href="/gem-shop" className="text-cyan-400 hover:underline">
-            Mua tại Cửa hàng Gem
+            {t('decorations.buyAtShop')}
           </Link>
           .
         </p>
@@ -287,18 +292,16 @@ export function DecorationCatalogExperience({
   if (!isProfile && !flatCatalog.length) {
     return (
       <Card className={`p-4 border-ds-border ${className}`}>
-        <p className="text-sm text-ds-muted">
-          Chưa có trang trí. Quản trị có thể thêm tại Kinh tế Gem.
-        </p>
+        <p className="text-sm text-ds-muted">{t('decorations.emptyShop')}</p>
       </Card>
     )
   }
 
   const previewHint = previewSku
-    ? 'Đang xem trước'
+    ? t('decorations.previewActive')
     : isProfile && equippedSkuId
-      ? 'Đang đeo'
-      : 'Chọn trang trí bên dưới'
+      ? t('decorations.previewEquipped')
+      : t('decorations.previewSelect')
 
   return (
     <div className={`space-y-6 ${className}`}>
@@ -307,7 +310,7 @@ export function DecorationCatalogExperience({
       >
         {!isProfile ? (
           <p className="text-xs text-ds-subtle uppercase tracking-wide mb-3">
-            Xem trước trên avatar của bạn
+            {t('decorations.previewShopAvatar')}
           </p>
         ) : null}
         <div className="flex flex-col sm:flex-row gap-6 items-center sm:items-start">
@@ -332,12 +335,12 @@ export function DecorationCatalogExperience({
                   </p>
                   <p className={`text-sm mt-0.5 ${isProfile ? 'text-ds-muted' : 'text-ds-accent'}`}>
                     {isProfile || isPreviewOwned
-                      ? 'Đã sở hữu'
+                      ? t('decorations.ownedLabel')
                       : formatDecorationPrice(previewItem.effectivePriceGem)}
                     {!isProfile && gemBalance !== null ? (
                       <span className="text-ds-subtle">
                         {' '}
-                        · Số dư {gemBalance} gem
+                        · {t('decorations.balanceGems', { gems: gemBalance })}
                       </span>
                     ) : null}
                   </p>
@@ -353,13 +356,12 @@ export function DecorationCatalogExperience({
                   busySku,
                   onPurchase: handlePurchase,
                   onEquip: handleEquip,
+                  t,
                 })}
               </>
             ) : (
               <p className="text-sm text-ds-muted">
-                {isProfile
-                  ? 'Chọn một trang trí đã mua bên dưới để xem trước và đeo.'
-                  : 'Chọn một trang trí bên dưới.'}
+                {isProfile ? t('decorations.selectOwnedHint') : t('decorations.selectShopHint')}
               </p>
             )}
             {isProfile && equippedSkuId && !previewItem ? (
@@ -371,7 +373,7 @@ export function DecorationCatalogExperience({
                 disabled={busySku !== null}
                 onClick={() => void handleEquip(null)}
               >
-                Gỡ trang trí
+                {t('decorations.unequip')}
               </Button>
             ) : null}
           </div>
@@ -387,7 +389,7 @@ export function DecorationCatalogExperience({
               <div>
                 <h3 className="text-sm font-medium text-white">{section.nameVi}</h3>
                 <p className="text-xs text-ds-muted mt-0.5">
-                  {section.items.length} trang trí — bấm để xem trước, «Đeo trang trí này» để áp dụng.
+                  {t('decorations.ownedSectionHint', { count: section.items.length })}
                 </p>
               </div>
               <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2.5">
@@ -397,6 +399,7 @@ export function DecorationCatalogExperience({
                   equippedSkuId,
                   previewSku,
                   setPreviewSku,
+                  t,
                 })}
               </div>
             </section>
@@ -424,6 +427,7 @@ export function DecorationCatalogExperience({
                 previewSku,
                 setPreviewSku,
                 itemOwned,
+                t,
               })}
             </div>
           </section>
@@ -444,6 +448,7 @@ function renderPreviewActions({
   busySku,
   onPurchase,
   onEquip,
+  t,
 }: {
   isProfile: boolean
   loggedIn: boolean
@@ -455,14 +460,15 @@ function renderPreviewActions({
   busySku: string | null
   onPurchase: (skuId: string) => void
   onEquip: (skuId: string | null) => void
+  t: (key: string, vars?: Record<string, string | number>) => string
 }) {
   if (!loggedIn) {
     return (
       <p className="text-sm text-ds-muted">
         <Link href="/login?redirect=/gem-shop" className="text-cyan-400 hover:underline">
-          Đăng nhập
+          {t('decorations.signIn')}
         </Link>{' '}
-        để nhận hoặc mua trang trí.
+        {t('decorations.signInToBuy')}
       </p>
     )
   }
@@ -478,10 +484,10 @@ function renderPreviewActions({
               disabled={busySku !== null}
               onClick={() => onEquip(previewItem.skuId)}
             >
-              {busySku === previewItem.skuId ? '…' : 'Đeo trang trí này'}
+              {busySku === previewItem.skuId ? '…' : t('decorations.equipThis')}
             </Button>
           ) : (
-            <span className="text-sm text-emerald-400/90 py-1.5">Đang đeo trên hồ sơ & header</span>
+            <span className="text-sm text-emerald-400/90 py-1.5">{t('decorations.equippedOnProfile')}</span>
           )}
           {equippedSkuId && !isPreviewEquipped ? (
             <Button
@@ -492,7 +498,7 @@ function renderPreviewActions({
               disabled={busySku !== null}
               onClick={() => onEquip(null)}
             >
-              Gỡ trang trí đang đeo
+              {t('decorations.unequipCurrent')}
             </Button>
           ) : null}
         </div>
@@ -507,10 +513,10 @@ function renderPreviewActions({
             disabled={busySku !== null}
             onClick={() => onEquip(previewItem.skuId)}
           >
-            {busySku === previewItem.skuId ? '…' : 'Đeo ngay'}
+            {busySku === previewItem.skuId ? '…' : t('decorations.equipNow')}
           </Button>
         ) : (
-          <span className="text-sm text-emerald-400/90 py-1.5">Đang đeo trên hồ sơ & header</span>
+          <span className="text-sm text-emerald-400/90 py-1.5">{t('decorations.equippedOnProfile')}</span>
         )}
         {equippedSkuId && !isPreviewEquipped ? (
           <Button
@@ -521,12 +527,12 @@ function renderPreviewActions({
             disabled={busySku !== null}
             onClick={() => onEquip(null)}
           >
-            Gỡ trang trí đang đeo
+            {t('decorations.unequipCurrent')}
           </Button>
         ) : null}
         {!isProfile ? (
           <Link href="/profile" className="text-xs text-cyan-400 hover:underline self-center">
-            Quản lý tại Hồ sơ
+            {t('decorations.manageAtProfile')}
           </Link>
         ) : null}
       </div>
@@ -537,9 +543,9 @@ function renderPreviewActions({
     <p className="text-sm text-ds-muted">
       {isProfile ? (
         <>
-          Trang trí này chưa có trong bộ sưu tập.{' '}
+          {t('decorations.notInCollection')}{' '}
           <Link href="/gem-shop" className="text-cyan-400 hover:underline">
-            Mua tại Cửa hàng Gem
+            {t('decorations.buyAtShop')}
           </Link>
           .
         </>
@@ -552,7 +558,11 @@ function renderPreviewActions({
           disabled={busySku !== null}
           onClick={() => onPurchase(previewItem.skuId)}
         >
-          {busySku === previewItem.skuId ? '…' : previewFree ? 'Nhận miễn phí' : 'Mua bằng Gem'}
+          {busySku === previewItem.skuId
+            ? '…'
+            : previewFree
+              ? t('decorations.claimFree')
+              : t('decorations.buyWithGem')}
         </Button>
       ) : null}
     </p>

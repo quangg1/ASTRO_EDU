@@ -8,8 +8,10 @@ import {
   type ActivePromoCampaign,
 } from '@/features/promotions/api/promoApi'
 import { dismissPromo, undismissedPromos } from '@/features/promotions/lib/promoDismiss'
+import { useT } from '@/i18n/public'
 
 export function PromoCampaignBar() {
+  const { t } = useT()
   const [campaign, setCampaign] = useState<ActivePromoCampaign | null>(null)
 
   const refresh = useCallback(async () => {
@@ -38,6 +40,15 @@ export function PromoCampaignBar() {
     : '#06b6d4'
   const ctaHref = campaign.primaryCheckoutHref || campaign.primaryHref
 
+  const scopeSuffix =
+    campaign.appliesToAll && campaign.courses.length === 0
+      ? ` · ${t('promo.barApplies')}`
+      : campaign.courses.length === 1
+        ? ` · ${campaign.courses[0].title}`
+        : campaign.courses.length > 1
+          ? ` · ${t('promo.barCourses', { count: campaign.courses.length })}`
+          : ''
+
   return (
     <div
       className="fixed top-14 left-0 right-0 z-[35] border-b px-3 py-2 sm:px-5"
@@ -46,7 +57,7 @@ export function PromoCampaignBar() {
         background: `linear-gradient(90deg, ${accent}22 0%, rgba(7,10,16,0.97) 55%)`,
       }}
       role="region"
-      aria-label="Ưu đãi đang diễn ra"
+      aria-label={t('promo.barActive')}
     >
       <div className="max-w-[1600px] mx-auto flex items-center gap-2 sm:gap-3">
         <Tag className="h-4 w-4 shrink-0 hidden sm:block" style={{ color: accent }} aria-hidden />
@@ -55,18 +66,13 @@ export function PromoCampaignBar() {
             {campaign.bannerTitleVi}
             <span className="text-white/50 font-normal hidden sm:inline">
               {' '}
-              · Mã <span className="font-mono text-cyan-200/90">{campaign.code}</span>
+              · {t('promo.barCode')}{' '}
+              <span className="font-mono text-cyan-200/90">{campaign.code}</span>
             </span>
           </p>
           <p className="text-[10px] sm:text-xs text-ds-muted truncate sm:whitespace-normal sm:line-clamp-1">
             {campaign.bannerBodyVi}
-            {campaign.appliesToAll && campaign.courses.length === 0
-              ? ' · Áp dụng các khóa trả phí'
-              : campaign.courses.length === 1
-                ? ` · ${campaign.courses[0].title}`
-                : campaign.courses.length > 1
-                  ? ` · ${campaign.courses.length} khóa học`
-                  : ''}
+            {scopeSuffix}
           </p>
         </div>
         <Link
@@ -74,7 +80,7 @@ export function PromoCampaignBar() {
           className="shrink-0 rounded-lg px-3 py-1.5 text-[11px] sm:text-xs font-semibold text-white hover:opacity-90"
           style={{ backgroundColor: accent }}
         >
-          Xem ưu đãi
+          {t('promo.barView')}
         </Link>
         <button
           type="button"
@@ -83,7 +89,7 @@ export function PromoCampaignBar() {
             setCampaign(null)
           }}
           className="shrink-0 p-1.5 rounded-lg text-ds-muted hover:text-white hover:bg-white/10"
-          aria-label="Ẩn thông báo ưu đãi"
+          aria-label={t('promo.barHide')}
         >
           <X className="h-4 w-4" />
         </button>

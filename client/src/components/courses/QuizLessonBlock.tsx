@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import type { QuizQuestion } from '@/features/courses/api/coursesApi'
 import { mcqAnswerIndex, mcqOptionTexts } from '@/shared/types/quizQuestion'
+import { useT } from '@/i18n/public'
 
 export function QuizLessonBlock({
   questions,
@@ -11,6 +12,7 @@ export function QuizLessonBlock({
   questions: QuizQuestion[]
   onComplete?: () => void
 }) {
+  const { t } = useT()
   const [answers, setAnswers] = useState<number[]>(() => questions.map(() => -1))
   const [submitted, setSubmitted] = useState(false)
 
@@ -30,7 +32,7 @@ export function QuizLessonBlock({
 
   const correctCount = questions.reduce(
     (acc, q, i) => acc + (answers[i] === mcqAnswerIndex(q) ? 1 : 0),
-    0
+    0,
   )
   const score = questions.length ? Math.round((correctCount / questions.length) * 100) : 0
   const mono: React.CSSProperties = { fontFamily: "'JetBrains Mono', monospace" }
@@ -46,13 +48,13 @@ export function QuizLessonBlock({
           background: 'rgba(10,16,36,0.65)',
         }}
       >
-        <h3 className="font-semibold text-white">Bài kiểm tra kiến thức</h3>
-        <p className="mt-1 text-sm text-ds-muted">Trả lời đầy đủ tất cả câu hỏi trước khi nộp bài.</p>
+        <h3 className="font-semibold text-white">{t('courses.quizTitle')}</h3>
+        <p className="mt-1 text-sm text-ds-muted">{t('courses.quizInstructionsFull')}</p>
         <span
           className="absolute right-3 top-3 text-[10px] uppercase tracking-wider text-cyan-200/80"
           style={mono}
         >
-          // quiz
+          {t('courses.quizEyebrow')}
         </span>
       </div>
       {questions.map((q, qIndex) => {
@@ -74,7 +76,7 @@ export function QuizLessonBlock({
             }}
           >
             <legend className="px-1 text-sm font-medium text-white md:text-base">
-              Câu {qIndex + 1}. {q.question}
+              {t('courses.quizQuestion', { n: qIndex + 1 })} {q.question}
             </legend>
             <div className="mt-2 space-y-2">
               {opts.map((opt, optIndex) => (
@@ -101,7 +103,7 @@ export function QuizLessonBlock({
                   <span>
                     {String.fromCharCode(65 + optIndex)}. {opt}
                     {submitted && optIndex === correctIdx && (
-                      <span className="ml-2 text-green-400">✓ Đáp án đúng</span>
+                      <span className="ml-2 text-green-400">✓ {t('courses.quizCorrectAnswer')}</span>
                     )}
                   </span>
                 </label>
@@ -124,7 +126,7 @@ export function QuizLessonBlock({
             borderColor: 'rgba(126,231,255,0.4)',
           }}
         >
-          Nộp bài
+          {t('courses.quizSubmit')}
         </button>
       ) : (
         <div
@@ -137,10 +139,10 @@ export function QuizLessonBlock({
           }}
         >
           <p className="text-ds-accent font-medium">
-            Kết quả: {correctCount}/{questions.length} câu đúng ({score}%)
+            {t('courses.quizResult', { correct: correctCount, total: questions.length, score })}
           </p>
           <p className="text-sm text-ds-muted mt-1">
-            {score >= 80 ? 'Bạn đã nắm tốt nội dung.' : 'Hãy xem lại bài học và thử lại.'}
+            {score >= 80 ? t('courses.quizResultPass') : t('courses.quizResultFail')}
           </p>
         </div>
       )}

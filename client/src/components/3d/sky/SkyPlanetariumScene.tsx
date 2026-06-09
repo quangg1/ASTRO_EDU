@@ -76,7 +76,6 @@ import { SKY_RENDER_ORDER } from './skyLayers'
 import {
   applyViewDrag,
   DEFAULT_SKY_VIEW,
-  viewLandscapeOpacity,
   viewNadirLookAmount,
   type SkyViewState,
 } from './skyViewState'
@@ -223,7 +222,16 @@ function FisheyeSky({
         if (!na || !nb) continue
         const va = equatorialToSceneVector(na.raDeg, na.decDeg, observer)
         const vb = equatorialToSceneVector(nb.raDeg, nb.decDeg, observer)
-        appendGreatCircleArcSegments(va, vb, R, positions, 14, true)
+        appendGreatCircleArcSegments(
+          va,
+          vb,
+          R,
+          positions,
+          18,
+          !!activeConstellationId,
+          view,
+          fovDeg,
+        )
       }
       if (positions.length >= 6) {
         const geom = new THREE.BufferGeometry()
@@ -232,7 +240,7 @@ function FisheyeSky({
       }
     }
     return lines
-  }, [targets, observer, activeConstellationId])
+  }, [targets, observer, activeConstellationId, view, fovDeg])
 
   const solarBillboards = useMemo(() => {
     return ephemerisBodies.map((b) => {
@@ -352,7 +360,12 @@ function FisheyeSky({
       <MilkyWayPlane texture={milkyWay} fovDeg={fovDeg} observer={observer} />
 
       {landscapeLoaded && landscapeTex ? (
-        <LandscapePlane texture={landscapeTex} pack={SKY_ACTIVE_LANDSCAPE} view={view} />
+        <LandscapePlane
+          texture={landscapeTex}
+          pack={SKY_ACTIVE_LANDSCAPE}
+          view={view}
+          constellationActive={!!activeConstellationId}
+        />
       ) : null}
 
       <StereographicStarfield geometry={starfield} fovDeg={fovDeg} />
@@ -632,11 +645,13 @@ export function SkyPlanetariumScene(props: Props) {
     if (constellationId) {
       const t = props.targets.find((x) => x.id === constellationId)
       if (t) {
+        const hor = equatorialToHorizontal(t.raDeg, t.decDeg, props.observer)
         out.push({
           id: `lbl-${constellationId}`,
           text: t.nameVi,
           dir: equatorialToSceneVector(t.raDeg, t.decDeg, props.observer),
           emphasis: 'constellation',
+          altDeg: hor.altDeg,
           priority: 250,
           selected: !props.sceneHighlightId,
         })
@@ -655,7 +670,11 @@ export function SkyPlanetariumScene(props: Props) {
     props.targets,
   ])
 
-  const allowBelowHorizon = viewNadirLookAmount(view) > 0.18
+  /**
+   * Chỉ lộ sao/chòm dưới chân trời khi người dùng ghim chòm (landscape đã mờ).
+   * Không ghim → không dán nhãn lên ảnh đất.
+   */
+  const allowBelowHorizon = !!props.constellationTargetId
 
   const screenLabels = useMemo(
     () => layoutSkyLabels(labelCandidates, view, fovDeg, aspect, allowBelowHorizon),

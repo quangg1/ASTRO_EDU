@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import type { CommunityTagCount } from '@/features/community/api/communityApi'
+import { useT } from '@/i18n/public'
 
 type Props = {
   tags: CommunityTagCount[]
@@ -10,12 +11,15 @@ type Props = {
   title?: string
 }
 
-export function TagChips({ tags, activeTag = '', onSelect, title = 'Hashtag' }: Props) {
+export function TagChips({ tags, activeTag = '', onSelect, title }: Props) {
+  const { t } = useT()
+  const heading = title ?? t('community.hashtagTitle')
+
   if (!tags.length) return null
 
   return (
     <div className="space-y-2">
-      <p className="text-xs uppercase tracking-wide text-ds-subtle">{title}</p>
+      <p className="text-xs uppercase tracking-wide text-ds-subtle">{heading}</p>
       <div className="flex flex-wrap gap-2">
         {onSelect && (
           <button
@@ -27,12 +31,12 @@ export function TagChips({ tags, activeTag = '', onSelect, title = 'Hashtag' }: 
                 : 'border-ds-border bg-white/5 text-ds-muted hover:border-white/25'
             }`}
           >
-            Tất cả
+            {t('community.all')}
           </button>
         )}
-        {tags.map((t) => {
-          const active = activeTag === t.tag
-          const label = `#${t.tag}`
+        {tags.map((tagItem) => {
+          const active = activeTag === tagItem.tag
+          const label = `#${tagItem.tag}`
           const className = `rounded-full px-3 py-1 text-xs border transition-colors ${
             active
               ? 'border-violet-400/50 bg-violet-500/20 text-violet-100'
@@ -40,14 +44,14 @@ export function TagChips({ tags, activeTag = '', onSelect, title = 'Hashtag' }: 
           }`
           if (onSelect) {
             return (
-              <button key={t.tag} type="button" onClick={() => onSelect(t.tag)} className={className}>
-                {label} <span className="text-ds-subtle">({t.count})</span>
+              <button key={tagItem.tag} type="button" onClick={() => onSelect(tagItem.tag)} className={className}>
+                {label} <span className="text-ds-subtle">({tagItem.count})</span>
               </button>
             )
           }
           return (
-            <Link key={t.tag} href={`/community/tags/${encodeURIComponent(t.tag)}`} className={className}>
-              {label} <span className="text-ds-subtle">({t.count})</span>
+            <Link key={tagItem.tag} href={`/community/tags/${encodeURIComponent(tagItem.tag)}`} className={className}>
+              {label} <span className="text-ds-subtle">({tagItem.count})</span>
             </Link>
           )
         })}

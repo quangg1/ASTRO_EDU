@@ -7,7 +7,7 @@ import * as THREE from 'three'
 import { SKY_RENDER_ORDER, SKY_SHADER_GLSL1 } from './skyLayers'
 import type { SkyLandscapePackConfig } from '@/features/explore/lib/skyLandscapePack'
 import type { SkyViewState } from './skyViewState'
-import { viewLandscapeOpacity } from './skyViewState'
+import { effectiveLandscapeOpacity } from './skyViewState'
 import { useStereoScreenUniforms } from './useStereoScreenUniforms'
 import {
   STEREO_INVERSE_FN,
@@ -19,10 +19,12 @@ type Props = {
   texture: THREE.Texture
   pack: SkyLandscapePackConfig
   view: SkyViewState
+  /** Ghim chòm — landscape mờ hơn để thấy phần chòm dưới chân trời. */
+  constellationActive?: boolean
 }
 
 /** Panorama alt-az: đục khi nhìn lên; trong suốt dần chỉ khi kéo xuống dưới chân trời (Stellarium). */
-export function LandscapePlane({ texture, pack, view }: Props) {
+export function LandscapePlane({ texture, pack, view, constellationActive = false }: Props) {
   const { gl } = useThree()
   const azRot = (pack.angleRotateZDeg * Math.PI) / 180
   const uniforms = useStereoScreenUniforms({
@@ -38,7 +40,7 @@ export function LandscapePlane({ texture, pack, view }: Props) {
   }, [gl, texture])
 
   useFrame(() => {
-    uniforms.uGroundOpacity.value = viewLandscapeOpacity(view)
+    uniforms.uGroundOpacity.value = effectiveLandscapeOpacity(view, constellationActive)
   })
 
   const material = useMemo(

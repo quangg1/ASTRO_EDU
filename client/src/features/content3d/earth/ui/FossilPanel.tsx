@@ -423,7 +423,7 @@ function FossilListModal({ fossils, phylumMetadata, timeRange, onClose, onFlyToF
               </p>
               {!searchQuery.trim() && (
                 <p className="text-sm text-ds-subtle mt-2">
-                  Hóa thạch chỉ xuất hiện từ kỷ Cambrian (~540 Ma)
+                  Hóa thạch chỉ xuất hiện từ kỳ Cambri (~540 Ma)
                 </p>
               )}
             </div>

@@ -37,6 +37,14 @@ function labelBox(
 }
 
 /** Ngưỡng mag theo FOV — FOV nhỏ (zoom sâu) → hiện thêm sao mờ. */
+/** Độ cao (°) từ vector scene Y=thiên đỉnh — fallback khi thiếu altDeg. */
+function candidateAltDeg(c: LabelCandidate): number | undefined {
+  if (c.altDeg != null) return c.altDeg
+  const y = c.dir?.[1]
+  if (y == null) return undefined
+  return Math.asin(Math.min(1, Math.max(-1, y))) * (180 / Math.PI)
+}
+
 export function maxLabelMagForFov(fovDeg: number, emphasis: SkyLabel['emphasis']): number {
   if (emphasis === 'body') return fovDeg >= 130 ? 2.5 : 4
   if (emphasis === 'constellation') return 99
@@ -62,19 +70,20 @@ export function layoutSkyLabels(
   const boxes: Box[] = []
 
   for (const c of sorted) {
-    if (c.altDeg != null && c.altDeg < 0 && !allowBelowHorizon) continue
+    const altDeg = candidateAltDeg(c)
+    if (altDeg != null && altDeg < 0 && !allowBelowHorizon) continue
 
     if (c.selected || c.forceShow) {
       const p = stereographicScreenPercent(c.dir, view, fovDeg, aspect)
       if (!p) continue
-      placed.push({ ...c, altDeg: c.altDeg, selected: c.selected })
+      placed.push({ ...c, altDeg, selected: c.selected })
       boxes.push(labelBox(p.leftPct, p.topPct, 14, 4, true))
       continue
     }
 
     const maxMag = maxLabelMagForFov(fovDeg, c.emphasis)
     if (c.mag != null && c.mag > maxMag && c.emphasis !== 'constellation') continue
-    if (c.altDeg != null && c.altDeg < 8 && c.emphasis !== 'body' && !c.forceShow) continue
+    if (altDeg != null && altDeg < 8 && c.emphasis !== 'body' && !c.forceShow) continue
 
     const p = stereographicScreenPercent(c.dir, view, fovDeg, aspect)
     if (!p) continue
@@ -91,7 +100,7 @@ export function layoutSkyLabels(
       dir: c.dir,
       emphasis: c.emphasis,
       selected: false,
-      altDeg: c.altDeg,
+      altDeg,
     })
   }
 

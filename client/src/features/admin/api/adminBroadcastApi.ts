@@ -1,5 +1,6 @@
 import { getToken } from '@/features/auth/api/authApi'
 import { getApiPathBase } from '@/lib/apiConfig'
+import { apiClientHeaders } from '@/lib/apiClientHeaders'
 
 const BASE = `${getApiPathBase()}/admin`
 

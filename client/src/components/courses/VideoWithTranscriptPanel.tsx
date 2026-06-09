@@ -9,6 +9,7 @@ import {
   normalizeVideoTranscript,
   type VideoTranscript,
 } from '@/features/courses/lib/videoTranscript'
+import { useT } from '@/i18n/public'
 
 declare global {
   interface Window {
@@ -50,12 +51,6 @@ function loadYouTubeIframeApi(): Promise<void> {
   return YT_LOADED.promise
 }
 
-const LANGUAGE_LABEL: Record<string, string> = {
-  vi: 'Tiếng Việt',
-  en: 'English',
-  auto: 'Tự động',
-}
-
 type Props = {
   videoUrl: string
   title?: string
@@ -64,6 +59,7 @@ type Props = {
 }
 
 export function VideoWithTranscriptPanel({ videoUrl, title, transcript, className = '' }: Props) {
+  const { t } = useT()
   const resolvedUrl = resolveMediaUrl(videoUrl)
   const youtubeId = extractYouTubeVideoId(resolvedUrl)
   const isDirect =
@@ -88,17 +84,26 @@ export function VideoWithTranscriptPanel({ videoUrl, title, transcript, classNam
   const [transcriptOpen, setTranscriptOpen] = useState(true)
   const activeIndex = hasTranscript ? findActiveCueIndex(cues, currentTime) : -1
 
+  const langLabels: Record<string, string> = useMemo(
+    () => ({
+      vi: t('courses.videoLangVi'),
+      en: t('courses.videoLangEn'),
+      auto: t('courses.videoAuto'),
+    }),
+    [t],
+  )
+
   const seekTo = useCallback(
     (seconds: number) => {
-      const t = Math.max(0, seconds)
+      const time = Math.max(0, seconds)
       if (videoRef.current) {
-        videoRef.current.currentTime = t
+        videoRef.current.currentTime = time
         void videoRef.current.play().catch(() => {})
       }
       if (ytPlayerRef.current) {
-        ytPlayerRef.current.seekTo(t, true)
+        ytPlayerRef.current.seekTo(time, true)
       }
-      setCurrentTime(t)
+      setCurrentTime(time)
     },
     [],
   )
@@ -140,8 +145,9 @@ export function VideoWithTranscriptPanel({ videoUrl, title, transcript, classNam
     }
   }, [youtubeId])
 
+  const videoTitle = title || t('courses.videoFallback')
   const videoNode = youtubeId ? (
-    <div ref={ytHostRef} className="aspect-video w-full bg-black" title={title || 'Video'} />
+    <div ref={ytHostRef} className="aspect-video w-full bg-black" title={videoTitle} />
   ) : isDirect ? (
     <video
       ref={videoRef}
@@ -150,12 +156,12 @@ export function VideoWithTranscriptPanel({ videoUrl, title, transcript, classNam
       className="aspect-video w-full bg-black"
       onTimeUpdate={() => setCurrentTime(videoRef.current?.currentTime ?? 0)}
     >
-      Video not supported.
+      {t('courses.videoUnsupported')}
     </video>
   ) : (
     <div className="aspect-video w-full flex items-center justify-center bg-ds-elevated/80 text-sm text-ds-subtle">
       <a href={resolvedUrl} target="_blank" rel="noreferrer" className="text-ds-accent hover:underline">
-        Mở video
+        {t('courses.videoOpen')}
       </a>
     </div>
   )
@@ -164,7 +170,10 @@ export function VideoWithTranscriptPanel({ videoUrl, title, transcript, classNam
     return <div className={className}>{videoNode}</div>
   }
 
-  const langLabel = LANGUAGE_LABEL[normalizedTranscript?.language || 'vi'] || normalizedTranscript?.language || 'Transcript'
+  const langLabel =
+    langLabels[normalizedTranscript?.language || 'vi'] ||
+    normalizedTranscript?.language ||
+    t('courses.videoTranscript')
 
   return (
     <div className={`relative border border-ds-border rounded-xl overflow-hidden bg-ds-surface ${className}`}>
@@ -176,15 +185,17 @@ export function VideoWithTranscriptPanel({ videoUrl, title, transcript, classNam
       >
         <div className="flex shrink-0 items-center justify-between gap-2 border-b border-ds-border px-4 py-3">
           <div>
-            <p className="text-sm font-semibold text-white">Bản chép lời</p>
-            <p className="text-[11px] text-ds-subtle">Ngôn ngữ: {langLabel}</p>
+            <p className="text-sm font-semibold text-white">{t('courses.videoTranscript')}</p>
+            <p className="text-[11px] text-ds-subtle">
+              {t('courses.videoLangLabel')} {langLabel}
+            </p>
           </div>
           <button
             type="button"
             onClick={() => setTranscriptOpen((v) => !v)}
             className="lg:hidden text-[11px] text-ds-accent"
           >
-            {transcriptOpen ? 'Ẩn' : 'Hiện'}
+            {transcriptOpen ? t('courses.videoHide') : t('courses.videoShow')}
           </button>
         </div>
 

@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import type { Post } from '@/features/community/api/communityApi'
 import { postLearningBackHref } from '@/features/community/lib/composeContext'
+import { useT } from '@/i18n/public'
 
 type Props = {
   post: Pick<
@@ -19,17 +20,22 @@ type Props = {
 }
 
 export function PostLearningContextChip({ post, className = '' }: Props) {
+  const { t } = useT()
   const href = postLearningBackHref(post)
   const label =
     post.contextTitle?.trim() ||
-    (post.pathSource === 'learning-path' ? 'Lộ trình học' : post.courseSlug ? `Khóa ${post.courseSlug}` : null)
+    (post.pathSource === 'learning-path'
+      ? t('community.chipLearningPath')
+      : post.courseSlug
+        ? t('community.chipCourseSlug', { slug: post.courseSlug })
+        : null)
 
   if (!label && !href) return null
 
   const inner = (
     <>
       <span className="text-[10px] uppercase tracking-wide text-ds-accent/80 shrink-0">
-        {post.pathSource === 'learning-path' ? 'Lộ trình' : 'Khóa học'}
+        {post.pathSource === 'learning-path' ? t('community.chipPathShort') : t('community.chipCourseShort')}
       </span>
       <span className="text-violet-100 truncate">{label}</span>
     </>

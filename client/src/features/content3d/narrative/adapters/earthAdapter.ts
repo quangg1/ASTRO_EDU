@@ -1,4 +1,5 @@
 import type { EarthStage, MajorEvent } from '@/features/content3d/earth/lib/earthHistoryTypes'
+import { telemetryForEarthStage } from '@/features/content3d/earth/lib/earthStageTelemetry'
 import { narrativeVisualForBeatId } from '@/features/content3d/narrative/lib/defaultVisual'
 import type {
   NarrativeBeat,
@@ -10,30 +11,29 @@ import type {
 } from '@/features/content3d/narrative/types'
 
 export function earthStageToBeat(stage: EarthStage, order: number): NarrativeBeat {
+  const tel = telemetryForEarthStage(stage.id)
+
   const visual: NarrativeBeatVisual = {
     globeTint: stage.earthColor,
     atmosphereColor: stage.atmosphereColor ?? '#22d3ee',
-    atmosphereThickness: 0.15,
-    waterCoverage:
-      stage.continental?.oceanCoverage != null ? stage.continental.oceanCoverage / 100 : 0,
-    dustOpacity: 0,
-    volcanicGlow: 0,
+    atmosphereThickness: tel.atmosphereThickness,
+    waterCoverage: tel.waterCoverage,
+    dustOpacity: tel.dustOpacity,
+    volcanicGlow: tel.volcanicGlow,
     textureUrl: stage.textureUrl,
   }
 
   const env: NarrativeBeatEnvironment = {
-    confidence: 'consensus',
-    liquidWater: stage.continental?.oceanCoverage && stage.continental.oceanCoverage > 50 ? 'widespread' : 'unknown',
-    volcanism: 'moderate',
-    surfaceTempMinC: stage.climate?.globalTemp != null ? stage.climate.globalTemp - 10 : -20,
-    surfaceTempMaxC: stage.climate?.globalTemp != null ? stage.climate.globalTemp + 10 : 30,
-    surfacePressureRepresentativePa: (stage as { atmosphere?: { pressure?: number } }).atmosphere?.pressure
-      ? ((stage as { atmosphere?: { pressure?: number } }).atmosphere!.pressure! * 101_325)
-      : 101_325,
-    surfacePressureBasis: 'measured_global_average',
+    confidence: tel.confidence,
+    liquidWater: tel.liquidWater,
+    volcanism: tel.volcanism,
+    surfaceTempMinC: tel.surfaceTempMinC,
+    surfaceTempMaxC: tel.surfaceTempMaxC,
+    surfacePressureRepresentativePa: tel.surfacePressureRepresentativePa,
+    surfacePressureBasis: tel.surfacePressureBasis,
     o2Percent: stage.o2,
     co2Ppm: stage.co2,
-    dayLengthHours: stage.dayLength,
+    dayLengthHours: tel.dayLengthHours,
     eon: stage.eon,
     era: stage.era,
     period: stage.period,
@@ -42,8 +42,8 @@ export function earthStageToBeat(stage: EarthStage, order: number): NarrativeBea
 
   const panel: NarrativeBeatPanel = {
     descriptionVi: stage.description,
-    compareNoteVi: '',
-    environmentNoteVi: '',
+    compareNoteVi: tel.compareNoteVi,
+    environmentNoteVi: tel.environmentNoteVi,
     pressureCitationVi: '',
     surfaceTempNoteVi: '',
   }
@@ -85,7 +85,7 @@ export function beatToEarthStage(beat: NarrativeBeat): EarthStage {
     timeDisplay: beat.ageLabelVi,
     maxMa: beat.timeMa,
     minMa: beat.timeMaEnd,
-    eon: e.eon ?? 'Phanerozoic',
+    eon: e.eon ?? 'Đại Hiển Sinh',
     era: e.era ?? null,
     period: e.period ?? null,
     epoch: e.epoch ?? null,
