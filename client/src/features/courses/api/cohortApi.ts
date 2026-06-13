@@ -264,6 +264,22 @@ export async function enrollCohort(slug: string, cohortId: string): Promise<Enro
   return res.json()
 }
 
+export async function resendCohortInviteEmail(
+  slug: string,
+  cohortId: string,
+): Promise<{
+  success: boolean
+  error?: string
+  code?: string
+  data?: { emailSent?: boolean; message?: string; maskedEmail?: string | null }
+}> {
+  const res = await fetch(
+    `${BASE}/courses/${encodeURIComponent(slug)}/cohort/${encodeURIComponent(cohortId)}/resend-invite-email`,
+    apiFetchInit({ method: 'POST', headers: authHeaders() }),
+  )
+  return res.json()
+}
+
 export async function fetchCohortSyllabus(slug: string, cohortId: string) {
   const res = await fetch(`${BASE}/courses/${encodeURIComponent(slug)}/cohort/${encodeURIComponent(cohortId)}/syllabus`, apiFetchInit({
     headers: authHeaders(),

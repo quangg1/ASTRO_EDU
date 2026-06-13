@@ -1,10 +1,84 @@
 const User = require('../../auth/models/User');
 const Cohort = require('../models/Cohort');
 const CohortEnrollment = require('../models/CohortEnrollment');
-const { sendCohortInviteEmail } = require('../../../shared/mailer');
+const { sendCohortInviteEmail, isMailConfigured } = require('../../../shared/mailer');
 const { notifyCohortInviteSent, notifyCohortJoined } = require('./deliveryNotifications');
 const { AppError } = require('../../../shared/errors');
 const { resolveCohortPrice } = require('../lib/cohortPricing');
+
+const INVITE_EMAIL_RESEND_COOLDOWN_MS = 120_000;
+
+function cohortInviteEmailMessage(placement) {
+  if (placement.emailSent) {
+    return 'Mã lớp đã gửi qua email (kiểm tra cả thư rác). Không hiển thị mã trên web.';
+  }
+  if (placement.emailSkippedReason === 'no_smtp') {
+    return 'Đã vào lớp nhưng chưa gửi được email — SMTP chưa cấu hình trên server. Bấm «Gửi lại email» hoặc liên hệ giáo viên.';
+  }
+  if (placement.emailSkippedReason === 'no_email') {
+    return 'Đã vào lớp — tài khoản chưa có email. Cập nhật hồ sơ hoặc liên hệ giáo viên.';
+  }
+  if (placement.emailSkippedReason === 'no_invite_code') {
+    return 'Đã vào lớp — lớp chưa có mã. Liên hệ giáo viên.';
+  }
+  if (placement.emailSkippedReason === 'smtp_error') {
+    return 'Đã vào lớp nhưng gửi email thất bại. Bấm «Gửi lại email» sau vài phút hoặc liên hệ giáo viên.';
+  }
+  return 'Đã vào lớp. Mã lớp gửi qua email — nếu chưa nhận, bấm «Gửi lại email» hoặc xem thông báo trên app.';
+}
+
+async function trySendCohortInviteEmail({ en, user, course, cohort, session, allowResend = false }) {
+  const email = user?.email?.trim();
+  if (!email) {
+    return { sent: false, skipped: true, emailSkippedReason: 'no_email' };
+  }
+  if (!cohort.inviteCode) {
+    return { sent: false, skipped: true, emailSkippedReason: 'no_invite_code' };
+  }
+  if (en.inviteCodeEmailSentAt && !allowResend) {
+    return { sent: true, skipped: false, alreadySent: true };
+  }
+  if (allowResend && en.inviteCodeEmailSentAt) {
+    const elapsed = Date.now() - new Date(en.inviteCodeEmailSentAt).getTime();
+    if (elapsed < INVITE_EMAIL_RESEND_COOLDOWN_MS) {
+      const waitSec = Math.ceil((INVITE_EMAIL_RESEND_COOLDOWN_MS - elapsed) / 1000);
+      throw new AppError(
+        429,
+        'INVITE_EMAIL_COOLDOWN',
+        `Vui lòng đợi ${waitSec} giây trước khi gửi lại email.`,
+      );
+    }
+  }
+  if (!isMailConfigured()) {
+    console.warn('[cohort] invite email skipped — SMTP chưa cấu hình (SMTP_HOST/USER/PASS/MAIL_FROM)');
+    return { sent: false, skipped: true, emailSkippedReason: 'no_smtp' };
+  }
+
+  const emailResult = await sendCohortInviteEmail({
+    to: email,
+    displayName: user?.displayName,
+    courseTitle: course.title,
+    courseSlug: course.slug,
+    cohortTitle: cohort.title,
+    inviteCode: cohort.inviteCode,
+    startAt: cohort.startAt,
+    timezone: cohort.timezone,
+  });
+
+  if (emailResult.sent) {
+    en.inviteCodeEmailSentAt = new Date();
+    await en.save(session ? { session } : {});
+    return { sent: true, skipped: false };
+  }
+
+  console.error('[cohort] invite email failed:', emailResult.error || 'unknown');
+  return {
+    sent: false,
+    skipped: !!emailResult.skipped,
+    emailSkippedReason: emailResult.skipped ? 'no_smtp' : 'smtp_error',
+    emailError: emailResult.error || null,
+  };
+}
 
 function isCohortEnrollmentOpen(cohort, now = new Date()) {
   if (!cohort || cohort.status !== 'open') return false;
@@ -65,27 +139,16 @@ async function placeStudentInCohort({ userId, course, cohort, session }) {
   }
 
   const user = await User.findById(userId).select('email displayName').lean();
-  const email = user?.email?.trim();
-  let emailResult = { sent: false, skipped: true };
+  const emailResult = await trySendCohortInviteEmail({
+    en,
+    user,
+    course,
+    cohort,
+    session,
+    allowResend: false,
+  });
 
-  if (email && cohort.inviteCode && !en.inviteCodeEmailSentAt) {
-    emailResult = await sendCohortInviteEmail({
-      to: email,
-      displayName: user?.displayName,
-      courseTitle: course.title,
-      courseSlug: course.slug,
-      cohortTitle: cohort.title,
-      inviteCode: cohort.inviteCode,
-      startAt: cohort.startAt,
-      timezone: cohort.timezone,
-    });
-    if (emailResult.sent) {
-      en.inviteCodeEmailSentAt = new Date();
-      await en.save(session ? { session } : {});
-    }
-  }
-
-  const maskedEmail = email ? maskEmail(email) : null;
+  const maskedEmail = user?.email?.trim() ? maskEmail(user.email.trim()) : null;
   try {
     await notifyCohortInviteSent({
       userId,
@@ -112,7 +175,53 @@ async function placeStudentInCohort({ userId, course, cohort, session }) {
     cohortSlug: cohort.slug,
     emailSent: emailResult.sent,
     emailSkipped: emailResult.skipped,
+    emailSkippedReason: emailResult.emailSkippedReason || null,
     maskedEmail,
+  };
+}
+
+/**
+ * Gửi lại email mã lớp — học viên đã trong lớp, chưa nhận được thư.
+ */
+async function resendCohortInviteEmail({ userId, course, cohortId }) {
+  const cohort = await Cohort.findOne({ _id: cohortId, courseId: course._id });
+  if (!cohort) {
+    throw new AppError(404, 'COHORT_NOT_FOUND', 'Không tìm thấy lớp');
+  }
+  const en = await CohortEnrollment.findOne({ cohortId: cohort._id, userId });
+  if (!en) {
+    throw new AppError(403, 'NOT_ENROLLED', 'Bạn chưa tham gia lớp này');
+  }
+  const user = await User.findById(userId).select('email displayName').lean();
+  const emailResult = await trySendCohortInviteEmail({
+    en,
+    user,
+    course,
+    cohort,
+    session: null,
+    allowResend: true,
+  });
+  const maskedEmail = user?.email?.trim() ? maskEmail(user.email.trim()) : null;
+  if (emailResult.sent) {
+    await notifyCohortInviteSent({
+      userId,
+      courseTitle: course.title,
+      courseSlug: course.slug,
+      cohortTitle: cohort.title,
+      cohortId: String(cohort._id),
+      email: maskedEmail,
+      emailSent: true,
+    });
+  }
+  return {
+    cohortId: String(cohort._id),
+    emailSent: emailResult.sent,
+    emailSkippedReason: emailResult.emailSkippedReason || null,
+    maskedEmail,
+    message: cohortInviteEmailMessage({
+      emailSent: emailResult.sent,
+      emailSkippedReason: emailResult.emailSkippedReason,
+    }),
   };
 }
 
@@ -128,4 +237,6 @@ module.exports = {
   publicCohortCard,
   loadEnrollableCohort,
   placeStudentInCohort,
+  resendCohortInviteEmail,
+  cohortInviteEmailMessage,
 };

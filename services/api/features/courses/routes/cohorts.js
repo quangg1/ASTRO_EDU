@@ -20,6 +20,8 @@ const {
   publicCohortCard,
   loadEnrollableCohort,
   placeStudentInCohort,
+  resendCohortInviteEmail,
+  cohortInviteEmailMessage,
 } = require('../services/cohortEnrollmentService');
 const { assertCohortMemberOrStaff } = require('../services/cohortAccess');
 const { buildCohortHome } = require('../services/cohortHomeService');
@@ -236,7 +238,7 @@ router.post('/:slug/cohorts/enroll', authMiddleware, async (req, res) => {
         slug: placement.cohortSlug,
         title: cohort.title,
         inviteEmailSent: placement.emailSent,
-        message: 'Mã lớp đã gửi qua email (không hiển thị trên web).',
+        message: cohortInviteEmailMessage(placement),
       },
     });
   } catch (err) {
@@ -283,10 +285,31 @@ router.post('/:slug/cohorts/join', authMiddleware, async (req, res) => {
         slug: placement.cohortSlug,
         title: cohort.title,
         inviteEmailSent: placement.emailSent,
+        message: cohortInviteEmailMessage(placement),
       },
     });
   } catch (err) {
     console.error('[cohorts] join error:', err);
+    res.status(500).json({ success: false, error: 'Lỗi server' });
+  }
+});
+
+/** POST gửi lại email mã lớp — học viên đã trong lớp. */
+router.post('/:slug/cohort/:cohortId/resend-invite-email', authMiddleware, async (req, res) => {
+  try {
+    const course = await Course.findOne({ slug: req.params.slug, published: true });
+    if (!course) return res.status(404).json({ success: false, error: 'Không tìm thấy khóa học' });
+    const result = await resendCohortInviteEmail({
+      userId: req.userId,
+      course,
+      cohortId: req.params.cohortId,
+    });
+    res.json({ success: true, data: result });
+  } catch (err) {
+    if (err.status && err.code) {
+      return res.status(err.status).json({ success: false, code: err.code, error: err.message });
+    }
+    console.error('[cohorts] resend invite email error:', err);
     res.status(500).json({ success: false, error: 'Lỗi server' });
   }
 });

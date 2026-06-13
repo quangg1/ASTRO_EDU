@@ -8,6 +8,7 @@ import {
   enrollCohort,
   fetchCourseCohorts,
   fetchMyCohorts,
+  resendCohortInviteEmail,
   type CohortSummary,
   type MyCohortRow,
 } from '@/features/courses/api/cohortApi'
@@ -56,6 +57,7 @@ export function CourseCohortsJoin({
   const [myCohorts, setMyCohorts] = useState<MyCohortRow[]>([])
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const [resendBusyId, setResendBusyId] = useState<string | null>(null)
   const [msg, setMsg] = useState<string | null>(null)
   const [upgradeDue, setUpgradeDue] = useState<{
     listPrice: number
@@ -130,6 +132,27 @@ export function CourseCohortsJoin({
       ? upgradeDue.listPrice > 0
       : cohortRequiresPay
 
+  const refreshMyCohorts = () => {
+    if (!user?.id) return
+    void fetchMyCohorts(courseSlug).then((res) => {
+      if (res.success) setMyCohorts(res.data || [])
+    })
+  }
+
+  const handleResendInvite = async (cohortId: string) => {
+    if (!user) return
+    setResendBusyId(cohortId)
+    setMsg(null)
+    const res = await resendCohortInviteEmail(courseSlug, cohortId)
+    setResendBusyId(null)
+    if (res.success && res.data?.emailSent) {
+      setMsg(res.data.message || 'Đã gửi lại email mã lớp.')
+      refreshMyCohorts()
+      return
+    }
+    setMsg(res.error || res.data?.message || 'Chưa gửi được email. Thử lại sau hoặc liên hệ giáo viên.')
+  }
+
   const handleEnroll = async () => {
     if (!user) {
       router.push(`/login?redirect=/courses/${courseSlug}`)
@@ -155,6 +178,11 @@ export function CourseCohortsJoin({
     const res = await enrollCohort(courseSlug, cohortId)
     setBusy(false)
     if (res.success && res.data?.cohortId) {
+      if (res.data.inviteEmailSent === false && res.data.message) {
+        setMsg(res.data.message)
+        refreshMyCohorts()
+        return
+      }
       router.push(`/courses/${courseSlug}/cohort/${res.data.cohortId}`)
       return
     }
@@ -181,8 +209,8 @@ export function CourseCohortsJoin({
 
       {cohortPlacedFlash && (
         <p className="text-xs text-emerald-200/95 mb-4 rounded-lg border border-emerald-500/35 bg-emerald-500/10 px-3 py-2">
-          Đăng ký thành công. Mã lớp đã được gửi tới email của bạn (kiểm tra cả hộp thư spam). Trên web chỉ có
-          thông báo xác nhận — không hiển thị mã.
+          Đăng ký lớp thành công. Mã lớp (nếu có) được gửi qua email — kiểm tra hộp thư và thư rác. Nếu chưa
+          nhận, bấm «Gửi lại email» bên dưới hoặc xem thông báo trên app.
         </p>
       )}
 
@@ -190,18 +218,36 @@ export function CourseCohortsJoin({
         <div className="mb-4 space-y-2">
           <p className="text-xs text-ds-muted font-medium">Lớp của bạn</p>
           {myCohorts.map((c) => (
-            <Link
+            <div
               key={c.id}
-              href={`/courses/${courseSlug}/cohort/${c.id}`}
-              className="block rounded-lg border border-ds-border bg-white/5 px-4 py-3 text-sm text-white hover:border-ds-accent-strong"
+              className="rounded-lg border border-ds-border bg-white/5 px-4 py-3 text-sm text-white"
             >
-              <span>{c.title}</span>
-              {c.inviteEmailSent && (
+              <Link
+                href={`/courses/${courseSlug}/cohort/${c.id}`}
+                className="block hover:text-ds-accent-strong"
+              >
+                {c.title}
+              </Link>
+              {c.inviteEmailSent ? (
                 <span className="block text-[11px] text-emerald-300/90 mt-1">
                   Đã gửi mã lớp qua email — không hiển thị mã trên web.
                 </span>
+              ) : (
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <span className="text-[11px] text-amber-200/90">
+                    Chưa xác nhận gửi email mã lớp — kiểm tra thông báo hoặc gửi lại.
+                  </span>
+                  <button
+                    type="button"
+                    disabled={resendBusyId === c.id}
+                    onClick={() => void handleResendInvite(c.id)}
+                    className="rounded-md border border-amber-400/30 bg-amber-500/10 px-2 py-0.5 text-[11px] text-amber-100 hover:bg-amber-500/20 disabled:opacity-50"
+                  >
+                    {resendBusyId === c.id ? 'Đang gửi…' : 'Gửi lại email'}
+                  </button>
+                </div>
               )}
-            </Link>
+            </div>
           ))}
         </div>
       )}
