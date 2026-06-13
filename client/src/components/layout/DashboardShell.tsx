@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { Suspense } from 'react'
 import { usePathname, useSearchParams } from 'next/navigation'
 import {
   LayoutDashboard, BookMarked, BookOpen, Map, Globe, Receipt,
@@ -146,6 +147,28 @@ const rewardItems: NavItem[] = [
 ]
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
+  return (
+    <Suspense fallback={<DashboardShellFallback>{children}</DashboardShellFallback>}>
+      <DashboardShellInner>{children}</DashboardShellInner>
+    </Suspense>
+  )
+}
+
+function DashboardShellFallback({ children }: { children: React.ReactNode }) {
+  return (
+    <div
+      className="min-h-screen pt-14 flex dash-font md:pl-[280px]"
+      style={{ background: 'var(--color-bg-base)', color: 'var(--color-text-primary)' }}
+    >
+      <CosmoPageBackdrop />
+      <main className="flex-1 w-full min-w-0 pb-6" style={{ position: 'relative', zIndex: 1 }}>
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">{children}</div>
+      </main>
+    </div>
+  )
+}
+
+function DashboardShellInner({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const { user } = useAuthStore()
