@@ -72,15 +72,13 @@ export function useExplorePage() {
     const sp = mode.searchParams
     const hasLat = sp.get('lat')
     const hasLon = sp.get('lon')
-    const hasTime = sp.get('time')
-    if (hasLat && hasLon && hasTime) return
+    if (hasLat && hasLon) return
 
     const { observer } = skyObserver
     const next = new URLSearchParams(sp.toString())
     next.set('view', 'sky')
     if (!hasLat) next.set('lat', String(Number(observer.latDeg.toFixed(4))))
     if (!hasLon) next.set('lon', String(Number(observer.lonDeg.toFixed(4))))
-    if (!hasTime) next.set('time', formatObserverTimeParam(observer.at))
     if (mode.skyActiveTargetId) next.set('target', mode.skyActiveTargetId)
     for (const k of EXPLORE_SOLAR_ONLY_PARAMS) next.delete(k)
 
@@ -99,7 +97,6 @@ export function useExplorePage() {
     skyObserver.observerResolved,
     skyObserver.observer.latDeg,
     skyObserver.observer.lonDeg,
-    skyObserver.observer.at.getTime(),
   ])
 
   const sky = useExploreSkyCatalog(mode.skyActiveTargetId)

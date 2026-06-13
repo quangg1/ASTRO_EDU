@@ -12,7 +12,7 @@ import {
   mergeExplorePreservedParams,
   type ExploreView,
 } from '@/features/explore/public'
-import { formatObserverTimeParam } from '@/features/explore/lib/skyObserver'
+import { formatObserverTimeParam, tonightSkyObserverTime } from '@/features/explore/lib/skyObserver'
 import { normalizeSkyTargetId } from '@/features/explore/lib/exploreViewUrl'
 import type { AstronomyCalendarEvent } from '@/features/astronomy-calendar/types'
 
@@ -114,6 +114,20 @@ export function useExploreViewNavigation({
     [navigateExploreView],
   )
 
+  const setSkyObserverTimeMode = useCallback(
+    (mode: 'live' | 'tonight') => {
+      const next = new URLSearchParams(searchParams.toString())
+      if (mode === 'live') {
+        next.delete('time')
+      } else {
+        next.set('time', formatObserverTimeParam(tonightSkyObserverTime()))
+      }
+      const qs = next.toString()
+      replaceExploreUrl(qs ? `${pathname}?${qs}` : pathname)
+    },
+    [searchParams, pathname, replaceExploreUrl],
+  )
+
   const jumpToSkyEvent = useCallback(
     (event: Pick<
       AstronomyCalendarEvent,
@@ -168,6 +182,7 @@ export function useExploreViewNavigation({
     pickSkySceneObject,
     openSkyForEntity,
     openSolarForTarget,
+    setSkyObserverTimeMode,
     jumpToSkyEvent,
   }
 }

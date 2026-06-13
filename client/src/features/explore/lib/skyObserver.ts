@@ -58,9 +58,25 @@ export function parseObserverTimeParam(timeRaw: string | null | undefined): Date
   return null
 }
 
+/** `?time=` có nghĩa người dùng / sự kiện lịch ghim thời điểm — không tick live. */
+export function isObserverTimePinned(
+  params: URLSearchParams | { get: (k: string) => string | null },
+): boolean {
+  return parseObserverTimeParam(params.get('time')) != null
+}
+
 /** Ghi `?time=` an toàn — ISO UTC, không dùng `+` offset (tránh query đổi `+` → space). */
 export function formatObserverTimeParam(at: Date): string {
   return at.toISOString()
+}
+
+/** ~21:00 giờ địa phương — xem bầu trời tối khi đang ban ngày. */
+export function tonightSkyObserverTime(now = new Date()): Date {
+  const d = new Date(now)
+  d.setSeconds(0, 0)
+  if (d.getHours() < 5) d.setDate(d.getDate() - 1)
+  d.setHours(21, 0, 0, 0)
+  return d
 }
 
 export function parseSkyObserverFromSearchParams(

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import {
   parseSkyObserverFromSearchParams,
   formatObserverLocationShort,
+  isObserverTimePinned,
   type SkyObserver,
 } from '@/features/explore/lib/skyObserver'
 import { computeSkyEphemerisBodies, observerTimeLabel } from '@/features/explore/lib/skyEphemeris'
@@ -52,22 +53,39 @@ export function useExploreSkyObserver(
     )
   }, [urlHasLatLon])
 
+  const timePinned = useMemo(
+    () => isObserverTimePinned(searchParams),
+    [searchParams.get('time')],
+  )
+
+  const [liveNow, setLiveNow] = useState(() => new Date())
+
+  useEffect(() => {
+    if (timePinned) return
+    const tick = () => setLiveNow(new Date())
+    tick()
+    const id = setInterval(tick, 1000)
+    return () => clearInterval(id)
+  }, [timePinned])
+
   const observer = useMemo((): SkyObserver => {
     const base = parseSkyObserverFromSearchParams(searchParams)
     const latDeg =
       urlHasLatLon ? base.latDeg : geo.status === 'ok' ? geo.latDeg : base.latDeg
     const lonDeg =
       urlHasLatLon ? base.lonDeg : geo.status === 'ok' ? geo.lonDeg : base.lonDeg
-    return { ...base, latDeg, lonDeg }
+    const at = timePinned ? base.at : liveNow
+    return { ...base, latDeg, lonDeg, at }
   }, [
     searchParams,
     searchParams.get('lat'),
     searchParams.get('lon'),
-    searchParams.get('time'),
     searchParams.get('pollution'),
     searchParams.get('bortle'),
     urlHasLatLon,
     geo,
+    timePinned,
+    liveNow.getTime(),
   ])
 
   /** Sẵn sàng ghi URL — đã có lat/lon trên URL hoặc geolocation xong (ok / bị từ chối). */
@@ -80,7 +98,7 @@ export function useExploreSkyObserver(
     [observer.at.getTime()],
   )
 
-  return { observer, locationLabel, timeLabels, ephemerisBodies, observerResolved }
+  return { observer, locationLabel, timeLabels, ephemerisBodies, observerResolved, timePinned }
 }
 
 export type { SkyObserver }
