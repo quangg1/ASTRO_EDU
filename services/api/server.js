@@ -148,7 +148,7 @@ async function start() {
   server.listen(PORT, '0.0.0.0', () => {
     if (!isMailConfigured()) {
       console.warn(
-        '[mailer] Email chưa cấu hình — xác nhận đăng ký, xóa tài khoản, mã lớp… sẽ không gửi. Thêm RESEND_API_KEY + MAIL_FROM (Render) hoặc SMTP_* vào env API.',
+        '[mailer] Email chưa cấu hình — xác nhận đăng ký, xóa tài khoản, mã lớp… sẽ không gửi. Thêm BREVO_API_KEY + MAIL_FROM (Render) hoặc SMTP_* vào env API.',
       );
     } else {
       const transport = getMailTransport();

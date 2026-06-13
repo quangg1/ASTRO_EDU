@@ -10,17 +10,23 @@ function isSmtpEnvConfigured() {
   );
 }
 
+function isBrevoApiConfigured() {
+  return !!(process.env.BREVO_API_KEY?.trim() && process.env.MAIL_FROM?.trim());
+}
+
 function isResendConfigured() {
   return !!(process.env.RESEND_API_KEY?.trim() && process.env.MAIL_FROM?.trim());
 }
 
-/** SMTP hoặc Resend + MAIL_FROM. */
+/** Brevo API / Resend / SMTP + MAIL_FROM. */
 function isMailConfigured() {
+  if (isBrevoApiConfigured()) return true;
   if (isResendConfigured()) return true;
   return !!(isSmtpEnvConfigured() && process.env.MAIL_FROM?.trim());
 }
 
 function getMailTransport() {
+  if (isBrevoApiConfigured()) return 'brevo-api';
   if (isResendConfigured()) return 'resend';
   if (isSmtpEnvConfigured() && process.env.MAIL_FROM?.trim()) return 'smtp';
   return null;
@@ -48,6 +54,29 @@ function getTransporter() {
     tls: { minVersion: 'TLSv1.2' },
   });
   return transporter;
+}
+
+async function verifyBrevoApiConnection() {
+  const key = process.env.BREVO_API_KEY?.trim();
+  if (!key) {
+    return { ok: false, skipped: true, reason: 'not_configured' };
+  }
+  try {
+    const res = await fetch('https://api.brevo.com/v3/account', {
+      headers: { 'api-key': key },
+      signal: AbortSignal.timeout(15_000),
+    });
+    if (res.status === 401 || res.status === 403) {
+      return { ok: false, error: 'BREVO_API_KEY không hợp lệ', transport: 'brevo-api' };
+    }
+    if (!res.ok) {
+      const body = await res.text().catch(() => '');
+      return { ok: false, error: body || res.statusText || `HTTP ${res.status}`, transport: 'brevo-api' };
+    }
+    return { ok: true, transport: 'brevo-api' };
+  } catch (err) {
+    return { ok: false, error: err?.message || String(err), transport: 'brevo-api' };
+  }
 }
 
 async function verifyResendConnection() {
@@ -78,6 +107,9 @@ async function verifySmtpConnection() {
   if (!isMailConfigured()) {
     return { ok: false, skipped: true, reason: 'not_configured' };
   }
+  if (isBrevoApiConfigured()) {
+    return verifyBrevoApiConnection();
+  }
   if (isResendConfigured()) {
     return verifyResendConnection();
   }
@@ -101,7 +133,7 @@ function formatSendError(err) {
       return `${msg} — SMTP_HOST vẫn là Gmail; trên Render thường timeout. Đổi sang Brevo: smtp-relay.brevo.com, port 587, SMTP_SECURE=false trên service API.`;
     }
     if (host.includes('brevo') || host.includes('sendinblue')) {
-      return `${msg} — Brevo: kiểm tra SMTP_USER (email đăng ký Brevo), SMTP_PASS (SMTP key xsmtpsib-…, không phải mật khẩu web), MAIL_FROM (sender đã Verified), port 587.`;
+      return `${msg} — Brevo SMTP timeout trên Render. Dùng BREVO_API_KEY (HTTP, tab API keys xkeysib-…) + MAIL_FROM thay SMTP_HOST/SMTP_PASS.`;
     }
     return `${msg} — Kiểm tra SMTP_HOST trên Render (Brevo: smtp-relay.brevo.com). Env phải ở service galaxies-api, không phải frontend.`;
   }
@@ -122,6 +154,31 @@ function getSmtpPublicConfig() {
     secure: process.env.SMTP_SECURE === 'true' || process.env.SMTP_SECURE === '1',
     mailFromSet: Boolean(process.env.MAIL_FROM?.trim()),
   };
+}
+
+async function sendViaBrevoApi({ to, subject, text, html }) {
+  const key = process.env.BREVO_API_KEY.trim();
+  const sender = parseMailFromSender(process.env.MAIL_FROM);
+  const res = await fetch('https://api.brevo.com/v3/smtp/email', {
+    method: 'POST',
+    headers: {
+      'api-key': key,
+      'Content-Type': 'application/json',
+      accept: 'application/json',
+    },
+    body: JSON.stringify({
+      sender,
+      to: [{ email: to }],
+      subject,
+      textContent: text,
+      htmlContent: html || `<pre style="font-family:sans-serif;white-space:pre-wrap">${escapeHtml(text)}</pre>`,
+    }),
+    signal: AbortSignal.timeout(25_000),
+  });
+  if (!res.ok) {
+    const body = await res.text().catch(() => '');
+    throw new Error(body || res.statusText || `HTTP ${res.status}`);
+  }
 }
 
 async function sendViaResend({ to, subject, text, html }) {
@@ -155,6 +212,16 @@ async function sendViaResend({ to, subject, text, html }) {
 async function sendMail({ to, subject, text, html }) {
   if (!isMailConfigured()) {
     return { sent: false, skipped: true };
+  }
+
+  if (isBrevoApiConfigured()) {
+    try {
+      await sendViaBrevoApi({ to, subject, text, html });
+      return { sent: true };
+    } catch (err) {
+      console.error('[mailer] Brevo API send failed:', err?.message || err);
+      return { sent: false, error: formatSendError(err) };
+    }
   }
 
   if (isResendConfigured()) {
@@ -210,6 +277,19 @@ function normalizeMailFrom(raw) {
     return `${name} <${email}>`;
   }
   return s;
+}
+
+/** { name, email } cho Brevo REST API. */
+function parseMailFromSender(raw) {
+  const normalized = normalizeMailFrom(raw) || String(raw || '').trim();
+  const bracket = normalized.match(/^(.+?)\s*<([^>]+)>$/);
+  if (bracket) {
+    return { name: bracket[1].trim() || 'Cosmo Learn', email: bracket[2].trim() };
+  }
+  if (normalized.includes('@')) {
+    return { name: 'Cosmo Learn', email: normalized };
+  }
+  return { name: 'Cosmo Learn', email: normalized };
 }
 
 function formatMoney(amount, currency = 'VND') {
