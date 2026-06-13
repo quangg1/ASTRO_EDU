@@ -11,14 +11,18 @@ export const SKY_SHADER_GLSL1 = { glslVersion: THREE.GLSL1 } as const
 export const SKY_RENDER_ORDER = {
   atmosphere: 0,
   horizonGlow: 1,
-  milkyWay: 2,
-  deepSky: 3,
-  stars: 4,
-  planets: 5,
-  grid: 6,
-  constellationLines: 7,
+  /** Mây che — sau bầu khí quyển, trước Dải Ngân Hà. */
+  clouds: 2,
+  milkyWay: 3,
+  deepSky: 4,
+  stars: 5,
+  /** Mặt Trời / Mặt Trăng có pha — trước hành tinh glow. */
+  sunMoon: 6,
+  planets: 7,
+  grid: 8,
+  constellationLines: 9,
   /** Sau sao/hành tinh — cây che sao sát chân trời (Stellarium). */
-  landscape: 9,
+  landscape: 11,
 } as const
 
 /** Lưới Alt-Az kiểu Stellarium (cam). */

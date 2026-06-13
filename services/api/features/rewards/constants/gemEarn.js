@@ -31,6 +31,7 @@ const GEM_EARN = Object.freeze({
   community_helpful_answer: 8,
   community_helpful_vote: 1,
   onboarding_complete: 5,
+  astronomy_event_observed: 20,
 });
 
 /** Tối thiểu ký tự (title + nội dung plain) để thưởng đăng bài thảo luận */

@@ -1,19 +1,15 @@
 import type { EarthStage } from '@/features/content3d/earth/lib/earthHistoryTypes'
 import { getEarthHistoryApiPathBase } from '@/lib/apiConfig'
+import { apiFetch } from '@/lib/apiRequestInit'
 
 const API = `${getEarthHistoryApiPathBase()}/earth-history/editor`
 
 export async function saveEarthHistoryStagesBulk(
-  token: string,
   stages: EarthStage[],
 ): Promise<{ ok: boolean; error?: string }> {
   try {
-    const res = await fetch(`${API}/bulk`, {
+    const res = await apiFetch(`${API}/bulk`, {
       method: 'PUT',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify({ stages }),
     })
     const json = await res.json()

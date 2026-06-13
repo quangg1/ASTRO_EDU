@@ -211,13 +211,8 @@ function StudioShowcaseEntitiesPage() {
   }, [checked, user, router])
 
   const load = useCallback(async (opts?: { silent?: boolean }) => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('galaxies_token') : null
-    if (!token) {
-      setLoading(false)
-      return
-    }
     if (!opts?.silent) setLoading(true)
-    const editor = await fetchEditorShowcaseEntityContents(token)
+    const editor = await fetchEditorShowcaseEntityContents()
     if (editor) {
       setEditorCatalog(editor.catalog)
       setRows(buildInitialRows(editor.items, editor.catalog))
@@ -389,8 +384,6 @@ function StudioShowcaseEntitiesPage() {
   }
 
   const save = async () => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('galaxies_token') : null
-    if (!token) return
     setSaving(true)
     setMessage('')
     const payload = rows.map((r) => ({
@@ -399,7 +392,7 @@ function StudioShowcaseEntitiesPage() {
       horizonsCommand: r.horizonsId?.trim() || r.horizonsCommand?.trim() || '',
       horizonsCenter: r.orbitAround?.trim() || r.horizonsCenter?.trim() || '',
     }))
-    const r = await saveShowcaseEntityContents(token, payload)
+    const r = await saveShowcaseEntityContents(payload)
     setSaving(false)
     if (r.ok && r.items) {
       setRows(buildInitialRows(r.items, editorCatalog))
@@ -412,11 +405,9 @@ function StudioShowcaseEntitiesPage() {
 
   const syncSelectedFromJpl = async () => {
     if (!selected) return
-    const token = typeof window !== 'undefined' ? localStorage.getItem('galaxies_token') : null
-    if (!token) return
     setSyncingJpl(true)
     setMessage('')
-    const r = await syncShowcaseOrbitEntityFromJpl(token, selected.entityId, {
+    const r = await syncShowcaseOrbitEntityFromJpl(selected.entityId, {
       horizonsId: selected.horizonsId,
       orbitAround: selected.orbitAround,
       parentId: selected.parentId,
@@ -453,9 +444,7 @@ function StudioShowcaseEntitiesPage() {
   }
 
   const refreshAfterEntityCrud = async (nextSelectedId?: string) => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('galaxies_token') : null
-    if (!token) return
-    const editor = await fetchEditorShowcaseEntityContents(token)
+    const editor = await fetchEditorShowcaseEntityContents()
     if (editor) {
       setEditorCatalog(editor.catalog)
       setRows(buildInitialRows(editor.items, editor.catalog))
@@ -475,11 +464,9 @@ function StudioShowcaseEntitiesPage() {
     parentId: string
     linkedPlanetName: string
   }) => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('galaxies_token') : null
-    if (!token) return { ok: false, error: 'Chưa đăng nhập' }
     setEntityCrudBusy(true)
     setMessage('')
-    const r = await createShowcaseEntity(token, input)
+    const r = await createShowcaseEntity(input)
     setEntityCrudBusy(false)
     if (!r.ok) return { ok: false, error: r.error }
     setMessage(`Đã tạo ${r.entityId || input.entityId}.`)
@@ -488,11 +475,9 @@ function StudioShowcaseEntitiesPage() {
   }
 
   const handleDeleteEntity = async (entityId: string, cascade: boolean) => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('galaxies_token') : null
-    if (!token) return { ok: false, error: 'Chưa đăng nhập' }
     setEntityCrudBusy(true)
     setMessage('')
-    const r = await deleteShowcaseEntity(token, entityId, { cascade })
+    const r = await deleteShowcaseEntity(entityId, { cascade })
     setEntityCrudBusy(false)
     if (!r.ok) return { ok: false, error: r.error }
     setMessage(`Đã xóa ${entityId}.`)

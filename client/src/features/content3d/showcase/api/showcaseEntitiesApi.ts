@@ -1,4 +1,5 @@
 import { getApiPathBase } from '@/lib/apiConfig'
+import { apiFetch } from '@/lib/apiRequestInit'
 
 const API = `${getApiPathBase()}/showcase-entities`
 
@@ -88,13 +89,9 @@ export type ShowcaseEditorFetchResult = {
   catalog: ShowcaseEditorCatalogItem[]
 }
 
-export async function fetchEditorShowcaseEntityContents(
-  token: string,
-): Promise<ShowcaseEditorFetchResult | null> {
+export async function fetchEditorShowcaseEntityContents(): Promise<ShowcaseEditorFetchResult | null> {
   try {
-    const res = await fetch(`${API}/editor`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
+    const res = await apiFetch(`${API}/editor`)
     const data = await res.json()
     if (!data.success || !Array.isArray(data.data?.items)) return null
     return {
@@ -117,7 +114,6 @@ export type CreateShowcaseEntityInput = {
 }
 
 export async function createShowcaseEntity(
-  token: string,
   input: CreateShowcaseEntityInput,
 ): Promise<{
   ok: boolean
@@ -126,12 +122,8 @@ export async function createShowcaseEntity(
   error?: string
 }> {
   try {
-    const res = await fetch(`${API}/editor`, {
+    const res = await apiFetch(`${API}/editor`, {
       method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify(input),
     })
     const data = await res.json()
@@ -149,7 +141,6 @@ export async function createShowcaseEntity(
 }
 
 export async function deleteShowcaseEntity(
-  token: string,
   entityId: string,
   opts?: { cascade?: boolean },
 ): Promise<{
@@ -161,9 +152,8 @@ export async function deleteShowcaseEntity(
 }> {
   try {
     const q = opts?.cascade ? '?cascade=1' : ''
-    const res = await fetch(`${API}/editor/${encodeURIComponent(entityId)}${q}`, {
+    const res = await apiFetch(`${API}/editor/${encodeURIComponent(entityId)}${q}`, {
       method: 'DELETE',
-      headers: { Authorization: `Bearer ${token}` },
     })
     const data = await res.json()
     if (data.success && Array.isArray(data.data?.items)) {
@@ -184,16 +174,11 @@ export async function deleteShowcaseEntity(
 }
 
 export async function saveShowcaseEntityContents(
-  token: string,
   items: ShowcaseEntityContentDTO[],
 ): Promise<{ ok: boolean; items?: ShowcaseEntityContentDTO[]; invalidEntityIds?: string[]; error?: string }> {
   try {
-    const res = await fetch(`${API}/editor`, {
+    const res = await apiFetch(`${API}/editor`, {
       method: 'PUT',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify({ items }),
     })
     const data = await res.json()

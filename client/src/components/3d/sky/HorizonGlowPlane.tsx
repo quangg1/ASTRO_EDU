@@ -1,7 +1,9 @@
 'use client'
 
 import { useMemo } from 'react'
+import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
+import type { SunSkyState } from '@/features/explore/lib/skyAstronomy'
 import { SKY_RENDER_ORDER, SKY_SHADER_GLSL1 } from './skyLayers'
 import { useStereoScreenUniforms } from './useStereoScreenUniforms'
 import {
@@ -10,9 +12,17 @@ import {
   STEREO_UNIFORMS,
 } from './stereographicGlsl'
 
+type Props = { sun: SunSkyState }
+
 /** Ô nhiễm sáng + mép chân trời mềm (giữa sky gradient và panorama). */
-export function HorizonGlowPlane() {
-  const uniforms = useStereoScreenUniforms()
+export function HorizonGlowPlane({ sun }: Props) {
+  const sunUniforms = useMemo(
+    () => ({
+      uDay: { value: sun.dayFactor },
+    }),
+    [sun.dayFactor],
+  )
+  const uniforms = useStereoScreenUniforms(sunUniforms)
 
   const material = useMemo(
     () =>
@@ -30,8 +40,8 @@ export function HorizonGlowPlane() {
         fragmentShader: /* glsl */ `
           ${STEREO_UNIFORMS}
           ${STEREO_INVERSE_FN}
+          uniform float uDay;
           varying vec2 vNdc;
-          const float PI = 3.14159265359;
 
           void main() {
             float r = stereoRadius(vNdc);
@@ -47,13 +57,17 @@ export function HorizonGlowPlane() {
             vec3 lp = vec3(0.14, 0.16, 0.24);
             vec3 warm = vec3(0.22, 0.14, 0.08);
             vec3 col = mix(lp, warm, smoothstep(0.12, -0.05, alt) * 0.45);
-            float a = haze * (0.42 + rim) * discEdgeFade(vNdc);
+            float a = haze * (0.42 + rim) * discEdgeFade(vNdc) * (1.0 - uDay * 0.88);
             gl_FragColor = vec4(col * a, a);
           }
         `,
       }),
     [uniforms],
   )
+
+  useFrame(() => {
+    uniforms.uDay.value = sun.dayFactor
+  })
 
   return (
     <mesh

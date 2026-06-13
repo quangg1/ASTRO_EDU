@@ -1,6 +1,6 @@
 import { getToken } from '@/features/auth/public'
 import { getApiPathBase } from '@/lib/apiConfig'
-import { apiClientHeaders } from '@/lib/apiClientHeaders'
+import { apiClientHeaders, apiFetchInit } from '@/lib/apiClientHeaders'
 import { forUserFacingError } from '@/lib/sanitizeUserError'
 import { userMessages } from '@/lib/userMessages'
 
@@ -10,7 +10,7 @@ function apiBase(): string {
 
 async function promoFetch(path: string, init?: RequestInit): Promise<Response | null> {
   try {
-    return await fetch(`${apiBase()}${path}`, { cache: 'no-store', ...init })
+    return await fetch(`${apiBase()}${path}`, apiFetchInit({ cache: 'no-store', ...init }))
   } catch {
     return null
   }

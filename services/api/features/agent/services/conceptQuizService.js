@@ -7,6 +7,7 @@ const {
   deleteConceptQuizSession,
 } = require('./conceptQuizSessionStore');
 const { recordConceptQuizSubmit } = require('../../learning-state/services/learningStateEngine');
+const { internalServiceHeaders } = require('../../../shared/internalServiceAuth');
 
 const AI_URL = (process.env.AI_SERVICE_URL || 'http://127.0.0.1:5005').replace(/\/$/, '');
 
@@ -118,7 +119,7 @@ async function generateConceptQuizForAgent(userId, tier, opts = {}, heavyCtx = n
 
   const res = await fetch(`${AI_URL}/quiz/generate-concept`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...internalServiceHeaders() },
     body: JSON.stringify({
       concept_id: conceptId,
       concept_title: built.concept.title,

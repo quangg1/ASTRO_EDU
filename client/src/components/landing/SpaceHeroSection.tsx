@@ -20,7 +20,9 @@ const NAV = [
   { id: 'pillars', index: 1, label: 'Lộ trình', href: '#pillars' },
   { id: 'courses', index: 2, label: 'Khóa học', href: '#courses' },
   { id: 'explore', index: 3, label: 'Khám phá 3D', href: '/explore' },
-  { id: 'community', index: 4, label: 'Cộng đồng', href: '/community' },
+  { id: 'sky', index: 4, label: 'La bàn chòm sao', href: '/explore?view=sky' },
+  { id: 'calendar', index: 5, label: 'Lịch thiên văn', href: '/calendar' },
+  { id: 'community', index: 6, label: 'Cộng đồng', href: '/community' },
 ]
 
 const ORB_SIZE =

@@ -1,6 +1,6 @@
-import { getToken } from '@/features/auth/public'
+import { hasClientSession } from '@/features/auth/public'
 import { getApiPathBase } from '@/lib/apiConfig'
-import { apiClientHeaders } from '@/lib/apiClientHeaders'
+import { apiClientHeaders, apiFetchInit } from '@/lib/apiClientHeaders'
 
 const COMMUNITY_BASE = getApiPathBase()
 
@@ -95,14 +95,14 @@ export interface CommunityGemReward {
 }
 
 export async function fetchForums(): Promise<Forum[]> {
-  const res = await fetch(`${COMMUNITY_BASE}/forums`, { headers: authHeaders() })
+  const res = await fetch(`${COMMUNITY_BASE}/forums`, apiFetchInit({ headers: authHeaders() }))
   const data = await res.json()
   if (data.success && Array.isArray(data.data)) return data.data
   return []
 }
 
 export async function fetchForum(slug: string): Promise<Forum | null> {
-  const res = await fetch(`${COMMUNITY_BASE}/forums/${slug}`, { headers: authHeaders() })
+  const res = await fetch(`${COMMUNITY_BASE}/forums/${slug}`, apiFetchInit({ headers: authHeaders() }))
   const data = await res.json()
   if (data.success && data.data) return data.data
   return null
@@ -138,7 +138,7 @@ export async function fetchForumPosts(
   if (opts?.pathSource) params.set('pathSource', opts.pathSource)
   if (opts?.learningLessonId) params.set('learningLessonId', opts.learningLessonId)
   const q = params.toString()
-  const res = await fetch(`${COMMUNITY_BASE}/forums/${slug}/posts${q ? `?${q}` : ''}`, { headers: authHeaders() })
+  const res = await fetch(`${COMMUNITY_BASE}/forums/${slug}/posts${q ? `?${q}` : ''}`, apiFetchInit({ headers: authHeaders() }))
   const json = await res.json()
   if (json.success) return { data: json.data || [], total: json.total || 0, page: json.page || 1, limit: json.limit || 20 }
   return { data: [], total: 0, page: 1, limit: 20 }
@@ -159,7 +159,7 @@ export async function fetchNews(opts?: {
   if (opts?.q) params.set('q', opts.q)
   if (opts?.sort && opts.sort !== 'newest') params.set('sort', opts.sort)
   const q = params.toString()
-  const res = await fetch(`${COMMUNITY_BASE}/news${q ? `?${q}` : ''}`, { headers: authHeaders() })
+  const res = await fetch(`${COMMUNITY_BASE}/news${q ? `?${q}` : ''}`, apiFetchInit({ headers: authHeaders() }))
   const json = await res.json()
   if (json.success) return { data: json.data || [], total: json.total || 0 }
   return { data: [], total: 0 }
@@ -167,7 +167,7 @@ export async function fetchNews(opts?: {
 
 /** Danh sách category từ tin đã crawl (để filter). */
 export async function fetchNewsCategories(): Promise<string[]> {
-  const res = await fetch(`${COMMUNITY_BASE}/news/categories`, { headers: authHeaders() })
+  const res = await fetch(`${COMMUNITY_BASE}/news/categories`, apiFetchInit({ headers: authHeaders() }))
   const json = await res.json()
   if (json.success && Array.isArray(json.data)) return json.data
   return []
@@ -179,7 +179,7 @@ export interface CommunityTagCount {
 }
 
 export async function fetchPopularTags(limit = 30): Promise<CommunityTagCount[]> {
-  const res = await fetch(`${COMMUNITY_BASE}/community/tags?limit=${limit}`, { cache: 'no-store' })
+  const res = await fetch(`${COMMUNITY_BASE}/community/tags?limit=${limit}`, apiFetchInit({ cache: 'no-store' }))
   const json = await res.json()
   if (json.success && Array.isArray(json.data)) return json.data
   return []
@@ -205,10 +205,10 @@ export async function searchCommunityPosts(opts: {
   if (opts.page) params.set('page', String(opts.page))
   if (opts.limit) params.set('limit', String(opts.limit))
   const qs = params.toString()
-  const res = await fetch(`${COMMUNITY_BASE}/community/search${qs ? `?${qs}` : ''}`, {
+  const res = await fetch(`${COMMUNITY_BASE}/community/search${qs ? `?${qs}` : ''}`, apiFetchInit({
     headers: authHeaders(),
     cache: 'no-store',
-  })
+  }))
   const json = await res.json()
   if (json.success) {
     return {
@@ -231,7 +231,7 @@ export async function fetchPostsByTag(
   const qs = params.toString()
   const res = await fetch(
     `${COMMUNITY_BASE}/community/tags/${encodeURIComponent(tag)}/posts${qs ? `?${qs}` : ''}`,
-    { headers: authHeaders(), cache: 'no-store' },
+    apiFetchInit({ headers: authHeaders(), cache: 'no-store' }),
   )
   const json = await res.json()
   if (json.success) return { data: json.data || [], total: json.total || 0 }
@@ -239,7 +239,7 @@ export async function fetchPostsByTag(
 }
 
 export async function fetchPost(id: string): Promise<{ post: Post & { comments: Comment[]; myVote?: number | null } } | null> {
-  const res = await fetch(`${COMMUNITY_BASE}/posts/${id}`, { headers: authHeaders() })
+  const res = await fetch(`${COMMUNITY_BASE}/posts/${id}`, apiFetchInit({ headers: authHeaders() }))
   const json = await res.json()
   if (json.success && json.data) return { post: json.data }
   return null
@@ -261,15 +261,14 @@ export async function createPost(
     tags?: string[]
   },
 ): Promise<{ success: boolean; data?: Post; gemReward?: CommunityGemReward | null; error?: string; code?: string }> {
-  const token = getToken()
-  if (!token) {
+  if (!hasClientSession()) {
     return { success: false, error: 'Bạn cần đăng nhập để đăng bài', code: 'AUTH_REQUIRED' }
   }
-  const res = await fetch(`${COMMUNITY_BASE}/forums/${forumSlug}/posts`, {
+  const res = await fetch(`${COMMUNITY_BASE}/forums/${forumSlug}/posts`, apiFetchInit({
     method: 'POST',
     headers: authHeaders(),
     body: JSON.stringify(body),
-  })
+  }))
   const json = await res.json().catch(() => ({}))
   if (json.success) return { success: true, data: json.data, gemReward: json.gemReward ?? null }
   if (res.status === 401) {
@@ -287,15 +286,14 @@ export async function addComment(
   content: string,
   parentId?: string,
 ): Promise<{ success: boolean; data?: Comment; error?: string; code?: string }> {
-  const token = getToken()
-  if (!token) {
+  if (!hasClientSession()) {
     return { success: false, error: 'Bạn cần đăng nhập để bình luận', code: 'AUTH_REQUIRED' }
   }
-  const res = await fetch(`${COMMUNITY_BASE}/posts/${postId}/comments`, {
+  const res = await fetch(`${COMMUNITY_BASE}/posts/${postId}/comments`, apiFetchInit({
     method: 'POST',
     headers: authHeaders(),
     body: JSON.stringify({ content, parentId }),
-  })
+  }))
   const json = await res.json().catch(() => ({}))
   if (json.success) return { success: true, data: json.data }
   if (res.status === 401) {
@@ -309,11 +307,11 @@ export async function addComment(
 }
 
 export async function votePost(postId: string, value: 1 | -1): Promise<{ success: boolean; voteCount?: number; myVote?: number | null; error?: string }> {
-  const res = await fetch(`${COMMUNITY_BASE}/posts/${postId}/vote`, {
+  const res = await fetch(`${COMMUNITY_BASE}/posts/${postId}/vote`, apiFetchInit({
     method: 'POST',
     headers: authHeaders(),
     body: JSON.stringify({ value }),
-  })
+  }))
   const json = await res.json()
   if (json.success) return { success: true, voteCount: json.voteCount, myVote: json.myVote }
   return { success: false, error: json.error || 'Lỗi vote' }
@@ -323,11 +321,11 @@ export async function voteComment(
   commentId: string,
   value: 1 | -1,
 ): Promise<{ success: boolean; voteCount?: number; myVote?: number | null; gemReward?: CommunityGemReward | null; error?: string }> {
-  const res = await fetch(`${COMMUNITY_BASE}/comments/${commentId}/vote`, {
+  const res = await fetch(`${COMMUNITY_BASE}/comments/${commentId}/vote`, apiFetchInit({
     method: 'POST',
     headers: authHeaders(),
     body: JSON.stringify({ value }),
-  })
+  }))
   const json = await res.json()
   if (json.success) {
     return { success: true, voteCount: json.voteCount, myVote: json.myVote, gemReward: json.gemReward ?? null }
@@ -338,10 +336,10 @@ export async function voteComment(
 export async function markCommentHelpful(
   commentId: string,
 ): Promise<{ success: boolean; data?: Comment; gemReward?: CommunityGemReward | null; error?: string }> {
-  const res = await fetch(`${COMMUNITY_BASE}/comments/${commentId}/helpful`, {
+  const res = await fetch(`${COMMUNITY_BASE}/comments/${commentId}/helpful`, apiFetchInit({
     method: 'POST',
     headers: authHeaders(),
-  })
+  }))
   const json = await res.json()
   if (json.success) return { success: true, data: json.data, gemReward: json.gemReward ?? null }
   return { success: false, error: json.error || 'Không thể đánh dấu hữu ích' }
@@ -349,11 +347,11 @@ export async function markCommentHelpful(
 
 /** Admin: ghim / bỏ ghim bài viết */
 export async function pinPost(postId: string, isPinned: boolean): Promise<{ success: boolean; data?: Post; error?: string }> {
-  const res = await fetch(`${COMMUNITY_BASE}/posts/${postId}`, {
+  const res = await fetch(`${COMMUNITY_BASE}/posts/${postId}`, apiFetchInit({
     method: 'PATCH',
     headers: authHeaders(),
     body: JSON.stringify({ isPinned }),
-  })
+  }))
   const json = await res.json()
   if (json.success) return { success: true, data: json.data }
   return { success: false, error: json.error || 'Lỗi cập nhật' }
@@ -361,7 +359,7 @@ export async function pinPost(postId: string, isPinned: boolean): Promise<{ succ
 
 /** Admin: xóa bài viết */
 export async function deletePost(postId: string): Promise<{ success: boolean; error?: string }> {
-  const res = await fetch(`${COMMUNITY_BASE}/posts/${postId}`, { method: 'DELETE', headers: authHeaders() })
+  const res = await fetch(`${COMMUNITY_BASE}/posts/${postId}`, apiFetchInit({ method: 'DELETE', headers: authHeaders() }))
   const json = await res.json()
   if (json.success) return { success: true }
   return { success: false, error: json.error || 'Lỗi xóa' }

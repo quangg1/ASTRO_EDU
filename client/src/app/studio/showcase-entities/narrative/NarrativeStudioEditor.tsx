@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import Link from 'next/link'
@@ -69,24 +69,21 @@ export function NarrativeStudioEditor({ entityId, showcaseContent }: Props) {
   const load = useCallback(async () => {
     setLoading(true)
     setMessage('')
-    const token = typeof window !== 'undefined' ? localStorage.getItem('galaxies_token') : null
-    if (token) {
-      const { data } = await fetchEditorPlanetNarrative(token, entityId)
-      if (data?.beats?.length) {
-        const sorted = data.beats.map(ensureBeatVisual).sort((a, b) => a.order - b.order)
-        setBundle({
-          ...data,
-          entityId,
-          kind: 'generic',
-          beats: sorted,
-          panelSchema: resolvePanelSchema(entityId, data.panelSchema),
-        })
-        setSelectedBeatId(sorted[0]?.id ?? null)
-        setSelectedSiteId(data.sites[0]?.id ?? '')
-        setDataSource('db')
-        setLoading(false)
-        return
-      }
+    const { data } = await fetchEditorPlanetNarrative(entityId)
+    if (data?.beats?.length) {
+      const sorted = data.beats.map(ensureBeatVisual).sort((a, b) => a.order - b.order)
+      setBundle({
+        ...data,
+        entityId,
+        kind: 'generic',
+        beats: sorted,
+        panelSchema: resolvePanelSchema(entityId, data.panelSchema),
+      })
+      setSelectedBeatId(sorted[0]?.id ?? null)
+      setSelectedSiteId(data.sites[0]?.id ?? '')
+      setDataSource('db')
+      setLoading(false)
+      return
     }
     const fallback = studioFallbackBundle(entityId)
     setBundle({
@@ -191,11 +188,6 @@ export function NarrativeStudioEditor({ entityId, showcaseContent }: Props) {
   }
 
   const onSave = async () => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('galaxies_token') : null
-    if (!token) {
-      setMessage('Cần đăng nhập teacher/admin')
-      return
-    }
     if (!bundle.beats.length) {
       setMessage('Thêm ít nhất một thời kỳ trước khi lưu.')
       return
@@ -209,7 +201,7 @@ export function NarrativeStudioEditor({ entityId, showcaseContent }: Props) {
       panelSchema: schema,
       beats: bundle.beats.map((b, i) => ({ ...ensureBeatVisual(b), order: i + 1 })),
     }
-    const r = await savePlanetNarrative(token, payload)
+    const r = await savePlanetNarrative(payload)
     if (!r.ok) {
       setSaving(false)
       setMessage(r.error || 'Lưu thất bại')

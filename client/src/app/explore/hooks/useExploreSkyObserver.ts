@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   parseSkyObserverFromSearchParams,
   formatObserverLocationShort,
@@ -8,20 +8,70 @@ import {
 } from '@/features/explore/lib/skyObserver'
 import { computeSkyEphemerisBodies, observerTimeLabel } from '@/features/explore/lib/skyEphemeris'
 
+type GeoState =
+  | { status: 'pending' }
+  | { status: 'ok'; latDeg: number; lonDeg: number }
+  | { status: 'denied' }
+
+function hasUrlLatLon(
+  params: URLSearchParams | { get: (k: string) => string | null },
+): boolean {
+  const latRaw = params.get('lat')
+  const lonRaw = params.get('lon')
+  if (latRaw == null || lonRaw == null) return false
+  const lat = Number(latRaw)
+  const lon = Number(lonRaw)
+  return Number.isFinite(lat) && Number.isFinite(lon)
+}
+
 export function useExploreSkyObserver(
   searchParams: URLSearchParams | { get: (k: string) => string | null },
 ) {
-  const observer = useMemo(
-    () => parseSkyObserverFromSearchParams(searchParams),
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- serialize URL fields
-    [
-      searchParams.get('lat'),
-      searchParams.get('lon'),
-      searchParams.get('time'),
-      searchParams.get('pollution'),
-      searchParams.get('bortle'),
-    ],
+  const urlHasLatLon = hasUrlLatLon(searchParams)
+
+  const [geo, setGeo] = useState<GeoState>(() =>
+    urlHasLatLon ? { status: 'denied' } : { status: 'pending' },
   )
+
+  useEffect(() => {
+    if (urlHasLatLon) return
+    if (!navigator.geolocation) {
+      setGeo({ status: 'denied' })
+      return
+    }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setGeo({
+          status: 'ok',
+          latDeg: pos.coords.latitude,
+          lonDeg: pos.coords.longitude,
+        })
+      },
+      () => setGeo({ status: 'denied' }),
+      { maximumAge: 300_000, timeout: 12_000 },
+    )
+  }, [urlHasLatLon])
+
+  const observer = useMemo((): SkyObserver => {
+    const base = parseSkyObserverFromSearchParams(searchParams)
+    const latDeg =
+      urlHasLatLon ? base.latDeg : geo.status === 'ok' ? geo.latDeg : base.latDeg
+    const lonDeg =
+      urlHasLatLon ? base.lonDeg : geo.status === 'ok' ? geo.lonDeg : base.lonDeg
+    return { ...base, latDeg, lonDeg }
+  }, [
+    searchParams,
+    searchParams.get('lat'),
+    searchParams.get('lon'),
+    searchParams.get('time'),
+    searchParams.get('pollution'),
+    searchParams.get('bortle'),
+    urlHasLatLon,
+    geo,
+  ])
+
+  /** Sẵn sàng ghi URL — đã có lat/lon trên URL hoặc geolocation xong (ok / bị từ chối). */
+  const observerResolved = urlHasLatLon || geo.status !== 'pending'
 
   const locationLabel = useMemo(() => formatObserverLocationShort(observer), [observer])
   const timeLabels = useMemo(() => observerTimeLabel(observer), [observer])
@@ -30,7 +80,7 @@ export function useExploreSkyObserver(
     [observer.at.getTime()],
   )
 
-  return { observer, locationLabel, timeLabels, ephemerisBodies }
+  return { observer, locationLabel, timeLabels, ephemerisBodies, observerResolved }
 }
 
 export type { SkyObserver }

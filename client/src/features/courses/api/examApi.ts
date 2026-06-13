@@ -1,14 +1,10 @@
-import { getToken } from '@/features/auth/public'
 import { getApiPathBase } from '@/lib/apiConfig'
-import { apiClientHeaders } from '@/lib/apiClientHeaders'
+import { apiClientHeaders, apiFetchInit } from '@/lib/apiClientHeaders'
 
 const BASE = getApiPathBase()
 
 function authHeaders(): HeadersInit {
-  const token = getToken()
-  const h: HeadersInit = { 'Content-Type': 'application/json' }
-  if (token) (h as Record<string, string>)['Authorization'] = `Bearer ${token}`
-  return h
+  return apiClientHeaders()
 }
 
 export type QuizRevealMode = 'after_submit' | 'after_each_question' | 'never'
@@ -50,7 +46,7 @@ export async function fetchExamSession(
   lessonSlug: string,
   cohortId?: string | null,
 ): Promise<{ success: boolean; data?: ExamSession; error?: string }> {
-  const res = await fetch(`${examBase(slug, lessonSlug, cohortId)}/session`, { headers: authHeaders() })
+  const res = await fetch(`${examBase(slug, lessonSlug, cohortId)}/session`, apiFetchInit({ headers: authHeaders() }))
   const json = await res.json()
   if (json.success && json.data) return { success: true, data: json.data as ExamSession }
   return { success: false, error: json.error || 'Không tải được bài thi' }
@@ -61,15 +57,15 @@ export async function fetchActiveExamAttempt(
   lessonSlug: string,
   cohortId?: string | null,
 ) {
-  const res = await fetch(`${examBase(slug, lessonSlug, cohortId)}/attempts/active`, { headers: authHeaders() })
+  const res = await fetch(`${examBase(slug, lessonSlug, cohortId)}/attempts/active`, apiFetchInit({ headers: authHeaders() }))
   return res.json()
 }
 
 export async function startExamAttempt(slug: string, lessonSlug: string, cohortId?: string | null) {
-  const res = await fetch(`${examBase(slug, lessonSlug, cohortId)}/attempts`, {
+  const res = await fetch(`${examBase(slug, lessonSlug, cohortId)}/attempts`, apiFetchInit({
     method: 'POST',
     headers: authHeaders(),
-  })
+  }))
   return res.json()
 }
 
@@ -80,11 +76,11 @@ export async function checkpointExamAttempt(
   body: { answers: Record<string, number>; revision: number },
   cohortId?: string | null,
 ) {
-  const res = await fetch(`${examBase(slug, lessonSlug, cohortId)}/attempts/${attemptId}/checkpoint`, {
+  const res = await fetch(`${examBase(slug, lessonSlug, cohortId)}/attempts/${attemptId}/checkpoint`, apiFetchInit({
     method: 'PATCH',
     headers: authHeaders(),
     body: JSON.stringify(body),
-  })
+  }))
   return res.json()
 }
 
@@ -95,11 +91,11 @@ export async function submitExamAttempt(
   answers: Record<string, number>,
   cohortId?: string | null,
 ) {
-  const res = await fetch(`${examBase(slug, lessonSlug, cohortId)}/attempts/${attemptId}/submit`, {
+  const res = await fetch(`${examBase(slug, lessonSlug, cohortId)}/attempts/${attemptId}/submit`, apiFetchInit({
     method: 'POST',
     headers: authHeaders(),
     body: JSON.stringify({ answers }),
-  })
+  }))
   return res.json()
 }
 
@@ -111,10 +107,10 @@ export async function confirmExamQuestion(
   answer: number,
   cohortId?: string | null,
 ) {
-  const res = await fetch(`${examBase(slug, lessonSlug, cohortId)}/attempts/${attemptId}/confirm-question`, {
+  const res = await fetch(`${examBase(slug, lessonSlug, cohortId)}/attempts/${attemptId}/confirm-question`, apiFetchInit({
     method: 'POST',
     headers: authHeaders(),
     body: JSON.stringify({ questionId, answer }),
-  })
+  }))
   return res.json()
 }

@@ -1,16 +1,11 @@
 import { getApiPathBase } from '@/lib/apiConfig'
-import { apiClientHeaders } from '@/lib/apiClientHeaders'
-import { getToken } from '@/features/auth/public'
+import { apiClientHeaders, apiFetchInit } from '@/lib/apiClientHeaders'
 import type { LearnerTierPublic } from '@/features/rewards/api/learnerTiersApi'
 
 const API = `${getApiPathBase()}/messages`
 
 function authHeaders(): HeadersInit {
-  const token = getToken()
-  return {
-    'Content-Type': 'application/json',
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-  }
+  return apiClientHeaders()
 }
 
 export type DmConversationSummary = {
@@ -38,7 +33,7 @@ export type DmMessage = {
 }
 
 export async function fetchConversations(): Promise<DmConversationSummary[]> {
-  const res = await fetch(`${API}/conversations`, { headers: authHeaders(), cache: 'no-store' })
+  const res = await fetch(`${API}/conversations`, apiFetchInit({ headers: authHeaders(), cache: 'no-store' }))
   const data = await res.json()
   if (!res.ok || !data?.success) return []
   return Array.isArray(data.data) ? data.data : []
@@ -50,10 +45,7 @@ export async function fetchConversationMessages(
 ): Promise<DmMessage[]> {
   const q = new URLSearchParams()
   if (before) q.set('before', before)
-  const res = await fetch(
-    `${API}/conversations/${encodeURIComponent(conversationId)}?${q}`,
-    { headers: authHeaders(), cache: 'no-store' },
-  )
+  const res = await fetch(`${API}/conversations/${encodeURIComponent(conversationId)}?${q}`, apiFetchInit({ headers: authHeaders(), cache: 'no-store' }))
   const data = await res.json()
   if (!res.ok || !data?.success) return []
   return Array.isArray(data.data?.messages) ? data.data.messages : []
@@ -62,11 +54,11 @@ export async function fetchConversationMessages(
 export async function openConversationWithUser(
   userId: string,
 ): Promise<{ conversationId: string } | null> {
-  const res = await fetch(`${API}/open`, {
+  const res = await fetch(`${API}/open`, apiFetchInit({
     method: 'POST',
     headers: authHeaders(),
     body: JSON.stringify({ userId }),
-  })
+  }))
   const data = await res.json()
   if (!res.ok || !data?.success || !data?.data?.conversationId) return null
   return { conversationId: data.data.conversationId as string }
@@ -77,11 +69,11 @@ export async function sendDirectMessage(params: {
   recipientId?: string
   body: string
 }): Promise<{ conversationId: string; message: DmMessage } | null> {
-  const res = await fetch(`${API}/send`, {
+  const res = await fetch(`${API}/send`, apiFetchInit({
     method: 'POST',
     headers: authHeaders(),
     body: JSON.stringify(params),
-  })
+  }))
   const data = await res.json()
   if (!res.ok || !data?.success) return null
   return data.data as { conversationId: string; message: DmMessage }

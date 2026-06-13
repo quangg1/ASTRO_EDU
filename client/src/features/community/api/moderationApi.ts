@@ -1,6 +1,6 @@
 import { getToken } from '@/features/auth/public'
 import { getApiPathBase } from '@/lib/apiConfig'
-import { apiClientHeaders } from '@/lib/apiClientHeaders'
+import { apiClientHeaders, apiFetchInit } from '@/lib/apiClientHeaders'
 import type { Comment, Post } from '@/features/community/api/communityApi'
 
 const BASE = getApiPathBase()
@@ -47,11 +47,11 @@ export async function submitCommunityReport(body: {
   reason: ReportReason
   details?: string
 }): Promise<{ success: boolean; error?: string }> {
-  const res = await fetch(`${BASE}/community/mod/reports`, {
+  const res = await fetch(`${BASE}/community/mod/reports`, apiFetchInit({
     method: 'POST',
     headers: authHeaders(),
     body: JSON.stringify(body),
-  })
+  }))
   const json = await res.json()
   if (json.success) return { success: true }
   return { success: false, error: json.error || 'Không gửi được báo cáo' }
@@ -68,10 +68,10 @@ export async function fetchModerationQueue(opts?: {
   if (opts?.status) params.set('status', opts.status)
   if (opts?.limit) params.set('limit', String(opts.limit))
   const qs = params.toString()
-  const res = await fetch(`${BASE}/community/mod/queue${qs ? `?${qs}` : ''}`, {
+  const res = await fetch(`${BASE}/community/mod/queue${qs ? `?${qs}` : ''}`, apiFetchInit({
     headers: authHeaders(),
     cache: 'no-store',
-  })
+  }))
   const json = await res.json()
   if (json.success && json.data) {
     return { items: json.data.items || [], stats: json.data.stats || { openReports: 0, hiddenPosts: 0, hiddenComments: 0 } }
@@ -84,11 +84,11 @@ export async function resolveModerationReport(
   status: 'resolved' | 'dismissed',
   resolutionNote?: string,
 ): Promise<boolean> {
-  const res = await fetch(`${BASE}/community/mod/reports/${reportId}/resolve`, {
+  const res = await fetch(`${BASE}/community/mod/reports/${reportId}/resolve`, apiFetchInit({
     method: 'POST',
     headers: authHeaders(),
     body: JSON.stringify({ status, resolutionNote }),
-  })
+  }))
   const json = await res.json()
   return Boolean(json.success)
 }
@@ -99,40 +99,40 @@ export async function issueModerationWarning(body: {
   relatedReportId?: string
   postId?: string
 }): Promise<boolean> {
-  const res = await fetch(`${BASE}/community/mod/warn`, {
+  const res = await fetch(`${BASE}/community/mod/warn`, apiFetchInit({
     method: 'POST',
     headers: authHeaders(),
     body: JSON.stringify(body),
-  })
+  }))
   const json = await res.json()
   return Boolean(json.success)
 }
 
 export async function setPostHidden(postId: string, hidden: boolean): Promise<boolean> {
-  const res = await fetch(`${BASE}/community/mod/posts/${postId}/hidden`, {
+  const res = await fetch(`${BASE}/community/mod/posts/${postId}/hidden`, apiFetchInit({
     method: 'PATCH',
     headers: authHeaders(),
     body: JSON.stringify({ hidden }),
-  })
+  }))
   const json = await res.json()
   return Boolean(json.success)
 }
 
 export async function setCommentHidden(commentId: string, hidden: boolean): Promise<boolean> {
-  const res = await fetch(`${BASE}/community/mod/comments/${commentId}/hidden`, {
+  const res = await fetch(`${BASE}/community/mod/comments/${commentId}/hidden`, apiFetchInit({
     method: 'PATCH',
     headers: authHeaders(),
     body: JSON.stringify({ hidden }),
-  })
+  }))
   const json = await res.json()
   return Boolean(json.success)
 }
 
 export async function deleteCommentAsMod(commentId: string): Promise<boolean> {
-  const res = await fetch(`${BASE}/community/mod/comments/${commentId}`, {
+  const res = await fetch(`${BASE}/community/mod/comments/${commentId}`, apiFetchInit({
     method: 'DELETE',
     headers: authHeaders(),
-  })
+  }))
   const json = await res.json()
   return Boolean(json.success)
 }

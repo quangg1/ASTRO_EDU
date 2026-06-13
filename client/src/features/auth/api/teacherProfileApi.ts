@@ -1,5 +1,6 @@
 import { getAuthBase } from '@/lib/apiConfig'
-import { getToken } from './authApi'
+import { hasClientSession } from '@/features/auth/public'
+import { apiFetch } from '@/lib/apiRequestInit'
 
 const AUTH_BASE = getAuthBase()
 
@@ -24,12 +25,8 @@ export async function fetchMyTeacherProfile(): Promise<{
   profile?: PublicTeacherProfile
   error?: string
 }> {
-  const token = getToken()
-  if (!token) return { success: false, error: 'Chưa đăng nhập' }
-  const res = await fetch(`${AUTH_BASE}/auth/teacher-profile/me`, {
-    headers: { Authorization: `Bearer ${token}` },
-    cache: 'no-store',
-  })
+  if (!hasClientSession()) return { success: false, error: 'Chưa đăng nhập' }
+  const res = await apiFetch(`${AUTH_BASE}/auth/teacher-profile/me`)
   const data = await res.json()
   if (data.success && data.profile) return { success: true, profile: data.profile }
   return { success: false, error: data.error || 'Không tải được hồ sơ' }
@@ -38,11 +35,9 @@ export async function fetchMyTeacherProfile(): Promise<{
 export async function updateMyTeacherProfile(
   body: Partial<PublicTeacherProfile>,
 ): Promise<{ success: boolean; profile?: PublicTeacherProfile; error?: string }> {
-  const token = getToken()
-  if (!token) return { success: false, error: 'Chưa đăng nhập' }
-  const res = await fetch(`${AUTH_BASE}/auth/teacher-profile/me`, {
+  if (!hasClientSession()) return { success: false, error: 'Chưa đăng nhập' }
+  const res = await apiFetch(`${AUTH_BASE}/auth/teacher-profile/me`, {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
     body: JSON.stringify(body),
   })
   const data = await res.json()

@@ -133,7 +133,7 @@ function ToastViewport({
   return (
     <div
       role="region"
-      aria-label="Notifications"
+      aria-label="Thông báo"
       className="fixed bottom-4 right-4 z-[80] flex flex-col gap-2 max-w-sm pointer-events-none"
     >
       {toasts.map((t) => (

@@ -20,6 +20,14 @@ import {
 } from '@/features/explore/lib/skyObserver'
 
 import { computeSunSkyState } from '@/features/explore/lib/skyAstronomy'
+import { computeMoonIllumination, shouldShowMoonDisk } from '@/features/explore/lib/skyMoonPhase'
+import {
+  showScreenSunDisk,
+  showScreenWeatherLayers,
+  starFieldVisibility,
+  useStarryWorldSky,
+} from '@/features/explore/lib/skyTimeMode'
+import type { SkyWeatherSnapshot } from '@/features/astronomy-calendar/types'
 
 import type { SkyEphemerisBody } from '@/features/explore/lib/skyEphemeris'
 
@@ -50,6 +58,9 @@ import { StereographicBillboard } from './StereographicBillboard'
 import { StereographicProvider } from './StereographicContext'
 
 import { StereographicBackdrop } from './StereographicBackdrop'
+import { SkyCloudLayer } from './SkyCloudLayer'
+import { ScreenSunDisk } from './ScreenSunDisk'
+import { WorldMoonDisk } from './WorldMoonDisk'
 
 import { SkyAtmospherePlane } from './SkyAtmospherePlane'
 
@@ -101,6 +112,7 @@ type Props = {
   onSkyScenePick: (id: string) => void
   observer: SkyObserver
   ephemerisBodies: SkyEphemerisBody[]
+  skyWeather?: SkyWeatherSnapshot | null
 }
 
 
@@ -149,6 +161,7 @@ function FisheyeSky({
   onSkyScenePick,
   observer,
   ephemerisBodies,
+  skyWeather,
   hipCatalog,
   onViewChange,
   view,
@@ -187,6 +200,14 @@ function FisheyeSky({
   viewRef.current = view
 
   const sunSky = useMemo(() => computeSunSkyState(observer), [observer])
+  const moonPhase = useMemo(() => computeMoonIllumination(observer.at), [observer.at.getTime()])
+  const cloudCoverPct = skyWeather?.cloudCoverPct ?? 0
+  const starrySky = useMemo(() => useStarryWorldSky(sunSky), [sunSky])
+  const starVis = useMemo(() => {
+    if (!starrySky) return 0
+    return Math.max(starFieldVisibility(sunSky), 0.72)
+  }, [sunSky, starrySky])
+  const daytimeScreen = useMemo(() => showScreenWeatherLayers(sunSky), [sunSky])
 
   const milkyWay = useMilkyWayTexture()
 
@@ -354,28 +375,53 @@ function FisheyeSky({
       <StereographicBackdrop />
 
       <SkyAtmospherePlane sun={sunSky} />
+      <HorizonGlowPlane sun={sunSky} />
 
-      <HorizonGlowPlane />
+      {daytimeScreen && cloudCoverPct > 4 ? (
+        <SkyCloudLayer
+          cloudCoverPct={cloudCoverPct}
+          isDay={sunSky.dayFactor > 0.35}
+          view={view}
+        />
+      ) : null}
+      {showScreenSunDisk(sunSky) ? (
+        <ScreenSunDisk
+          sun={sunSky}
+          cloudCoverPct={cloudCoverPct}
+          active={focusTargetId === 'planet-sun'}
+          onClick={() => onSkyScenePick('planet-sun')}
+        />
+      ) : null}
 
-      <MilkyWayPlane texture={milkyWay} fovDeg={fovDeg} observer={observer} />
+      <MilkyWayPlane
+        texture={milkyWay}
+        fovDeg={fovDeg}
+        observer={observer}
+        nightVisibility={starVis}
+      />
 
       {landscapeLoaded && landscapeTex ? (
         <LandscapePlane
           texture={landscapeTex}
           pack={SKY_ACTIVE_LANDSCAPE}
           view={view}
+          sun={sunSky}
           constellationActive={!!activeConstellationId}
         />
       ) : null}
 
-      <StereographicStarfield geometry={starfield} fovDeg={fovDeg} />
+      <StereographicStarfield
+        geometry={starfield}
+        fovDeg={fovDeg}
+        nightVisibility={starVis}
+      />
 
       {constellationLines.map(({ geom, constellationId }, idx) => (
         <StereographicLineSegments
           key={`const-${constellationId}-${idx}`}
           geometry={geom}
           color="#b8d4f0"
-          opacity={0.88}
+          opacity={0.88 * starVis}
           renderOrder={SKY_RENDER_ORDER.constellationLines}
         />
       ))}
@@ -392,13 +438,13 @@ function FisheyeSky({
               position={activeStar.pos}
               size={glow * 2}
               color={tint}
-              opacity={0.45 * ext.opacity}
+              opacity={0.45 * ext.opacity * starVis}
             />
             <StereographicBillboard
               position={activeStar.pos}
               size={glow * 1.2}
               color="#ffffff"
-              opacity={0.98 * ext.opacity}
+              opacity={0.98 * ext.opacity * starVis}
             />
           </group>
         )
@@ -406,15 +452,31 @@ function FisheyeSky({
 
 
 
+      {starrySky ? (() => {
+        const moon = solarBillboards.find((b) => b.id === 'planet-moon')
+        if (!moon?.aboveHorizon) return null
+        return (
+          <WorldMoonDisk
+            position={moon.pos}
+            moonAltDeg={moon.altDeg}
+            sunAltDeg={sunSky.altDeg}
+            moonPhase={moonPhase}
+            active={focusTargetId === 'planet-moon'}
+            onClick={() => onSkyScenePick('planet-moon')}
+          />
+        )
+      })() : null}
+
       {solarBillboards.map(({ id, pos, mag, aboveHorizon, ext }) => {
         if (!aboveHorizon) return null
-        if (id === 'planet-sun') return null
+        if (id === 'planet-sun' || id === 'planet-moon') return null
         const isActive = id === focusTargetId
         const glow = magToGlowSize(mag, observer.magLimit) * (isActive ? 1.35 : 1)
         const base = id === 'planet-moon' ? [0.93, 0.92, 0.88] : [1, 0.98, 0.92]
         const [r, g, b] = applyHorizonReddening(base[0], base[1], base[2], ext.redness)
         const color = `rgb(${Math.round(r * 255)},${Math.round(g * 255)},${Math.round(b * 255)})`
-        const op = ext.opacity
+        const op = ext.opacity * starVis
+        if (op < 0.02) return null
         return (
           <group key={id}>
             <StereographicBillboard
@@ -450,6 +512,12 @@ function clampFovDeg(deg: number): number {
 }
 
 export function SkyPlanetariumScene(props: Props) {
+  const sunSky = useMemo(() => computeSunSkyState(props.observer), [props.observer])
+  const starrySkyOuter = useMemo(() => useStarryWorldSky(sunSky), [sunSky])
+  const starVis = useMemo(() => {
+    if (!starrySkyOuter) return 0
+    return Math.max(starFieldVisibility(sunSky), 0.72)
+  }, [sunSky, starrySkyOuter])
 
   const [view, setView] = useState<SkyViewState>(DEFAULT_SKY_VIEW)
 
@@ -501,11 +569,26 @@ export function SkyPlanetariumScene(props: Props) {
       if (mag > 2.5 && !isAboveHorizon(t.raDeg, t.decDeg, props.observer)) continue
     }
 
+    const sunBody = props.ephemerisBodies.find((b) => b.id === 'planet-sun')
+    const moonBody = props.ephemerisBodies.find((b) => b.id === 'planet-moon')
+    const sunAlt = sunBody
+      ? equatorialToHorizontal(sunBody.raDeg, sunBody.decDeg, props.observer).altDeg
+      : -90
+    const moonAlt = moonBody
+      ? equatorialToHorizontal(moonBody.raDeg, moonBody.decDeg, props.observer).altDeg
+      : -90
+
     for (const b of props.ephemerisBodies) {
-      if (b.id === 'planet-sun') continue
       const dir = equatorialToSceneVector(b.raDeg, b.decDeg, props.observer)
       if (!isAboveHorizon(b.raDeg, b.decDeg, props.observer)) continue
       const mag = SOLAR_VISUAL_MAG[b.id] ?? 0
+      if (b.id === 'planet-sun') continue
+      if (b.id === 'planet-moon') {
+        if (useStarryWorldSky(sunSky) && shouldShowMoonDisk(sunAlt, moonAlt)) {
+          out.push({ id: b.id, dir, hitRadiusPct: 4.2 })
+        }
+        continue
+      }
       if (mag > 4) continue
       out.push({ id: b.id, dir, hitRadiusPct: 3.8 })
     }
@@ -534,7 +617,7 @@ export function SkyPlanetariumScene(props: Props) {
 
     return out
 
-  }, [props.targets, props.observer, props.ephemerisBodies, catalogLabeled])
+  }, [props.targets, props.observer, props.ephemerisBodies, catalogLabeled, sunSky])
 
 
 
@@ -623,16 +706,30 @@ export function SkyPlanetariumScene(props: Props) {
       })
     }
 
+    const sunEph = props.ephemerisBodies.find((b) => b.id === 'planet-sun')
+    const moonEph = props.ephemerisBodies.find((b) => b.id === 'planet-moon')
+    const sunAltLbl = sunEph
+      ? equatorialToHorizontal(sunEph.raDeg, sunEph.decDeg, props.observer).altDeg
+      : -90
+    const moonAltLbl = moonEph
+      ? equatorialToHorizontal(moonEph.raDeg, moonEph.decDeg, props.observer).altDeg
+      : -90
+
     for (const b of props.ephemerisBodies) {
       if (b.id === 'planet-sun') continue
+      if (b.id === 'planet-moon') {
+        if (!useStarryWorldSky(sunSky) || !shouldShowMoonDisk(sunAltLbl, moonAltLbl)) continue
+      }
       const mag = SOLAR_VISUAL_MAG[b.id] ?? 0
       const hor = equatorialToHorizontal(b.raDeg, b.decDeg, props.observer)
       if (hor.altDeg <= 0) continue
       const dir = equatorialToSceneVector(b.raDeg, b.decDeg, props.observer)
       const isActive = b.id === active
+      const label =
+        b.id === 'planet-sun' ? 'Mặt Trời' : b.id === 'planet-moon' ? 'Mặt Trăng' : b.label
       out.push({
         id: `lbl-${b.id}`,
-        text: b.label,
+        text: label,
         dir,
         emphasis: 'body',
         mag,
@@ -668,6 +765,7 @@ export function SkyPlanetariumScene(props: Props) {
     props.constellationTargetId,
     props.sceneHighlightId,
     props.targets,
+    sunSky,
   ])
 
   /**
@@ -779,6 +877,7 @@ export function SkyPlanetariumScene(props: Props) {
           fovDeg={fovDeg}
           aspect={aspect}
           allowBelowHorizon={allowBelowHorizon}
+          nightVisibility={starVis}
         />
 
         <SkySelectionRingOverlay

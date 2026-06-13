@@ -1,0 +1,62 @@
+[
+  {
+    "slug": "quadrantids",
+    "titleVi": "Mưa sao băng Quadrantids",
+    "summaryVi": "Đỉnh hoạt động đầu tháng 1 — cần trời tối và ít trăng.",
+    "peakMonth": 1,
+    "peakDay": 4,
+    "windowDays": 3,
+    "skyTargetId": "bootes",
+    "priority": 7
+  },
+  {
+    "slug": "lyrids",
+    "titleVi": "Mưa sao băng Lyrids",
+    "summaryVi": "Cuối tháng 4 — tốc độ vừa phải, phù hợp quan sát ngoài thành phố.",
+    "peakMonth": 4,
+    "peakDay": 22,
+    "windowDays": 3,
+    "skyTargetId": "lyra",
+    "priority": 6
+  },
+  {
+    "slug": "perseids",
+    "titleVi": "Mưa sao băng Perseids",
+    "summaryVi": "Một trong những mưa sao băng đẹp nhất năm — đỉnh giữa tháng 8.",
+    "peakMonth": 8,
+    "peakDay": 12,
+    "windowDays": 5,
+    "skyTargetId": "perseus",
+    "priority": 9
+  },
+  {
+    "slug": "orionids",
+    "titleVi": "Mưa sao băng Orionids",
+    "summaryVi": "Tháng 10 — liên quan sao chổi Halley, tốc độ nhanh.",
+    "peakMonth": 10,
+    "peakDay": 21,
+    "windowDays": 4,
+    "skyTargetId": "orion",
+    "priority": 6
+  },
+  {
+    "slug": "geminids",
+    "titleVi": "Mưa sao băng Geminids",
+    "summaryVi": "Đỉnh giữa tháng 12 — nhiều vệt sáng, đêm dài ở Bắc bán cầu.",
+    "peakMonth": 12,
+    "peakDay": 14,
+    "windowDays": 5,
+    "skyTargetId": "gemini",
+    "priority": 9
+  },
+  {
+    "slug": "ursids",
+    "titleVi": "Mưa sao băng Ursids",
+    "summaryVi": "Cuối tháng 12 — ít vệt hơn Perseids/Geminids nhưng đáng thử.",
+    "peakMonth": 12,
+    "peakDay": 22,
+    "windowDays": 3,
+    "skyTargetId": "ursa-minor",
+    "priority": 5
+  }
+]

@@ -1,5 +1,6 @@
 import { parseGemWalletResponse, type GemTransaction as ContractGemTransaction } from '@galaxies/contracts'
 import { getApiPathBase } from '@/lib/apiConfig'
+import { apiFetch } from '@/lib/apiRequestInit'
 import type { LearnerTierProgress } from './learnerTiersApi'
 
 const API = `${getApiPathBase()}/gems`
@@ -17,12 +18,9 @@ export type GemTransaction = ContractGemTransaction & {
 }
 
 /** GET /gems/wallet — server source of truth when authenticated. */
-export async function fetchGemWalletFromServer(token: string): Promise<GemWalletState | null> {
+export async function fetchGemWalletFromServer(): Promise<GemWalletState | null> {
   try {
-    const res = await fetch(`${API}/wallet`, {
-      headers: { Authorization: `Bearer ${token}` },
-      cache: 'no-store',
-    })
+    const res = await apiFetch(`${API}/wallet`)
     const data = await res.json()
     if (!data?.success || !data?.data) return null
     const parsed = parseGemWalletResponse(data)

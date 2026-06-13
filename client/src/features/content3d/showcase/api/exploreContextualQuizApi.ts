@@ -1,5 +1,5 @@
 import { getApiPathBase } from '@/lib/apiConfig'
-import { getToken } from '@/features/auth/public'
+import { apiFetch } from '@/lib/apiRequestInit'
 import type { QuizQuestion } from '@/shared/types/quizQuestion'
 
 export type ExploreContextualQuizResponse = {
@@ -18,13 +18,11 @@ export async function fetchExploreContextualQuiz(
   const id = String(entityId || '').trim()
   if (!id) return null
 
-  const token = getToken()
-  const res = await fetch(`${getApiPathBase()}/explore/contextual-quiz/${encodeURIComponent(id)}`, {
-    credentials: 'omit',
-    headers: {
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-  })
+  const res = await apiFetch(
+    `${getApiPathBase()}/explore/contextual-quiz/${encodeURIComponent(id)}`,
+    {},
+    false,
+  )
 
   const data = (await res.json().catch(() => null)) as {
     success?: boolean

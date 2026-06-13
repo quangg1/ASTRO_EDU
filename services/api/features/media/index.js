@@ -38,6 +38,13 @@ const upload = multer({
 const avatarUpload = multer({
   storage: getMulterStorage(),
   fileFilter: avatarFileFilter,
+  limits: { fileSize: 12 * 1024 * 1024 },
+});
+
+const observationPhotoUpload = multer({
+  storage: getMulterStorage(),
+  fileFilter: avatarFileFilter,
+  limits: { fileSize: 12 * 1024 * 1024 },
 });
 
 const decorationBulkUpload = multer({
@@ -236,6 +243,34 @@ router.post('/upload/avatar', authMiddleware, avatarUpload.single('file'), async
       success: false,
       code: err.code || 'MEDIA_UPLOAD_FAILED',
       error: err.message || 'Tải ảnh đại diện thất bại',
+    });
+  }
+});
+
+/** Ảnh quan sát thiên văn — mọi user đã đăng nhập; lưu `observations/{userId}/...`. */
+router.post('/upload/observation-photo', authMiddleware, observationPhotoUpload.single('file'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        code: 'MEDIA_INVALID_FILE',
+        error: 'Chọn ảnh JPG, PNG, GIF hoặc WebP.',
+      });
+    }
+    const userId = String(req.userId || '').replace(/[^a-zA-Z0-9_-]/g, '');
+    if (!userId) {
+      return res.status(401).json({ success: false, error: 'Phiên đăng nhập không hợp lệ' });
+    }
+    const ext = extFromFile(req.file);
+    const storageKey = `observations/${userId}/${Date.now()}${ext}`;
+    const { url, cdn } = await persistUploadedFile(req.file, storageKey);
+    res.json({ success: true, url, cdn: Boolean(cdn) });
+  } catch (err) {
+    console.error('[media] observation-photo upload error:', err);
+    res.status(err.status || 500).json({
+      success: false,
+      code: err.code || 'MEDIA_UPLOAD_FAILED',
+      error: err.message || 'Tải ảnh quan sát thất bại',
     });
   }
 });

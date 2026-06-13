@@ -10,8 +10,7 @@
  * exception used in `adminUsersApi.ts`.
  */
 import { getApiPathBase } from '@/lib/apiConfig'
-import { apiClientHeaders } from '@/lib/apiClientHeaders'
-import { getToken } from '@/features/auth/api/authApi'
+import { apiClientHeaders, apiFetchInit } from '@/lib/apiClientHeaders'
 
 const API_BASE = getApiPathBase()
 
@@ -135,10 +134,7 @@ export type AdminLearningPathAnalytics = {
 }
 
 function authHeaders(): HeadersInit {
-  const token = getToken()
-  const h: HeadersInit = { 'Content-Type': 'application/json' }
-  if (token) (h as Record<string, string>)['Authorization'] = `Bearer ${token}`
-  return h
+  return apiClientHeaders()
 }
 
 /** API admin trả phẳng `{ success, kpis, ... }` — không bọc trong `data`. */
@@ -161,10 +157,10 @@ export async function fetchAdminAnalyticsOverview(
   range: AnalyticsRange
 ): Promise<{ success: boolean; data?: AdminAnalyticsOverview; error?: string }> {
   try {
-    const res = await fetch(`${API_BASE}/admin/analytics/overview?range=${encodeURIComponent(range)}`, {
+    const res = await fetch(`${API_BASE}/admin/analytics/overview?range=${encodeURIComponent(range)}`, apiFetchInit({
       headers: authHeaders(),
       cache: 'no-store',
-    })
+    }))
     const data = await res.json()
     if (!res.ok || !data.success) return { success: false, error: data.error || 'Không tải được analytics' }
     const payload = unwrapAnalyticsPayload<AdminAnalyticsOverview>(data)
@@ -179,10 +175,10 @@ export async function fetchAdminAnalyticsFunnel(
   range: AnalyticsRange
 ): Promise<{ success: boolean; data?: { range: AnalyticsRange; funnel: AdminAnalyticsFunnelItem[] }; error?: string }> {
   try {
-    const res = await fetch(`${API_BASE}/admin/analytics/funnel?range=${encodeURIComponent(range)}`, {
+    const res = await fetch(`${API_BASE}/admin/analytics/funnel?range=${encodeURIComponent(range)}`, apiFetchInit({
       headers: authHeaders(),
       cache: 'no-store',
-    })
+    }))
     const data = await res.json()
     if (!res.ok || !data.success) return { success: false, error: data.error || 'Không tải được funnel analytics' }
     return { success: true, data: { range: data.range as AnalyticsRange, funnel: data.funnel as AdminAnalyticsFunnelItem[] } }
@@ -195,10 +191,10 @@ export async function fetchAdminAnalyticsRetention(
   range: AnalyticsRange
 ): Promise<{ success: boolean; data?: { range: AnalyticsRange; retention: AdminAnalyticsRetention }; error?: string }> {
   try {
-    const res = await fetch(`${API_BASE}/admin/analytics/retention?range=${encodeURIComponent(range)}`, {
+    const res = await fetch(`${API_BASE}/admin/analytics/retention?range=${encodeURIComponent(range)}`, apiFetchInit({
       headers: authHeaders(),
       cache: 'no-store',
-    })
+    }))
     const data = await res.json()
     if (!res.ok || !data.success) return { success: false, error: data.error || 'Không tải được retention analytics' }
     return { success: true, data: { range: data.range as AnalyticsRange, retention: data.retention as AdminAnalyticsRetention } }
@@ -211,10 +207,10 @@ export async function fetchAdminAnalyticsCohort(
   range: AnalyticsRange
 ): Promise<{ success: boolean; data?: { range: AnalyticsRange; cohorts: AdminAnalyticsCohort[] }; error?: string }> {
   try {
-    const res = await fetch(`${API_BASE}/admin/analytics/cohort?range=${encodeURIComponent(range)}`, {
+    const res = await fetch(`${API_BASE}/admin/analytics/cohort?range=${encodeURIComponent(range)}`, apiFetchInit({
       headers: authHeaders(),
       cache: 'no-store',
-    })
+    }))
     const data = await res.json()
     if (!res.ok || !data.success) return { success: false, error: data.error || 'Không tải được cohort analytics' }
     return { success: true, data: { range: data.range as AnalyticsRange, cohorts: data.cohorts as AdminAnalyticsCohort[] } }
@@ -231,10 +227,10 @@ export async function fetchAdminLearningPathAnalytics(
     const query = new URLSearchParams({ range })
     if (filters?.moduleId) query.set('moduleId', filters.moduleId)
     if (filters?.depth) query.set('depth', filters.depth)
-    const res = await fetch(`${API_BASE}/admin/analytics/learning-path?${query.toString()}`, {
+    const res = await fetch(`${API_BASE}/admin/analytics/learning-path?${query.toString()}`, apiFetchInit({
       headers: authHeaders(),
       cache: 'no-store',
-    })
+    }))
     const data = await res.json()
     if (!res.ok || !data.success) return { success: false, error: data.error || 'Không tải được learning path analytics' }
     const payload = unwrapAnalyticsPayload<AdminLearningPathAnalytics>(data)
@@ -268,10 +264,10 @@ export async function fetchAdminAgentAnalytics(
   range: AnalyticsRange = '30d',
 ): Promise<{ success: boolean; data?: AdminAgentAnalytics; error?: string }> {
   try {
-    const res = await fetch(`${API_BASE}/admin/analytics/agent?range=${encodeURIComponent(range)}`, {
+    const res = await fetch(`${API_BASE}/admin/analytics/agent?range=${encodeURIComponent(range)}`, apiFetchInit({
       headers: authHeaders(),
       cache: 'no-store',
-    })
+    }))
     const data = await res.json()
     if (!res.ok || !data.success) {
       return { success: false, error: data.error || 'Không tải được agent analytics' }
@@ -343,10 +339,10 @@ export async function fetchAdminExploreAnalytics(
   range: AnalyticsRange = '30d',
 ): Promise<{ success: boolean; data?: AdminExploreAnalytics; error?: string }> {
   try {
-    const res = await fetch(`${API_BASE}/admin/analytics/explore?range=${encodeURIComponent(range)}`, {
+    const res = await fetch(`${API_BASE}/admin/analytics/explore?range=${encodeURIComponent(range)}`, apiFetchInit({
       headers: authHeaders(),
       cache: 'no-store',
-    })
+    }))
     const data = await res.json()
     if (!res.ok || !data.success) {
       return { success: false, error: data.error || 'Không tải được Explore analytics' }
@@ -363,10 +359,10 @@ export async function fetchAdminUnifiedLearnerAnalytics(
   range: AnalyticsRange = '30d',
 ): Promise<{ success: boolean; data?: AdminUnifiedLearnerAnalytics; error?: string }> {
   try {
-    const res = await fetch(`${API_BASE}/admin/analytics/unified-learner?range=${encodeURIComponent(range)}`, {
+    const res = await fetch(`${API_BASE}/admin/analytics/unified-learner?range=${encodeURIComponent(range)}`, apiFetchInit({
       headers: authHeaders(),
       cache: 'no-store',
-    })
+    }))
     const data = await res.json()
     if (!res.ok || !data.success) {
       return { success: false, error: data.error || 'Không tải được unified learner analytics' }

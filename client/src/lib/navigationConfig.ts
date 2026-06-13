@@ -17,6 +17,8 @@ export type NavItemConfig = {
 export const NAV_ITEMS: NavItemConfig[] = [
   { id: 'home', href: '/', labelKey: 'home', group: 'learning', surfaces: ['mobileBottom'] },
   { id: 'dashboard', href: '/dashboard', labelKey: 'dashboard', group: 'learning', surfaces: ['headerDesktop', 'headerMobileMenu', 'dashboardSidebar'] },
+  { id: 'sky', href: '/explore?view=sky', labelKey: 'sky', group: 'learning', surfaces: ['headerMobileMenu', 'mobileBottom', 'dashboardSidebar'] },
+  { id: 'calendar', href: '/calendar', labelKey: 'calendar', group: 'learning', surfaces: ['headerMobileMenu', 'mobileBottom', 'dashboardSidebar'] },
   { id: 'community', href: '/community', labelKey: 'community', group: 'community', surfaces: ['headerDesktop', 'headerMobileMenu', 'mobileBottom', 'dashboardSidebar'] },
   { id: 'profile', href: '/profile', labelKey: 'profile', group: 'account', surfaces: ['headerMobileMenu'] },
   {
@@ -61,3 +63,27 @@ export function navLabel(item: NavItemConfig): string {
   return viText.nav[item.labelKey]
 }
 
+type SearchParamsLike = { get(name: string): string | null } | null | undefined
+
+export function navItemIsActive(
+  pathname: string,
+  item: NavItemConfig,
+  searchParams?: SearchParamsLike,
+): boolean {
+  if (item.id === 'sky') {
+    return pathname.startsWith('/explore') && searchParams?.get('view') === 'sky'
+  }
+  if (item.id === 'explore') {
+    return pathname.startsWith('/explore') && searchParams?.get('view') !== 'sky'
+  }
+  if (item.id === 'calendar') {
+    return pathname === '/calendar' || pathname.startsWith('/calendar/')
+  }
+  if (item.href === '/dashboard') {
+    return pathname === '/dashboard' || pathname.startsWith('/dashboard/')
+  }
+  const hrefPath = item.href.split('?')[0]
+  if (pathname === hrefPath && !item.href.includes('?')) return true
+  if (pathname === item.href) return true
+  return hrefPath !== '/' && pathname.startsWith(`${hrefPath}/`)
+}

@@ -64,6 +64,12 @@ export type ExploreSkySlice = {
   handleSkyScenePick: (pickedId: string) => void
   openSkyForEntity: (entityId: string) => void
   openSolarForTarget: (targetId: string, solarEntityId?: string | null) => void
+  jumpToSkyEvent: (
+    event: Pick<
+      import('@/features/astronomy-calendar/types').AstronomyCalendarEvent,
+      'exploreTarget' | 'exploreView' | 'peakAt' | 'startAt' | 'lessonHref'
+    >,
+  ) => void
   setSkyActiveTargetId: (id: string) => void
 }
 

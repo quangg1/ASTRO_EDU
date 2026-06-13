@@ -59,6 +59,14 @@ export function computeSunSkyState(obs: SkyObserver): SunSkyState {
   return { altDeg: alt, azDeg: hor.azimuth, dayFactor }
 }
 
+/** 1 = đêm, 0 = ban ngày — fade sao, Dải Ngân Hà, landscape. */
+export function nightSkyVisibility(sun: SunSkyState): number {
+  const alt = sun.altDeg
+  if (alt <= -6) return 1
+  if (alt >= 6) return 0
+  return 1 - (alt + 6) / 12
+}
+
 const BODY_MAP: Record<string, Body> = {
   'planet-sun': Body.Sun,
   'planet-moon': Body.Moon,

@@ -1,11 +1,11 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useSearchParams } from 'next/navigation'
 import {
   LayoutDashboard, BookMarked, BookOpen, Map, Globe, Receipt,
   MessageCircle, Search, Gem, ShoppingBag, Video, Heart,
-  Shield, Newspaper, Settings, UserPlus,
+  Shield, Newspaper, Settings, UserPlus, Telescope, CalendarDays,
 } from 'lucide-react'
 import { useAuthStore } from '@/features/auth/public'
 import { useEquippedDecoration } from '@/features/rewards/hooks/useEquippedDecoration'
@@ -36,7 +36,13 @@ function Brackets({ c = 'var(--color-accent)', s = 12, o = 5 }: { c?: string; s?
   )
 }
 
-function navIsActive(href: string, pathname: string): boolean {
+function navIsActive(href: string, pathname: string, searchParams?: ReturnType<typeof useSearchParams>): boolean {
+  if (href === '/explore?view=sky') {
+    return pathname.startsWith('/explore') && searchParams?.get('view') === 'sky'
+  }
+  if (href === '/calendar') {
+    return pathname === '/calendar' || pathname.startsWith('/calendar/')
+  }
   if (href === '/dashboard') return pathname === '/dashboard' || pathname === '/dashboard/'
   if (pathname === href) return true
   return href !== '/' && pathname.startsWith(`${href}/`)
@@ -44,7 +50,17 @@ function navIsActive(href: string, pathname: string): boolean {
 
 type NavItem = { href: string; label: string; icon: React.ElementType; badge?: string }
 
-function NavSection({ title, items, pathname }: { title: string; items: NavItem[]; pathname: string }) {
+function NavSection({
+  title,
+  items,
+  pathname,
+  searchParams,
+}: {
+  title: string
+  items: NavItem[]
+  pathname: string
+  searchParams: ReturnType<typeof useSearchParams>
+}) {
   return (
     <div>
       <p className="dash-mono px-3 mb-1.5 text-[10px] uppercase text-ds-subtle" style={{ letterSpacing: '0.22em' }}>
@@ -52,7 +68,7 @@ function NavSection({ title, items, pathname }: { title: string; items: NavItem[
       </p>
       <ul className="space-y-0.5">
         {items.map((item) => {
-          const active = navIsActive(item.href, pathname)
+          const active = navIsActive(item.href, pathname, searchParams)
           const Icon = item.icon
           return (
             <li key={item.href} className="relative">
@@ -117,6 +133,8 @@ const learnItems: NavItem[] = [
   { href: '/courses', label: 'Khóa học', icon: BookOpen },
   { href: '/tutorial', label: 'Lộ trình', icon: Map },
   { href: '/explore', label: 'Khám phá 3D', icon: Globe },
+  { href: '/explore?view=sky', label: 'La bàn chòm sao', icon: Telescope },
+  { href: '/calendar', label: 'Lịch thiên văn', icon: CalendarDays },
 ]
 const communityItems: NavItem[] = [
   { href: '/community', label: 'Diễn đàn', icon: MessageCircle },
@@ -129,6 +147,7 @@ const rewardItems: NavItem[] = [
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
+  const searchParams = useSearchParams()
   const { user } = useAuthStore()
   const equippedOverlay = useEquippedDecoration()
 
@@ -173,9 +192,9 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 
           {/* Navigation */}
           <nav className="flex-1 overflow-y-auto py-2 px-3 space-y-4">
-            <NavSection title="Học tập" items={learnItems} pathname={pathname} />
-            <NavSection title="Cộng đồng" items={communityItems} pathname={pathname} />
-            <NavSection title="Phần thưởng" items={rewardItems} pathname={pathname} />
+            <NavSection title="Học tập" items={learnItems} pathname={pathname} searchParams={searchParams} />
+            <NavSection title="Cộng đồng" items={communityItems} pathname={pathname} searchParams={searchParams} />
+            <NavSection title="Phần thưởng" items={rewardItems} pathname={pathname} searchParams={searchParams} />
 
             {user?.role === 'student' && (
               <div>
@@ -207,6 +226,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                 title="Giảng viên"
                 items={[{ href: '/studio', label: 'Studio giảng dạy', icon: Video }]}
                 pathname={pathname}
+                searchParams={searchParams}
               />
             )}
 
@@ -218,6 +238,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                   { href: '/community/tin-thien-van', label: 'Tin thiên văn', icon: Newspaper },
                 ]}
                 pathname={pathname}
+                searchParams={searchParams}
               />
             )}
 
@@ -226,6 +247,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                 title="Quản trị"
                 items={[{ href: '/admin', label: 'Quản trị hệ thống', icon: Settings }]}
                 pathname={pathname}
+                searchParams={searchParams}
               />
             )}
           </nav>

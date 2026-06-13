@@ -2,17 +2,13 @@
  * Teacher-application API surface.
  */
 import { getAuthBase } from '@/lib/apiConfig'
-import { getToken } from './authApi'
+import { apiFetch } from '@/lib/apiRequestInit'
+import { hasClientSession } from './authApi'
 
 const AUTH_BASE = getAuthBase()
 
 function authFetch(url: string, init?: RequestInit): Promise<Response> {
-  return fetch(url, {
-    cache: 'no-store',
-    credentials: 'omit',
-    ...init,
-    headers: { ...(init?.headers || {}) },
-  })
+  return apiFetch(url, init)
 }
 
 export interface TeacherApplication {
@@ -80,11 +76,9 @@ export type TeacherApplicationSubmitBody = {
 export async function submitTeacherApplication(
   body: TeacherApplicationSubmitBody,
 ): Promise<{ success: boolean; application?: TeacherApplication; error?: string; code?: string }> {
-  const token = getToken()
-  if (!token) return { success: false, error: 'Chưa đăng nhập' }
+  if (!hasClientSession()) return { success: false, error: 'Chưa đăng nhập' }
   const res = await authFetch(`${AUTH_BASE}/auth/teacher-application`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
     body: JSON.stringify(body),
   })
   const data = await res.json()
@@ -98,11 +92,8 @@ export async function fetchMyTeacherApplicationStatus(): Promise<{
   last?: TeacherApplication | null
   error?: string
 }> {
-  const token = getToken()
-  if (!token) return { success: false, error: 'Chưa đăng nhập' }
-  const res = await authFetch(`${AUTH_BASE}/auth/teacher-application/me`, {
-    headers: { Authorization: `Bearer ${token}` },
-  })
+  if (!hasClientSession()) return { success: false, error: 'Chưa đăng nhập' }
+  const res = await authFetch(`${AUTH_BASE}/auth/teacher-application/me`)
   const data = await res.json()
   if (data.success) {
     return { success: true, pending: data.pending ?? null, last: data.last ?? null }
@@ -113,12 +104,9 @@ export async function fetchMyTeacherApplicationStatus(): Promise<{
 export async function fetchAdminTeacherApplications(
   status: 'pending' | 'approved' | 'rejected' | 'all' = 'pending',
 ): Promise<{ success: boolean; data?: TeacherApplicationWithUser[]; error?: string }> {
-  const token = getToken()
-  if (!token) return { success: false, error: 'Not signed in' }
+  if (!hasClientSession()) return { success: false, error: 'Not signed in' }
   const q = status === 'all' ? 'all' : status
-  const res = await authFetch(`${AUTH_BASE}/api/admin/teacher-applications?status=${encodeURIComponent(q)}`, {
-    headers: { Authorization: `Bearer ${token}` },
-  })
+  const res = await authFetch(`${AUTH_BASE}/api/admin/teacher-applications?status=${encodeURIComponent(q)}`)
   const data = await res.json()
   if (data.success && Array.isArray(data.data)) return { success: true, data: data.data }
   return { success: false, error: data.error || 'Lỗi tải đơn' }
@@ -127,14 +115,10 @@ export async function fetchAdminTeacherApplications(
 export async function markTeacherApplicationCvReviewed(
   applicationId: string,
 ): Promise<{ success: boolean; application?: TeacherApplication; error?: string }> {
-  const token = getToken()
-  if (!token) return { success: false, error: 'Not signed in' }
+  if (!hasClientSession()) return { success: false, error: 'Not signed in' }
   const res = await authFetch(
     `${AUTH_BASE}/api/admin/teacher-applications/${encodeURIComponent(applicationId)}/cv-reviewed`,
-    {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },
-    },
+    { method: 'POST' },
   )
   const data = await res.json()
   if (data.success && data.application) return { success: true, application: data.application }
@@ -146,11 +130,9 @@ export async function reviewTeacherApplication(
   action: 'approve' | 'reject',
   note?: string,
 ): Promise<{ success: boolean; application?: TeacherApplication; error?: string }> {
-  const token = getToken()
-  if (!token) return { success: false, error: 'Not signed in' }
+  if (!hasClientSession()) return { success: false, error: 'Not signed in' }
   const res = await authFetch(`${AUTH_BASE}/api/admin/teacher-applications/${encodeURIComponent(applicationId)}`, {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
     body: JSON.stringify({ action, note: note ?? '' }),
   })
   const data = await res.json()

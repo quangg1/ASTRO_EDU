@@ -2,7 +2,7 @@
  * Gem wallet client cache. When the user is authenticated, **`syncGemWallet` → GET /gems/wallet**
  * is the source of truth; localStorage is a guest/offline cache only.
  */
-import { getUserFromStoredToken } from '@/features/auth/public'
+import { hasClientSession, getUserFromStoredToken } from '@/features/auth/public'
 import { fetchGemWalletFromServer, type GemTransaction, type GemWalletState } from '@/features/rewards/api/gemsWalletApi'
 
 export type { GemTransaction, GemWalletState }
@@ -94,9 +94,8 @@ export async function syncGemWallet(userId?: string | null): Promise<GemWalletSt
   const uid = userId ?? getUserFromStoredToken()?.id ?? null
   if (isGuestGemUser(uid)) return createGuestWallet()
   const local = loadGemWallet(uid)
-  const token = typeof window !== 'undefined' ? localStorage.getItem('galaxies_token') : null
-  if (!token || !uid) return local
-  const serverState = await fetchGemWalletFromServer(token)
+  if (!hasClientSession() || !uid) return local
+  const serverState = await fetchGemWalletFromServer()
   if (!serverState) return local
   saveGemWallet(serverState, uid)
   return serverState

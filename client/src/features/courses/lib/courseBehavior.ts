@@ -1,7 +1,7 @@
 'use client'
 
-import { getToken } from '@/features/auth/public'
 import { getApiPathBase } from '@/lib/apiConfig'
+import { apiFetchInit } from '@/lib/apiClientHeaders'
 
 const BASE = getApiPathBase()
 
@@ -117,15 +117,14 @@ export async function flushCourseBehavior() {
   if (!courseSlug) return
   flushInFlight = true
   try {
-    const token = getToken()
-    const headers: HeadersInit = { 'Content-Type': 'application/json' }
-    if (token) (headers as Record<string, string>).Authorization = `Bearer ${token}`
-    await fetch(`${BASE}/courses/${encodeURIComponent(courseSlug)}/events/batch`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({ events: batch }),
-      keepalive: true,
-    })
+    await fetch(
+      `${BASE}/courses/${encodeURIComponent(courseSlug)}/events/batch`,
+      apiFetchInit({
+        method: 'POST',
+        body: JSON.stringify({ events: batch }),
+        keepalive: true,
+      }),
+    )
   } catch {
     queue.unshift(...batch)
   } finally {

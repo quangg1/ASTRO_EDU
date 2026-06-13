@@ -18,10 +18,12 @@ type Props = {
   texture: THREE.Texture
   fovDeg: number
   observer: SkyObserver
+  /** 1 = đêm, 0 = ban ngày */
+  nightVisibility?: number
 }
 
 /** Dải Ngân Hà — UV theo RA/Dec (`/sky/milkyway.png`, equirectangular 2:1). */
-export function MilkyWayPlane({ texture, fovDeg, observer }: Props) {
+export function MilkyWayPlane({ texture, fovDeg, observer, nightVisibility = 1 }: Props) {
   const sceneToEquat = useMemo(
     () => buildSceneToEquatorialMatrix(observer),
     [observer.latDeg, observer.lonDeg, observer.at.getTime()],
@@ -32,6 +34,7 @@ export function MilkyWayPlane({ texture, fovDeg, observer }: Props) {
     uSceneToEquat: { value: sceneToEquat.clone() },
     uBaseOpacity: { value: 0.38 },
     uFovBoost: { value: 0 },
+    uNightVis: { value: 1 },
   })
 
   const material = useMemo(
@@ -54,6 +57,7 @@ export function MilkyWayPlane({ texture, fovDeg, observer }: Props) {
           uniform mat3 uSceneToEquat;
           uniform float uBaseOpacity;
           uniform float uFovBoost;
+          uniform float uNightVis;
           varying vec2 vNdc;
           const float PI = 3.14159265359;
 
@@ -72,7 +76,7 @@ export function MilkyWayPlane({ texture, fovDeg, observer }: Props) {
 
             vec4 tex = texture2D(uMap, vec2(u, v));
             float lum = max(tex.r, max(tex.g, tex.b));
-            float a = max(tex.a, lum * 0.85) * uBaseOpacity * (1.0 + uFovBoost);
+            float a = max(tex.a, lum * 0.85) * uBaseOpacity * (1.0 + uFovBoost) * uNightVis;
             a *= discEdgeFade(vNdc);
             a *= smoothstep(-1.52, 0.1, alt);
             if (a < 0.002) discard;
@@ -93,6 +97,7 @@ export function MilkyWayPlane({ texture, fovDeg, observer }: Props) {
     const boost = Math.max(0.15, Math.min(0.55, (ref + 40 - fovDeg) / 75))
     uniforms.uFovBoost.value = boost
     uniforms.uBaseOpacity.value = 0.34 + boost * 0.14
+    uniforms.uNightVis.value = nightVisibility
   })
 
   return (

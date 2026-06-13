@@ -1,6 +1,6 @@
-import { getToken } from '@/features/auth/public'
+import { hasClientSession } from '@/features/auth/public'
 import { getApiPathBase } from '@/lib/apiConfig'
-import { apiClientHeaders } from '@/lib/apiClientHeaders'
+import { apiClientHeaders, apiFetchInit } from '@/lib/apiClientHeaders'
 
 const BASE = getApiPathBase()
 
@@ -52,7 +52,7 @@ export interface OnboardingOptions {
 }
 
 export async function fetchOnboardingOptions(): Promise<OnboardingOptions | null> {
-  const res = await fetch(`${BASE}/onboarding/options`, { cache: 'no-store' })
+  const res = await fetch(`${BASE}/onboarding/options`, apiFetchInit({ cache: 'no-store' }))
   const json = await res.json()
   if (json.success && json.data) return json.data
   return null
@@ -62,10 +62,9 @@ export async function fetchOnboardingStatus(): Promise<{
   completed: boolean
   profile: OnboardingProfile | null
 } | null> {
-  const token = getToken()
-  if (!token) return null
+  if (!hasClientSession()) return null
   try {
-    const res = await fetch(`${BASE}/onboarding/me`, { headers: authHeaders(), cache: 'no-store' })
+    const res = await fetch(`${BASE}/onboarding/me`, apiFetchInit({ headers: authHeaders(), cache: 'no-store' }))
     const json = await res.json()
     if (json.success && json.data) return json.data
     // Đã đăng nhập nhưng chưa có profile / API lỗi → coi như chưa onboarding
@@ -85,11 +84,11 @@ export async function completeOnboarding(body: {
   gemReward?: OnboardingGemReward | null
   error?: string
 }> {
-  const res = await fetch(`${BASE}/onboarding/complete`, {
+  const res = await fetch(`${BASE}/onboarding/complete`, apiFetchInit({
     method: 'POST',
     headers: authHeaders(),
     body: JSON.stringify(body),
-  })
+  }))
   const json = await res.json()
   if (json.success) {
     return {
@@ -102,10 +101,10 @@ export async function completeOnboarding(body: {
 }
 
 export async function skipOnboarding(): Promise<{ success: boolean; profile?: OnboardingProfile; error?: string }> {
-  const res = await fetch(`${BASE}/onboarding/skip`, {
+  const res = await fetch(`${BASE}/onboarding/skip`, apiFetchInit({
     method: 'POST',
     headers: authHeaders(),
-  })
+  }))
   const json = await res.json()
   if (json.success) return { success: true, profile: json.data?.profile }
   return { success: false, error: json.error || 'Không bỏ qua được' }

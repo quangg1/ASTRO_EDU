@@ -86,18 +86,13 @@ function SkyTargetsStudioPage() {
 
   useEffect(() => {
     if (!user || !canEnterStudio(user)) return
-    const token = typeof window !== 'undefined' ? localStorage.getItem('galaxies_token') : null
-    if (!token) {
-      setLoading(false)
-      return
-    }
     let cancelled = false
     setLoading(true)
     void (async () => {
       preloadHipCatalogIndex()
       const hip = await fetchHipCatalogIndex()
       const western = hip?.size ? await loadWesternExploreTargets(hip) : []
-      const editor = await fetchEditorSkyTargets(token)
+      const editor = await fetchEditorSkyTargets()
       if (cancelled) return
       const seedCatalog = editor?.catalog || []
       const bodies: PickerRow[] = seedCatalog.map((c) => ({
@@ -169,11 +164,9 @@ function SkyTargetsStudioPage() {
   )
 
   const handleSave = useCallback(async () => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('galaxies_token') : null
-    if (!token) return
     setSaving(true)
     setMessage('')
-    const result = await saveEditorSkyTargets(token, rows)
+    const result = await saveEditorSkyTargets(rows)
     setSaving(false)
     if (!result) {
       setMessage('Lưu thất bại.')

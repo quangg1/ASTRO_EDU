@@ -1,6 +1,7 @@
 const { WebSocketServer } = require('ws');
 const { verifyToken } = require('@galaxies/auth-shared');
 const User = require('../../auth/models/User');
+const { extractAuthTokenFromRequest } = require('../../../shared/authCookie');
 const { addConnection, removeConnection } = require('./notificationHub');
 
 const WS_PATH = '/ws/notifications';
@@ -20,6 +21,7 @@ function attachNotificationWebSocket(server) {
 
     const token =
       url.searchParams.get('token') ||
+      extractAuthTokenFromRequest(request) ||
       (request.headers['sec-websocket-protocol'] || '').split(',')[0]?.trim();
     const payload = token ? verifyToken(token) : null;
     if (!payload?.sub) {
@@ -39,6 +41,7 @@ function attachNotificationWebSocket(server) {
         const url = new URL(request.url || '', `http://${request.headers.host}`);
         const token =
           url.searchParams.get('token') ||
+          extractAuthTokenFromRequest(request) ||
           (request.headers['sec-websocket-protocol'] || '').split(',')[0]?.trim();
         const payload = token ? verifyToken(token) : null;
         if (!payload?.sub) {

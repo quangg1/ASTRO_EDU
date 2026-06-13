@@ -34,8 +34,11 @@ export function useExplorePlanetHistoryMode(
   }, [planetHistoryOpen, planetHistoryEntityId, loadPlanetNarrative])
 
   useEffect(() => {
-    if (!planetHistoryOpen || !historyLoadStartedRef.current || narrativeLoading) return
-    if (usePlanetNarrativeStore.getState().entityId !== planetHistoryEntityId) return
+    if (!planetHistoryOpen || !planetHistoryEntityId || !historyLoadStartedRef.current) return
+    if (narrativeLoading) return
+    const store = usePlanetNarrativeStore.getState()
+    if (store.entityId !== planetHistoryEntityId) return
+    if (store.loading) return
     if (narrativeBeats.length > 0) return
     closePlanetHistory()
   }, [

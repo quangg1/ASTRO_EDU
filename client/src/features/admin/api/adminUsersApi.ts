@@ -11,17 +11,13 @@
  * avoids a barrel cycle (auth/public re-exports the auth Zustand store).
  */
 import { getApiPathBase } from '@/lib/apiConfig'
-import { getToken } from '@/features/auth/api/authApi'
+import { hasClientSession } from '@/features/auth/public'
+import { apiFetch } from '@/lib/apiRequestInit'
 
 const API_BASE = getApiPathBase()
 
 function authFetch(url: string, init?: RequestInit): Promise<Response> {
-  return fetch(url, {
-    cache: 'no-store',
-    credentials: 'omit',
-    ...init,
-    headers: { ...(init?.headers || {}) },
-  })
+  return apiFetch(url, init)
 }
 
 export type UserRole = 'student' | 'teacher' | 'moderator' | 'admin'
@@ -50,17 +46,14 @@ export async function fetchAdminUsers(params?: {
   page?: number
   limit?: number
 }): Promise<{ success: boolean; data?: AdminUser[]; total?: number; page?: number; limit?: number; error?: string }> {
-  const token = getToken()
-  if (!token) return { success: false, error: 'Not signed in' }
+  if (!hasClientSession()) return { success: false, error: 'Not signed in' }
   const sp = new URLSearchParams()
   if (params?.q) sp.set('q', params.q)
   if (params?.role) sp.set('role', params.role)
   if (params?.accountStatus && params.accountStatus !== 'all') sp.set('accountStatus', params.accountStatus)
   if (params?.page) sp.set('page', String(params.page))
   if (params?.limit) sp.set('limit', String(params.limit))
-  const res = await authFetch(`${API_BASE}/admin/users?${sp}`, {
-    headers: { Authorization: `Bearer ${token}` },
-  })
+  const res = await authFetch(`${API_BASE}/admin/users?${sp}`)
   const data = await res.json()
   if (data.success && Array.isArray(data.data)) {
     return {
@@ -78,11 +71,9 @@ export async function updateUserRole(
   userId: string,
   role: UserRole
 ): Promise<{ success: boolean; user?: AdminUser; error?: string }> {
-  const token = getToken()
-  if (!token) return { success: false, error: 'Not signed in' }
+  if (!hasClientSession()) return { success: false, error: 'Not signed in' }
   const res = await authFetch(`${API_BASE}/admin/users/${encodeURIComponent(userId)}/role`, {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
     body: JSON.stringify({ role }),
   })
   const data = await res.json()
@@ -94,11 +85,9 @@ export async function updateUserAdminScopes(
   userId: string,
   adminScopes: string[],
 ): Promise<{ success: boolean; user?: AdminUser; error?: string }> {
-  const token = getToken()
-  if (!token) return { success: false, error: 'Not signed in' }
+  if (!hasClientSession()) return { success: false, error: 'Not signed in' }
   const res = await authFetch(`${API_BASE}/admin/users/${encodeURIComponent(userId)}/scopes`, {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
     body: JSON.stringify({ adminScopes }),
   })
   const data = await res.json()
@@ -111,11 +100,9 @@ export async function updateUserStatus(
   accountStatus: AccountStatus,
   reason?: string
 ): Promise<{ success: boolean; user?: AdminUser; error?: string }> {
-  const token = getToken()
-  if (!token) return { success: false, error: 'Not signed in' }
+  if (!hasClientSession()) return { success: false, error: 'Not signed in' }
   const res = await authFetch(`${API_BASE}/admin/users/${encodeURIComponent(userId)}/status`, {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
     body: JSON.stringify({ accountStatus, reason }),
   })
   const data = await res.json()
@@ -134,14 +121,10 @@ export async function sendAdminUserPasswordReset(
   error?: string
   code?: string
 }> {
-  const token = getToken()
-  if (!token) return { success: false, error: 'Not signed in' }
+  if (!hasClientSession()) return { success: false, error: 'Not signed in' }
   const res = await authFetch(
     `${API_BASE}/admin/users/${encodeURIComponent(userId)}/send-password-reset`,
-    {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },
-    },
+    { method: 'POST' },
   )
   const data = await res.json()
   if (data.success) {
@@ -165,11 +148,9 @@ export async function deleteUserPermanently(
   confirmEmail: string,
   reason: string
 ): Promise<{ success: boolean; error?: string; message?: string; emailSent?: boolean; code?: string }> {
-  const token = getToken()
-  if (!token) return { success: false, error: 'Not signed in' }
+  if (!hasClientSession()) return { success: false, error: 'Not signed in' }
   const res = await authFetch(`${API_BASE}/admin/users/${encodeURIComponent(userId)}`, {
     method: 'DELETE',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
     body: JSON.stringify({ confirmEmail, reason }),
   })
   const data = await res.json()

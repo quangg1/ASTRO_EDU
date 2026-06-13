@@ -1,6 +1,6 @@
 import { getToken } from '@/features/auth/public'
 import { getApiPathBase } from '@/lib/apiConfig'
-import { apiClientHeaders } from '@/lib/apiClientHeaders'
+import { apiClientHeaders, apiFetchInit } from '@/lib/apiClientHeaders'
 import { forUserFacingError } from '@/lib/sanitizeUserError'
 import { userMessages } from '@/lib/userMessages'
 
@@ -86,9 +86,9 @@ export async function fetchCheckoutQuote(params: {
   if (params.voucherTierId) q.set('voucherTierId', params.voucherTierId)
   if (params.promoCode) q.set('promoCode', params.promoCode)
   if (params.cohortId) q.set('cohortId', params.cohortId)
-  const res = await fetch(`${PAYMENT_BASE}/payments/checkout-quote?${q.toString()}`, {
+  const res = await fetch(`${PAYMENT_BASE}/payments/checkout-quote?${q.toString()}`, apiFetchInit({
     headers: authHeaders(),
-  })
+  }))
   const data = await res.json()
   if (data?.success && data.data) {
     return { success: true, data: data.data as CheckoutQuote }
@@ -127,7 +127,7 @@ export async function createCheckoutSession(params: {
   promoCode?: string | null
   cohortId?: string | null
 }): Promise<CreateCheckoutSessionResult> {
-  const res = await fetch(`${PAYMENT_BASE}/payments/checkout`, {
+  const res = await fetch(`${PAYMENT_BASE}/payments/checkout`, apiFetchInit({
     method: 'POST',
     headers: authHeaders(),
     body: JSON.stringify({
@@ -136,7 +136,7 @@ export async function createCheckoutSession(params: {
       promoCode: params.promoCode || undefined,
       cohortId: params.cohortId || undefined,
     }),
-  })
+  }))
   const data = await res.json()
   if (data?.success && data.data) {
     return { success: true, data: data.data as CheckoutSession }
@@ -167,11 +167,11 @@ export async function confirmCheckout(params: {
 }): Promise<ConfirmCheckoutResponse> {
   const res = await fetch(
     `${PAYMENT_BASE}/payments/checkout/${encodeURIComponent(params.txnRef)}/confirm`,
-    {
+    apiFetchInit({
       method: 'POST',
       headers: authHeaders(),
       body: JSON.stringify({ paymentMethod: params.paymentMethod || 'card' }),
-    },
+    }),
   )
   const data = await res.json()
   if (data?.success && data.data) {
@@ -196,9 +196,9 @@ export interface PaymentStatusResponse {
 export async function fetchPaymentStatus(
   txnRef: string,
 ): Promise<PaymentStatusResponse | null> {
-  const res = await fetch(`${PAYMENT_BASE}/payments/status/${encodeURIComponent(txnRef)}`, {
+  const res = await fetch(`${PAYMENT_BASE}/payments/status/${encodeURIComponent(txnRef)}`, apiFetchInit({
     headers: authHeaders(),
-  })
+  }))
   if (!res.ok) return null
   const data = await res.json()
   if (data?.success && data.data) return data.data as PaymentStatusResponse
@@ -257,7 +257,7 @@ export interface AdminOrderStats {
 }
 
 export async function fetchMyOrders(): Promise<Order[]> {
-  const res = await fetch(`${PAYMENT_BASE}/payments/orders`, { headers: authHeaders() })
+  const res = await fetch(`${PAYMENT_BASE}/payments/orders`, apiFetchInit({ headers: authHeaders() }))
   const data = await res.json()
   if (data.success && Array.isArray(data.data)) return data.data
   return []
@@ -268,7 +268,7 @@ export async function fetchAdminOrderStats(): Promise<{
   orders: AdminOrder[]
 }> {
   try {
-    const res = await fetch(`${PAYMENT_BASE}/admin/orders/overview`, { headers: authHeaders() })
+    const res = await fetch(`${PAYMENT_BASE}/admin/orders/overview`, apiFetchInit({ headers: authHeaders() }))
     const data = await res.json()
     if (!res.ok || !data.success) return { stats: null, orders: [] }
     return {

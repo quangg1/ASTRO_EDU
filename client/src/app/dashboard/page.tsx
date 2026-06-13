@@ -21,6 +21,7 @@ import { fetchLearnerTiersWithProgress, type LearnerTierProgress } from '@/featu
 import { useLiveClock } from '@/hooks/useLiveClock'
 import { DashboardForYouPanel } from '@/components/onboarding/DashboardForYouPanel'
 import { DashboardOnboardingWelcome } from '@/components/onboarding/DashboardOnboardingWelcome'
+import { TonightSkyPanel } from '@/features/astronomy-calendar/public'
 
 const chamfer = (cut = 18) => ({
   clipPath: `polygon(${cut}px 0,100% 0,100% calc(100% - ${cut}px),calc(100% - ${cut}px) 100%,0 100%,0 ${cut}px)`,
@@ -184,6 +185,8 @@ export default function DashboardOverviewPage() {
         <DashboardOnboardingWelcome />
       </Suspense>
       <DashboardForYouPanel />
+
+      <TonightSkyPanel maxItems={3} />
 
       {/* Stats Row — 3 cards */}
       <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">

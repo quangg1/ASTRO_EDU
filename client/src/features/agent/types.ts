@@ -4,6 +4,7 @@ export type AgentSurface =
   | 'course'
   | 'dashboard'
   | 'studio'
+  | 'calendar'
   | 'general'
 
 export type SessionContext = {
@@ -45,6 +46,16 @@ export type SessionContext = {
   activeSectionId?: string | null
   activeSectionTitle?: string | null
   activeSectionExcerpt?: string | null
+  /** Lịch thiên văn — sự kiện đang xem / liên kết bài học. */
+  calendarEventId?: string | null
+  calendarEventTitle?: string | null
+  calendarEventType?: string | null
+  calendarEventKind?: 'observable' | 'educational' | null
+  calendarEventSummary?: string | null
+  calendarLessonHref?: string | null
+  calendarExploreView?: 'sky' | 'solar' | null
+  calendarExploreTarget?: string | null
+  calendarUpcomingTitles?: string[] | null
 }
 
 export type ExploreNarrativeSiteContext = {

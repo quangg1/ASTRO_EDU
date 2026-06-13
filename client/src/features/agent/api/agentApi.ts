@@ -1,5 +1,6 @@
 import { getApiPathBase } from '@/lib/apiConfig'
-import { getToken } from '@/features/auth/public'
+import { getToken, hasClientSession } from '@/features/auth/public'
+import { apiRequestInit, usesCookieAuth } from '@/lib/apiRequestInit'
 import type { RecallQuizDeliveryQuestion } from '@/features/learning-path/public'
 import type {
   AgentMessageResponse,
@@ -32,13 +33,29 @@ function agentHeaders(stream: boolean): HeadersInit {
   } else {
     h.Accept = 'application/json'
   }
-  const token = getToken()
-  if (token) h.Authorization = `Bearer ${token}`
-  else {
+  if (!usesCookieAuth()) {
+    const token = getToken()
+    if (token) h.Authorization = `Bearer ${token}`
+    else {
+      const guest = getAgentGuestSessionId()
+      if (guest) h['X-Agent-Guest-Session'] = guest
+    }
+  } else {
     const guest = getAgentGuestSessionId()
     if (guest) h['X-Agent-Guest-Session'] = guest
   }
   return h
+}
+
+function agentFetchInit(init?: RequestInit, stream = false): RequestInit {
+  const extra = (init?.headers || {}) as Record<string, string>
+  return apiRequestInit(
+    {
+      ...init,
+      headers: { ...agentHeaders(stream), ...extra },
+    },
+    true,
+  )
 }
 
 export function getAgentApiBase(): string {
@@ -117,9 +134,8 @@ export async function postAgentMessage(params: {
 }): Promise<AgentMessageResponse> {
   const useStream = params.stream !== false
   const url = `${getAgentApiBase()}/message${useStream ? '?stream=1' : '?stream=0'}`
-  const res = await fetch(url, {
+  const res = await fetch(url, agentFetchInit({
     method: 'POST',
-    headers: agentHeaders(useStream),
     body: JSON.stringify({
       messages: params.messages,
       session_context: params.sessionContext,
@@ -128,7 +144,7 @@ export async function postAgentMessage(params: {
       image_base64: params.image_base64,
       image_media_type: params.image_media_type,
     }),
-  })
+  }))
 
   if (!res.ok) {
     const data = (await res.json().catch(() => ({}))) as { error?: string; code?: string }
@@ -197,24 +213,19 @@ export async function prefetchAgentContext(
   sessionContext: SessionContext,
   learnerSnapshot?: LearnerSnapshot,
 ): Promise<void> {
-  const token = getToken()
-  if (!token) return
-  await fetch(`${getAgentApiBase()}/context/prefetch`, {
+  if (!hasClientSession()) return
+  await fetch(`${getAgentApiBase()}/context/prefetch`, agentFetchInit({
     method: 'POST',
-    headers: agentHeaders(false),
     body: JSON.stringify({
       session_context: sessionContext,
       learner_snapshot: learnerSnapshot,
     }),
-  }).catch(() => {})
+  })).catch(() => {})
 }
 
 export async function fetchAgentSnapshot(): Promise<LearnerSnapshot | null> {
-  const token = getToken()
-  if (!token) return null
-  const res = await fetch(`${getAgentApiBase()}/snapshot`, {
-    headers: agentHeaders(false),
-  })
+  if (!hasClientSession()) return null
+  const res = await fetch(`${getAgentApiBase()}/snapshot`, agentFetchInit({}))
   if (!res.ok) return null
   const data = (await res.json()) as { snapshot?: LearnerSnapshot }
   return data.snapshot ?? null
@@ -229,14 +240,11 @@ export async function fetchAgentCoachNudge(params: {
   chips?: Array<{ label: string; action: string; lessonId?: string }>
   reason?: string
 } | null> {
-  const token = getToken()
-  if (!token) return null
+  if (!hasClientSession()) return null
   const q = new URLSearchParams()
   if (params.lessonId) q.set('lessonId', params.lessonId)
   if (params.sessionId) q.set('sessionId', params.sessionId)
-  const res = await fetch(`${getAgentApiBase()}/coach-nudge?${q}`, {
-    headers: agentHeaders(false),
-  })
+  const res = await fetch(`${getAgentApiBase()}/coach-nudge?${q}`, agentFetchInit({}))
   if (!res.ok) return null
   const data = (await res.json()) as {
     allowed?: boolean
@@ -253,12 +261,8 @@ export async function fetchAgentCoachNudge(params: {
 }
 
 export async function dismissAgentCoach(): Promise<void> {
-  const token = getToken()
-  if (!token) return
-  await fetch(`${getAgentApiBase()}/coach/dismiss`, {
-    method: 'POST',
-    headers: agentHeaders(false),
-  }).catch(() => {})
+  if (!hasClientSession()) return
+  await fetch(`${getAgentApiBase()}/coach/dismiss`, agentFetchInit({ method: 'POST' })).catch(() => {})
 }
 
 export async function postAgentQuizOutcome(body: {
@@ -266,13 +270,11 @@ export async function postAgentQuizOutcome(body: {
   passed: boolean
   misconceptionTag?: string
 }): Promise<void> {
-  const token = getToken()
-  if (!token) return
-  await fetch(`${getAgentApiBase()}/quiz-outcome`, {
+  if (!hasClientSession()) return
+  await fetch(`${getAgentApiBase()}/quiz-outcome`, agentFetchInit({
     method: 'POST',
-    headers: agentHeaders(false),
     body: JSON.stringify(body),
-  }).catch(() => {})
+  })).catch(() => {})
 }
 
 export async function fetchSpacedReviewDue(limit = 5): Promise<{
@@ -285,11 +287,8 @@ export async function fetchSpacedReviewDue(limit = 5): Promise<{
   }>
   totalDue: number
 } | null> {
-  const token = getToken()
-  if (!token) return null
-  const res = await fetch(`${getAgentApiBase()}/spaced-review?limit=${limit}`, {
-    headers: agentHeaders(false),
-  })
+  if (!hasClientSession()) return null
+  const res = await fetch(`${getAgentApiBase()}/spaced-review?limit=${limit}`, agentFetchInit({}))
   if (!res.ok) return null
   const data = (await res.json()) as {
     dueLessons?: Array<{
@@ -307,23 +306,19 @@ export async function fetchSpacedReviewDue(limit = 5): Promise<{
 }
 
 export async function postSpacedReviewComplete(lessonId: string): Promise<void> {
-  const token = getToken()
-  if (!token) return
-  await fetch(`${getAgentApiBase()}/spaced-review/complete`, {
+  if (!hasClientSession()) return
+  await fetch(`${getAgentApiBase()}/spaced-review/complete`, agentFetchInit({
     method: 'POST',
-    headers: agentHeaders(false),
     body: JSON.stringify({ lessonId }),
-  }).catch(() => {})
+  })).catch(() => {})
 }
 
 export async function postDepthPreference(depth: string): Promise<void> {
-  const token = getToken()
-  if (!token) return
-  await fetch(`${getAgentApiBase()}/depth-preference`, {
+  if (!hasClientSession()) return
+  await fetch(`${getAgentApiBase()}/depth-preference`, agentFetchInit({
     method: 'POST',
-    headers: agentHeaders(false),
     body: JSON.stringify({ depth }),
-  }).catch(() => {})
+  })).catch(() => {})
 }
 
 export async function postAgentSessionSummary(body: {
@@ -332,21 +327,16 @@ export async function postAgentSessionSummary(body: {
   lessonTitle?: string
   messageCount?: number
 }): Promise<void> {
-  const token = getToken()
-  if (!token) return
-  await fetch(`${getAgentApiBase()}/session-summary`, {
+  if (!hasClientSession()) return
+  await fetch(`${getAgentApiBase()}/session-summary`, agentFetchInit({
     method: 'POST',
-    headers: agentHeaders(false),
     body: JSON.stringify(body),
-  }).catch(() => {})
+  })).catch(() => {})
 }
 
 export async function fetchAgentSessions(limit = 20): Promise<AgentSessionSummary[]> {
-  const token = getToken()
-  if (!token) return []
-  const res = await fetch(`${getAgentApiBase()}/sessions?limit=${limit}`, {
-    headers: agentHeaders(false),
-  }).catch(() => null)
+  if (!hasClientSession()) return []
+  const res = await fetch(`${getAgentApiBase()}/sessions?limit=${limit}`, agentFetchInit({})).catch(() => null)
   if (!res?.ok) return []
   const data = (await res.json().catch(() => ({}))) as { sessions?: AgentSessionSummary[] }
   return Array.isArray(data.sessions) ? data.sessions : []
@@ -362,13 +352,11 @@ export async function postAgentMessageFeedback(body: {
   cacheEntryId?: string
   userQuery?: string
 }): Promise<boolean> {
-  const token = getToken()
-  if (!token) return false
-  const res = await fetch(`${getAgentApiBase()}/feedback`, {
+  if (!hasClientSession()) return false
+  const res = await fetch(`${getAgentApiBase()}/feedback`, agentFetchInit({
     method: 'POST',
-    headers: agentHeaders(false),
     body: JSON.stringify(body),
-  }).catch(() => null)
+  })).catch(() => null)
   const data = await res?.json().catch(() => ({}))
   return Boolean(res?.ok && data?.success)
 }
@@ -401,16 +389,14 @@ export async function startConceptQuiz(
   conceptId: string,
   lessonId?: string | null,
 ): Promise<{ ok: boolean; data?: ConceptQuizStartPayload; error?: string; code?: string }> {
-  const token = getToken()
-  if (!token) {
+  if (!hasClientSession()) {
     return { ok: false, error: 'Đăng nhập để làm quiz concept', code: 'AUTH_REQUIRED' }
   }
   try {
-    const res = await fetch(`${getAgentApiBase()}/concept-quiz/start`, {
+    const res = await fetch(`${getAgentApiBase()}/concept-quiz/start`, agentFetchInit({
       method: 'POST',
-      headers: agentHeaders(false),
       body: JSON.stringify({ conceptId, lessonId: lessonId || undefined }),
-    })
+    }))
     const data = await res.json().catch(() => ({}))
     if (data.success && data.data?.quizSessionId && data.data?.questions?.length >= 3) {
       return { ok: true, data: data.data as ConceptQuizStartPayload }
@@ -429,16 +415,14 @@ export async function submitConceptQuiz(
   quizSessionId: string,
   answers: Record<string, number>,
 ): Promise<{ ok: boolean; data?: ConceptQuizSubmitResult; error?: string; code?: string }> {
-  const token = getToken()
-  if (!token) {
+  if (!hasClientSession()) {
     return { ok: false, error: 'Đăng nhập để nộp quiz', code: 'AUTH_REQUIRED' }
   }
   try {
-    const res = await fetch(`${getAgentApiBase()}/concept-quiz/submit`, {
+    const res = await fetch(`${getAgentApiBase()}/concept-quiz/submit`, agentFetchInit({
       method: 'POST',
-      headers: agentHeaders(false),
       body: JSON.stringify({ quizSessionId, answers }),
-    })
+    }))
     const data = await res.json().catch(() => ({}))
     if (data.success && data.data) {
       return { ok: true, data: data.data as ConceptQuizSubmitResult }
@@ -456,11 +440,11 @@ export async function submitConceptQuiz(
 export async function fetchAgentSessionDetail(
   sessionId: string,
 ): Promise<AgentSessionDetail | null> {
-  const token = getToken()
-  if (!token || !sessionId) return null
-  const res = await fetch(`${getAgentApiBase()}/sessions/${encodeURIComponent(sessionId)}`, {
-    headers: agentHeaders(false),
-  }).catch(() => null)
+  if (!hasClientSession() || !sessionId) return null
+  const res = await fetch(
+    `${getAgentApiBase()}/sessions/${encodeURIComponent(sessionId)}`,
+    agentFetchInit({}),
+  ).catch(() => null)
   if (!res?.ok) return null
   const data = (await res.json().catch(() => ({}))) as { session?: AgentSessionDetail }
   return data.session ?? null

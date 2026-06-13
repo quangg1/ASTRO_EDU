@@ -2,6 +2,7 @@ require('dotenv').config();
 const http = require('http');
 const express = require('express');
 const cors = require('cors');
+const cookieParser = require('cookie-parser');
 const connectDB = require('./config/db');
 const { validateApiEnv } = require('./config/env');
 const { bootstrapCoreData } = require('./bootstrap/seedCoreData');
@@ -39,6 +40,9 @@ const adminRouter = require('./features/admin');
 const { agentRouter } = require('./features/agent');
 const { learningStateRouter } = require('./features/learning-state');
 const { onboardingRouter } = require('./features/onboarding');
+const { astronomyCalendarRouter } = require('./features/astronomy-calendar');
+const { startAstronomyReminderScheduler } = require('./features/astronomy-calendar/jobs/reminderScheduler');
+const { ensurePublishedSeed } = require('./features/astronomy-calendar/services/astronomyCalendarService');
 const { attachNotificationWebSocket, WS_PATH } = require('./features/notifications/ws/attachNotificationWs');
 const { isMailConfigured } = require('./shared/mailer');
 const { hasS3 } = require('./features/media/uploadStorage');
@@ -48,6 +52,7 @@ const app = express();
 const PORT = env.port;
 const corsOrigin = env.clientUrl;
 app.use(cors({ origin: corsOrigin, credentials: true }));
+app.use(cookieParser());
 applyPlatformSecurity(app);
 app.use(express.json({ limit: '10mb' }));
 app.use(requestContextMiddleware);
@@ -85,6 +90,7 @@ app.use('/api/admin', adminRouter);
 app.use('/api/agent', agentRouter);
 app.use('/api/learning-state', learningStateRouter);
 app.use('/api/onboarding', onboardingRouter);
+app.use('/api/astronomy-calendar', astronomyCalendarRouter);
 app.use(mediaRouter); // POST /upload, GET /files/*
 app.use(errorMiddleware);
 
@@ -101,6 +107,14 @@ app.get('/health', (req, res) => {
 async function start() {
   await connectDB();
   await bootstrapCoreData();
+  try {
+    const seed = await ensurePublishedSeed();
+    if (seed.seeded) {
+      console.log(`[astronomy-calendar] Seeded ${seed.created} published events`);
+    }
+  } catch (err) {
+    console.error('[astronomy-calendar] seed error:', err);
+  }
   const forumBootstrap = await bootstrapCommunityForums();
   if (forumBootstrap.removedForums > 0) {
     console.log(
@@ -112,6 +126,7 @@ async function start() {
   attachNotificationWebSocket(server);
   startNewsCrawlScheduler({ info: (msg, meta) => console.log(msg, meta || ''), error: (msg, meta) => console.error(msg, meta || '') });
   startOrderMaintenanceScheduler({ info: (msg, meta) => console.log(msg, meta || ''), error: (msg, meta) => console.error(msg, meta || '') });
+  startAstronomyReminderScheduler();
 
   server.listen(PORT, '0.0.0.0', () => {
     if (!isMailConfigured()) {

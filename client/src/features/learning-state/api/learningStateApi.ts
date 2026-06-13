@@ -1,6 +1,6 @@
 import { getApiPathBase } from '@/lib/apiConfig'
-import { apiClientHeaders } from '@/lib/apiClientHeaders'
-import { getToken } from '@/features/auth/public'
+import { apiClientHeaders, apiFetchInit } from '@/lib/apiClientHeaders'
+import { hasClientSession } from '@/features/auth/public'
 
 const base = () => {
   const root = getApiPathBase()
@@ -8,10 +8,7 @@ const base = () => {
 }
 
 function authHeaders(): HeadersInit {
-  const token = getToken()
-  return token
-    ? { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
-    : { 'Content-Type': 'application/json' }
+  return apiClientHeaders()
 }
 
 export type LearningStateEventInput = {
@@ -28,14 +25,13 @@ export type LearningStateEventInput = {
 export async function postLearningStateEvents(
   events: LearningStateEventInput | LearningStateEventInput[],
 ): Promise<boolean> {
-  const token = getToken()
-  if (!token) return false
+  if (!hasClientSession()) return false
   const list = Array.isArray(events) ? events : [events]
-  const res = await fetch(`${base()}/events`, {
+  const res = await fetch(`${base()}/events`, apiFetchInit({
     method: 'POST',
     headers: authHeaders(),
     body: JSON.stringify({ events: list }),
-  }).catch(() => null)
+  })).catch(() => null)
   const data = await res?.json().catch(() => ({}))
   return Boolean(res?.ok && data?.success)
 }
@@ -87,21 +83,19 @@ export type ConceptLearningStateSummary = {
 export async function fetchConceptLearningStates(
   conceptIds: string[],
 ): Promise<ConceptLearningStateSummary[]> {
-  const token = getToken()
-  if (!token || !conceptIds.length) return []
+  if (!hasClientSession() || !conceptIds.length) return []
   const ids = conceptIds.slice(0, 12).join(',')
-  const res = await fetch(`${base()}/concepts?ids=${encodeURIComponent(ids)}`, {
+  const res = await fetch(`${base()}/concepts?ids=${encodeURIComponent(ids)}`, apiFetchInit({
     headers: authHeaders(),
-  }).catch(() => null)
+  })).catch(() => null)
   if (!res?.ok) return []
   const data = await res.json().catch(() => ({}))
   return Array.isArray(data.concepts) ? data.concepts : []
 }
 
 export async function fetchLearningStateSnapshot(): Promise<Record<string, unknown> | null> {
-  const token = getToken()
-  if (!token) return null
-  const res = await fetch(`${base()}/snapshot`, { headers: authHeaders() }).catch(() => null)
+  if (!hasClientSession()) return null
+  const res = await fetch(`${base()}/snapshot`, apiFetchInit({ headers: authHeaders() })).catch(() => null)
   if (!res?.ok) return null
   const data = await res.json().catch(() => ({}))
   return data.snapshot ?? null

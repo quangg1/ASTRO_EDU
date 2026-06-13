@@ -8,7 +8,7 @@ const NAV_COLS = [
     title: 'Khám phá',
     links: [
       { label: 'Tất cả khóa học', href: '/courses' },
-      { label: 'Tutorial', href: '/tutorial' },
+      { label: 'Hướng dẫn', href: '/tutorial' },
       { label: 'Khám phá 3D', href: '/explore' },
       { label: 'Cộng đồng', href: '/community' },
     ],
@@ -22,7 +22,7 @@ const NAV_COLS = [
     ],
   },
   {
-    title: 'Mission control',
+    title: 'Trung tâm điều khiển',
     links: [
       { label: 'Bảng điều khiển', href: '/dashboard' },
       { label: 'Studio', href: '/studio' },

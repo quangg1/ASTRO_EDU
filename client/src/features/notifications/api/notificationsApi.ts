@@ -1,6 +1,6 @@
 import { getToken } from '@/features/auth/public'
 import { getApiPathBase } from '@/lib/apiConfig'
-import { apiClientHeaders } from '@/lib/apiClientHeaders'
+import { apiClientHeaders, apiFetchInit } from '@/lib/apiClientHeaders'
 
 const BASE = getApiPathBase()
 
@@ -26,33 +26,33 @@ export async function fetchNotifications(params?: {
   const q = new URLSearchParams()
   if (params?.limit) q.set('limit', String(params.limit))
   if (params?.unreadOnly) q.set('unreadOnly', '1')
-  const res = await fetch(`${BASE}/notifications?${q.toString()}`, { headers: authHeaders() })
+  const res = await fetch(`${BASE}/notifications?${q.toString()}`, apiFetchInit({ headers: authHeaders() }))
   const data = await res.json()
   if (data?.success && Array.isArray(data.data)) return data.data as AppNotification[]
   return []
 }
 
 export async function fetchUnreadNotificationCount(): Promise<number> {
-  const res = await fetch(`${BASE}/notifications/unread-count`, { headers: authHeaders() })
+  const res = await fetch(`${BASE}/notifications/unread-count`, apiFetchInit({ headers: authHeaders() }))
   const data = await res.json()
   if (data?.success && data.data?.count != null) return Number(data.data.count) || 0
   return 0
 }
 
 export async function markNotificationRead(id: string): Promise<boolean> {
-  const res = await fetch(`${BASE}/notifications/${encodeURIComponent(id)}/read`, {
+  const res = await fetch(`${BASE}/notifications/${encodeURIComponent(id)}/read`, apiFetchInit({
     method: 'PATCH',
     headers: authHeaders(),
-  })
+  }))
   const data = await res.json()
   return Boolean(data?.success)
 }
 
 export async function markAllNotificationsRead(): Promise<boolean> {
-  const res = await fetch(`${BASE}/notifications/read-all`, {
+  const res = await fetch(`${BASE}/notifications/read-all`, apiFetchInit({
     method: 'POST',
     headers: authHeaders(),
-  })
+  }))
   const data = await res.json()
   return Boolean(data?.success)
 }

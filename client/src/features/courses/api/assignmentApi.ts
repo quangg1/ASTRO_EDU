@@ -1,15 +1,7 @@
-import { getToken } from '@/features/auth/public'
 import { getApiPathBase, getUploadBase } from '@/lib/apiConfig'
+import { apiFetchInit } from '@/lib/apiClientHeaders'
 
 const BASE = getApiPathBase()
-
-function authHeaders(json = true): HeadersInit {
-  const token = getToken()
-  const h: HeadersInit = {}
-  if (json) (h as Record<string, string>)['Content-Type'] = 'application/json'
-  if (token) (h as Record<string, string>)['Authorization'] = `Bearer ${token}`
-  return h
-}
 
 function assignmentBase(slug: string, lessonSlug: string, cohortId?: string | null) {
   if (cohortId) {
@@ -19,7 +11,7 @@ function assignmentBase(slug: string, lessonSlug: string, cohortId?: string | nu
 }
 
 export async function fetchAssignmentDraft(slug: string, lessonSlug: string, cohortId?: string | null) {
-  const res = await fetch(`${assignmentBase(slug, lessonSlug, cohortId)}/draft`, { headers: authHeaders() })
+  const res = await fetch(`${assignmentBase(slug, lessonSlug, cohortId)}/draft`, apiFetchInit())
   return res.json()
 }
 
@@ -33,11 +25,10 @@ export async function uploadAssignmentStagingFile(
   form.append('purpose', 'assignment-staging')
   form.append('entityId', submissionId)
   form.append('variant', variant)
-  const res = await fetch(`${getUploadBase()}/upload/assignment-staging`, {
+  const res = await fetch(`${getUploadBase()}/upload/assignment-staging`, apiFetchInit({
     method: 'POST',
-    headers: authHeaders(false),
     body: form,
-  })
+  }, false))
   return res.json()
 }
 
@@ -46,11 +37,10 @@ export async function validateAssignmentFiles(
   lessonSlug: string,
   cohortId?: string | null,
 ) {
-  const res = await fetch(`${assignmentBase(slug, lessonSlug, cohortId)}/validate-files`, {
+  const res = await fetch(`${assignmentBase(slug, lessonSlug, cohortId)}/validate-files`, apiFetchInit({
     method: 'POST',
-    headers: authHeaders(),
     body: JSON.stringify({}),
-  })
+  }))
   return res.json()
 }
 
@@ -60,11 +50,10 @@ export async function attachStagingFile(
   body: { storageKey: string; url: string; name: string; mime: string; size: number },
   cohortId?: string | null,
 ) {
-  const res = await fetch(`${assignmentBase(slug, lessonSlug, cohortId)}/staging-files`, {
+  const res = await fetch(`${assignmentBase(slug, lessonSlug, cohortId)}/staging-files`, apiFetchInit({
     method: 'POST',
-    headers: authHeaders(),
     body: JSON.stringify(body),
-  })
+  }))
   return res.json()
 }
 
@@ -74,10 +63,9 @@ export async function submitAssignment(
   note: string,
   cohortId?: string | null,
 ) {
-  const res = await fetch(`${assignmentBase(slug, lessonSlug, cohortId)}/submit`, {
+  const res = await fetch(`${assignmentBase(slug, lessonSlug, cohortId)}/submit`, apiFetchInit({
     method: 'POST',
-    headers: authHeaders(),
     body: JSON.stringify({ note }),
-  })
+  }))
   return res.json()
 }

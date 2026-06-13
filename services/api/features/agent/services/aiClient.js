@@ -1,8 +1,18 @@
+const { internalServiceHeaders } = require('../../../shared/internalServiceAuth');
+
 const AI_SERVICE_URL = (
   process.env.AI_SERVICE_URL || 'http://127.0.0.1:5005'
 )
   .trim()
   .replace(/\/$/, '');
+
+function aiServiceHeaders(extra = {}) {
+  return {
+    'Content-Type': 'application/json',
+    ...internalServiceHeaders(),
+    ...extra,
+  };
+}
 const RAG_TIMEOUT_MS = 3000;
 const CHAT_TIMEOUT_MS = 70000;
 
@@ -21,7 +31,7 @@ async function callAiChat(body) {
   try {
     const res = await fetch(`${AI_SERVICE_URL}/chat`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: aiServiceHeaders(),
       body: JSON.stringify(body),
       signal: controller.signal,
     });
@@ -59,8 +69,10 @@ function mapContextForAi(
   if (isCourse) contextLabel = 'course';
   else if (surface === 'learning_path' || agentContext?.currentLesson) {
     contextLabel = 'learning_path';
-  } else if (surface === 'explore') {
+  }   else if (surface === 'explore') {
     contextLabel = 'explore';
+  } else if (surface === 'calendar') {
+    contextLabel = 'calendar';
   }
 
   const agentState = {
@@ -99,6 +111,10 @@ function mapContextForAi(
     earth_fossil_context: agentContext?.earthFossilContext ?? null,
     showcase_context: agentContext?.showcaseContext ?? null,
     explore_scene_context: agentContext?.exploreSceneContext ?? null,
+    astronomy_calendar_context: agentContext?.astronomyCalendarContext ?? null,
+    calendar_event_id: sessionContext?.calendarEventId ?? null,
+    calendar_event_title: sessionContext?.calendarEventTitle ?? null,
+    calendar_lesson_href: sessionContext?.calendarLessonHref ?? null,
     tutoring_style: agentContext?.tutoringStyle ?? 'balanced',
     learner_interests: agentContext?.learnerInterests?.length
       ? agentContext.learnerInterests
@@ -166,10 +182,7 @@ async function callAiChatStream(body, handlers = {}) {
   try {
     const res = await fetch(`${AI_SERVICE_URL}/chat/stream`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'text/event-stream',
-      },
+      headers: aiServiceHeaders({ Accept: 'text/event-stream' }),
       body: JSON.stringify(body),
       signal: controller.signal,
     });

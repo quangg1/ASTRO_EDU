@@ -1,4 +1,5 @@
 import { getApiPathBase } from '@/lib/apiConfig'
+import { apiFetch } from '@/lib/apiRequestInit'
 import type {
   NasaCatalogItem,
   NasaStory,
@@ -27,11 +28,9 @@ export async function fetchPublicShowcaseCatalogBundle(): Promise<ShowcaseCatalo
   }
 }
 
-export async function fetchEditorShowcaseCatalogBundle(token: string): Promise<(ShowcaseCatalogBundleDTO & { updatedAt?: string | null }) | null> {
+export async function fetchEditorShowcaseCatalogBundle(): Promise<(ShowcaseCatalogBundleDTO & { updatedAt?: string | null }) | null> {
   try {
-    const res = await fetch(API, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
+    const res = await apiFetch(API)
     const data = await res.json()
     if (!data.success) return null
     if (data.data == null) return { stories: [], catalog: [], orbits: [], updatedAt: null }
@@ -48,16 +47,11 @@ export async function fetchEditorShowcaseCatalogBundle(token: string): Promise<(
 }
 
 export async function saveShowcaseCatalogBundleEditor(
-  token: string,
   bundle: ShowcaseCatalogBundleDTO,
 ): Promise<{ ok: boolean; error?: string }> {
   try {
-    const res = await fetch(`${API}/editor`, {
+    const res = await apiFetch(`${API}/editor`, {
       method: 'PUT',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify({
         stories: bundle.stories,
         catalog: bundle.catalog,

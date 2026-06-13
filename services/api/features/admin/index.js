@@ -26,6 +26,7 @@ const LearningPath = require('../learning-path/models/LearningPath');
 const Concept = require('../concepts/models/Concept');
 const gemEconomyRouter = require('./gemEconomy');
 const adminPromoRoutes = require('../promotions/adminPromoRoutes');
+const { adminAstronomyRoutes } = require('../astronomy-calendar');
 const adminOpsRoutes = require('./routes/adminOpsRoutes');
 const { broadcastAdminNotification, VALID_ROLES } = require('./adminBroadcastService');
 const { requireString } = require('../../shared/validation');
@@ -41,6 +42,7 @@ const router = express.Router();
 
 router.use('/gem-economy', gemEconomyRouter);
 router.use('/promo-codes', adminPromoRoutes);
+router.use('/astronomy-calendar', adminAstronomyRoutes);
 router.use(adminOpsRoutes);
 
 router.post('/notifications/broadcast', authMiddleware, requireAdminScope('broadcast'), async (req, res) => {

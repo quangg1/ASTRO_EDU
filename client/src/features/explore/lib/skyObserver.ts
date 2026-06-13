@@ -22,13 +22,45 @@ export type SkyObserver = {
 const DEFAULT_LAT = 10.8
 const DEFAULT_LON = 106.66
 
+/** Thời điểm quan sát mặc định khi không có `?time=` — giờ thực trên máy người dùng. */
+export function defaultSkyObserverTime(): Date {
+  return new Date()
+}
+
 /**
- * Thời điểm quan sát mặc định khi không có `?time=` — giống Stellarium “đêm đầy sao”.
- * 15/01 ~21:30 tại 10.8°N: ~4000+ sao mag≤6.5 trên chân trời (trải cả vòm).
- * Ngày hè (vd. 3/6) cùng giờ chỉ ~100 sao → dồn một góc, không giống Stellarium.
+ * Parse `?time=` — query string đổi `+07:00` thành khoảng trắng (`…00 07:00`).
+ * Chuẩn hóa trước khi `new Date()` để URL `time=2026-06-02T07:00:00+07:00` hoạt động.
  */
-export function defaultSkyObserverTime(now = new Date()): Date {
-  return new Date(now.getFullYear(), 0, 15, 21, 30, 0)
+/** Chuỗi `?time=` sau khi URLSearchParams decode — `+07:00` thường thành khoảng trắng. */
+export function normalizeObserverTimeParamString(timeRaw: string): string {
+  let s = String(timeRaw).trim()
+  if (!s) return s
+  try {
+    s = decodeURIComponent(s)
+  } catch {
+    /* giữ nguyên */
+  }
+  s = s.replace(/%2B/gi, '+')
+  if (/T\d{2}:\d{2}(:\d{2}(?:\.\d+)?)? \d{2}:\d{2}$/.test(s)) {
+    s = s.replace(/ (\d{2}:\d{2})$/, '+$1')
+  }
+  return s
+}
+
+export function parseObserverTimeParam(timeRaw: string | null | undefined): Date | null {
+  const raw = String(timeRaw ?? '').trim()
+  if (!raw) return null
+
+  const s = normalizeObserverTimeParamString(raw)
+  const parsed = new Date(s)
+  if (!Number.isNaN(parsed.getTime())) return parsed
+
+  return null
+}
+
+/** Ghi `?time=` an toàn — ISO UTC, không dùng `+` offset (tránh query đổi `+` → space). */
+export function formatObserverTimeParam(at: Date): string {
+  return at.toISOString()
 }
 
 export function parseSkyObserverFromSearchParams(
@@ -50,10 +82,8 @@ export function parseSkyObserverFromSearchParams(
   }
 
   let at = defaultSkyObserverTime()
-  if (timeRaw) {
-    const parsed = new Date(timeRaw)
-    if (!Number.isNaN(parsed.getTime())) at = parsed
-  }
+  const parsedAt = parseObserverTimeParam(timeRaw)
+  if (parsedAt) at = parsedAt
 
   const lightPollution = parseSkyLightPollution(
     params.get('pollution') ?? params.get('bortle'),

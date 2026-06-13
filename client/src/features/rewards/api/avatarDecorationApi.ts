@@ -1,6 +1,6 @@
 import { getApiPathBase, getMediaBase } from '@/lib/apiConfig'
 import { readApiResponseJson } from '@/lib/fetchApiJson'
-import { getToken } from '@/features/auth/api/authApi'
+import { apiFetch, apiRequestInit } from '@/lib/apiRequestInit'
 
 const API = `${getApiPathBase()}/gems`
 
@@ -55,11 +55,7 @@ export async function fetchDecorationCatalog(): Promise<{
 }
 
 export async function fetchMyDecorationState(): Promise<AvatarDecorationState> {
-  const token = getToken()
-  const res = await fetch(`${API}/decorations/me`, {
-    headers: { Authorization: `Bearer ${token}` },
-    cache: 'no-store',
-  })
+  const res = await apiFetch(`${API}/decorations/me`)
   const json = await readApiResponseJson<{ success?: boolean; data?: AvatarDecorationState }>(res)
   if (!res.ok || !json.success || !json.data) {
     throw new Error('Không tải được trang trí của bạn.')
@@ -73,10 +69,8 @@ export async function purchaseAvatarDecoration(skuId: string): Promise<{
   alreadyOwned?: boolean
   cost?: number
 }> {
-  const token = getToken()
-  const res = await fetch(`${API}/decorations/purchase`, {
+  const res = await apiFetch(`${API}/decorations/purchase`, {
     method: 'POST',
-    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ skuId }),
   })
   const json = await readApiResponseJson<{
@@ -95,10 +89,8 @@ export async function equipAvatarDecoration(skuId: string | null): Promise<{
   equippedDecorationSkuId: string | null
   equippedOverlayUrl: string | null
 }> {
-  const token = getToken()
-  const res = await fetch(`${API}/decorations/equip`, {
+  const res = await apiFetch(`${API}/decorations/equip`, {
     method: 'PATCH',
-    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ skuId }),
   })
   const json = await readApiResponseJson<{
@@ -127,15 +119,13 @@ export async function bulkUploadDecorationOverlaysAdmin(
   categorySlug: string,
   files: File[],
 ): Promise<DecorationBulkImportResult> {
-  const token = getToken()
   const form = new FormData()
   form.append('categorySlug', categorySlug)
   for (const f of files) form.append('files', f)
-  const res = await fetch(`${getMediaBase()}/upload/decoration-bulk`, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${token}` },
-    body: form,
-  })
+  const res = await apiFetch(
+    `${getMediaBase()}/upload/decoration-bulk`,
+    apiRequestInit({ method: 'POST', body: form }, false),
+  )
   const json = await readApiResponseJson<{
     success?: boolean
     data?: DecorationBulkImportResult
@@ -152,15 +142,13 @@ export async function uploadDecorationCategoryBannerAdmin(
   categorySlug: string,
   file: File,
 ): Promise<{ bannerUrl: string }> {
-  const token = getToken()
   const form = new FormData()
   form.append('categorySlug', categorySlug)
   form.append('file', file)
-  const res = await fetch(`${getMediaBase()}/upload/decoration-category-banner`, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${token}` },
-    body: form,
-  })
+  const res = await apiFetch(
+    `${getMediaBase()}/upload/decoration-category-banner`,
+    apiRequestInit({ method: 'POST', body: form }, false),
+  )
   const json = await readApiResponseJson<{
     success?: boolean
     bannerUrl?: string

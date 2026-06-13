@@ -5,6 +5,7 @@ import { useFrame } from '@react-three/fiber'
 import { useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { SKY_RENDER_ORDER, SKY_SHADER_GLSL1 } from './skyLayers'
+import { nightSkyVisibility, type SunSkyState } from '@/features/explore/lib/skyAstronomy'
 import type { SkyLandscapePackConfig } from '@/features/explore/lib/skyLandscapePack'
 import type { SkyViewState } from './skyViewState'
 import { effectiveLandscapeOpacity } from './skyViewState'
@@ -19,12 +20,13 @@ type Props = {
   texture: THREE.Texture
   pack: SkyLandscapePackConfig
   view: SkyViewState
+  sun: SunSkyState
   /** Ghim chòm — landscape mờ hơn để thấy phần chòm dưới chân trời. */
   constellationActive?: boolean
 }
 
 /** Panorama alt-az: đục khi nhìn lên; trong suốt dần chỉ khi kéo xuống dưới chân trời (Stellarium). */
-export function LandscapePlane({ texture, pack, view, constellationActive = false }: Props) {
+export function LandscapePlane({ texture, pack, view, sun, constellationActive = false }: Props) {
   const { gl } = useThree()
   const azRot = (pack.angleRotateZDeg * Math.PI) / 180
   const uniforms = useStereoScreenUniforms({
@@ -32,6 +34,8 @@ export function LandscapePlane({ texture, pack, view, constellationActive = fals
     uDim: { value: pack.brightness },
     uAzRot: { value: azRot },
     uGroundOpacity: { value: 1 },
+    uDay: { value: sun.dayFactor },
+    uNightVis: { value: nightSkyVisibility(sun) },
   })
 
   useEffect(() => {
@@ -41,6 +45,8 @@ export function LandscapePlane({ texture, pack, view, constellationActive = fals
 
   useFrame(() => {
     uniforms.uGroundOpacity.value = effectiveLandscapeOpacity(view, constellationActive)
+    uniforms.uDay.value = sun.dayFactor
+    uniforms.uNightVis.value = nightSkyVisibility(sun)
   })
 
   const material = useMemo(
@@ -63,6 +69,8 @@ export function LandscapePlane({ texture, pack, view, constellationActive = fals
           uniform float uDim;
           uniform float uAzRot;
           uniform float uGroundOpacity;
+          uniform float uDay;
+          uniform float uNightVis;
           varying vec2 vNdc;
           const float PI = 3.14159265359;
 
@@ -72,7 +80,7 @@ export function LandscapePlane({ texture, pack, view, constellationActive = fals
 
             vec3 w = worldDirFromNdc(vNdc);
             float alt = asin(clamp(w.y, -1.0, 1.0));
-            if (alt > 0.003) discard;
+            if (alt > 0.012) discard;
 
             float az = atan(w.x, -w.z);
             float u = fract(az / (2.0 * PI) + 0.5 + uAzRot / (2.0 * PI));
@@ -82,7 +90,13 @@ export function LandscapePlane({ texture, pack, view, constellationActive = fals
             float alpha = tex.a * discEdgeFade(vNdc) * uGroundOpacity;
             if (alpha < 0.003) discard;
             float dim = 0.5 + 0.5 * uGroundOpacity;
-            gl_FragColor = vec4(tex.rgb * uDim * dim, alpha);
+            float dayBoost = mix(0.32, 2.85, uDay);
+            float dayLift = mix(0.0, 0.14, uDay);
+            vec3 rgb = tex.rgb * uDim * dim * dayBoost + vec3(dayLift);
+            rgb = mix(rgb, pow(max(rgb, vec3(0.0)), vec3(0.82)), uDay * 0.65);
+            rgb *= mix(vec3(0.5, 0.53, 0.68), vec3(1.04, 1.06, 1.1), uDay);
+            rgb *= mix(0.38, 1.0, 1.0 - uNightVis);
+            gl_FragColor = vec4(rgb, alpha);
           }
         `,
       }),

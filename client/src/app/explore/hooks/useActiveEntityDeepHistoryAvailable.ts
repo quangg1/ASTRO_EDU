@@ -21,7 +21,6 @@ export function useActiveEntityDeepHistoryAvailable(entityId: string) {
       return
     }
     let cancelled = false
-    setAvailable(false)
     void probeEntityHasDeepHistory(id).then((has) => {
       if (!cancelled) setAvailable(has)
     })

@@ -2,17 +2,18 @@
 
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
-import { useAuthStore, clearToken } from '@/features/auth/public'
+import { usePathname, useSearchParams } from 'next/navigation'
+import { useAuthStore, logout } from '@/features/auth/public'
 import { SiteLogo } from '@/components/ui/SiteLogo'
 import { viText } from '@/messages/vi'
 import { canAccessStudio, canAdminContentOverride, canModerate, canManagePlatform } from '@/lib/roles'
 import { AvatarWithDecoration } from '@/components/profile/AvatarWithDecoration'
 import { useEquippedDecoration } from '@/features/rewards/hooks/useEquippedDecoration'
-import { navItemsForSurface, navLabel } from '@/lib/navigationConfig'
+import { navItemsForSurface, navLabel, navItemIsActive } from '@/lib/navigationConfig'
 import { NotificationBell } from '@/components/notifications/NotificationBell'
 import {
   BookOpen,
+  CalendarDays,
   ChevronDown,
   Clapperboard,
   Compass,
@@ -24,17 +25,13 @@ import {
   Sparkles,
   Gavel,
   Shield,
+  Telescope,
   UserRound,
 } from 'lucide-react'
 
-function navActive(pathname: string, href: string): boolean {
-  if (href === '/dashboard') return pathname === '/dashboard' || pathname.startsWith('/dashboard/')
-  if (pathname === href) return true
-  return href !== '/' && pathname.startsWith(`${href}/`)
-}
-
 export function AppHeader() {
   const pathname = usePathname()
+  const searchParams = useSearchParams()
   const { user, loading, checked } = useAuthStore()
   const equippedOverlay = useEquippedDecoration()
   const [mobileOpen, setMobileOpen] = useState(false)
@@ -56,10 +53,11 @@ export function AppHeader() {
   }, [userMenuOpen])
 
   const handleLogout = () => {
-    clearToken()
-    useAuthStore.getState().setUser(null)
-    setUserMenuOpen(false)
-    window.location.href = '/'
+    void logout().finally(() => {
+      useAuthStore.getState().setUser(null)
+      setUserMenuOpen(false)
+      window.location.href = '/'
+    })
   }
 
   const showStudio = !!user && canAccessStudio(user)
@@ -73,6 +71,10 @@ export function AppHeader() {
     community: MessageCircle,
   } as const
   const dropdownIconById = {
+    dashboard: LayoutDashboard,
+    sky: Telescope,
+    calendar: CalendarDays,
+    community: MessageCircle,
     profile: UserRound,
     messages: MessageCircle,
     myLearning: BookOpen,
@@ -153,7 +155,7 @@ export function AppHeader() {
                       href={item.href}
                       style={{ clipPath: sciFiClip }}
                       className={`${navBtnBase} ${
-                        navActive(pathname, item.href) ? navBtnActive : navBtnIdle
+                        navItemIsActive(pathname, item, searchParams) ? navBtnActive : navBtnIdle
                       }`}
                     >
                       <Icon className="w-3.5 h-3.5" aria-hidden />
@@ -348,7 +350,7 @@ export function AppHeader() {
                         key={`mobile-top-${item.id}`}
                         href={item.href}
                         className={`flex items-center gap-2 rounded-xl px-3 py-3 text-sm font-medium ${
-                          navActive(pathname, item.href) ? activeCls : 'text-slate-200 hover:bg-white/[0.06]'
+                          navItemIsActive(pathname, item, searchParams) ? activeCls : 'text-slate-200 hover:bg-white/[0.06]'
                         }`}
                       >
                         <Icon className="w-4 h-4" />

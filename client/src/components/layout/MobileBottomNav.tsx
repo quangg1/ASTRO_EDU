@@ -1,21 +1,25 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
-import { Home, ListTree, BookOpen, MessageCircle, UserRound } from 'lucide-react'
+import { usePathname, useSearchParams } from 'next/navigation'
+import { Home, ListTree, BookOpen, MessageCircle, UserRound, Telescope, CalendarDays } from 'lucide-react'
 import { useAuthStore } from '@/features/auth/public'
 import { viText } from '@/messages/vi'
-import { navItemsForSurface, navLabel } from '@/lib/navigationConfig'
+import { navItemsForSurface, navLabel, navItemIsActive } from '@/lib/navigationConfig'
 
-function active(pathname: string, href: string, rootOnly = false): boolean {
-  if (href === '/') return pathname === '/' || pathname === ''
-  if (rootOnly) return pathname === href
-  if (pathname === href) return true
-  return href !== '/' && pathname.startsWith(`${href}/`)
+function active(
+  pathname: string,
+  item: ReturnType<typeof navItemsForSurface>[number],
+  searchParams: ReturnType<typeof useSearchParams>,
+  rootOnly = false,
+): boolean {
+  if (rootOnly && item.href.split('?')[0] === '/') return pathname === '/' || pathname === ''
+  return navItemIsActive(pathname, item, searchParams)
 }
 
 export function MobileBottomNav() {
   const pathname = usePathname()
+  const searchParams = useSearchParams()
   const { user } = useAuthStore()
 
   const accountHref = user ? '/dashboard' : '/login'
@@ -34,6 +38,8 @@ export function MobileBottomNav() {
     home: Home,
     learningPath: ListTree,
     courses: BookOpen,
+    sky: Telescope,
+    calendar: CalendarDays,
     community: MessageCircle,
   } as const
   const items = [
@@ -45,7 +51,7 @@ export function MobileBottomNav() {
         href: item.href,
         label: navLabel(item),
         icon: Icon,
-        isActive: () => active(pathname, item.href, item.href === '/'),
+        isActive: () => active(pathname, item, searchParams, item.href === '/'),
       }
     }),
     {

@@ -1,4 +1,5 @@
 import { getApiPathBase } from '@/lib/apiConfig'
+import { apiFetch } from '@/lib/apiRequestInit'
 import type { PlanetNarrativeBundle } from '@/features/content3d/narrative/types'
 
 const API = `${getApiPathBase()}/planet-narratives`
@@ -48,13 +49,10 @@ export async function fetchPlanetNarrative(entityId: string): Promise<{
 }
 
 export async function fetchEditorPlanetNarrative(
-  token: string,
   entityId: string,
 ): Promise<{ data: PlanetNarrativeBundle | null; source: 'db' | 'preset' }> {
   try {
-    const res = await fetch(`${API}/editor/${encodeURIComponent(entityId)}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
+    const res = await apiFetch(`${API}/editor/${encodeURIComponent(entityId)}`)
     const json = await res.json()
     if (!json.success) return { data: null, source: 'preset' }
     const data = normalizeBundle(json.data, entityId)
@@ -65,16 +63,11 @@ export async function fetchEditorPlanetNarrative(
 }
 
 export async function savePlanetNarrative(
-  token: string,
   bundle: PlanetNarrativeBundle,
 ): Promise<{ ok: boolean; data?: PlanetNarrativeBundle; error?: string }> {
   try {
-    const res = await fetch(`${API}/editor`, {
+    const res = await apiFetch(`${API}/editor`, {
       method: 'PUT',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify({
         ...bundle,
         stages: bundle.beats,

@@ -37,6 +37,7 @@ type Props = Pick<
   | 'handleSkyScenePick'
   | 'observer'
   | 'ephemerisBodies'
+  | 'skyWeather'
   | 'sceneMode'
   | 'planetHistoryEntityId'
   | 'planetGlobeEntity'
@@ -63,6 +64,7 @@ export function ExploreSceneCanvas({
   handleSkyScenePick,
   observer,
   ephemerisBodies,
+  skyWeather,
   sceneMode,
   planetHistoryEntityId,
   earthHistoryStage,
@@ -96,6 +98,7 @@ export function ExploreSceneCanvas({
             onSkyScenePick={handleSkyScenePick}
             observer={observer}
             ephemerisBodies={ephemerisBodies}
+            skyWeather={skyWeather}
           />
         ) : sceneMode === 'earth' ? (
           <EarthScene />

@@ -1,14 +1,10 @@
-import { getToken } from '@/features/auth/public'
 import { getApiPathBase } from '@/lib/apiConfig'
-import { apiClientHeaders } from '@/lib/apiClientHeaders'
+import { apiClientHeaders, apiFetchInit } from '@/lib/apiClientHeaders'
 
 const BASE = `${getApiPathBase()}/users`
 
 function authHeaders(): HeadersInit {
-  const token = getToken()
-  return token
-    ? { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
-    : { 'Content-Type': 'application/json' }
+  return apiClientHeaders()
 }
 
 export type SavedItemSource = 'learning-path' | 'course'
@@ -58,17 +54,17 @@ export function savedItemKeyForCourse(courseSlug: string, lessonSlug: string) {
 
 export async function fetchSavedItems(source?: SavedItemSource): Promise<SavedItem[]> {
   const qs = source ? `?source=${encodeURIComponent(source)}` : ''
-  const res = await fetch(`${BASE}/me/saved${qs}`, { headers: authHeaders(), cache: 'no-store' })
+  const res = await fetch(`${BASE}/me/saved${qs}`, apiFetchInit({ headers: authHeaders(), cache: 'no-store' }))
   const data = await res.json()
   if (data.success && Array.isArray(data.data)) return data.data as SavedItem[]
   return []
 }
 
 export async function fetchSavedLessonIds(): Promise<string[]> {
-  const res = await fetch(`${BASE}/me/saved/keys?source=learning-path`, {
+  const res = await fetch(`${BASE}/me/saved/keys?source=learning-path`, apiFetchInit({
     headers: authHeaders(),
     cache: 'no-store',
-  })
+  }))
   const data = await res.json()
   if (data.success && data.data?.lessonIds) return data.data.lessonIds as string[]
   return []
@@ -77,11 +73,11 @@ export async function fetchSavedLessonIds(): Promise<string[]> {
 export async function toggleSavedItem(
   payload: ToggleSavedPayload,
 ): Promise<{ saved: boolean; item: SavedItem | null; error?: string }> {
-  const res = await fetch(`${BASE}/me/saved/toggle`, {
+  const res = await fetch(`${BASE}/me/saved/toggle`, apiFetchInit({
     method: 'POST',
     headers: authHeaders(),
     body: JSON.stringify(payload),
-  })
+  }))
   const data = await res.json()
   if (data.success && data.data) {
     return { saved: Boolean(data.data.saved), item: data.data.item ?? null }
@@ -90,10 +86,10 @@ export async function toggleSavedItem(
 }
 
 export async function removeSavedItem(itemKey: string): Promise<boolean> {
-  const res = await fetch(`${BASE}/me/saved/${encodeURIComponent(itemKey)}`, {
+  const res = await fetch(`${BASE}/me/saved/${encodeURIComponent(itemKey)}`, apiFetchInit({
     method: 'DELETE',
     headers: authHeaders(),
-  })
+  }))
   const data = await res.json()
   return Boolean(data.success)
 }

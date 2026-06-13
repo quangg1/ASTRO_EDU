@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { AppHeader } from '@/components/ui/AppHeader'
 import { AppShell } from '@/components/layout/AppShell'
 import { useLayoutChrome } from '@/components/layout/LayoutChromeContext'
@@ -22,7 +22,11 @@ export function AppChrome({ children }: { children: React.ReactNode }) {
 
   return (
     <>
-      {options.showHeader ? <AppHeader /> : null}
+      {options.showHeader ? (
+        <Suspense fallback={null}>
+          <AppHeader />
+        </Suspense>
+      ) : null}
       {options.showHeader ? <PromoCampaignBar /> : null}
       <AppShell showMobileNav={options.showMobileNav} showStarfield={options.showStarfield}>
         <div className={options.showHeader && promoBarVisible ? 'pt-11' : undefined}>

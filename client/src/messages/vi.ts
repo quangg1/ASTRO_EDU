@@ -15,6 +15,8 @@ export const viText = {
     courses: 'Khóa học',
     learningPath: 'Lộ trình học',
     explore: 'Khám phá',
+    sky: 'La bàn chòm sao',
+    calendar: 'Lịch thiên văn',
     search: 'Tìm kiếm',
     teacher: 'Giảng viên',
     admin: 'Quản trị',

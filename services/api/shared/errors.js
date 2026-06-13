@@ -31,6 +31,15 @@ function errorMiddleware(err, _req, res, _next) {
     });
   }
 
+  if (err && err.type === 'entity.parse.failed') {
+    console.error('Body parse error:', err.message);
+    return res.status(400).json({
+      success: false,
+      code: 'INVALID_BODY',
+      error: 'Dữ liệu gửi lên không hợp lệ — thử tải lại trang.',
+    });
+  }
+
   if (err && err.name === 'CastError') {
     console.error('Cast error:', err);
     return res.status(401).json({

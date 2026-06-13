@@ -24,6 +24,8 @@ type Props = {
   aspect?: number
   /** Khi landscape mờ — cho nhãn sao dưới chân trời. */
   allowBelowHorizon?: boolean
+  /** 1 = đêm, 0 = ban ngày — ẩn nhãn sao khi trời sáng. */
+  nightVisibility?: number
 }
 
 export function SkyLabelsOverlay({
@@ -32,11 +34,13 @@ export function SkyLabelsOverlay({
   fovDeg = SKY_FOV_DEFAULT_DEG,
   aspect = 1,
   allowBelowHorizon = false,
+  nightVisibility = 1,
 }: Props) {
   return (
     <div className="pointer-events-none absolute inset-0 overflow-hidden">
       {labels.map((lb) => {
         if (lb.altDeg != null && lb.altDeg < 0 && !allowBelowHorizon) return null
+        if (nightVisibility < 0.04 && lb.emphasis !== 'cardinal') return null
         const p = stereographicScreenPercent(lb.dir, view, fovDeg, aspect)
         if (!p) return null
         const selected = lb.selected ?? lb.emphasis !== 'cardinal'
@@ -49,7 +53,7 @@ export function SkyLabelsOverlay({
         const fade =
           (nearHorizon && lb.altDeg != null
             ? Math.max(0.15, lb.altDeg / 12)
-            : 1) * belowFade
+            : 1) * belowFade * nightVisibility
         return (
           <span
             key={lb.id}

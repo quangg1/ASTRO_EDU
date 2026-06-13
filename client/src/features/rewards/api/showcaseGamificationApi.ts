@@ -1,5 +1,6 @@
 import { getApiPathBase } from '@/lib/apiConfig'
-import { getToken } from '@/features/auth/public'
+import { hasClientSession } from '@/features/auth/public'
+import { apiFetch } from '@/lib/apiRequestInit'
 
 const API = `${getApiPathBase()}/showcase`
 
@@ -17,13 +18,9 @@ export type ShowcaseCatalogEntryWithUnlocks = {
 export async function fetchShowcaseGamificationCatalog(): Promise<{
   catalog: ShowcaseCatalogEntryWithUnlocks[]
 } | null> {
-  const token = getToken()
-  if (!token) return null
+  if (!hasClientSession()) return null
   try {
-    const res = await fetch(`${API}/catalog`, {
-      headers: { Authorization: `Bearer ${token}` },
-      cache: 'no-store',
-    })
+    const res = await apiFetch(`${API}/catalog`)
     const data = await res.json()
     if (!data?.success || !data?.data?.catalog) return null
     return { catalog: data.data.catalog as ShowcaseCatalogEntryWithUnlocks[] }
@@ -36,15 +33,10 @@ export async function postShowcaseUnlock(
   entityId: string,
   contentType: ShowcaseContentType,
 ): Promise<{ ok: boolean; error?: string; gemBalance?: number }> {
-  const token = getToken()
-  if (!token) return { ok: false, error: 'Chưa đăng nhập' }
+  if (!hasClientSession()) return { ok: false, error: 'Chưa đăng nhập' }
   try {
-    const res = await fetch(`${API}/unlock`, {
+    const res = await apiFetch(`${API}/unlock`, {
       method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify({ entityId, contentType }),
     })
     const data = await res.json().catch(() => ({}))

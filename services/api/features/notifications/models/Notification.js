@@ -23,6 +23,7 @@ const notificationSchema = new mongoose.Schema(
         'community_post_upvote',
         'community_comment_upvote',
         'direct_message',
+        'astronomy_event_reminder',
       ],
       default: 'system',
       index: true,

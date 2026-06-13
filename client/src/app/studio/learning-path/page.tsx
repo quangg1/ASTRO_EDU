@@ -947,12 +947,7 @@ export default function StudioLearningPathPage() {
 
   useEffect(() => {
     if (!user) return
-    const token = typeof window !== 'undefined' ? localStorage.getItem('galaxies_token') : null
-    if (!token) {
-      setLoading(false)
-      return
-    }
-    Promise.all([fetchEditorLearningPath(token), fetchEditorConcepts(token), fetchTaxonomyRegistryEditor(token)])
+    Promise.all([fetchEditorLearningPath(), fetchEditorConcepts(), fetchTaxonomyRegistryEditor()])
       .then(([d, cs, tx]) => {
         if (!d) return
         setModules(d.modules || [])
@@ -1242,11 +1237,9 @@ export default function StudioLearningPathPage() {
   }
 
   const save = useCallback(async () => {
-    const token = localStorage.getItem('galaxies_token')
-    if (!token) return
     setSaving(true)
     setMessage('')
-    const rPath = await saveEditorLearningPath(token, modules, published)
+    const rPath = await saveEditorLearningPath(modules, published)
     setSaving(false)
     if (rPath.ok && rPath.modules) {
       setModules(rPath.modules)

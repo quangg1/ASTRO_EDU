@@ -1,10 +1,11 @@
 const { getLearningPathLessonIndex } = require('./toolAuthorizers/lpCurriculum');
+const { internalServiceHeaders } = require('../../../shared/internalServiceAuth');
 
 const AI_URL = (process.env.AI_SERVICE_URL || 'http://127.0.0.1:5005').replace(/\/$/, '');
 const TOKEN = (process.env.KNOWLEDGE_ADMIN_TOKEN || '').trim();
 
 function adminHeaders() {
-  const h = { 'Content-Type': 'application/json' };
+  const h = { 'Content-Type': 'application/json', ...internalServiceHeaders() };
   if (TOKEN) h.Authorization = `Bearer ${TOKEN}`;
   return h;
 }
@@ -229,7 +230,7 @@ async function callRagSearch(opts) {
   try {
     const res = await fetch(`${AI_URL}/rag/search`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...internalServiceHeaders() },
       body: JSON.stringify({
         query: opts.query,
         top_k: opts.top_k ?? 12,

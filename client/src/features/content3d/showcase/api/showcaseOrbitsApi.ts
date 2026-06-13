@@ -1,4 +1,5 @@
 import { getApiPathBase } from '@/lib/apiConfig'
+import { apiFetch } from '@/lib/apiRequestInit'
 
 const API = `${getApiPathBase()}/showcase-orbits`
 
@@ -59,7 +60,6 @@ export type SyncShowcaseOrbitFromJplInput = {
 }
 
 export async function syncShowcaseOrbitEntityFromJpl(
-  token: string,
   entityId: string,
   whenIsoOrOpts?: string | Omit<SyncShowcaseOrbitFromJplInput, 'entityId'>,
 ): Promise<{ ok: boolean; item?: ShowcaseJplOrbitDTO; whenUsed?: string | null; error?: string }> {
@@ -68,12 +68,8 @@ export async function syncShowcaseOrbitEntityFromJpl(
       typeof whenIsoOrOpts === 'string' || whenIsoOrOpts == null
         ? { whenIso: whenIsoOrOpts || undefined }
         : whenIsoOrOpts
-    const res = await fetch(`${API}/sync-entity`, {
+    const res = await apiFetch(`${API}/sync-entity`, {
       method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify({
         entityId,
         when: opts.whenIso || undefined,

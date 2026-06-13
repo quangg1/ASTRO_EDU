@@ -1,6 +1,6 @@
 import { getToken } from '@/features/auth/public'
 import { getApiPathBase } from '@/lib/apiConfig'
-import { apiClientHeaders } from '@/lib/apiClientHeaders'
+import { apiClientHeaders, apiFetchInit } from '@/lib/apiClientHeaders'
 
 const BASE = getApiPathBase()
 
@@ -206,12 +206,12 @@ export async function fetchCourseCohorts(slug: string) {
 }
 
 export async function fetchMyCohorts(slug: string) {
-  const res = await fetch(`${BASE}/courses/${encodeURIComponent(slug)}/cohorts/my`, { headers: authHeaders() })
+  const res = await fetch(`${BASE}/courses/${encodeURIComponent(slug)}/cohorts/my`, apiFetchInit({ headers: authHeaders() }))
   return res.json()
 }
 
 export async function fetchCohortsManage(slug: string) {
-  const res = await fetch(`${BASE}/courses/${encodeURIComponent(slug)}/cohorts/manage`, { headers: authHeaders() })
+  const res = await fetch(`${BASE}/courses/${encodeURIComponent(slug)}/cohorts/manage`, apiFetchInit({ headers: authHeaders() }))
   return res.json()
 }
 
@@ -228,11 +228,11 @@ export type JoinCohortResult = {
 }
 
 export async function joinCohort(slug: string, inviteCode: string): Promise<JoinCohortResult> {
-  const res = await fetch(`${BASE}/courses/${encodeURIComponent(slug)}/cohorts/join`, {
+  const res = await fetch(`${BASE}/courses/${encodeURIComponent(slug)}/cohorts/join`, apiFetchInit({
     method: 'POST',
     headers: authHeaders(),
     body: JSON.stringify({ inviteCode }),
-  })
+  }))
   return res.json()
 }
 
@@ -256,50 +256,38 @@ export type EnrollCohortResult = {
 }
 
 export async function enrollCohort(slug: string, cohortId: string): Promise<EnrollCohortResult> {
-  const res = await fetch(`${BASE}/courses/${encodeURIComponent(slug)}/cohorts/enroll`, {
+  const res = await fetch(`${BASE}/courses/${encodeURIComponent(slug)}/cohorts/enroll`, apiFetchInit({
     method: 'POST',
     headers: authHeaders(),
     body: JSON.stringify({ cohortId }),
-  })
+  }))
   return res.json()
 }
 
 export async function fetchCohortSyllabus(slug: string, cohortId: string) {
-  const res = await fetch(`${BASE}/courses/${encodeURIComponent(slug)}/cohort/${encodeURIComponent(cohortId)}/syllabus`, {
+  const res = await fetch(`${BASE}/courses/${encodeURIComponent(slug)}/cohort/${encodeURIComponent(cohortId)}/syllabus`, apiFetchInit({
     headers: authHeaders(),
-  })
+  }))
   return res.json()
 }
 
 export async function fetchCohortHome(slug: string, cohortId: string) {
-  const res = await fetch(
-    `${BASE}/courses/${encodeURIComponent(slug)}/cohort/${encodeURIComponent(cohortId)}/home`,
-    { headers: authHeaders() },
-  )
+  const res = await fetch(`${BASE}/courses/${encodeURIComponent(slug)}/cohort/${encodeURIComponent(cohortId)}/home`, apiFetchInit({ headers: authHeaders() }))
   return res.json() as Promise<{ success: boolean; data?: CohortHomeData; error?: string }>
 }
 
 export async function fetchCohortAnalytics(slug: string, cohortId: string) {
-  const res = await fetch(
-    `${BASE}/courses/${encodeURIComponent(slug)}/cohort/${encodeURIComponent(cohortId)}/analytics`,
-    { headers: authHeaders() },
-  )
+  const res = await fetch(`${BASE}/courses/${encodeURIComponent(slug)}/cohort/${encodeURIComponent(cohortId)}/analytics`, apiFetchInit({ headers: authHeaders() }))
   return res.json() as Promise<{ success: boolean; data?: CohortAnalyticsData; error?: string }>
 }
 
 export async function fetchCohortDiscussion(slug: string, cohortId: string) {
-  const res = await fetch(
-    `${BASE}/courses/${encodeURIComponent(slug)}/cohort/${encodeURIComponent(cohortId)}/discussion`,
-    { headers: authHeaders() },
-  )
+  const res = await fetch(`${BASE}/courses/${encodeURIComponent(slug)}/cohort/${encodeURIComponent(cohortId)}/discussion`, apiFetchInit({ headers: authHeaders() }))
   return res.json() as Promise<{ success: boolean; data?: { slug: string; title: string }; error?: string }>
 }
 
 export async function fetchCohortAnnouncements(slug: string, cohortId: string) {
-  const res = await fetch(
-    `${BASE}/courses/${encodeURIComponent(slug)}/cohort/${encodeURIComponent(cohortId)}/announcements`,
-    { headers: authHeaders() },
-  )
+  const res = await fetch(`${BASE}/courses/${encodeURIComponent(slug)}/cohort/${encodeURIComponent(cohortId)}/announcements`, apiFetchInit({ headers: authHeaders() }))
   return res.json() as Promise<{ success: boolean; data?: CohortAnnouncementRow[]; error?: string }>
 }
 
@@ -308,18 +296,12 @@ export async function createCohortAnnouncement(
   cohortId: string,
   body: { title: string; body: string; pinned?: boolean; notifyEmail?: boolean },
 ) {
-  const res = await fetch(
-    `${BASE}/courses/${encodeURIComponent(slug)}/cohort/${encodeURIComponent(cohortId)}/announcements`,
-    { method: 'POST', headers: authHeaders(), body: JSON.stringify(body) },
-  )
+  const res = await fetch(`${BASE}/courses/${encodeURIComponent(slug)}/cohort/${encodeURIComponent(cohortId)}/announcements`, apiFetchInit({ method: 'POST', headers: authHeaders(), body: JSON.stringify(body) }))
   return res.json()
 }
 
 export async function deleteCohortAnnouncement(slug: string, cohortId: string, announcementId: string) {
-  const res = await fetch(
-    `${BASE}/courses/${encodeURIComponent(slug)}/cohort/${encodeURIComponent(cohortId)}/announcements/${announcementId}`,
-    { method: 'DELETE', headers: authHeaders() },
-  )
+  const res = await fetch(`${BASE}/courses/${encodeURIComponent(slug)}/cohort/${encodeURIComponent(cohortId)}/announcements/${announcementId}`, apiFetchInit({ method: 'DELETE', headers: authHeaders() }))
   return res.json()
 }
 
@@ -327,11 +309,11 @@ export async function createCohort(
   slug: string,
   body: { title: string; status?: string; timezone?: string },
 ) {
-  const res = await fetch(`${BASE}/courses/${encodeURIComponent(slug)}/cohorts`, {
+  const res = await fetch(`${BASE}/courses/${encodeURIComponent(slug)}/cohorts`, apiFetchInit({
     method: 'POST',
     headers: authHeaders(),
     body: JSON.stringify(body),
-  })
+  }))
   return res.json()
 }
 
@@ -349,19 +331,16 @@ export async function patchCohort(
     currency?: string | null
   },
 ) {
-  const res = await fetch(`${BASE}/courses/${encodeURIComponent(slug)}/cohort/${encodeURIComponent(cohortId)}`, {
+  const res = await fetch(`${BASE}/courses/${encodeURIComponent(slug)}/cohort/${encodeURIComponent(cohortId)}`, apiFetchInit({
     method: 'PATCH',
     headers: authHeaders(),
     body: JSON.stringify(body),
-  })
+  }))
   return res.json()
 }
 
 export async function fetchCohortSchedules(slug: string, cohortId: string) {
-  const res = await fetch(
-    `${BASE}/courses/${encodeURIComponent(slug)}/cohort/${encodeURIComponent(cohortId)}/schedules`,
-    { headers: authHeaders() },
-  )
+  const res = await fetch(`${BASE}/courses/${encodeURIComponent(slug)}/cohort/${encodeURIComponent(cohortId)}/schedules`, apiFetchInit({ headers: authHeaders() }))
   return res.json()
 }
 
@@ -370,10 +349,7 @@ export async function applyCohortWeeklySchedule(
   cohortId: string,
   body: { week1OpenAtLocal: string; daysPerWeek?: number; setDueAndClose?: boolean },
 ) {
-  const res = await fetch(
-    `${BASE}/courses/${encodeURIComponent(slug)}/cohort/${encodeURIComponent(cohortId)}/schedules/apply-weekly`,
-    { method: 'POST', headers: authHeaders(), body: JSON.stringify(body) },
-  )
+  const res = await fetch(`${BASE}/courses/${encodeURIComponent(slug)}/cohort/${encodeURIComponent(cohortId)}/schedules/apply-weekly`, apiFetchInit({ method: 'POST', headers: authHeaders(), body: JSON.stringify(body) }))
   return res.json() as Promise<{ success: boolean; message?: string; error?: string }>
 }
 
@@ -384,7 +360,7 @@ export async function copyCohortScheduleFrom(
 ) {
   const res = await fetch(
     `${BASE}/courses/${encodeURIComponent(slug)}/cohort/${encodeURIComponent(targetCohortId)}/schedules/copy-from`,
-    { method: 'POST', headers: authHeaders(), body: JSON.stringify({ sourceCohortId }) },
+    apiFetchInit({ method: 'POST', headers: authHeaders(), body: JSON.stringify({ sourceCohortId }) }),
   )
   return res.json() as Promise<{ success: boolean; message?: string; error?: string }>
 }
@@ -404,20 +380,17 @@ export async function saveCohortSchedules(
 ) {
   const res = await fetch(
     `${BASE}/courses/${encodeURIComponent(slug)}/cohort/${encodeURIComponent(cohortId)}/schedules`,
-    {
+    apiFetchInit({
       method: 'PUT',
       headers: authHeaders(),
       body: JSON.stringify({ schedules }),
-    },
+    }),
   )
   return res.json()
 }
 
 export async function fetchCohortSubmissions(slug: string, cohortId: string, status = 'submitted') {
-  const res = await fetch(
-    `${BASE}/courses/${encodeURIComponent(slug)}/cohort/${encodeURIComponent(cohortId)}/submissions?status=${status}`,
-    { headers: authHeaders() },
-  )
+  const res = await fetch(`${BASE}/courses/${encodeURIComponent(slug)}/cohort/${encodeURIComponent(cohortId)}/submissions?status=${status}`, apiFetchInit({ headers: authHeaders() }))
   return res.json()
 }
 
@@ -429,20 +402,17 @@ export async function gradeSubmission(
 ) {
   const res = await fetch(
     `${BASE}/courses/${encodeURIComponent(slug)}/cohort/${encodeURIComponent(cohortId)}/submissions/${submissionId}/grade`,
-    {
+    apiFetchInit({
       method: 'PATCH',
       headers: authHeaders(),
       body: JSON.stringify({ ...body, status: 'graded' }),
-    },
+    }),
   )
   return res.json()
 }
 
 export async function fetchCohortQuizAttempts(slug: string, cohortId: string) {
-  const res = await fetch(
-    `${BASE}/courses/${encodeURIComponent(slug)}/cohort/${encodeURIComponent(cohortId)}/quiz-attempts`,
-    { headers: authHeaders() },
-  )
+  const res = await fetch(`${BASE}/courses/${encodeURIComponent(slug)}/cohort/${encodeURIComponent(cohortId)}/quiz-attempts`, apiFetchInit({ headers: authHeaders() }))
   return res.json()
 }
 

@@ -1,11 +1,11 @@
 const { verifyToken } = require('@galaxies/auth-shared');
 const { AppError } = require('./errors');
 const { hasAdminScope, isFullAdmin } = require('./adminScopes');
+const { extractAuthToken } = require('./authCookie');
 const User = require('../features/auth/models/User');
 
 async function authMiddleware(req, res, next) {
-  const authHeader = req.headers.authorization;
-  const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
+  const token = extractAuthToken(req);
   if (!token) {
     return res.status(401).json({ success: false, error: 'Thiếu token' });
   }
@@ -33,8 +33,7 @@ async function authMiddleware(req, res, next) {
 
 /** Giống authMiddleware nhưng không bắt buộc token — role luôn đọc từ DB (JWT có thể cũ). */
 async function optionalAuth(req, res, next) {
-  const authHeader = req.headers.authorization;
-  const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
+  const token = extractAuthToken(req);
   if (!token) {
     return next();
   }

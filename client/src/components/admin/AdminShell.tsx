@@ -20,6 +20,7 @@ const NAV: ReadonlyArray<{
   { href: '/admin/moderation', label: 'Kiểm duyệt', scope: 'moderation' },
   { href: '/admin/audit', label: 'Nhật ký', scope: 'audit' },
   { href: '/admin/system', label: 'Hệ thống', scope: 'system' },
+  { href: '/admin/astronomy-calendar', label: 'Lịch thiên văn', scope: 'system' },
   { href: '/admin/gem-economy', label: 'Gem', scope: 'gem' },
   { href: '/admin/promo-codes', label: 'Coupon', scope: 'promo' },
   { href: '/admin/broadcast', label: 'Broadcast', scope: 'broadcast' },

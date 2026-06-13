@@ -1,4 +1,4 @@
-import { getToken } from '@/features/auth/public'
+import { hasClientSession } from '@/features/auth/public'
 import { getApiPathBase } from '@/lib/apiConfig'
 import { fetchGemWalletFromServer } from './gemsWalletApi'
 
@@ -57,11 +57,10 @@ export async function fetchLearnerTiersWithProgress(): Promise<{
 } | null> {
   const catalog = await fetchLearnerTiersCatalog()
   if (!catalog) return null
-  const token = getToken()
-  if (!token) {
+  if (!hasClientSession()) {
     return { catalog, progress: null, gemBalance: 0 }
   }
-  const wallet = await fetchGemWalletFromServer(token)
+  const wallet = await fetchGemWalletFromServer()
   return {
     catalog,
     progress: wallet?.learnerTier ?? null,

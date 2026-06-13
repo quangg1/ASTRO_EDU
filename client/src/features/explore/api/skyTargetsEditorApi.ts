@@ -1,4 +1,5 @@
 import { getApiPathBase } from '@/lib/apiConfig'
+import { apiFetch } from '@/lib/apiRequestInit'
 import type { ShowcasePanelConfigDTO } from '@/features/content3d/showcase/api/showcaseEntitiesApi'
 import type { SkyTargetContentDTO } from '../lib/mergeSkyTargetContent'
 
@@ -32,11 +33,9 @@ export function emptySkyTargetEditorRow(targetId: string): SkyTargetEditorRow {
   }
 }
 
-export async function fetchEditorSkyTargets(token: string): Promise<SkyTargetEditorFetchResult | null> {
+export async function fetchEditorSkyTargets(): Promise<SkyTargetEditorFetchResult | null> {
   try {
-    const res = await fetch(`${API}/editor`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
+    const res = await apiFetch(`${API}/editor`)
     const data = await res.json()
     if (!data.success) return null
     return {
@@ -49,16 +48,11 @@ export async function fetchEditorSkyTargets(token: string): Promise<SkyTargetEdi
 }
 
 export async function saveEditorSkyTargets(
-  token: string,
   items: SkyTargetEditorRow[],
 ): Promise<{ items: SkyTargetEditorRow[]; invalidTargetIds: string[] } | null> {
   try {
-    const res = await fetch(`${API}/editor`, {
+    const res = await apiFetch(`${API}/editor`, {
       method: 'PUT',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify({ items }),
     })
     const data = await res.json()

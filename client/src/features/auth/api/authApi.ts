@@ -1,16 +1,14 @@
 /**
  * Core auth API + token storage.
  *
- * Scope after PR8 split:
- *   - Token: get/set/clear + JWT format check + decode-to-user.
- *   - Session: login / register / fetchMe / Firebase-bridge / forgot+reset password.
- *   - Self-service: updateProfile / changePassword / deactivateMyAccount.
- *
- * Admin user management lives in `features/admin/api/adminUsersApi.ts`.
- * Teacher applications (user + admin) live in `features/auth/api/teacherApplicationsApi.ts`.
+ * Web: HttpOnly cookie `galaxies_session` (không lưu JWT trong localStorage).
+ * Native app: Bearer token trong secure storage.
  */
 import { getAuthBase } from '@/lib/apiConfig'
-import { setSecureToken, clearSecureToken } from '@/lib/hybrid/mobileNative'
+import { apiRequestInit, usesCookieAuth } from '@/lib/apiRequestInit'
+import { setSecureToken, clearSecureToken, isNativeApp } from '@/lib/hybrid/mobileNative'
+import { useAuthStore } from '../stores/useAuthStore'
+
 const AUTH_BASE = getAuthBase()
 
 export interface AuthUser {
@@ -20,7 +18,6 @@ export interface AuthUser {
   avatar: string | null
   provider: string
   role?: 'student' | 'teacher' | 'moderator' | 'admin'
-  /** Phạm vi admin con — rỗng = toàn quyền (chỉ khi role === admin). */
   adminScopes?: string[]
   accountStatus?: 'active' | 'deactivated'
 }
@@ -62,54 +59,61 @@ function decodeBase64Url(segment: string): string | null {
   }
 }
 
-export function getUserFromStoredToken(): AuthUser | null {
-  const token = getToken()
-  if (!token || typeof window === 'undefined') return null
-  const payloadSegment = token.split('.')[1]
-  const decoded = payloadSegment ? decodeBase64Url(payloadSegment) : null
-  if (!decoded) return null
-
-  try {
-    const payload = JSON.parse(decoded) as {
-      sub?: string
-      email?: string | null
-      displayName?: string
-      avatar?: string | null
-      provider?: string
-      role?: AuthUser['role']
-      exp?: number
-    }
-    if (payload.exp && payload.exp * 1000 <= Date.now()) {
-      clearToken()
-      return null
-    }
-    if (!payload.sub) return null
-    return {
-      id: payload.sub,
-      email: payload.email || null,
-      displayName: payload.displayName || payload.email?.split('@')[0] || 'Người dùng',
-      avatar: payload.avatar || null,
-      provider: payload.provider || 'local',
-      role: payload.role || 'student',
-    }
-  } catch {
-    return null
-  }
+function nativeClientHeader(): Record<string, string> {
+  return isNativeApp() ? { 'X-Galaxies-Client': 'native' } : {}
 }
 
 async function authFetch(url: string, init?: RequestInit): Promise<Response> {
-  return fetch(url, {
-    cache: 'no-store',
-    credentials: 'omit',
-    ...init,
-    headers: {
-      ...(init?.headers || {}),
-    },
-  })
+  const base = apiRequestInit(init)
+  const headers = { ...(base.headers as Record<string, string>), ...nativeClientHeader() }
+  return fetch(url, { ...base, headers })
+}
+
+export function getUserFromStoredToken(): AuthUser | null {
+  if (!usesCookieAuth()) {
+    const token = getToken()
+    if (!token || typeof window === 'undefined') return null
+    const payloadSegment = token.split('.')[1]
+    const decoded = payloadSegment ? decodeBase64Url(payloadSegment) : null
+    if (!decoded) return null
+    try {
+      const payload = JSON.parse(decoded) as {
+        sub?: string
+        email?: string | null
+        displayName?: string
+        avatar?: string | null
+        provider?: string
+        role?: AuthUser['role']
+        exp?: number
+      }
+      if (payload.exp && payload.exp * 1000 <= Date.now()) {
+        clearToken()
+        return null
+      }
+      if (!payload.sub) return null
+      return {
+        id: payload.sub,
+        email: payload.email || null,
+        displayName: payload.displayName || payload.email?.split('@')[0] || 'Người dùng',
+        avatar: payload.avatar || null,
+        provider: payload.provider || 'local',
+        role: payload.role || 'student',
+      }
+    } catch {
+      return null
+    }
+  }
+  return null
+}
+
+/** Web: dựa vào user đã hydrate; native: JWT trong storage. */
+export function hasClientSession(): boolean {
+  if (!usesCookieAuth()) return Boolean(getToken())
+  return Boolean(useAuthStore.getState().user)
 }
 
 export function getToken(): string | null {
-  if (typeof window === 'undefined') return null
+  if (typeof window === 'undefined' || usesCookieAuth()) return null
   const token = localStorage.getItem(TOKEN_KEY)
   if (!token) return null
   if (!isTokenFormatValid(token)) {
@@ -120,7 +124,7 @@ export function getToken(): string | null {
 }
 
 export function setToken(token: string): void {
-  if (typeof window === 'undefined') return
+  if (typeof window === 'undefined' || usesCookieAuth()) return
   if (!isTokenFormatValid(token)) return
   localStorage.setItem(TOKEN_KEY, token)
   setSecureToken(token).catch(() => {})
@@ -129,19 +133,37 @@ export function setToken(token: string): void {
 
 export function clearToken(): void {
   if (typeof window === 'undefined') return
-  localStorage.removeItem(TOKEN_KEY)
-  clearSecureToken().catch(() => {})
+  if (!usesCookieAuth()) {
+    localStorage.removeItem(TOKEN_KEY)
+    clearSecureToken().catch(() => {})
+  }
+}
+
+export async function logout(): Promise<void> {
+  try {
+    await authFetch(`${AUTH_BASE}/auth/logout`, { method: 'POST' })
+  } catch {
+    /* ignore */
+  }
+  clearToken()
+}
+
+function persistLoginToken(data: { token?: string; user?: AuthUser }): void {
+  if (usesCookieAuth()) {
+    if (typeof window !== 'undefined') localStorage.removeItem(TOKEN_KEY)
+    return
+  }
+  if (data.token) setToken(data.token)
 }
 
 export async function login(email: string, password: string): Promise<AuthResponse> {
   const res = await authFetch(`${AUTH_BASE}/auth/login`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password }),
   })
   const data = await res.json()
-  if (data.success && data.token) {
-    setToken(data.token)
+  if (data.success && data.user) {
+    persistLoginToken(data)
     return { success: true, token: data.token, user: data.user }
   }
   return { success: false, error: data.error || 'Đăng nhập thất bại', code: data.code }
@@ -154,7 +176,6 @@ export async function register(
 ): Promise<RegisterStartResponse> {
   const res = await authFetch(`${AUTH_BASE}/auth/register`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password, displayName }),
   })
   const data = await res.json()
@@ -169,9 +190,9 @@ export async function register(
       devHint: data.devHint,
     }
   }
-  if (data.success && data.token) {
-    setToken(data.token)
-    return { success: true, token: data.token, user: data.user }
+  if (data.success && data.user) {
+    persistLoginToken(data)
+    return { success: true, token: data.token || '', user: data.user }
   }
   return { success: false, error: data.error || 'Đăng ký thất bại', code: data.code }
 }
@@ -182,12 +203,11 @@ export async function verifyRegistrationEmail(
 ): Promise<AuthResponse> {
   const res = await authFetch(`${AUTH_BASE}/auth/register/verify-email`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, code }),
   })
   const data = await res.json()
-  if (data.success && data.token) {
-    setToken(data.token)
+  if (data.success && data.user) {
+    persistLoginToken(data)
     return { success: true, token: data.token, user: data.user }
   }
   return { success: false, error: data.error || 'Mã xác nhận không hợp lệ', code: data.code }
@@ -201,7 +221,6 @@ export async function resendRegistrationVerification(email: string): Promise<{
 }> {
   const res = await authFetch(`${AUTH_BASE}/auth/register/resend-verification`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email }),
   })
   const data = await res.json()
@@ -216,11 +235,10 @@ export async function resendRegistrationVerification(email: string): Promise<{
 }
 
 export async function fetchMe(): Promise<AuthResponse> {
-  const token = getToken()
-  if (!token) return { success: false, error: 'Not signed in' }
-  const res = await authFetch(`${AUTH_BASE}/auth/me`, {
-    headers: { Authorization: `Bearer ${token}` },
-  })
+  if (!usesCookieAuth() && !getToken()) {
+    return { success: false, error: 'Not signed in' }
+  }
+  const res = await authFetch(`${AUTH_BASE}/auth/me`)
   const data = await res.json()
   if (data.success && data.user) {
     if (typeof data.token === 'string' && data.token) {
@@ -232,30 +250,23 @@ export async function fetchMe(): Promise<AuthResponse> {
   return { success: false, error: data.error || 'Session expired' }
 }
 
-/** Đăng nhập sau khi Firebase `signInWithPopup` — server verify ID token và gộp user theo email. */
 export async function loginWithFirebaseIdToken(idToken: string): Promise<AuthResponse> {
   const res = await authFetch(`${AUTH_BASE}/auth/firebase`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ idToken }),
   })
   const data = await res.json()
-  if (data.success && data.token) {
-    setToken(data.token)
+  if (data.success && data.user) {
+    persistLoginToken(data)
     return { success: true, token: data.token, user: data.user }
   }
   return { success: false, error: data.error || 'Đăng nhập Firebase thất bại' }
 }
 
 export async function updateProfile(data: { displayName?: string; avatar?: string }): Promise<AuthResponse> {
-  const token = getToken()
-  if (!token) return { success: false, error: 'Not signed in' }
+  if (!usesCookieAuth() && !getToken()) return { success: false, error: 'Not signed in' }
   const res = await authFetch(`${AUTH_BASE}/auth/me`, {
     method: 'PATCH',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
     body: JSON.stringify(data),
   })
   const json = await res.json()
@@ -264,14 +275,9 @@ export async function updateProfile(data: { displayName?: string; avatar?: strin
 }
 
 export async function changePassword(currentPassword: string, newPassword: string): Promise<AuthResponse> {
-  const token = getToken()
-  if (!token) return { success: false, error: 'Not signed in' }
+  if (!usesCookieAuth() && !getToken()) return { success: false, error: 'Not signed in' }
   const res = await authFetch(`${AUTH_BASE}/auth/change-password`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
     body: JSON.stringify({ currentPassword, newPassword }),
   })
   const json = await res.json()
@@ -282,7 +288,6 @@ export async function changePassword(currentPassword: string, newPassword: strin
 export async function forgotPassword(email: string): Promise<{ success: boolean; error?: string; resetLink?: string }> {
   const res = await authFetch(`${AUTH_BASE}/auth/forgot-password`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email }),
   })
   const data = await res.json()
@@ -293,7 +298,6 @@ export async function forgotPassword(email: string): Promise<{ success: boolean;
 export async function resetPassword(token: string, newPassword: string): Promise<AuthResponse> {
   const res = await authFetch(`${AUTH_BASE}/auth/reset-password`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ token, newPassword }),
   })
   const data = await res.json()
@@ -302,16 +306,14 @@ export async function resetPassword(token: string, newPassword: string): Promise
 }
 
 export async function deactivateMyAccount(reason?: string): Promise<{ success: boolean; error?: string }> {
-  const token = getToken()
-  if (!token) return { success: false, error: 'Not signed in' }
+  if (!usesCookieAuth() && !getToken()) return { success: false, error: 'Not signed in' }
   const res = await authFetch(`${AUTH_BASE}/auth/me`, {
     method: 'DELETE',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
     body: JSON.stringify({ reason }),
   })
   const data = await res.json()
   if (data.success) {
-    clearToken()
+    await logout()
     return { success: true }
   }
   return { success: false, error: data.error || 'Ngừng hoạt động tài khoản thất bại' }

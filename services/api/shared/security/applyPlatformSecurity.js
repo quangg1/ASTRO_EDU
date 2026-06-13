@@ -20,9 +20,24 @@ function applyPlatformSecurity(app) {
     app.set('trust proxy', 1);
   }
 
+  const cspEnabled = process.env.DISABLE_API_CSP !== '1';
   app.use(
     helmet({
-      contentSecurityPolicy: false,
+      contentSecurityPolicy: cspEnabled
+        ? {
+            useDefaults: true,
+            directives: {
+              defaultSrc: ["'self'"],
+              scriptSrc: ["'self'"],
+              styleSrc: ["'self'", "'unsafe-inline'"],
+              imgSrc: ["'self'", 'data:', 'blob:', 'https:'],
+              connectSrc: ["'self'", 'https:'],
+              fontSrc: ["'self'", 'data:', 'https:'],
+              objectSrc: ["'none'"],
+              frameAncestors: ["'self'"],
+            },
+          }
+        : false,
       crossOriginEmbedderPolicy: false,
     }),
   );

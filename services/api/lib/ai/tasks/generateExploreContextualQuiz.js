@@ -1,6 +1,7 @@
 const fetch = require('node-fetch');
 const { runWithFallback } = require('../../../lib/ai/chatCompletion');
 const { normalizeQuizList, newQuizQuestionId } = require('../../../shared/quizQuestion');
+const { internalServiceHeaders } = require('../../../shared/internalServiceAuth');
 
 const AI_SERVICE_URL = (process.env.AI_SERVICE_URL || '').trim();
 
@@ -48,7 +49,7 @@ async function generateExploreContextualQuizFromContext(context) {
     try {
       const r = await fetch(`${AI_SERVICE_URL.replace(/\/$/, '')}/quiz/generate`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...internalServiceHeaders() },
         body: JSON.stringify({
           mode: 'explore_contextual',
           entityId,

@@ -1,5 +1,6 @@
 'use client'
 
+import { Suspense } from 'react'
 import { CosmoPageBackdrop } from '@/components/layout/CosmoPageBackdrop'
 import { MobileBottomNav } from '@/components/layout/MobileBottomNav'
 
@@ -32,7 +33,11 @@ export function AppShell({
       >
         {children}
       </div>
-      {showMobileNav ? <MobileBottomNav /> : null}
+      {showMobileNav ? (
+        <Suspense fallback={null}>
+          <MobileBottomNav />
+        </Suspense>
+      ) : null}
     </>
   )
 }

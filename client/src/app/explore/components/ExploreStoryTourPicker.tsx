@@ -36,7 +36,7 @@ export function ExploreStoryTourPicker({
       >
         <header className="flex items-start justify-between gap-3 border-b border-white/[0.08] px-5 py-4">
           <div>
-            <p className="text-[10px] uppercase tracking-[0.18em] text-ds-accent">Showcase premium</p>
+            <p className="text-[10px] uppercase tracking-[0.18em] text-ds-accent">Triển lãm cao cấp</p>
             <h2 id="story-tour-picker-title" className="mt-1 font-[family-name:var(--font-heading)] text-xl font-bold text-white">
               Story tour 3D
             </h2>

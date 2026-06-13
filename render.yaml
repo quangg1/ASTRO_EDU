@@ -112,6 +112,11 @@ services:
         sync: false
       - key: KNOWLEDGE_ADMIN_TOKEN
         sync: false
+      - key: INTERNAL_API_SECRET
+        fromService:
+          type: web
+          name: galaxies-api
+          envVarKey: INTERNAL_API_SECRET
 
   - type: web
     name: galaxies-web

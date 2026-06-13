@@ -13,6 +13,7 @@ const REASON_LABELS: Record<string, string> = {
   community_helpful_answer: 'Cộng đồng — câu trả lời hữu ích',
   community_helpful_vote: 'Cộng đồng — nhận upvote hữu ích',
   onboarding_complete: 'Hoàn thành onboarding cá nhân hóa',
+  astronomy_event_observed: 'Check-in quan sát lịch thiên văn',
   showcase_unlock: 'Mở khóa nội dung Showcase',
   shop_avatar_decoration: 'Mua trang trí avatar',
   admin_manual_adjust: 'Điều chỉnh từ quản trị viên',

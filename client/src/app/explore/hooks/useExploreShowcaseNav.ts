@@ -128,7 +128,7 @@ export function useExploreShowcaseNav({
 
   useEffect(() => {
     if (exploreView !== 'solar') return
-    if (earthHistoryOpen || searchParams.get('history') === '1') return
+    if (earthHistoryOpen || planetHistoryOpen || searchParams.get('history') === '1') return
     if (useShowcaseStore.getState().storyTourActive) return
 
     const entityParam = searchParams.get('entity')?.trim()
@@ -144,10 +144,14 @@ export function useExploreShowcaseNav({
     }
     next.delete('stage')
     next.delete('target')
+    for (const key of ['history', 'beat', 'pin'] as const) {
+      const v = searchParams.get(key)
+      if (v) next.set(key, v)
+    }
     const updated = next.toString()
     if (updated === searchParams.toString()) return
     router.replace(`${pathname}?${updated}`, { scroll: false })
-  }, [pathname, router, searchParams, showcaseActiveItemId, earthHistoryOpen, exploreView])
+  }, [pathname, router, searchParams, showcaseActiveItemId, earthHistoryOpen, planetHistoryOpen, exploreView])
 
   return {
     initialShowcaseSpherical,

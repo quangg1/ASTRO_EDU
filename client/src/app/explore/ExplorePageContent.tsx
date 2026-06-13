@@ -137,6 +137,7 @@ function ExplorePageInner() {
         handleSkyScenePick={explore.handleSkyScenePick}
         observer={explore.observer}
         ephemerisBodies={explore.ephemerisBodies}
+        skyWeather={explore.skyWeather}
         sceneMode={explore.sceneMode}
         planetHistoryEntityId={explore.planetHistoryEntityId}
         earthHistoryStage={earthHistoryScene.earthHistoryStage}

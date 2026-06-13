@@ -171,12 +171,7 @@ export default function StudioConceptsPage() {
 
   useEffect(() => {
     if (!user) return
-    const token = typeof window !== 'undefined' ? localStorage.getItem('galaxies_token') : null
-    if (!token) {
-      setLoading(false)
-      return
-    }
-    Promise.all([fetchEditorConcepts(token), fetchEditorLearningPath(token), fetchTaxonomyRegistryEditor(token)])
+    Promise.all([fetchEditorConcepts(), fetchEditorLearningPath(), fetchTaxonomyRegistryEditor()])
       .then(([cs, lp, tx]) => {
         setConcepts(cs || [])
         setModules(lp?.modules || [])
@@ -379,16 +374,14 @@ export default function StudioConceptsPage() {
   }
 
   const save = async () => {
-    const token = localStorage.getItem('galaxies_token')
-    if (!token) return
     setSaving(true)
     setMessage('')
     const [conceptSave, taxonomySave] = await Promise.all([
-      saveEditorConcepts(token, concepts),
-      saveTaxonomyRegistryEditor(token, taxonomyRegistry),
+      saveEditorConcepts(concepts),
+      saveTaxonomyRegistryEditor(taxonomyRegistry),
     ])
     if (conceptSave.ok && taxonomySave.ok) {
-      const fresh = await fetchEditorConcepts(token)
+      const fresh = await fetchEditorConcepts()
       if (fresh) setConcepts(fresh)
       if (taxonomySave.taxonomy) setTaxonomyRegistry(taxonomySave.taxonomy)
       setMessage('Đã lưu Concept Library vào server.')

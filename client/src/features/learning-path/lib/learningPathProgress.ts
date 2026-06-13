@@ -1,6 +1,8 @@
 import type { LearningModule } from '@/data/learningPathCurriculum'
 import { DEPTH_ORDER, LEARNING_MODULES } from '@/data/learningPathCurriculum'
+import { hasClientSession } from '@/features/auth/public'
 import { getApiPathBase } from '@/lib/apiConfig'
+import { apiFetch } from '@/lib/apiRequestInit'
 
 /** Prefix phiên bản — mỗi user có key riêng để không dùng chung tiến độ trên cùng trình duyệt */
 const PREFIX = 'cosmo-learning-path-v3'
@@ -271,12 +273,6 @@ export function saveLastLearningPathLessonId(lessonId: string | null | undefined
   }
 }
 
-function getAuthToken() {
-  if (typeof window === 'undefined') return null
-  const t = localStorage.getItem('galaxies_token')
-  return t && t.trim() ? t : null
-}
-
 function mapFromCompletedIds(ids: string[]): LessonCompletionMap {
   const next: LessonCompletionMap = {}
   for (const id of ids) next[id] = true
@@ -295,16 +291,16 @@ function normalizeIdArray(ids: string[]) {
   return [...new Set(ids.map((x) => String(x || '').trim()).filter(Boolean))]
 }
 
+function canSyncProgress(userId?: string | null) {
+  return Boolean(userId) && hasClientSession()
+}
+
 /** Đồng bộ 2 chiều local ↔ DB (DB là nguồn chính nếu đã có dữ liệu). */
 export async function syncLearningPathCompletion(userId?: string | null): Promise<LessonCompletionMap> {
   const localMap = loadLessonCompletion(userId)
-  const token = getAuthToken()
-  if (!token || !userId) return localMap
+  if (!canSyncProgress(userId)) return localMap
   try {
-    const res = await fetch(`${API}/progress`, {
-      headers: { Authorization: `Bearer ${token}` },
-      cache: 'no-store',
-    })
+    const res = await apiFetch(`${API}/progress`)
     const data = await res.json()
     if (!data?.success) return localMap
 
@@ -367,17 +363,12 @@ export async function pushLearningPathCompletionWithLast(
   lastLessonId?: string | null,
   userId?: string | null,
 ): Promise<void> {
-  const token = getAuthToken()
-  if (!token || !userId) return
+  if (!canSyncProgress(userId)) return
   const last = String(lastLessonId || '').trim()
   const mastery = loadLessonMastery(userId)
   try {
-    await fetch(`${API}/progress`, {
+    await apiFetch(`${API}/progress`, {
       method: 'PUT',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify({
         completedLessonIds: completedIdsFromMap(map),
         masteredLessonIds: completedIdsFromMap(mastery),
@@ -392,15 +383,10 @@ export async function pushLearningPathCompletionWithLast(
 
 /** Gộp visited 3D (client) lên server — partial PUT, giữ completion/mastery/doc cũ. */
 export async function pushVisited3DLessonIdsMerge(userId?: string | null): Promise<void> {
-  const token = getAuthToken()
-  if (!token || !userId) return
+  if (!canSyncProgress(userId)) return
   try {
-    await fetch(`${API}/progress`, {
+    await apiFetch(`${API}/progress`, {
       method: 'PUT',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify({
         visited3DLessonIds: completedIdsFromMap(loadLessonVisited3D(userId)),
       }),
@@ -412,17 +398,12 @@ export async function pushVisited3DLessonIdsMerge(userId?: string | null): Promi
 
 /** Ghi mastery lên server (kèm completion hiện tại). */
 export async function pushLessonMasteryMap(mastery: LessonMasteryMap, userId?: string | null): Promise<void> {
-  const token = getAuthToken()
-  if (!token || !userId) return
+  if (!canSyncProgress(userId)) return
   const completion = loadLessonCompletion(userId)
   const last = loadLastLearningPathLessonId(userId)
   try {
-    await fetch(`${API}/progress`, {
+    await apiFetch(`${API}/progress`, {
       method: 'PUT',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify({
         completedLessonIds: completedIdsFromMap(completion),
         masteredLessonIds: completedIdsFromMap(mastery),

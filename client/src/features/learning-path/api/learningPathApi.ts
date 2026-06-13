@@ -1,4 +1,5 @@
 import { getApiPathBase } from '@/lib/apiConfig'
+import { apiFetch } from '@/lib/apiRequestInit'
 import type { LearningConcept, LearningModule, LessonItem, QuizQuestion } from '@/data/learningPathCurriculum'
 
 const API = `${getApiPathBase()}/learning-path`
@@ -49,15 +50,13 @@ export async function fetchPublicLearningPathData(): Promise<{
   }
 }
 
-export async function fetchEditorLearningPath(token: string): Promise<{
+export async function fetchEditorLearningPath(): Promise<{
   modules: LearningModule[]
   concepts: LearningConcept[]
   published: boolean
 } | null> {
   try {
-    const res = await fetch(`${API}/editor`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
+    const res = await apiFetch(`${API}/editor`)
     const data = await res.json()
     if (data.success && Array.isArray(data.data?.modules)) {
       return {
@@ -73,7 +72,6 @@ export async function fetchEditorLearningPath(token: string): Promise<{
 }
 
 export async function saveEditorLearningPath(
-  token: string,
   modules: LearningModule[],
   published?: boolean,
 ): Promise<{
@@ -85,12 +83,8 @@ export async function saveEditorLearningPath(
   error?: string
 }> {
   try {
-    const res = await fetch(`${API}/editor`, {
+    const res = await apiFetch(`${API}/editor`, {
       method: 'PUT',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify({ modules, published }),
     })
     const data = await res.json()
@@ -132,7 +126,6 @@ export type RecallQuizSubmitResult = {
 }
 
 export async function fetchRecallQuizDelivery(
-  token: string,
   lessonId: string,
 ): Promise<{
   ok: boolean
@@ -145,10 +138,7 @@ export async function fetchRecallQuizDelivery(
   code?: string
 }> {
   try {
-    const res = await fetch(`${API}/lessons/${encodeURIComponent(lessonId)}/recall-quiz`, {
-      headers: { Authorization: `Bearer ${token}` },
-      cache: 'no-store',
-    })
+    const res = await apiFetch(`${API}/lessons/${encodeURIComponent(lessonId)}/recall-quiz`)
     const data = await res.json()
     if (data.success && data.data?.questions) {
       return { ok: true, data: data.data }
@@ -164,17 +154,12 @@ export async function fetchRecallQuizDelivery(
 }
 
 export async function submitRecallQuizAnswers(
-  token: string,
   lessonId: string,
   answers: Record<string, number>,
 ): Promise<{ ok: boolean; data?: RecallQuizSubmitResult; error?: string; code?: string }> {
   try {
-    const res = await fetch(`${API}/lessons/${encodeURIComponent(lessonId)}/recall-quiz/submit`, {
+    const res = await apiFetch(`${API}/lessons/${encodeURIComponent(lessonId)}/recall-quiz/submit`, {
       method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify({ answers }),
     })
     const data = await res.json()
@@ -192,16 +177,11 @@ export async function submitRecallQuizAnswers(
 }
 
 export async function generateRecallQuizForLesson(
-  token: string,
   lesson: LessonItem,
 ): Promise<{ ok: boolean; recallQuiz?: QuizQuestion[]; error?: string }> {
   try {
-    const res = await fetch(`${API}/editor/generate-quiz`, {
+    const res = await apiFetch(`${API}/editor/generate-quiz`, {
       method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify({ lesson }),
     })
     const data = await res.json()

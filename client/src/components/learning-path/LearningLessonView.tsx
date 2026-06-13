@@ -41,7 +41,7 @@ import {
   type LessonMasteryMap,
 } from '@/features/learning-path/public'
 import { LessonRecallQuizOverlay } from '@/components/learning-path/LessonRecallQuizOverlay'
-import { getToken, useAuthStore } from '@/features/auth/public'
+import { hasClientSession, useAuthStore } from '@/features/auth/public'
 import { SectionPreview } from '@/components/studio/LessonPreview'
 import { applyConceptAnchorsToHtml } from '@/features/concepts/public'
 import { trackEvent } from '@/lib/analytics'
@@ -131,13 +131,12 @@ export default function LearningLessonView({
   const [pendingCoachAfterQuiz, setPendingCoachAfterQuiz] = useState(false)
 
   const loadRecallDelivery = useCallback(async () => {
-    const token = getToken()
-    if (!token) {
+    if (!hasClientSession()) {
       setRecallLoadError('Đăng nhập để làm kiểm tra nhanh.')
       return false
     }
     setRecallLoadError(null)
-    const res = await fetchRecallQuizDelivery(token, lesson.id)
+    const res = await fetchRecallQuizDelivery(lesson.id)
     if (!res.ok || !res.data?.questions?.length) {
       setRecallLoadError(res.error || 'Không tải được bài kiểm tra.')
       setDeliveryQuestions([])
@@ -346,9 +345,8 @@ export default function LearningLessonView({
 
   const submitRecallToServer = useCallback(
     async (answers: Record<string, number>) => {
-      const token = getToken()
-      if (!token) throw new Error('Đăng nhập để nộp bài kiểm tra.')
-      const res = await submitRecallQuizAnswers(token, lesson.id, answers)
+      if (!hasClientSession()) throw new Error('Đăng nhập để nộp bài kiểm tra.')
+      const res = await submitRecallQuizAnswers(lesson.id, answers)
       if (!res.ok || !res.data) throw new Error(res.error || 'Nộp bài thất bại')
       return res.data
     },

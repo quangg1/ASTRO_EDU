@@ -54,13 +54,45 @@ function Brackets({ c = 'var(--color-accent)', s = 12, o = 6 }: { c?: string; s?
 }
 
 const NODE_CONFIGS = [
-  { cx: 60,  cy: 155, r: 11, color: 'var(--color-accent)', shortLabel: 'BÀI HỌC' },
-  { cx: 210, cy: 115, r: 11, color: 'var(--color-accent)', shortLabel: 'ĐỘ SÂU' },
-  { cx: 380, cy: 75,  r: 11, color: 'var(--color-accent)', shortLabel: 'QUIZ' },
-  { cx: 540, cy: 115, r: 11, color: '#6dffb0', shortLabel: 'EXPLORE' },
-  { cx: 720, cy: 155, r: 11, color: 'var(--color-brand-amber)', shortLabel: 'DEEP HIST' },
-  { cx: 860, cy: 120, r: 11, color: '#c4a0ff', shortLabel: 'CỘNG ĐỒNG' },
-]
+  { cx: 48,  cy: 155, r: 11, color: 'var(--color-accent)', shortLabel: 'BÀI HỌC' },
+  { cx: 168, cy: 115, r: 11, color: 'var(--color-accent)', shortLabel: 'ĐỘ SÂU' },
+  { cx: 288, cy: 75,  r: 11, color: 'var(--color-accent)', shortLabel: 'QUIZ' },
+  { cx: 408, cy: 115, r: 11, color: '#6dffb0', shortLabel: 'EXPLORE' },
+  { cx: 528, cy: 155, r: 11, color: 'var(--color-brand-amber)', shortLabel: 'DEEP HIST' },
+  { cx: 648, cy: 120, r: 11, color: '#a8d4ff', shortLabel: 'LỊCH' },
+  { cx: 768, cy: 155, r: 11, color: '#c4a0ff', shortLabel: 'CỘNG ĐỒNG' },
+] as const
+
+const GEM_PATH_WAYS = [
+  {
+    label: 'Hoàn thành bài lộ trình (đủ thời gian đọc)',
+    reward: `+${GEM_REWARD_LEARNING_PATH_LESSON}`,
+  },
+  {
+    label: 'Độ sâu bài học lần đầu (Beginner / Explorer / Researcher)',
+    reward: '+8 / +14 / +20',
+  },
+  {
+    label: 'Quiz nhớ đạt (lần đầu / ôn lại)',
+    reward: '+8 / +3',
+  },
+  {
+    label: 'Khám phá thể 3D mới · Quiz ngữ cảnh Explore',
+    reward: '+5 / +3',
+  },
+  {
+    label: 'Deep History — xem giai đoạn / mở điểm',
+    reward: '+4 / +2',
+  },
+  {
+    label: 'Check-in quan sát sự kiện thiên văn (trong khung giờ)',
+    reward: '+20',
+  },
+  {
+    label: 'Cộng đồng — đăng bài / trả lời hữu ích / upvote',
+    reward: '+3 / +8 / +1',
+  },
+] as const
 
 export default function GemPage() {
   const { user } = useAuthStore()
@@ -128,18 +160,7 @@ export default function GemPage() {
     }
   }, [wallet.transactions])
 
-  const earnWays = useMemo(
-    () => [
-      { label: 'Hoàn thành bài lộ trình (đủ thời gian đọc)', reward: `+${GEM_REWARD_LEARNING_PATH_LESSON} Gem` },
-      { label: 'Độ sâu bài học lần đầu (Beginner / Explorer / Researcher)', reward: '+8 / +14 / +20 Gem' },
-      { label: 'Quiz nhớ đạt (lần đầu / ôn lại)', reward: '+8 / +3 Gem' },
-      { label: 'Khám phá thể 3D mới trên Explore', reward: '+5 Gem' },
-      { label: 'Quiz ngữ cảnh Explore (đúng hết)', reward: '+3 Gem' },
-      { label: 'Deep History — xem giai đoạn / mở điểm', reward: '+4 / +2 Gem' },
-      { label: 'Cộng đồng — đăng bài / trả lời hữu ích / upvote', reward: '+3 / +8 / +1 Gem' },
-    ],
-    [],
-  )
+  const pathCountLabel = String(GEM_PATH_WAYS.length).padStart(2, '0')
 
   const guestMode = isGuestGemUser(userId)
 
@@ -196,6 +217,11 @@ export default function GemPage() {
       return { label: base, detail: postTitle || `Bài #${entityId.slice(-6)}` }
     }
 
+    if (reason === 'astronomy_event_observed') {
+      const title = String(tx.meta?.titleVi || tx.meta?.eventTitle || '').trim()
+      return { label: base, detail: title || (entityId ? `Sự kiện · ${entityId}` : null) }
+    }
+
     return { label: base, detail: null }
   }
 
@@ -225,16 +251,19 @@ export default function GemPage() {
           <Brackets c="var(--color-accent)" s={14} o={8} />
 
           <div style={{ ...mono, fontSize: 9, letterSpacing: '0.22em', color: 'var(--color-text-subtle)', marginBottom: 20, textTransform: 'uppercase' }}>
-            {String(earnWays.length).padStart(2, '0')} Paths · {tierProgress?.current?.nameVi || 'Starter'}
+            {pathCountLabel} Paths · {tierProgress?.current?.nameVi || 'Starter'}
           </div>
 
           <h1 style={{ fontSize: 'clamp(28px, 3.5vw, 50px)', fontWeight: 500, lineHeight: 1.05, letterSpacing: '-0.03em', color: 'var(--color-text-primary)', marginBottom: 10 }}>
             Mỗi việc bạn làm thắp sáng{' '}
             <em style={{ fontStyle: 'italic', fontWeight: 300, color: 'var(--color-brand-amber)' }}>một ngôi sao.</em>
           </h1>
-          <p style={{ fontSize: 14, color: 'var(--color-text-muted)', lineHeight: 1.65, maxWidth: 460, marginBottom: 36 }}>
-            Sáu cách kiếm Gem đang hoạt động — lộ trình học, Explore 3D, Deep History và cộng đồng.
-            Đổi thưởng tại Cửa hàng Gem khi đã sẵn sàng.
+          <p style={{ fontSize: 14, color: 'var(--color-text-muted)', lineHeight: 1.65, maxWidth: 520, marginBottom: 36 }}>
+            {GEM_PATH_WAYS.length} cách kiếm Gem đang hoạt động — lộ trình học, Explore 3D, Deep History,{' '}
+            <Link href="/calendar" className="text-ds-accent hover:underline">
+              Lịch thiên văn
+            </Link>{' '}
+            và cộng đồng. Đổi thưởng tại Cửa hàng Gem khi đã sẵn sàng.
           </p>
 
           {guestMode ? (
@@ -261,7 +290,7 @@ export default function GemPage() {
 
           {/* Constellation SVG */}
           <div style={{ width: '100%', height: 210, position: 'relative' }}>
-            <svg viewBox="0 0 920 195" style={{ width: '100%', height: '100%', overflow: 'visible' }}>
+            <svg viewBox="0 0 820 195" style={{ width: '100%', height: '100%', overflow: 'visible' }}>
               {/* Background stars */}
               {Array.from({ length: 36 }, (_, i) => (
                 <circle
@@ -275,17 +304,27 @@ export default function GemPage() {
               ))}
 
               {/* Connection lines */}
-              <line x1="60"  y1="155" x2="210" y2="115" stroke="rgba(126,231,255,0.2)" strokeWidth="1" strokeDasharray="5 6" />
-              <line x1="210" y1="115" x2="380" y2="75"  stroke="rgba(126,231,255,0.2)" strokeWidth="1" strokeDasharray="5 6" />
-              <line x1="380" y1="75"  x2="540" y2="115" stroke="rgba(126,231,255,0.2)" strokeWidth="1" strokeDasharray="5 6" />
-              <line x1="540" y1="115" x2="720" y2="155" stroke="rgba(126,231,255,0.2)" strokeWidth="1" strokeDasharray="5 6" />
-              <line x1="720" y1="155" x2="860" y2="120" stroke="rgba(126,231,255,0.2)" strokeWidth="1" strokeDasharray="5 6" />
+              {NODE_CONFIGS.slice(0, -1).map((node, i) => {
+                const next = NODE_CONFIGS[i + 1]
+                return (
+                  <line
+                    key={`line-${i}`}
+                    x1={node.cx}
+                    y1={node.cy}
+                    x2={next.cx}
+                    y2={next.cy}
+                    stroke="rgba(126,231,255,0.2)"
+                    strokeWidth="1"
+                    strokeDasharray="5 6"
+                  />
+                )
+              })}
 
-              {/* Nodes from earnWays */}
-              {earnWays.map((way, i) => {
+              {/* Nodes */}
+              {GEM_PATH_WAYS.map((way, i) => {
                 const cfg = NODE_CONFIGS[i]
                 if (!cfg) return null
-                const rewardNum = way.reward.replace(' Gem', '')
+                const rewardNum = way.reward
                 return (
                   <g key={i}>
                     {/* Glow halo */}
@@ -411,7 +450,7 @@ export default function GemPage() {
           </span>
         </div>
         <p style={{ fontSize: 13, color: 'var(--color-text-muted)', lineHeight: 1.5, marginBottom: 16 }}>
-          Mỗi dòng là một lần bạn nhận Gem khi học, khám phá 3D, làm quiz — hoặc tiêu Gem tại cửa hàng.
+          Mỗi dòng là một lần bạn nhận Gem khi học, khám phá 3D, check-in lịch thiên văn, làm quiz — hoặc tiêu Gem tại cửa hàng.
         </p>
 
         {/* Cyan accent line */}

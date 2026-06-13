@@ -18,6 +18,7 @@ const {
 } = require('./earthFossilContextService');
 const { buildExploreSceneContext } = require('./exploreSceneContextService');
 const { buildShowcaseAgentContext } = require('./showcaseNavigationService');
+const { buildAstronomyCalendarContext } = require('./astronomyCalendarContextService');
 const UserReward = require('../../rewards/models/UserReward');
 const { getWalletLearnerMeta } = require('../../rewards/services/learnerTierService');
 const LearnerProfile = require('../../users/models/LearnerProfile');
@@ -115,12 +116,17 @@ async function buildAgentContext(userId, sessionContext, learnerSnapshot, userRo
     surface === 'explore' || sessionContext?.entityId || sessionContext?.narrativeKey;
   const exploreEarthFossils = shouldBuildEarthFossilContext(sessionContext || {});
   const exploreShowcase = surface === 'explore';
-  const [narrativeContext, earthFossilContext, showcaseContext] = await Promise.all([
+  const calendarSurface = surface === 'calendar';
+  const [narrativeContext, earthFossilContext, showcaseContext, astronomyCalendarContext] =
+    await Promise.all([
     exploreNarrative ? buildNarrativeContext(sessionContext || {}) : Promise.resolve(null),
     exploreEarthFossils
       ? buildEarthFossilContext(sessionContext || {})
       : Promise.resolve(null),
     exploreShowcase ? buildShowcaseAgentContext(sessionContext || {}) : Promise.resolve(null),
+    calendarSurface
+      ? buildAstronomyCalendarContext(sessionContext || {})
+      : Promise.resolve(null),
   ]);
 
   const spacedReviewDue = learningCtx?.spacedReviewDue ?? { dueLessons: [], totalDue: 0 };
@@ -145,6 +151,7 @@ async function buildAgentContext(userId, sessionContext, learnerSnapshot, userRo
     narrativeContext,
     earthFossilContext,
     showcaseContext,
+    astronomyCalendarContext,
     exploreSceneContext: buildExploreSceneContext(sessionContext || {}),
     spacedReviewDue,
     depthSuggestion,

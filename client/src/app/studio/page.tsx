@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { fetchCoursesForEditor, createCourse, type Course } from '@/features/courses/public'
 import { useAuthStore } from '@/features/auth/public'
 import { formatOrderAmount } from '@/lib/money'
+import { canAccessAdmin, canAccessAdminPath } from '@/lib/roles'
 import { useLiveClock } from '@/hooks/useLiveClock'
 import {
   cohortsNavEnabledForStrategy,
@@ -34,6 +35,8 @@ function Brackets({ c = 'var(--color-accent)', s = 12, o = 6 }: { c?: string; s?
 export default function StudioHomePage() {
   const router = useRouter()
   const { user, checked } = useAuthStore()
+  const canEditAstronomyCalendar =
+    Boolean(user && canAccessAdmin(user) && canAccessAdminPath(user, '/admin/astronomy-calendar'))
   const [courses, setCourses] = useState<Course[]>([])
   const [loadingCourses, setLoadingCourses] = useState(true)
   const [showCreateCourse, setShowCreateCourse] = useState(false)
@@ -268,6 +271,35 @@ export default function StudioHomePage() {
               </svg>
               3D Showcase Studio
             </Link>
+
+            {canEditAstronomyCalendar ? (
+              <Link
+                href="/studio/astronomy-calendar"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  background: 'rgba(34,211,238,0.08)',
+                  color: '#22d3ee',
+                  padding: '11px 20px',
+                  ...mono,
+                  fontSize: 11,
+                  fontWeight: 600,
+                  letterSpacing: '0.16em',
+                  textTransform: 'uppercase',
+                  textDecoration: 'none',
+                  border: '1px solid rgba(34,211,238,0.28)',
+                  boxShadow: '0 0 16px rgba(34,211,238,0.08)',
+                  ...chamfer(10),
+                }}
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="4" width="18" height="18" rx="2" />
+                  <path d="M16 2v4M8 2v4M3 10h18" />
+                </svg>
+                Lịch Thiên Văn
+              </Link>
+            ) : null}
 
             <Link
               href="/tutorial"

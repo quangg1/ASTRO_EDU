@@ -25,10 +25,29 @@ const {
   verifyEmailCode,
   resendVerificationCode,
 } = require('./services/emailVerificationService');
+const {
+  setAuthCookie,
+  clearAuthCookie,
+  shouldExposeTokenInBody,
+  extractAuthToken,
+} = require('../../shared/authCookie');
 
 const ROLES = ['student', 'teacher', 'moderator', 'admin'];
 
 const router = express.Router();
+
+function sendAuthSuccess(req, res, user, token, extra = {}) {
+  setAuthCookie(res, token);
+  const body = {
+    success: true,
+    user: normalizeAuthUser(user),
+    ...extra,
+  };
+  if (shouldExposeTokenInBody(req)) {
+    body.token = token;
+  }
+  return res.json(body);
+}
 
 function normalizeAuthUser(user) {
   return {
@@ -123,10 +142,7 @@ router.post('/register/verify-email', async (req, res) => {
       });
     }
     const token = issueToken(user);
-    res.json({
-      success: true,
-      token,
-      user: normalizeAuthUser(user),
+    return sendAuthSuccess(req, res, user, token, {
       message: 'Xác nhận email thành công.',
     });
   } catch (err) {
@@ -187,11 +203,7 @@ router.post('/login', async (req, res) => {
     }
     user.password = undefined;
     const token = issueToken(user);
-    res.json({
-      success: true,
-      token,
-      user: normalizeAuthUser(user),
-    });
+    return sendAuthSuccess(req, res, user, token);
   } catch (err) {
     console.error('Login error:', err);
     if (err instanceof AppError) {
@@ -230,11 +242,7 @@ router.post('/firebase', async (req, res) => {
     });
     ensureUserIsActive(user);
     const token = issueToken(user);
-    res.json({
-      success: true,
-      token,
-      user: normalizeAuthUser(user),
-    });
+    return sendAuthSuccess(req, res, user, token);
   } catch (err) {
     console.error('Firebase auth:', err);
     res.status(401).json({
@@ -244,23 +252,30 @@ router.post('/firebase', async (req, res) => {
   }
 });
 
+router.post('/logout', (req, res) => {
+  clearAuthCookie(res);
+  res.json({ success: true });
+});
+
 // --- Me ---
 router.get('/me', (req, res) => {
-  const authHeader = req.headers.authorization;
-  const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
+  const token = extractAuthToken(req);
   if (!token) {
     return res.status(401).json({ success: false, error: 'Thiếu token' });
   }
   const payload = verifyToken(token);
   if (!payload) {
+    clearAuthCookie(res);
     return res.status(401).json({ success: false, error: 'Token không hợp lệ hoặc đã hết hạn' });
   }
   User.findById(payload.sub)
     .then((user) => {
       if (!user) {
+        clearAuthCookie(res);
         return res.status(401).json({ success: false, error: 'Người dùng không tồn tại' });
       }
       if (user.accountStatus === 'deactivated') {
+        clearAuthCookie(res);
         return res.status(403).json({ success: false, code: 'ACCOUNT_DEACTIVATED', error: 'Tài khoản đã ngừng hoạt động' });
       }
       if (!isLocalEmailVerified(user)) {
@@ -275,11 +290,15 @@ router.get('/me', (req, res) => {
       const tokenRole = payload.role || 'student';
       const roleMismatch = dbRole !== tokenRole;
       const newToken = roleMismatch ? issueToken(user) : null;
-      res.json({
+      if (newToken) setAuthCookie(res, newToken);
+      const body = {
         success: true,
         user: normalizeAuthUser(user),
-        ...(newToken ? { token: newToken } : {}),
-      });
+      };
+      if (newToken && shouldExposeTokenInBody(req)) {
+        body.token = newToken;
+      }
+      res.json(body);
     })
     .catch((err) => {
       console.error('Me error:', err);
@@ -332,6 +351,7 @@ router.delete('/me', authMiddleware, async (req, res) => {
     if (!user) {
       return res.status(404).json({ success: false, error: 'Người dùng không tồn tại' });
     }
+    clearAuthCookie(res);
     res.json({ success: true, message: 'Tài khoản đã được đánh dấu ngừng hoạt động' });
   } catch (err) {
     console.error('Deactivate me error:', err);

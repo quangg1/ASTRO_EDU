@@ -7,10 +7,14 @@ import { dispatchExplorePassportChanged } from '@/features/explore/lib/explorePa
 import { markPassportSkyTarget } from '@/features/explore/lib/explorePassportStorage'
 import {
   buildExploreHref,
+  EXPLORE_SOLAR_ONLY_PARAMS,
   isSkyOnlyTarget,
   mergeExplorePreservedParams,
   type ExploreView,
 } from '@/features/explore/public'
+import { formatObserverTimeParam } from '@/features/explore/lib/skyObserver'
+import { normalizeSkyTargetId } from '@/features/explore/lib/exploreViewUrl'
+import type { AstronomyCalendarEvent } from '@/features/astronomy-calendar/types'
 
 type Args = {
   pathname: string
@@ -110,11 +114,60 @@ export function useExploreViewNavigation({
     [navigateExploreView],
   )
 
+  const jumpToSkyEvent = useCallback(
+    (event: Pick<
+      AstronomyCalendarEvent,
+      'exploreTarget' | 'exploreView' | 'peakAt' | 'startAt' | 'lessonHref'
+    >) => {
+      if (event.lessonHref && !event.exploreTarget) {
+        router.push(event.lessonHref)
+        return
+      }
+
+      if (event.exploreView === 'solar' && event.exploreTarget) {
+        navigateExploreView('solar', event.exploreTarget)
+        return
+      }
+
+      const peakRaw = event.peakAt || event.startAt
+      const peakAt = peakRaw ? new Date(peakRaw) : null
+
+      const next = new URLSearchParams(searchParams.toString())
+      next.set('view', 'sky')
+
+      if (event.exploreTarget) {
+        const tid = normalizeSkyTargetId(event.exploreTarget)
+        setSkySceneHighlightId(null)
+        setSkyActiveTargetId(tid)
+        next.set('target', tid)
+      }
+
+      if (peakAt && !Number.isNaN(peakAt.getTime())) {
+        next.set('time', formatObserverTimeParam(peakAt))
+      }
+
+      for (const k of EXPLORE_SOLAR_ONLY_PARAMS) next.delete(k)
+
+      const qs = next.toString()
+      replaceExploreUrl(qs ? `${pathname}?${qs}` : pathname)
+    },
+    [
+      router,
+      searchParams,
+      pathname,
+      replaceExploreUrl,
+      navigateExploreView,
+      setSkyActiveTargetId,
+      setSkySceneHighlightId,
+    ],
+  )
+
   return {
     navigateExploreView,
     selectSkyTarget,
     pickSkySceneObject,
     openSkyForEntity,
     openSolarForTarget,
+    jumpToSkyEvent,
   }
 }

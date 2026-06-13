@@ -1,17 +1,15 @@
-import { getToken } from '@/features/auth/public'
+import { hasClientSession } from '@/features/auth/public'
 import { getUnifiedBase } from '@/lib/apiConfig'
 
 export function getNotificationWsUrl(): string {
   if (typeof window === 'undefined') return ''
-  const token = getToken()
-  if (!token) return ''
+  if (!hasClientSession()) return ''
 
   const httpBase = getUnifiedBase()
-  const q = `?token=${encodeURIComponent(token)}`
 
   if (!httpBase) {
     const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-    return `${proto}//${window.location.host}/ws/notifications${q}`
+    return `${proto}//${window.location.host}/ws/notifications`
   }
 
   let hostPart = httpBase.startsWith('https://')
@@ -26,5 +24,5 @@ export function getNotificationWsUrl(): string {
   }
 
   const wsBase = httpBase.startsWith('https://') ? `wss://${hostPart}` : `ws://${hostPart}`
-  return `${wsBase}/ws/notifications${q}`
+  return `${wsBase}/ws/notifications`
 }

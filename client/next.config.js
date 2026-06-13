@@ -109,6 +109,25 @@ const nextConfig = {
   },
 
   async headers() {
+    const mediaOrigin = resolveMediaOrigin();
+    const apiOrigin = resolveApiProxyOrigin();
+    const connectSrc = ["'self'", 'https:', 'wss:'];
+    if (mediaOrigin) connectSrc.push(mediaOrigin);
+    if (apiOrigin) connectSrc.push(apiOrigin);
+    const imgSrc = ["'self'", 'data:', 'blob:', 'https:'];
+    const csp = [
+      "default-src 'self'",
+      "script-src 'self' 'unsafe-eval' 'unsafe-inline'",
+      "style-src 'self' 'unsafe-inline' https:",
+      `img-src ${imgSrc.join(' ')}`,
+      `connect-src ${connectSrc.join(' ')}`,
+      "font-src 'self' data: https:",
+      "object-src 'none'",
+      "frame-ancestors 'self'",
+      "base-uri 'self'",
+      "form-action 'self'",
+    ].join('; ');
+
     return [
       {
         source: '/:path*',
@@ -117,6 +136,7 @@ const nextConfig = {
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
           { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
           { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
+          { key: 'Content-Security-Policy', value: csp },
         ],
       },
     ];

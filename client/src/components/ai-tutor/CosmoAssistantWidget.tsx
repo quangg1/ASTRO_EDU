@@ -50,6 +50,7 @@ function routeLabel(pathname: string): string | undefined {
   if (pathname.startsWith('/dashboard')) return 'Dashboard'
   if (pathname.startsWith('/my-courses')) return 'Khóa học của tôi'
   if (pathname.startsWith('/studio')) return 'Studio'
+  if (pathname.startsWith('/calendar')) return 'Lịch Thiên Văn'
   return undefined
 }
 
@@ -80,6 +81,12 @@ function contextTag(sessionContext: SessionContext): string | null {
   }
   if (sessionContext.surface === 'course' && sessionContext.lessonTitle) {
     return `🤖 Khóa học · ${sessionContext.lessonTitle}`
+  }
+  if (sessionContext.surface === 'calendar') {
+    if (sessionContext.calendarEventTitle) {
+      return `🤖 Lịch · ${sessionContext.calendarEventTitle}`
+    }
+    return '🤖 Lịch Thiên Văn'
   }
   return null
 }

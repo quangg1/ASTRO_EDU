@@ -170,12 +170,11 @@ export function useLandscapePanoramaTexture(): {
   return state
 }
 
-/** Ưu tiên HIP (~9k sao); không dùng ALL_STARS (~35) khi đang chờ fetch. */
+/** Ưu tiên HIP (~9k sao); fallback ALL_STARS nếu chưa fetch xong. */
 function resolveStarCatalog(catalogOverride?: CatalogStar[] | null): CatalogStar[] {
   if (catalogOverride && catalogOverride.length > 0) return catalogOverride
   const sync = getHipBrightCatalogSync()
   if (sync?.length) return sync
-  if (catalogOverride === null) return []
   return ALL_STARS
 }
 

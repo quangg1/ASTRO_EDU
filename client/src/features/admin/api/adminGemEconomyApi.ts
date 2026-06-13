@@ -4,7 +4,7 @@
  */
 import { getApiPathBase } from '@/lib/apiConfig'
 import { readApiResponseJson } from '@/lib/fetchApiJson'
-import { getToken } from '@/features/auth/api/authApi'
+import { apiFetch } from '@/lib/apiRequestInit'
 
 const API_BASE = getApiPathBase()
 
@@ -78,20 +78,14 @@ export type GemEconomyAuditDTO = {
 }
 
 export async function fetchGemEarnConstants(): Promise<GemEarnConstantsResponse> {
-  const token = getToken()
-  const res = await fetch(`${API_BASE}/admin/gem-economy/earn-constants`, {
-    headers: { Authorization: `Bearer ${token}` },
-  })
+  const res = await apiFetch(`${API_BASE}/admin/gem-economy/earn-constants`)
   const json = await readApiResponseJson<{ success?: boolean; data?: GemEarnConstantsResponse }>(res)
   if (!res.ok || !json.success || !json.data) throw new Error('Không tải được bảng GEM_EARN.')
   return json.data
 }
 
 export async function fetchGemRuntimeConfig(): Promise<GemRuntimeConfigDTO> {
-  const token = getToken()
-  const res = await fetch(`${API_BASE}/admin/gem-economy/config`, {
-    headers: { Authorization: `Bearer ${token}` },
-  })
+  const res = await apiFetch(`${API_BASE}/admin/gem-economy/config`)
   const json = await readApiResponseJson<{ success?: boolean; data?: GemRuntimeConfigDTO }>(res)
   if (!res.ok || !json.success || !json.data) throw new Error('Không tải được cấu hình vận hành Gem.')
   return json.data
@@ -100,10 +94,8 @@ export async function fetchGemRuntimeConfig(): Promise<GemRuntimeConfigDTO> {
 export async function patchGemRuntimeConfig(
   body: Record<string, unknown>,
 ): Promise<GemRuntimeConfigDTO> {
-  const token = getToken()
-  const res = await fetch(`${API_BASE}/admin/gem-economy/config`, {
+  const res = await apiFetch(`${API_BASE}/admin/gem-economy/config`, {
     method: 'PATCH',
-    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   })
   const json = await readApiResponseJson<{
@@ -116,10 +108,8 @@ export async function patchGemRuntimeConfig(
 }
 
 export async function fetchGemEconomyMetrics(range: '7d' | '30d' = '7d'): Promise<GemEconomyMetricsDTO> {
-  const token = getToken()
-  const res = await fetch(
+  const res = await apiFetch(
     `${API_BASE}/admin/gem-economy/metrics?range=${encodeURIComponent(range)}`,
-    { headers: { Authorization: `Bearer ${token}` } },
   )
   const json = await readApiResponseJson<{
     success?: boolean
@@ -143,20 +133,15 @@ export async function fetchGemEconomyMetrics(range: '7d' | '30d' = '7d'): Promis
 }
 
 export async function fetchAdminShopItems(): Promise<ShopItemAdminDTO[]> {
-  const token = getToken()
-  const res = await fetch(`${API_BASE}/admin/gem-economy/shop-items`, {
-    headers: { Authorization: `Bearer ${token}` },
-  })
+  const res = await apiFetch(`${API_BASE}/admin/gem-economy/shop-items`)
   const json = await readApiResponseJson<{ success?: boolean; data?: { items?: ShopItemAdminDTO[] } }>(res)
   if (!res.ok || !json.success || !json.data?.items) throw new Error('Không tải được danh mục cửa hàng (admin).')
   return json.data.items
 }
 
 export async function createAdminShopItem(body: Record<string, unknown>): Promise<ShopItemAdminDTO> {
-  const token = getToken()
-  const res = await fetch(`${API_BASE}/admin/gem-economy/shop-items`, {
+  const res = await apiFetch(`${API_BASE}/admin/gem-economy/shop-items`, {
     method: 'POST',
-    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   })
   const json = await readApiResponseJson<{
@@ -169,10 +154,8 @@ export async function createAdminShopItem(body: Record<string, unknown>): Promis
 }
 
 export async function patchAdminShopItem(skuId: string, body: Record<string, unknown>): Promise<ShopItemAdminDTO> {
-  const token = getToken()
-  const res = await fetch(`${API_BASE}/admin/gem-economy/shop-items/${encodeURIComponent(skuId)}`, {
+  const res = await apiFetch(`${API_BASE}/admin/gem-economy/shop-items/${encodeURIComponent(skuId)}`, {
     method: 'PATCH',
-    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   })
   const json = await readApiResponseJson<{
@@ -189,10 +172,8 @@ export async function postManualGemAdjust(payload: {
   delta: number
   reason: string
 }): Promise<{ gemBalance: number; totalGemsEarned: number }> {
-  const token = getToken()
-  const res = await fetch(`${API_BASE}/admin/gem-economy/manual-adjust`, {
+  const res = await apiFetch(`${API_BASE}/admin/gem-economy/manual-adjust`, {
     method: 'POST',
-    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   })
   const json = await readApiResponseJson<{
@@ -219,10 +200,7 @@ export type DecorationCategoryAdminDTO = {
 export type { DecorationBulkImportResult } from '@/features/rewards/api/avatarDecorationApi'
 
 export async function fetchDecorationCategoriesAdmin(): Promise<DecorationCategoryAdminDTO[]> {
-  const token = getToken()
-  const res = await fetch(`${API_BASE}/admin/gem-economy/decoration-categories`, {
-    headers: { Authorization: `Bearer ${token}` },
-  })
+  const res = await apiFetch(`${API_BASE}/admin/gem-economy/decoration-categories`)
   const json = await readApiResponseJson<{
     success?: boolean
     data?: { categories?: DecorationCategoryAdminDTO[] }
@@ -242,10 +220,8 @@ export async function createDecorationCategoryAdmin(body: {
   sortOrder?: number
   visible?: boolean
 }): Promise<DecorationCategoryAdminDTO> {
-  const token = getToken()
-  const res = await fetch(`${API_BASE}/admin/gem-economy/decoration-categories`, {
+  const res = await apiFetch(`${API_BASE}/admin/gem-economy/decoration-categories`, {
     method: 'POST',
-    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   })
   const json = await readApiResponseJson<{
@@ -261,12 +237,10 @@ export async function patchDecorationCategoryAdmin(
   slug: string,
   body: Record<string, unknown>,
 ): Promise<DecorationCategoryAdminDTO> {
-  const token = getToken()
-  const res = await fetch(
+  const res = await apiFetch(
     `${API_BASE}/admin/gem-economy/decoration-categories/${encodeURIComponent(slug)}`,
     {
       method: 'PATCH',
-      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     },
   )
@@ -280,10 +254,8 @@ export async function patchDecorationCategoryAdmin(
 }
 
 export async function fetchGemEconomyAuditLog(limit = 50): Promise<GemEconomyAuditDTO[]> {
-  const token = getToken()
-  const res = await fetch(
+  const res = await apiFetch(
     `${API_BASE}/admin/gem-economy/audit-log?limit=${encodeURIComponent(String(limit))}`,
-    { headers: { Authorization: `Bearer ${token}` } },
   )
   const json = await readApiResponseJson<{ success?: boolean; data?: { items?: GemEconomyAuditDTO[] } }>(res)
   if (!res.ok || !json.success || !json.data?.items) throw new Error('Không tải được nhật ký kiểm tra.')

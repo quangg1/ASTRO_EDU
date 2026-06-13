@@ -85,6 +85,7 @@ const GEM_EARN_LABELS: Record<string, string> = {
   community_helpful_answer: 'Cộng đồng — câu trả lời hữu ích',
   community_helpful_vote: 'Cộng đồng — nhận upvote hữu ích',
   onboarding_complete: 'Hoàn thành onboarding cá nhân hóa',
+  astronomy_event_observed: 'Quan sát sự kiện thiên văn (check-in)',
 }
 
 export function labelGemEarnConstant(key: string | undefined | null): string {
@@ -131,6 +132,7 @@ export const ADMIN_NAV_SCOPES: Record<string, AdminScope> = {
   '/admin/moderation': 'moderation',
   '/admin/audit': 'audit',
   '/admin/system': 'system',
+  '/admin/astronomy-calendar': 'system',
   '/admin/gem-economy': 'gem',
   '/admin/promo-codes': 'promo',
   '/admin/broadcast': 'broadcast',

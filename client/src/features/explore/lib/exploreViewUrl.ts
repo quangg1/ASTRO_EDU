@@ -79,9 +79,20 @@ export function mergeExplorePreservedParams(
 ): string {
   const [path, qs = ''] = baseHref.split('?')
   const out = new URLSearchParams(qs)
-  for (const key of ['from', 'tour', 'topics', 'bridgeDebug', 'depth'] as const) {
+  for (const key of [
+    'from',
+    'tour',
+    'topics',
+    'bridgeDebug',
+    'depth',
+    'lat',
+    'lon',
+    'time',
+    'pollution',
+    'bortle',
+  ] as const) {
     const v = current.get(key)
-    if (v) out.set(key, v)
+    if (v && !out.has(key)) out.set(key, v)
   }
   const merged = out.toString()
   return merged ? `${path}?${merged}` : path

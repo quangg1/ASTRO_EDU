@@ -67,7 +67,8 @@ export function useCosmoAssistantChat({
   const isContextual =
     sessionContext.surface === 'learning_path' ||
     sessionContext.surface === 'explore' ||
-    sessionContext.surface === 'course'
+    sessionContext.surface === 'course' ||
+    sessionContext.surface === 'calendar'
 
   const prefetchKey = useMemo(
     () =>
@@ -81,6 +82,8 @@ export function useCosmoAssistantChat({
         sessionContext.coachTrigger ?? '',
         sessionContext.quizLock ?? '',
         sessionContext.recallQuizActive ? '1' : '0',
+        sessionContext.calendarEventId ?? '',
+        sessionContext.calendarEventTitle ?? '',
         learnerSnapshot?.recentLessonIds?.[0] ?? '',
         learnerSnapshot?.depthSuggestion?.suggestedDepth ?? '',
       ].join('|'),
@@ -94,6 +97,8 @@ export function useCosmoAssistantChat({
       sessionContext.coachTrigger,
       sessionContext.quizLock,
       sessionContext.recallQuizActive,
+      sessionContext.calendarEventId,
+      sessionContext.calendarEventTitle,
       learnerSnapshot?.recentLessonIds,
       learnerSnapshot?.depthSuggestion?.suggestedDepth,
     ],

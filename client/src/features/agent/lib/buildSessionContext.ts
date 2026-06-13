@@ -36,6 +36,15 @@ type BuildParams = {
   activeSectionId?: string | null
   activeSectionTitle?: string | null
   activeSectionExcerpt?: string | null
+  calendarEventId?: string | null
+  calendarEventTitle?: string | null
+  calendarEventType?: string | null
+  calendarEventKind?: 'observable' | 'educational' | null
+  calendarEventSummary?: string | null
+  calendarLessonHref?: string | null
+  calendarExploreView?: 'sky' | 'solar' | null
+  calendarExploreTarget?: string | null
+  calendarUpcomingTitles?: string[] | null
 }
 
 export function buildSessionContext(params: BuildParams): SessionContext {
@@ -70,5 +79,14 @@ export function buildSessionContext(params: BuildParams): SessionContext {
     activeSectionId: params.activeSectionId ?? null,
     activeSectionTitle: params.activeSectionTitle ?? null,
     activeSectionExcerpt: params.activeSectionExcerpt ?? null,
+    calendarEventId: params.calendarEventId ?? null,
+    calendarEventTitle: params.calendarEventTitle ?? null,
+    calendarEventType: params.calendarEventType ?? null,
+    calendarEventKind: params.calendarEventKind ?? null,
+    calendarEventSummary: params.calendarEventSummary ?? null,
+    calendarLessonHref: params.calendarLessonHref ?? null,
+    calendarExploreView: params.calendarExploreView ?? null,
+    calendarExploreTarget: params.calendarExploreTarget ?? null,
+    calendarUpcomingTitles: params.calendarUpcomingTitles ?? null,
   }
 }

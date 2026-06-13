@@ -715,6 +715,18 @@ app = FastAPI(title="Galaxies AI", version="1.0.0")
 _knowledge_lock = asyncio.Lock()
 
 
+def require_internal_service(
+    x_internal_secret: str | None = Header(None, alias="X-Internal-Secret"),
+) -> None:
+    """Chỉ unified API (hoặc script nội bộ) gọi LLM — khớp INTERNAL_API_SECRET."""
+    expected = os.environ.get("INTERNAL_API_SECRET", "").strip()
+    if not expected:
+        return
+    got = (x_internal_secret or "").strip()
+    if not got or got != expected:
+        raise HTTPException(status_code=401, detail="Thiếu hoặc sai INTERNAL_API_SECRET")
+
+
 def require_knowledge_admin(
     authorization: str | None = Header(None),
     x_knowledge_token: str | None = Header(None, alias="X-Knowledge-Token"),
@@ -1144,7 +1156,7 @@ async def knowledge_delete_prefix(
     return result
 
 
-@app.post("/rag/search")
+@app.post("/rag/search", dependencies=[Depends(require_internal_service)])
 async def rag_search(body: RagSearchBody):
     """
   Semantic search trên rag_index (embedding). Dùng bởi agent tools — không cần admin token.
@@ -1161,7 +1173,7 @@ async def rag_search(body: RagSearchBody):
     return {"hits": hits, "rag_ms": round(rag_ms, 1), "count": len(hits)}
 
 
-@app.post("/chat")
+@app.post("/chat", dependencies=[Depends(require_internal_service)])
 async def chat(body: ChatRequestBody):
     messages = [m.model_dump() for m in body.messages]
     if is_request_blocked(messages):
@@ -1521,7 +1533,7 @@ async def _chat_stream_generator(body: ChatRequestBody) -> AsyncIterator[str]:
     yield _sse_line("done", done_payload)
 
 
-@app.post("/chat/stream")
+@app.post("/chat/stream", dependencies=[Depends(require_internal_service)])
 async def chat_stream(body: ChatRequestBody):
     """SSE: event token {content} … event done {message, tool_calls, rag_ms}."""
     return StreamingResponse(
@@ -1535,7 +1547,7 @@ async def chat_stream(body: ChatRequestBody):
     )
 
 
-@app.post("/quiz/generate-concept")
+@app.post("/quiz/generate-concept", dependencies=[Depends(require_internal_service)])
 async def generate_concept_quiz(body: ConceptQuizGenerateBody):
     """Quiz on-demand theo concept — nguồn từ LP, không dùng recallQuiz cố định."""
     concept_id = body.concept_id.strip()
@@ -1586,7 +1598,7 @@ async def generate_concept_quiz(body: ConceptQuizGenerateBody):
     return {"quiz": quiz, "conceptId": concept_id}
 
 
-@app.post("/quiz/generate")
+@app.post("/quiz/generate", dependencies=[Depends(require_internal_service)])
 async def generate_quiz(body: QuizGenerateRequestBody):
     lesson = body.lesson or {}
     lesson_id = str(lesson.get("id") or "").strip()

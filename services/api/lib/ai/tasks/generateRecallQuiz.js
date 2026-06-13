@@ -1,6 +1,7 @@
 const fetch = require('node-fetch');
 const { runWithFallback } = require('../chatCompletion');
 const { normalizeQuizList, newQuizQuestionId } = require('../../../shared/quizQuestion');
+const { internalServiceHeaders } = require('../../../shared/internalServiceAuth');
 const AI_SERVICE_URL = (process.env.AI_SERVICE_URL || '').trim();
 
 function flattenSectionText(sections) {
@@ -73,7 +74,7 @@ async function generateRecallQuizFromLesson(lesson) {
     try {
       const r = await fetch(`${AI_SERVICE_URL.replace(/\/$/, '')}/quiz/generate`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...internalServiceHeaders() },
         body: JSON.stringify({ lesson }),
       });
       const data = await r.json().catch(() => ({}));

@@ -1,5 +1,6 @@
+import { hasClientSession } from '@/features/auth/public'
 import { getApiPathBase } from '@/lib/apiConfig'
-import { apiClientHeaders } from '@/lib/apiClientHeaders'
+import { apiClientHeaders, apiFetchInit } from '@/lib/apiClientHeaders'
 const API = `${getApiPathBase()}/tutorials`
 
 export interface TutorialCategory {
@@ -114,11 +115,8 @@ export async function fetchTutorialTracks(): Promise<TutorialTrack[]> {
 export async function fetchTrackProgress(
   trackSlug: string,
 ): Promise<{ items: string[]; progress: Record<string, { status: string }> } | null> {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('galaxies_token') : null
-  if (!token) return null
-  const res = await fetch(`${API}/tracks/${encodeURIComponent(trackSlug)}/progress`, {
-    headers: { Authorization: `Bearer ${token}` },
-  })
+  if (!hasClientSession()) return null
+  const res = await fetch(`${API}/tracks/${encodeURIComponent(trackSlug)}/progress`, apiFetchInit())
   const data = await res.json()
   if (data.success && data.data) return data.data
   return null
@@ -132,32 +130,23 @@ export async function fetchTutorial(slug: string): Promise<Tutorial | null> {
 }
 
 export async function completeTutorial(slug: string): Promise<{ success: boolean }> {
-  const res = await fetch(`${API}/${encodeURIComponent(slug)}/progress/complete`, {
+  const res = await fetch(`${API}/${encodeURIComponent(slug)}/progress/complete`, apiFetchInit({
     method: 'POST',
-    headers: (() => {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('galaxies_token') : null
-      const h: HeadersInit = { 'Content-Type': 'application/json' }
-      if (token) (h as Record<string, string>)['Authorization'] = `Bearer ${token}`
-      return h
-    })(),
-  })
+  }))
   const data = await res.json()
   return { success: !!data.success }
 }
 
 /** Editor API – cần auth (teacher/admin) */
 function authHeaders(): HeadersInit {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('galaxies_token') : null
-  const h: HeadersInit = { 'Content-Type': 'application/json' }
-  if (token) (h as Record<string, string>)['Authorization'] = `Bearer ${token}`
-  return h
+  return apiClientHeaders()
 }
 
 export async function fetchTutorialsForEditor(): Promise<{
   tutorials: Tutorial[]
   categories: TutorialCategory[]
 }> {
-  const res = await fetch(`${API}/editor/all`, { headers: authHeaders() })
+  const res = await fetch(`${API}/editor/all`, apiFetchInit({ headers: authHeaders() }))
   const data = await res.json()
   if (data.success && data.data)
     return {
@@ -171,7 +160,7 @@ export async function fetchTutorialForEditor(slug: string): Promise<{
   tutorial: Tutorial
   categories: TutorialCategory[]
 } | null> {
-  const res = await fetch(`${API}/editor/${encodeURIComponent(slug)}`, { headers: authHeaders() })
+  const res = await fetch(`${API}/editor/${encodeURIComponent(slug)}`, apiFetchInit({ headers: authHeaders() }))
   const data = await res.json()
   if (data.success && data.data) return data.data
   return null
@@ -188,11 +177,11 @@ export async function createTutorial(payload: {
   relatedSlugs?: string[]
   published?: boolean
 }): Promise<{ success: boolean; data?: Tutorial; error?: string }> {
-  const res = await fetch(`${API}/editor`, {
+  const res = await fetch(`${API}/editor`, apiFetchInit({
     method: 'POST',
     headers: authHeaders(),
     body: JSON.stringify(payload),
-  })
+  }))
   const data = await res.json()
   if (data.success) return { success: true, data: data.data }
   return { success: false, error: data.error || 'Tạo bài viết thất bại' }
@@ -211,21 +200,21 @@ export async function updateTutorial(
     published: boolean
   }>
 ): Promise<{ success: boolean; error?: string }> {
-  const res = await fetch(`${API}/editor/${encodeURIComponent(slug)}`, {
+  const res = await fetch(`${API}/editor/${encodeURIComponent(slug)}`, apiFetchInit({
     method: 'PUT',
     headers: authHeaders(),
     body: JSON.stringify(payload),
-  })
+  }))
   const data = await res.json()
   if (data.success) return { success: true }
   return { success: false, error: data.error || 'Lưu thất bại' }
 }
 
 export async function deleteTutorial(slug: string): Promise<{ success: boolean; error?: string }> {
-  const res = await fetch(`${API}/editor/${encodeURIComponent(slug)}`, {
+  const res = await fetch(`${API}/editor/${encodeURIComponent(slug)}`, apiFetchInit({
     method: 'DELETE',
     headers: authHeaders(),
-  })
+  }))
   const data = await res.json()
   if (data.success) return { success: true }
   return { success: false, error: data.error || 'Xóa thất bại' }

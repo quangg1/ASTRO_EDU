@@ -1,5 +1,6 @@
 import { getApiPathBase } from '@/lib/apiConfig'
-import { getToken } from '@/features/auth/public'
+import { hasClientSession } from '@/features/auth/public'
+import { apiFetch } from '@/lib/apiRequestInit'
 import { syncGemWallet } from '@/features/rewards/public'
 
 export type LearningPathBehaviorEventName =
@@ -147,21 +148,15 @@ function bindLifecycleListeners() {
 
 export async function attributeGuestLearningSessionToUser() {
   if (typeof window === 'undefined') return
-  const token = getToken()
   const anonSessionId = getAnonLearningSessionId()
-  if (!token || !anonSessionId) return
+  if (!hasClientSession() || !anonSessionId) return
 
   const flagKey = `${ANON_ATTRIBUTED_PREFIX}${anonSessionId}`
   if (window.localStorage.getItem(flagKey)) return
 
   try {
-    const res = await fetch(`${getApiPathBase()}/learning-path/attribute-session`, {
+    const res = await apiFetch(`${getApiPathBase()}/learning-path/attribute-session`, {
       method: 'POST',
-      credentials: 'omit',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
       body: JSON.stringify({ anonSessionId }),
     })
     if (res.ok) {
@@ -202,15 +197,9 @@ export async function flushLearningPathBehavior(opts?: { keepalive?: boolean }) 
   queue = queue.slice(MAX_BATCH_SIZE)
 
   try {
-    const token = getToken()
-    const res = await fetch(`${getApiPathBase()}/learning-path/events/batch`, {
+    const res = await apiFetch(`${getApiPathBase()}/learning-path/events/batch`, {
       method: 'POST',
-      credentials: 'omit',
       keepalive: Boolean(opts?.keepalive),
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
       body: JSON.stringify({ events: batch, schemaVersion: SCHEMA_VERSION }),
     })
     const data = (await res.json().catch(() => null)) as {
@@ -229,7 +218,7 @@ export async function flushLearningPathBehavior(opts?: { keepalive?: boolean }) 
       void syncGemWallet()
       window.dispatchEvent(new CustomEvent('gem-wallet-changed'))
     }
-    if (token) {
+    if (hasClientSession()) {
       void attributeGuestLearningSessionToUser()
     }
   } catch {

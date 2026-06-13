@@ -16,6 +16,8 @@ export {
   getToken,
   setToken,
   clearToken,
+  logout,
+  hasClientSession,
   getUserFromStoredToken,
 } from './api/authApi'
 export type { AuthUser, AuthResponse } from './api/authApi'

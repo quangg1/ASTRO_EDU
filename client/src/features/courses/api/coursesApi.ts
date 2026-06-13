@@ -1,6 +1,6 @@
 import { parseCourseEditorListResponse } from '@galaxies/contracts'
 import { getToken } from '@/features/auth/public'
-import { apiClientHeaders } from '@/lib/apiClientHeaders'
+import { apiClientHeaders, apiFetchInit } from '@/lib/apiClientHeaders'
 import { getApiPathBase, getUploadBase } from '@/lib/apiConfig'
 import type { QuizQuestion } from '@/shared/types/quizQuestion'
 import type { VideoTranscript } from '@/features/courses/lib/videoTranscript'
@@ -207,7 +207,7 @@ export interface MyCourse {
 }
 
 export async function fetchMyCourses(): Promise<MyCourse[]> {
-  const res = await fetch(`${COURSES_BASE}/courses/my`, { headers: authHeaders() })
+  const res = await fetch(`${COURSES_BASE}/courses/my`, apiFetchInit({ headers: authHeaders() }))
   const data = await res.json()
   if (data.success && Array.isArray(data.data)) return data.data
   return []
@@ -228,7 +228,7 @@ export async function fetchCourses(filters?: string | FetchCoursesOpts): Promise
     if (opts.pricing === 'free' || opts.pricing === 'paid') qs.set('pricing', opts.pricing)
     const suffix = qs.toString()
     const url = suffix ? `${COURSES_BASE}/courses?${suffix}` : `${COURSES_BASE}/courses`
-    const res = await fetch(url, { headers: authHeaders() })
+    const res = await fetch(url, apiFetchInit({ headers: authHeaders() }))
     const data = await res.json()
     if (data.success && Array.isArray(data.data)) return data.data
     return []
@@ -241,10 +241,10 @@ export async function fetchCourses(filters?: string | FetchCoursesOpts): Promise
 export async function fetchCourseOutline(
   slug: string,
 ): Promise<{ course: Course | null; error?: string }> {
-  const res = await fetch(`${COURSES_BASE}/courses/${encodeURIComponent(slug)}?outline=1`, {
+  const res = await fetch(`${COURSES_BASE}/courses/${encodeURIComponent(slug)}?outline=1`, apiFetchInit({
     headers: authHeaders(),
     cache: 'no-store',
-  })
+  }))
   const data = await res.json()
   if (data.success && data.data) return { course: data.data }
   return { course: null, error: data.error || (res.status === 401 ? 'Phiên đăng nhập hết hạn' : undefined) }
@@ -252,7 +252,7 @@ export async function fetchCourseOutline(
 
 /** Danh sách khóa học cho Studio (teacher/admin), gồm cả chưa publish */
 export async function fetchCoursesForEditor(): Promise<Course[]> {
-  const res = await fetch(`${COURSES_BASE}/courses/editor/list`, { headers: authHeaders() })
+  const res = await fetch(`${COURSES_BASE}/courses/editor/list`, apiFetchInit({ headers: authHeaders() }))
   const data = await res.json()
   if (!data?.success) return []
   try {
@@ -272,17 +272,17 @@ export type CourseEditorTeacherOption = {
 
 /** Admin Studio — chọn giảng viên hiển thị trên trang khóa học */
 export async function fetchTeachersForCourseEditor(): Promise<CourseEditorTeacherOption[]> {
-  const res = await fetch(`${COURSES_BASE}/courses/editor/teachers`, { headers: authHeaders() })
+  const res = await fetch(`${COURSES_BASE}/courses/editor/teachers`, apiFetchInit({ headers: authHeaders() }))
   const data = await res.json()
   if (data.success && Array.isArray(data.data)) return data.data
   return []
 }
 
 export async function fetchCourse(slug: string): Promise<Course | null> {
-  const res = await fetch(`${COURSES_BASE}/courses/${encodeURIComponent(slug)}`, {
+  const res = await fetch(`${COURSES_BASE}/courses/${encodeURIComponent(slug)}`, apiFetchInit({
     headers: authHeaders(),
     cache: 'no-store',
-  })
+  }))
   if (!res.ok) return null
   const data = await res.json()
   if (data.success && data.data) return data.data
@@ -298,10 +298,10 @@ export async function enrollCourse(slug: string): Promise<{
   amount?: number
   currency?: string
 }> {
-  const res = await fetch(`${COURSES_BASE}/courses/${encodeURIComponent(slug)}/enroll`, {
+  const res = await fetch(`${COURSES_BASE}/courses/${encodeURIComponent(slug)}/enroll`, apiFetchInit({
     method: 'POST',
     headers: authHeaders(),
-  })
+  }))
   const data = await res.json()
   if (data.success) return { success: true }
   return {
@@ -320,11 +320,11 @@ export async function updateLessonProgress(
   lessonSlug: string,
   completed: boolean
 ): Promise<{ success: boolean; error?: string }> {
-  const res = await fetch(`${COURSES_BASE}/courses/${encodeURIComponent(slug)}/progress`, {
+  const res = await fetch(`${COURSES_BASE}/courses/${encodeURIComponent(slug)}/progress`, apiFetchInit({
     method: 'PATCH',
     headers: authHeaders(),
     body: JSON.stringify({ lessonSlug, completed }),
-  })
+  }))
   const data = await res.json()
   if (data.success) return { success: true }
   return { success: false, error: data.error || 'Cập nhật thất bại' }
@@ -365,12 +365,9 @@ export async function uploadMedia(
   file: File,
   context?: UploadMediaContext,
 ): Promise<{ success: boolean; url?: string; storageKey?: string; error?: string }> {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('galaxies_token') : null
   const form = new FormData()
   form.append('file', file)
   appendUploadContext(form, context)
-  const headers: HeadersInit = {}
-  if (token) headers['Authorization'] = `Bearer ${token}`
 
   let uploadBase = ''
   try {
@@ -380,7 +377,10 @@ export async function uploadMedia(
   }
 
   try {
-    const res = await fetch(`${uploadBase}/upload`, { method: 'POST', headers, body: form })
+    const res = await fetch(
+      `${uploadBase}/upload`,
+      apiFetchInit({ method: 'POST', body: form }, false),
+    )
     let data: { success?: boolean; url?: string; storageKey?: string; error?: string }
     try {
       data = (await res.json()) as typeof data
@@ -401,10 +401,10 @@ export async function uploadMedia(
 
 export async function fetchCourseForEditor(slug: string): Promise<CourseEditorPayload | null> {
   try {
-    const res = await fetch(`${COURSES_BASE}/courses/${encodeURIComponent(slug)}/editor`, {
+    const res = await fetch(`${COURSES_BASE}/courses/${encodeURIComponent(slug)}/editor`, apiFetchInit({
       headers: authHeaders(),
       cache: 'no-store',
-    })
+    }))
     if (!res.ok || res.status === 304) return null
     const data = await res.json()
     if (data.success && data.data) return data.data as CourseEditorPayload
@@ -423,22 +423,22 @@ export async function saveCourseFromEditor(
     crossSellTutorialBodyVi?: string
   }
 ): Promise<{ success: boolean; error?: string }> {
-  const res = await fetch(`${COURSES_BASE}/courses/${encodeURIComponent(slug)}/editor`, {
+  const res = await fetch(`${COURSES_BASE}/courses/${encodeURIComponent(slug)}/editor`, apiFetchInit({
     method: 'PUT',
     headers: authHeaders(),
     body: JSON.stringify(payload),
-  })
+  }))
   const data = await res.json()
   if (data.success) return { success: true }
   return { success: false, error: data.error || 'Lưu khóa học thất bại' }
 }
 
 export async function createCourse(title: string, slug?: string): Promise<{ success: boolean; slug?: string; error?: string }> {
-  const res = await fetch(`${COURSES_BASE}/courses`, {
+  const res = await fetch(`${COURSES_BASE}/courses`, apiFetchInit({
     method: 'POST',
     headers: authHeaders(),
     body: JSON.stringify({ title: title.trim(), slug: slug?.trim() || undefined }),
-  })
+  }))
   const data = await res.json()
   if (data.success && data.data?.slug) return { success: true, slug: data.data.slug }
   return { success: false, error: data.error || 'Tạo khóa học thất bại' }

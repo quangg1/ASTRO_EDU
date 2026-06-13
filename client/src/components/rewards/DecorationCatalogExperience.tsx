@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { AvatarWithDecoration } from '@/components/profile/AvatarWithDecoration'
 import { DecorationCategoryBanner } from '@/components/profile/DecorationCategoryBanner'
 import { DecorationOverlayThumb } from '@/components/profile/DecorationOverlayThumb'
-import { getToken } from '@/features/auth/api/authApi'
+import { hasClientSession } from '@/features/auth/public'
 import {
   equipAvatarDecoration,
   fetchMyDecorationState,
@@ -101,7 +101,7 @@ export function DecorationCatalogExperience({
   const { t } = useT()
   const sectionTitle = fallbackSectionTitle ?? t('decorations.fallbackTitle')
   const isProfile = mode === 'profile'
-  const loggedIn = Boolean(getToken())
+  const loggedIn = hasClientSession()
 
   const [loading, setLoading] = useState(isProfile)
   const [busySku, setBusySku] = useState<string | null>(null)

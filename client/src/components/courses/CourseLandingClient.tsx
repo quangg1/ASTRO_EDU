@@ -13,7 +13,7 @@ import {
   type CourseModule,
   type Lesson,
 } from '@/features/courses/api/coursesApi'
-import { getToken } from '@/features/auth/public'
+import { hasClientSession } from '@/features/auth/public'
 import { resolveMediaUrl } from '@/lib/apiConfig'
 import { courseLevelLabel, courseRequiresPayment, formatCatalogPrice } from '@/components/courses/courseCatalogMeta'
 import { trackEvent } from '@/lib/analytics'
@@ -122,7 +122,7 @@ export function CourseLandingClient({
     let cancelled = false
     setLoading(true)
     setLoadError(null)
-    if (!getToken()) {
+    if (!hasClientSession()) {
       setLoadError('Chưa đăng nhập trong cửa sổ này. Mở preview từ Studio (cùng tab) hoặc đăng nhập lại.')
       setLoading(false)
       return

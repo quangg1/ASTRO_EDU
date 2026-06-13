@@ -29,7 +29,10 @@ export function useExploreModeState() {
     return null
   }, [searchParams])
 
-  const planetHistoryEntityId = historyEntityFromUrl
+  /** Mở Lịch sử sâu ngay khi bấm — tránh race với URL sync trước khi `?history=1` kịp apply. */
+  const [planetHistoryPendingId, setPlanetHistoryPendingId] = useState<string | null>(null)
+
+  const planetHistoryEntityId = historyEntityFromUrl ?? planetHistoryPendingId
   const planetHistoryOpen = planetHistoryEntityId != null
 
   const targetFromUrl = useMemo(() => {
@@ -51,6 +54,9 @@ export function useExploreModeState() {
   const [selectedSolarPlanetIndex, setSelectedSolarPlanetIndex] = useState<number | null>(2)
 
   useEffect(() => {
+    if (historyEntityFromUrl) {
+      setPlanetHistoryPendingId(null)
+    }
     if (stageParam != null && stageParam !== '') {
       setEarthHistoryOpen(true)
     }
@@ -100,11 +106,14 @@ export function useExploreModeState() {
 
   const openPlanetHistory = useCallback(
     (entityId: string, focus?: { beatId?: number; pinId?: string }) => {
+      const id = String(entityId || '').trim()
+      if (!id) return
       setEarthHistoryOpen(false)
-      setShowcaseActiveItemId(entityId)
+      setPlanetHistoryPendingId(id)
+      setShowcaseActiveItemId(id)
       const next = new URLSearchParams(searchParams.toString())
       next.set('view', 'solar')
-      next.set('entity', entityId)
+      next.set('entity', id)
       next.set('history', '1')
       next.delete('stage')
       next.delete('target')
@@ -121,6 +130,7 @@ export function useExploreModeState() {
   )
 
   const closePlanetHistory = useCallback(() => {
+    setPlanetHistoryPendingId(null)
     const next = new URLSearchParams(searchParams.toString())
     next.delete('history')
     next.delete('beat')

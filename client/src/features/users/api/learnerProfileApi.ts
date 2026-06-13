@@ -1,6 +1,6 @@
 import { getApiPathBase } from '@/lib/apiConfig'
-import { apiClientHeaders } from '@/lib/apiClientHeaders'
-import { getToken } from '@/features/auth/public'
+import { apiFetchInit } from '@/lib/apiClientHeaders'
+import { hasClientSession } from '@/features/auth/public'
 
 const API = `${getApiPathBase()}/users`
 
@@ -21,18 +21,13 @@ export type LearnerProfile = {
 }
 
 function authHeaders(): HeadersInit {
-  const token = getToken()
-  return {
-    'Content-Type': 'application/json',
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-  }
+  return { 'Content-Type': 'application/json' }
 }
 
 export async function fetchMyLearnerProfile(): Promise<LearnerProfile | null> {
-  const token = getToken()
-  if (!token) return null
+  if (!hasClientSession()) return null
   try {
-    const res = await fetch(`${API}/me/learner-profile`, { headers: authHeaders(), cache: 'no-store' })
+    const res = await fetch(`${API}/me/learner-profile`, apiFetchInit({ headers: authHeaders(), cache: 'no-store' }))
     const data = await res.json()
     if (!res.ok || !data?.success) return null
     return data.data as LearnerProfile
@@ -44,13 +39,12 @@ export async function fetchMyLearnerProfile(): Promise<LearnerProfile | null> {
 export async function updateMyLearnerProfile(
   patch: Partial<LearnerProfile>,
 ): Promise<{ success: boolean; data?: LearnerProfile; error?: string }> {
-  const token = getToken()
-  if (!token) return { success: false, error: 'Chưa đăng nhập' }
-  const res = await fetch(`${API}/me/learner-profile`, {
+  if (!hasClientSession()) return { success: false, error: 'Chưa đăng nhập' }
+  const res = await fetch(`${API}/me/learner-profile`, apiFetchInit({
     method: 'PATCH',
     headers: authHeaders(),
     body: JSON.stringify(patch),
-  })
+  }))
   const data = await res.json()
   if (!res.ok || !data?.success) {
     return { success: false, error: data?.error || 'Lưu thất bại' }

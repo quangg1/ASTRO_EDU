@@ -10,9 +10,11 @@ import { STEREO_PROJECT_FN, STEREO_UNIFORMS } from './stereographicGlsl'
 type Props = {
   geometry: THREE.BufferGeometry
   fovDeg: number
+  /** 1 = đêm, 0 = ban ngày */
+  nightVisibility?: number
 }
 
-export function StereographicStarfield({ geometry, fovDeg }: Props) {
+export function StereographicStarfield({ geometry, fovDeg, nightVisibility = 1 }: Props) {
   const matRef = useRef<THREE.ShaderMaterial>(null)
   const stereo = useStereographicUniforms()
   const clockRef = useRef(0)
@@ -26,6 +28,7 @@ export function StereographicStarfield({ geometry, fovDeg }: Props) {
       uTanHalfFov: { value: 1 },
       uMaxTheta: { value: Math.PI },
       uAspect: { value: 1 },
+      uNightVis: { value: 1 },
     }),
     [],
   )
@@ -67,6 +70,7 @@ export function StereographicStarfield({ geometry, fovDeg }: Props) {
   const fragmentShader = useMemo(
     () => /* glsl */ `
       uniform float uTime;
+      uniform float uNightVis;
       varying float vOpacity;
       varying float vGlow;
       varying float vPhase;
@@ -78,8 +82,8 @@ export function StereographicStarfield({ geometry, fovDeg }: Props) {
         float core = smoothstep(0.22, 0.0, r);
         float halo = vGlow * smoothstep(0.85, 0.12, r) * 0.5;
         float tw = 0.88 + 0.12 * sin(uTime * (2.2 + vPhase * 0.15) + vPhase);
-        float lum = (core * 1.35 + halo) * vOpacity * tw;
-        if (lum < 0.008) discard;
+        float lum = (core * 1.35 + halo) * vOpacity * tw * uNightVis;
+        if (lum < 0.003) discard;
         vec3 rgb = vColor * lum;
         gl_FragColor = vec4(rgb, lum);
       }
@@ -97,11 +101,12 @@ export function StereographicStarfield({ geometry, fovDeg }: Props) {
     mat.uniforms.uMaxTheta.value = stereo.maxTheta
     mat.uniforms.uAspect.value = stereo.aspect
     mat.uniforms.uPointScale.value = 2.65 + (150 - fovDeg) * 0.018
+    mat.uniforms.uNightVis.value = nightVisibility
   }
 
   useLayoutEffect(() => {
     syncUniforms(clockRef.current)
-  }, [stereo, fovDeg])
+  }, [stereo, fovDeg, nightVisibility])
 
   useFrame((state) => {
     clockRef.current = state.clock.elapsedTime

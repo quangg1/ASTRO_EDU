@@ -11,7 +11,7 @@ import {
   type Forum,
   type Post,
 } from '@/features/community/api/communityApi'
-import { getToken } from '@/features/auth/public'
+import { hasClientSession } from '@/features/auth/public'
 import {
   createPostBodyFromContext,
   parseComposeContext,
@@ -111,7 +111,7 @@ export function DiscussionForumView({ forum, slug, user }: Props) {
 
   const handleCreatePost = async () => {
     if (!newTitle.trim()) return
-    if (!user || !getToken()) {
+    if (!user || !hasClientSession()) {
       const qs = typeof window !== 'undefined' ? window.location.search : ''
       router.push(`/login?redirect=${encodeURIComponent(`/community/${slug}${qs}`)}`)
       return
