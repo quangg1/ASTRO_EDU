@@ -69,7 +69,7 @@ const GEM_PATH_WAYS = [
     reward: `+${GEM_REWARD_LEARNING_PATH_LESSON}`,
   },
   {
-    label: 'Độ sâu bài học lần đầu (Beginner / Explorer / Researcher)',
+    label: 'Độ sâu bài học lần đầu (Cơ bản / Cơ chế / Chuyên sâu)',
     reward: '+8 / +14 / +20',
   },
   {

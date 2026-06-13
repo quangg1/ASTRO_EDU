@@ -20,26 +20,32 @@ export const DEPTH_META: Record<
   { label: string; labelVi: string; short: string; color: string; gradient: string }
 > = {
   beginner: {
-    label: 'Beginner',
+    label: 'Cơ bản',
     labelVi: 'Cơ bản',
     short: '🟢',
     color: 'text-emerald-300',
     gradient: 'from-emerald-500/30 to-cyan-500/20',
   },
   explorer: {
-    label: 'Explorer',
+    label: 'Cơ chế',
     labelVi: 'Cơ chế',
     short: '🔵',
     color: 'text-sky-300',
     gradient: 'from-sky-500/30 to-blue-500/20',
   },
   researcher: {
-    label: 'Researcher',
-    labelVi: 'Sâu',
+    label: 'Chuyên sâu',
+    labelVi: 'Chuyên sâu',
     short: '🔴',
     color: 'text-ds-accent',
     gradient: 'from-violet-500/30 to-fuchsia-500/20',
   },
+}
+
+/** Nhãn hiển thị tầng lộ trình (enum API vẫn là beginner | explorer | researcher). */
+export function depthLabelVi(depth: DepthLevel | string | null | undefined): string {
+  const key = String(depth || '').trim() as DepthLevel
+  return DEPTH_META[key]?.labelVi ?? String(depth || '')
 }
 
 /** Cụm trong nội dung bài map tới concept (do giáo viên gắn trong Studio). */

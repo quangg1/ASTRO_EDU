@@ -16,7 +16,7 @@ const FAQ_ENTRIES = [
   {
     keys: ['lo trinh o dau', 'hoc o dau', 'bat dau hoc o dau', 'vao lo trinh'],
     answer:
-      'Vào **Lộ trình học** từ menu hoặc `/tutorial` — chọn module (Lịch sử Trái Đất, Hệ Mặt Trời, Ngân hà…) rồi mở bài theo mức Beginner / Explorer / Researcher.',
+      'Vào **Lộ trình học** từ menu hoặc `/tutorial` — chọn module (Lịch sử Trái Đất, Hệ Mặt Trời, Ngân hà…) rồi mở bài theo mức Cơ bản / Cơ chế / Chuyên sâu.',
   },
   {
     keys: ['khoa hoc o dau', 'xem khoa hoc', 'catalog khoa hoc'],
@@ -46,7 +46,7 @@ const FAQ_ENTRIES = [
   {
     keys: ['depth la gi', 'muc do hoc', 'beginner explorer researcher'],
     answer:
-      'Lộ trình có 3 mức: **Beginner** (cơ bản), **Explorer** (mở rộng), **Researcher** (sâu). Mình có thể gợi chuyển mức nếu thấy bạn cần.',
+      'Lộ trình có 3 mức: **Cơ bản**, **Cơ chế**, **Chuyên sâu**. Mình có thể gợi chuyển mức nếu thấy bạn cần.',
   },
   {
     keys: ['ban co the lam gi', 'ban giup gi duoc', 'tro ly giup gi'],

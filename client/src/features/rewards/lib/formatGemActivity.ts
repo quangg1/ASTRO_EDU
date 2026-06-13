@@ -1,3 +1,4 @@
+import { depthLabelVi } from '@/data/learningPathCurriculum'
 import type { GemTransaction } from '@/features/rewards/api/gemsWalletApi'
 
 const REASON_LABELS: Record<string, string> = {
@@ -21,9 +22,9 @@ const REASON_LABELS: Record<string, string> = {
 }
 
 const DEPTH_LABELS: Record<string, string> = {
-  beginner: 'Người mới',
-  explorer: 'Khám phá',
-  researcher: 'Nghiên cứu',
+  beginner: depthLabelVi('beginner'),
+  explorer: depthLabelVi('explorer'),
+  researcher: depthLabelVi('researcher'),
 }
 
 function humanizeReasonCode(raw: string): string {

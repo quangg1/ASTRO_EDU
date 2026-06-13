@@ -23,7 +23,7 @@ export function SpaceMissionCard({
   title,
   metaPrimary,
   metaSecondary,
-  badge = 'Explorer',
+  badge = 'Cơ chế',
   progressLabel,
   href,
   moduleId = 'intro-scale',

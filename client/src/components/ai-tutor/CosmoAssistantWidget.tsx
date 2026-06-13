@@ -18,6 +18,7 @@ import {
 import { inferSessionContextFromPath } from '@/features/agent/lib/inferSessionContextFromPath'
 import { useAgentPageContextStore } from '@/features/agent/stores/useAgentPageContextStore'
 import { useCosmoAssistantChat } from '@/features/agent/hooks/useCosmoAssistantChat'
+import { depthLabelVi } from '@/data/learningPathCurriculum'
 import { CosmoChatHistoryPanel } from '@/features/agent/ui/CosmoChatHistoryPanel'
 import type { OpenCosmoAssistantDetail } from '@/features/agent/lib/openCosmoAssistant'
 import type { SessionContext } from '@/features/agent/types'
@@ -652,7 +653,7 @@ function CosmoAssistantInner() {
                           chat.setDepthBanner(null)
                         }}
                       >
-                        Chuyển sang {chat.depthBanner.depth}
+                        Chuyển sang {depthLabelVi(chat.depthBanner.depth)}
                       </button>
                       <button
                         type="button"

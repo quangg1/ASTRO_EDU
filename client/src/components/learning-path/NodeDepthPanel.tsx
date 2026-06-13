@@ -66,10 +66,10 @@ export default function NodeDepthPanel({ module, node }: Props) {
   const depthStyle = useMemo(
     () =>
       ({
-        beginner: { label: t('learningPath.depthBeginner'), labelVi: t('learningPath.depthBasic'), orbColor: DEPTH_ORB.beginner },
-        explorer: { label: t('learningPath.depthExplorer'), labelVi: t('learningPath.depthMechanism'), orbColor: DEPTH_ORB.explorer },
-        researcher: { label: t('learningPath.depthResearcher'), labelVi: t('learningPath.depthDeep'), orbColor: DEPTH_ORB.researcher },
-      }) satisfies Record<DepthLevel, { label: string; labelVi: string; orbColor: string }>,
+        beginner: { label: t('learningPath.depthBasic'), orbColor: DEPTH_ORB.beginner },
+        explorer: { label: t('learningPath.depthMechanism'), orbColor: DEPTH_ORB.explorer },
+        researcher: { label: t('learningPath.depthDeep'), orbColor: DEPTH_ORB.researcher },
+      }) satisfies Record<DepthLevel, { label: string; orbColor: string }>,
     [t],
   )
   const depths = useMemo(() => DEPTH_ORDER.filter((d) => (node.depths[d]?.length ?? 0) > 0), [node])
@@ -201,14 +201,6 @@ export default function NodeDepthPanel({ module, node }: Props) {
                 verticalAlign: 'middle', marginRight: 8,
               }}>
                 {ds.label}
-              </span>
-              <span style={{
-                fontFamily: "'JetBrains Mono',monospace",
-                fontSize: 10, letterSpacing: '0.14em', textTransform: 'uppercase',
-                color: isOn ? CYAN : '#3a4a6a',
-                verticalAlign: 'middle',
-              }}>
-                {ds.labelVi}
               </span>
               <span style={{
                 position: 'absolute', top: 8, right: 10,

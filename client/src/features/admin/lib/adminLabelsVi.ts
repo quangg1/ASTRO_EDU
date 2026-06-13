@@ -73,9 +73,9 @@ export function labelEnrollmentStatusVi(status: string | undefined | null): stri
 
 const GEM_EARN_LABELS: Record<string, string> = {
   lp_complete_dwell: 'Hoàn thành bài học (đủ thời gian đọc)',
-  depth_beginner: 'Hoàn thành mức Người mới',
-  depth_explorer: 'Hoàn thành mức Khám phá',
-  depth_researcher: 'Hoàn thành mức Nghiên cứu',
+  depth_beginner: 'Hoàn thành mức Cơ bản',
+  depth_explorer: 'Hoàn thành mức Cơ chế',
+  depth_researcher: 'Hoàn thành mức Chuyên sâu',
   recall_quiz_first: 'Đạt quiz nhớ lần đầu',
   recall_quiz_retry: 'Đạt quiz nhớ khi ôn lại',
   scene_entity_discovered: 'Khám phá vật thể 3D mới',

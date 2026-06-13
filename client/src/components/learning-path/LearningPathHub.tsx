@@ -14,7 +14,7 @@ import { useAuthStore } from '@/features/auth/public'
 import { Network } from 'lucide-react'
 import { SpaceMissionCard, SpaceStar } from '@/components/space-premium'
 
-const MISSION_BADGES = ['Beginner', 'Explorer', 'Researcher', 'Beginner', 'Explorer', 'Advanced']
+const MISSION_BADGES = ['Cơ bản', 'Cơ chế', 'Chuyên sâu', 'Cơ bản', 'Cơ chế', 'Nâng cao']
 
 // ── Design tokens ──────────────────────────────────────
 const AMBER = 'var(--color-brand-amber)'
@@ -188,7 +188,7 @@ export default function LearningPathHub() {
           </div>
 
           <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: 15, lineHeight: 1.7, maxWidth: 640, fontWeight: 300 }}>
-            Mỗi chủ đề có ba tầng Beginner → Explorer → Researcher. Tiến độ theo từng bài học.
+            Mỗi chủ đề có ba tầng Cơ bản → Cơ chế → Chuyên sâu. Tiến độ theo từng bài học.
           </p>
 
           {/* Total progress strip */}

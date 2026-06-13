@@ -1,4 +1,5 @@
-import { clearToken, fetchMe, usesCookieAuth, type AuthUser } from '../api/authApi'
+import { usesCookieAuth } from '@/lib/apiRequestInit'
+import { clearToken, fetchMe, type AuthUser } from '../api/authApi'
 import { useAuthStore } from '../stores/useAuthStore'
 
 export const SESSION_COOKIE_FAILED_MSG =
