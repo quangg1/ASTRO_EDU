@@ -10,8 +10,14 @@ function isSmtpEnvConfigured() {
   );
 }
 
+function getBrevoApiKey() {
+  return String(process.env.BREVO_API_KEY || '')
+    .trim()
+    .replace(/^["']|["']$/g, '');
+}
+
 function isBrevoApiConfigured() {
-  return !!(process.env.BREVO_API_KEY?.trim() && process.env.MAIL_FROM?.trim());
+  return !!(getBrevoApiKey() && process.env.MAIL_FROM?.trim());
 }
 
 function isResendConfigured() {
@@ -57,9 +63,16 @@ function getTransporter() {
 }
 
 async function verifyBrevoApiConnection() {
-  const key = process.env.BREVO_API_KEY?.trim();
+  const key = getBrevoApiKey();
   if (!key) {
     return { ok: false, skipped: true, reason: 'not_configured' };
+  }
+  if (key.startsWith('xsmtpsib-')) {
+    return {
+      ok: false,
+      error: 'BREVO_API_KEY đang là SMTP key (xsmtpsib-). Tạo API key tab «API keys» (xkeysib-…) trên Brevo.',
+      transport: 'brevo-api',
+    };
   }
   try {
     const res = await fetch('https://api.brevo.com/v3/account', {
@@ -128,6 +141,12 @@ async function verifySmtpConnection() {
 function formatSendError(err) {
   const msg = err?.message || String(err);
   const host = (process.env.SMTP_HOST || '').trim().toLowerCase();
+  const brevoApi = isBrevoApiConfigured();
+
+  if (brevoApi && /key not found|unauthorized|"code":"unauthorized"/i.test(msg)) {
+    return `${msg} — BREVO_API_KEY không hợp lệ. Brevo → Settings → SMTP & API → tab **API keys** → tạo key mới (bắt đầu \`xkeysib-\`). Không dùng \`xsmtpsib-\` (SMTP key). Cập nhật Render → Redeploy galaxies-api.`;
+  }
+
   if (/timeout|ETIMEDOUT|ECONNREFUSED|ESOCKET/i.test(msg)) {
     if (host.includes('gmail')) {
       return `${msg} — SMTP_HOST vẫn là Gmail; trên Render thường timeout. Đổi sang Brevo: smtp-relay.brevo.com, port 587, SMTP_SECURE=false trên service API.`;
@@ -138,6 +157,9 @@ function formatSendError(err) {
     return `${msg} — Kiểm tra SMTP_HOST trên Render (Brevo: smtp-relay.brevo.com). Env phải ở service galaxies-api, không phải frontend.`;
   }
   if (/authentication|auth|535|534|invalid login/i.test(msg)) {
+    if (brevoApi) {
+      return `${msg} — Kiểm tra BREVO_API_KEY (xkeysib-…) và MAIL_FROM khớp sender Verified trên Brevo.`;
+    }
     if (host.includes('brevo') || host.includes('sendinblue')) {
       return `${msg} — Brevo: SMTP_PASS phải là SMTP key (Settings → SMTP & API), SMTP_USER là email tài khoản Brevo.`;
     }
@@ -157,7 +179,10 @@ function getSmtpPublicConfig() {
 }
 
 async function sendViaBrevoApi({ to, subject, text, html }) {
-  const key = process.env.BREVO_API_KEY.trim();
+  const key = getBrevoApiKey();
+  if (key.startsWith('xsmtpsib-')) {
+    throw new Error('BREVO_API_KEY là SMTP key (xsmtpsib-) — cần API key (xkeysib-) từ tab API keys.');
+  }
   const sender = parseMailFromSender(process.env.MAIL_FROM);
   const res = await fetch('https://api.brevo.com/v3/smtp/email', {
     method: 'POST',
