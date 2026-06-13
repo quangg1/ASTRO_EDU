@@ -36,6 +36,8 @@ type Props = {
 
 const OAUTH_GOOGLE = 'Tiếp tục với Google'
 const OAUTH_FACEBOOK = 'Tiếp tục với Facebook'
+
+const pillClass =
   'h-[52px] relative w-full flex items-center justify-center gap-2.5 text-[14px] font-medium transition-all duration-200'
 
 const defaultPillStyle: React.CSSProperties = {
