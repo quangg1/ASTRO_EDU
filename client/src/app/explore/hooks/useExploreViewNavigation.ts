@@ -12,7 +12,7 @@ import {
   mergeExplorePreservedParams,
   type ExploreView,
 } from '@/features/explore/public'
-import { formatObserverTimeParam, tonightSkyObserverTime } from '@/features/explore/lib/skyObserver'
+import { formatObserverTimeParam, skyTimeForPreset, type SkyTimePreset } from '@/features/explore/lib/skyObserver'
 import { normalizeSkyTargetId } from '@/features/explore/lib/exploreViewUrl'
 import type { AstronomyCalendarEvent } from '@/features/astronomy-calendar/types'
 
@@ -114,18 +114,18 @@ export function useExploreViewNavigation({
     [navigateExploreView],
   )
 
-  const setSkyObserverTimeMode = useCallback(
-    (mode: 'live' | 'tonight') => {
+  const setSkyTimePreset = useCallback(
+    (preset: SkyTimePreset) => {
       const next = new URLSearchParams(searchParams.toString())
-      if (mode === 'live') {
+      if (preset === 'live') {
         next.delete('time')
       } else {
-        next.set('time', formatObserverTimeParam(tonightSkyObserverTime()))
+        next.set('time', formatObserverTimeParam(skyTimeForPreset(preset)))
       }
       const qs = next.toString()
-      replaceExploreUrl(qs ? `${pathname}?${qs}` : pathname)
+      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false })
     },
-    [searchParams, pathname, replaceExploreUrl],
+    [searchParams, pathname, router],
   )
 
   const jumpToSkyEvent = useCallback(
@@ -182,7 +182,7 @@ export function useExploreViewNavigation({
     pickSkySceneObject,
     openSkyForEntity,
     openSolarForTarget,
-    setSkyObserverTimeMode,
+    setSkyTimePreset,
     jumpToSkyEvent,
   }
 }

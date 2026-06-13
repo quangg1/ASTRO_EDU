@@ -70,13 +70,50 @@ export function formatObserverTimeParam(at: Date): string {
   return at.toISOString()
 }
 
-/** ~21:00 giờ địa phương — xem bầu trời tối khi đang ban ngày. */
-export function tonightSkyObserverTime(now = new Date()): Date {
+/** Preset thời gian quan sát trên La bàn chòm sao. */
+export type SkyTimePreset = 'live' | 'morning' | 'afternoon' | 'evening'
+
+const SKY_TIME_PRESET_HOURS: Record<Exclude<SkyTimePreset, 'live'>, number> = {
+  morning: 6,
+  afternoon: 14,
+  evening: 21,
+}
+
+/** Giờ địa phương cho preset sáng / chiều / tối. */
+export function skyTimeForPreset(
+  preset: Exclude<SkyTimePreset, 'live'>,
+  now = new Date(),
+): Date {
   const d = new Date(now)
   d.setSeconds(0, 0)
-  if (d.getHours() < 5) d.setDate(d.getDate() - 1)
-  d.setHours(21, 0, 0, 0)
+  if (preset === 'evening' && d.getHours() < 5) d.setDate(d.getDate() - 1)
+  d.setHours(SKY_TIME_PRESET_HOURS[preset], 0, 0, 0)
   return d
+}
+
+/** @deprecated Dùng `skyTimeForPreset('evening')`. */
+export function tonightSkyObserverTime(now = new Date()): Date {
+  return skyTimeForPreset('evening', now)
+}
+
+/** Preset đang active từ `?time=` — dùng highlight segment UI. */
+export function resolveSkyTimePreset(
+  params: URLSearchParams | { get: (k: string) => string | null },
+): SkyTimePreset {
+  if (!isObserverTimePinned(params)) return 'live'
+  const at = parseObserverTimeParam(params.get('time'))
+  if (!at) return 'live'
+
+  const mins = at.getHours() * 60 + at.getMinutes()
+  for (const preset of ['morning', 'afternoon', 'evening'] as const) {
+    const target = SKY_TIME_PRESET_HOURS[preset] * 60
+    if (Math.abs(mins - target) <= 60) return preset
+  }
+
+  const h = at.getHours()
+  if (h >= 5 && h < 11) return 'morning'
+  if (h >= 11 && h < 17) return 'afternoon'
+  return 'evening'
 }
 
 export function parseSkyObserverFromSearchParams(

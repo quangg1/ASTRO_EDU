@@ -1,21 +1,30 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Moon, Sun } from 'lucide-react'
 import { observerTimeLabel } from '@/features/explore/lib/skyEphemeris'
-import type { SkyObserver } from '@/features/explore/lib/skyObserver'
+import type { SkyObserver, SkyTimePreset } from '@/features/explore/lib/skyObserver'
 
 const PLACEHOLDER = { time: '--:--:--', date: '\u00a0' }
 
+const PRESETS: ReadonlyArray<{
+  id: SkyTimePreset
+  label: string
+  title: string
+}> = [
+  { id: 'live', label: 'Bây giờ', title: 'Giờ thực — đồng hồ chạy theo giây' },
+  { id: 'morning', label: 'Sáng', title: 'Khoảng 6:00 — bình minh, Mặt Trời mọc' },
+  { id: 'afternoon', label: 'Chiều', title: 'Khoảng 14:00 — ban ngày' },
+  { id: 'evening', label: 'Tối', title: 'Khoảng 21:00 — bầu trời đêm, sao' },
+]
+
 type Props = {
   observer: SkyObserver
-  timePinned: boolean
-  onSetLive: () => void
-  onSetTonight: () => void
+  skyTimePreset: SkyTimePreset
+  onSelectPreset: (preset: SkyTimePreset) => void
 }
 
-/** Đồng hồ HUD — chỉ render sau mount để tránh lệch SSR/client (giây khác nhau). */
-export function ExploreSkyHudClock({ observer, timePinned, onSetLive, onSetTonight }: Props) {
+/** Đồng hồ HUD + chọn buổi quan sát — render sau mount để tránh lệch SSR/client. */
+export function ExploreSkyHudClock({ observer, skyTimePreset, onSelectPreset }: Props) {
   const [labels, setLabels] = useState(PLACEHOLDER)
 
   useEffect(() => {
@@ -23,32 +32,37 @@ export function ExploreSkyHudClock({ observer, timePinned, onSetLive, onSetTonig
   }, [observer.latDeg, observer.lonDeg, observer.at.getTime()])
 
   return (
-    <div className="flex flex-col items-end gap-1">
-      <div className="flex flex-col items-end leading-tight">
+    <div className="flex min-w-[9.5rem] flex-col items-stretch gap-1.5">
+      <div className="text-right leading-tight">
         <span className="text-[11px] tabular-nums text-slate-100">{labels.time}</span>
-        <span className="text-[10px] text-slate-400">{labels.date}</span>
+        <span className="mt-0.5 block text-[10px] text-slate-400">{labels.date}</span>
       </div>
-      {timePinned ? (
-        <button
-          type="button"
-          onClick={onSetLive}
-          title="Xem bầu trời theo giờ thực"
-          className="flex items-center gap-1 rounded-md bg-sky-500/15 px-1.5 py-0.5 text-[9px] font-medium text-sky-100 ring-1 ring-sky-400/25 transition hover:bg-sky-500/25"
-        >
-          <Sun className="h-2.5 w-2.5" />
-          Bây giờ
-        </button>
-      ) : (
-        <button
-          type="button"
-          onClick={onSetTonight}
-          title="Xem bầu trời khoảng 21:00 tối nay (giờ địa phương)"
-          className="flex items-center gap-1 rounded-md bg-indigo-500/15 px-1.5 py-0.5 text-[9px] font-medium text-indigo-100 ring-1 ring-indigo-400/25 transition hover:bg-indigo-500/25"
-        >
-          <Moon className="h-2.5 w-2.5" />
-          Tối nay (~21h)
-        </button>
-      )}
+
+      <div
+        className="grid grid-cols-4 gap-px rounded-lg bg-white/[0.06] p-px"
+        role="group"
+        aria-label="Chọn thời điểm quan sát"
+      >
+        {PRESETS.map(({ id, label, title }) => {
+          const active = skyTimePreset === id
+          return (
+            <button
+              key={id}
+              type="button"
+              title={title}
+              aria-pressed={active}
+              onClick={() => onSelectPreset(id)}
+              className={`rounded-[5px] px-0.5 py-1 text-[9px] font-medium leading-none transition ${
+                active
+                  ? 'bg-slate-100/12 text-slate-50 shadow-sm ring-1 ring-white/10'
+                  : 'text-slate-500 hover:bg-white/[0.04] hover:text-slate-300'
+              }`}
+            >
+              {label}
+            </button>
+          )
+        })}
+      </div>
     </div>
   )
 }

@@ -64,7 +64,7 @@ export type ExploreSkySlice = {
   handleSkyScenePick: (pickedId: string) => void
   openSkyForEntity: (entityId: string) => void
   openSolarForTarget: (targetId: string, solarEntityId?: string | null) => void
-  setSkyObserverTimeMode: (mode: 'live' | 'tonight') => void
+  setSkyTimePreset: (preset: import('@/features/explore/lib/skyObserver').SkyTimePreset) => void
   jumpToSkyEvent: (
     event: Pick<
       import('@/features/astronomy-calendar/types').AstronomyCalendarEvent,

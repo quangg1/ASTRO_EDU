@@ -56,8 +56,8 @@ type Props = Pick<
   | 'bridgeEntityId'
   | 'locationLabel'
   | 'observer'
-  | 'timePinned'
-  | 'setSkyObserverTimeMode'
+  | 'skyTimePreset'
+  | 'setSkyTimePreset'
   | 'skyWeather'
   | 'skyWeatherLoading'
 >
@@ -94,8 +94,8 @@ export function ExploreSkyOverlay(props: Props) {
     bridgeEntityId,
     locationLabel,
     observer,
-    timePinned,
-    setSkyObserverTimeMode,
+    skyTimePreset,
+    setSkyTimePreset,
     skyWeather,
     skyWeatherLoading,
   } = props
@@ -287,12 +287,11 @@ export function ExploreSkyOverlay(props: Props) {
             ) : null}
           </div>
 
-          <div className="shrink-0 rounded-xl border border-white/[0.08] bg-black/60 px-2.5 py-1.5 backdrop-blur-md">
+          <div className="shrink-0 rounded-xl border border-white/[0.08] bg-black/60 px-2 py-1.5 backdrop-blur-md">
             <ExploreSkyHudClock
               observer={observer}
-              timePinned={timePinned}
-              onSetLive={() => setSkyObserverTimeMode('live')}
-              onSetTonight={() => setSkyObserverTimeMode('tonight')}
+              skyTimePreset={skyTimePreset}
+              onSelectPreset={setSkyTimePreset}
             />
           </div>
         </div>

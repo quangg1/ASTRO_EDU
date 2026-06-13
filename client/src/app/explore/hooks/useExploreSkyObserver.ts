@@ -5,7 +5,9 @@ import {
   parseSkyObserverFromSearchParams,
   formatObserverLocationShort,
   isObserverTimePinned,
+  resolveSkyTimePreset,
   type SkyObserver,
+  type SkyTimePreset,
 } from '@/features/explore/lib/skyObserver'
 import { computeSkyEphemerisBodies, observerTimeLabel } from '@/features/explore/lib/skyEphemeris'
 
@@ -98,7 +100,12 @@ export function useExploreSkyObserver(
     [observer.at.getTime()],
   )
 
-  return { observer, locationLabel, timeLabels, ephemerisBodies, observerResolved, timePinned }
+  const skyTimePreset = useMemo(
+    (): SkyTimePreset => resolveSkyTimePreset(searchParams),
+    [searchParams.get('time')],
+  )
+
+  return { observer, locationLabel, timeLabels, ephemerisBodies, observerResolved, timePinned, skyTimePreset }
 }
 
 export type { SkyObserver }
