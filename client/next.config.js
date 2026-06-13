@@ -115,17 +115,28 @@ const nextConfig = {
     if (mediaOrigin) connectSrc.push(mediaOrigin);
     if (apiOrigin) connectSrc.push(apiOrigin);
     const imgSrc = ["'self'", 'data:', 'blob:', 'https:'];
+    // Firebase signInWithPopup: iframe auth handler + Google/Facebook OAuth (frame-src kế thừa default-src nếu thiếu).
+    const frameSrc = [
+      "'self'",
+      'https://accounts.google.com',
+      'https://*.google.com',
+      'https://www.facebook.com',
+      'https://*.facebook.com',
+      'https://*.firebaseapp.com',
+      'https://*.web.app',
+    ];
     const csp = [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-eval' 'unsafe-inline'",
+      "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://apis.google.com https://www.gstatic.com",
       "style-src 'self' 'unsafe-inline' https:",
       `img-src ${imgSrc.join(' ')}`,
       `connect-src ${connectSrc.join(' ')}`,
       "font-src 'self' data: https:",
       "object-src 'none'",
+      `frame-src ${frameSrc.join(' ')}`,
       "frame-ancestors 'self'",
       "base-uri 'self'",
-      "form-action 'self'",
+      "form-action 'self' https://accounts.google.com https://www.facebook.com",
     ].join('; ');
 
     return [

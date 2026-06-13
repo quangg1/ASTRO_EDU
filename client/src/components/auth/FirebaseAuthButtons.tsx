@@ -128,8 +128,17 @@ export function FirebaseAuthButtons({
       }
       setErr(res.error || 'Đăng nhập thất bại')
     } catch (e: unknown) {
+      const code =
+        e && typeof e === 'object' && 'code' in e ? String((e as { code?: string }).code) : ''
       const msg = e instanceof Error ? e.message : 'Lỗi đăng nhập'
-      if (!msg.includes('auth/popup-closed')) setErr(msg)
+      if (msg.includes('auth/popup-closed')) return
+      if (code === 'auth/internal-error' || msg.includes('auth/internal-error')) {
+        setErr(
+          'Không mở được cửa sổ đăng nhập Google/Facebook. Thử tắt chặn popup hoặc đăng nhập bằng email.',
+        )
+        return
+      }
+      setErr(msg)
     } finally {
       setLoading(null)
     }
