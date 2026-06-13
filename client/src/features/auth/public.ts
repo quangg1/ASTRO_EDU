@@ -20,6 +20,14 @@ export {
   hasClientSession,
   getUserFromStoredToken,
 } from './api/authApi'
+export {
+  handleAuthUnauthorized,
+  mapAuthApiError,
+  verifyCookieSessionAfterAuth,
+  SESSION_COOKIE_FAILED_MSG,
+  SESSION_EXPIRED_MSG,
+  isUnauthorizedResponse,
+} from './lib/authSessionSync'
 export type { AuthUser, AuthResponse } from './api/authApi'
 export { useAuthStore } from './stores/useAuthStore'
 

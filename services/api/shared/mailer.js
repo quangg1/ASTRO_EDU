@@ -22,8 +22,28 @@ function getTransporter() {
       user: process.env.SMTP_USER.trim(),
       pass: process.env.SMTP_PASS.trim().replace(/\s+/g, ''),
     },
+    connectionTimeout: 20_000,
+    greetingTimeout: 20_000,
+    socketTimeout: 30_000,
   });
   return transporter;
+}
+
+/** Kiểm tra đăng nhập SMTP thật — khác `isMailConfigured()` (chỉ đọc env). */
+async function verifySmtpConnection() {
+  if (!isMailConfigured()) {
+    return { ok: false, skipped: true, reason: 'not_configured' };
+  }
+  const t = getTransporter();
+  if (!t) {
+    return { ok: false, skipped: true, reason: 'no_transporter' };
+  }
+  try {
+    await t.verify();
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: err?.message || String(err) };
+  }
 }
 
 /**
@@ -358,6 +378,7 @@ Cosmo Learn`;
 
 module.exports = {
   isMailConfigured,
+  verifySmtpConnection,
   sendMail,
   sendEmailVerificationCode,
   sendWelcomeEmail,

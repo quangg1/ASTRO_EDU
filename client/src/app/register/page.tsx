@@ -10,6 +10,7 @@ import {
   resendRegistrationVerification,
   useAuthStore,
   verifyRegistrationEmail,
+  verifyCookieSessionAfterAuth,
 } from '@/features/auth/public'
 import { FirebaseAuthButtons } from '@/components/auth/FirebaseAuthButtons'
 import {
@@ -66,8 +67,13 @@ export default function RegisterPage() {
         return
       }
       if (res.success && 'user' in res && res.user) {
+        const session = await verifyCookieSessionAfterAuth(res.user)
+        if (!session.ok || !session.user) {
+          setError(session.error || 'Phiên đăng nhập không lưu được sau đăng ký.')
+          return
+        }
         trackEvent('register_success', { provider: 'local' })
-        setUser(res.user)
+        setUser(session.user)
         goOnboarding()
         return
       }
@@ -92,8 +98,13 @@ export default function RegisterPage() {
     try {
       const res = await verifyRegistrationEmail(pendingEmail, code)
       if (res.success && res.user) {
+        const session = await verifyCookieSessionAfterAuth(res.user)
+        if (!session.ok || !session.user) {
+          setError(session.error || 'Xác nhận OK nhưng phiên không lưu được. Đăng nhập lại.')
+          return
+        }
         trackEvent('register_success', { provider: 'local', email_verified: true })
-        setUser(res.user)
+        setUser(session.user)
         goOnboarding()
         return
       }

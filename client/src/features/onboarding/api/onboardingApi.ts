@@ -1,4 +1,9 @@
 import { hasClientSession } from '@/features/auth/public'
+import {
+  handleAuthUnauthorized,
+  isUnauthorizedResponse,
+  mapAuthApiError,
+} from '@/features/auth/lib/authSessionSync'
 import { getApiPathBase } from '@/lib/apiConfig'
 import { apiClientHeaders, apiFetchInit } from '@/lib/apiClientHeaders'
 
@@ -66,6 +71,10 @@ export async function fetchOnboardingStatus(): Promise<{
   try {
     const res = await fetch(`${BASE}/onboarding/me`, apiFetchInit({ headers: authHeaders(), cache: 'no-store' }))
     const json = await res.json()
+    if (isUnauthorizedResponse(res.status, json.error)) {
+      handleAuthUnauthorized()
+      return null
+    }
     if (json.success && json.data) return json.data
     // Đã đăng nhập nhưng chưa có profile / API lỗi → coi như chưa onboarding
     return { completed: false, profile: null }
@@ -90,6 +99,10 @@ export async function completeOnboarding(body: {
     body: JSON.stringify(body),
   }))
   const json = await res.json()
+  if (isUnauthorizedResponse(res.status, json.error)) {
+    handleAuthUnauthorized()
+    return { success: false, error: mapAuthApiError(json.error) }
+  }
   if (json.success) {
     return {
       success: true,
@@ -97,7 +110,7 @@ export async function completeOnboarding(body: {
       gemReward: json.data?.gemReward ?? null,
     }
   }
-  return { success: false, error: json.error || 'Không lưu được onboarding' }
+  return { success: false, error: mapAuthApiError(json.error) || 'Không lưu được onboarding' }
 }
 
 export async function skipOnboarding(): Promise<{ success: boolean; profile?: OnboardingProfile; error?: string }> {
@@ -106,6 +119,10 @@ export async function skipOnboarding(): Promise<{ success: boolean; profile?: On
     headers: authHeaders(),
   }))
   const json = await res.json()
+  if (isUnauthorizedResponse(res.status, json.error)) {
+    handleAuthUnauthorized()
+    return { success: false, error: mapAuthApiError(json.error) }
+  }
   if (json.success) return { success: true, profile: json.data?.profile }
-  return { success: false, error: json.error || 'Không bỏ qua được' }
+  return { success: false, error: mapAuthApiError(json.error) || 'Không bỏ qua được' }
 }

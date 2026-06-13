@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { signInWithPopup, GoogleAuthProvider, FacebookAuthProvider } from 'firebase/auth'
 import { getFirebaseAuth } from '@/lib/firebaseClient'
-import { loginWithFirebaseIdToken, useAuthStore } from '@/features/auth/public'
+import { loginWithFirebaseIdToken, useAuthStore, verifyCookieSessionAfterAuth } from '@/features/auth/public'
 
 function GoogleIcon({ className = 'size-6' }: { className?: string }) {
   return (
@@ -118,7 +118,12 @@ export function FirebaseAuthButtons({
       const idToken = await cred.user.getIdToken()
       const res = await loginWithFirebaseIdToken(idToken)
       if (res.success && res.user) {
-        setUser(res.user)
+        const session = await verifyCookieSessionAfterAuth(res.user)
+        if (!session.ok || !session.user) {
+          setErr(session.error || 'Phiên đăng nhập không lưu được. Thử lại hoặc dùng email/mật khẩu.')
+          return
+        }
+        setUser(session.user)
         if (onSuccess) {
           onSuccess()
         } else {

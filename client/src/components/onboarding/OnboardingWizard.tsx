@@ -103,6 +103,10 @@ export function OnboardingWizard() {
     let cancelled = false
     void Promise.all([fetchOnboardingOptions(), fetchOnboardingStatus()]).then(([opts, status]) => {
       if (cancelled) return
+      if (status === null && user) {
+        router.replace('/login?redirect=/onboarding')
+        return
+      }
       if (status?.completed) {
         router.replace(status.profile?.primaryHref || '/dashboard')
         return

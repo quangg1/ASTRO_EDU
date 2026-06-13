@@ -44,7 +44,7 @@ const { astronomyCalendarRouter } = require('./features/astronomy-calendar');
 const { startAstronomyReminderScheduler } = require('./features/astronomy-calendar/jobs/reminderScheduler');
 const { ensurePublishedSeed } = require('./features/astronomy-calendar/services/astronomyCalendarService');
 const { attachNotificationWebSocket, WS_PATH } = require('./features/notifications/ws/attachNotificationWs');
-const { isMailConfigured } = require('./shared/mailer');
+const { isMailConfigured, verifySmtpConnection } = require('./shared/mailer');
 const { hasS3 } = require('./features/media/uploadStorage');
 
 const env = validateApiEnv();
@@ -94,12 +94,19 @@ app.use('/api/astronomy-calendar', astronomyCalendarRouter);
 app.use(mediaRouter); // POST /upload, GET /files/*
 app.use(errorMiddleware);
 
-app.get('/health', (req, res) => {
+app.get('/health', async (req, res) => {
+  const smtpConfigured = isMailConfigured();
+  let smtp = { configured: smtpConfigured };
+  if (req.query.verifySmtp === '1' && smtpConfigured) {
+    const verified = await verifySmtpConnection();
+    smtp = { ...smtp, verified: verified.ok, error: verified.error || null };
+  }
   res.json({
     status: 'OK',
     service: 'api',
     timestamp: new Date().toISOString(),
-    smtpConfigured: isMailConfigured(),
+    smtpConfigured,
+    smtp,
     s3UploadConfigured: hasS3,
   });
 });
@@ -134,7 +141,21 @@ async function start() {
         '[mailer] SMTP chưa cấu hình — email (xác nhận đăng ký, xóa tài khoản, hóa đơn…) sẽ không gửi. Thêm biến vào services/api/.env',
       );
     } else {
-      console.log('[mailer] SMTP đã bật (MAIL_FROM:', process.env.MAIL_FROM?.trim(), ')');
+      console.log('[mailer] SMTP env OK (MAIL_FROM:', process.env.MAIL_FROM?.trim(), ')');
+      verifySmtpConnection()
+        .then((r) => {
+          if (r.ok) {
+            console.log('[mailer] SMTP verify OK — server chấp nhận đăng nhập');
+            return;
+          }
+          console.error(
+            '[mailer] SMTP verify FAILED (env đủ nhưng Gmail/SMTP từ chối):',
+            r.error || r.reason,
+          );
+        })
+        .catch((e) => {
+          console.error('[mailer] SMTP verify error:', e?.message || e);
+        });
     }
     console.log(`
 ╔══════════════════════════════════════════════════════════════╗

@@ -1,5 +1,10 @@
 import { getApiPathBase } from '@/lib/apiConfig'
 import { getToken, hasClientSession } from '@/features/auth/public'
+import {
+  handleAuthUnauthorized,
+  isUnauthorizedResponse,
+  mapAuthApiError,
+} from '@/features/auth/lib/authSessionSync'
 import { apiRequestInit, usesCookieAuth } from '@/lib/apiRequestInit'
 import type { RecallQuizDeliveryQuestion } from '@/features/learning-path/public'
 import type {
@@ -148,9 +153,12 @@ export async function postAgentMessage(params: {
 
   if (!res.ok) {
     const data = (await res.json().catch(() => ({}))) as { error?: string; code?: string }
+    if (isUnauthorizedResponse(res.status, data.error)) {
+      handleAuthUnauthorized()
+    }
     return {
       success: false,
-      error: typeof data.error === 'string' ? data.error : 'Agent request failed',
+      error: mapAuthApiError(data.error) || 'Agent request failed',
       code: data.code,
     }
   }

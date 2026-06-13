@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { Eye, EyeOff, Sparkles, Mail, Lock } from 'lucide-react'
-import { login, useAuthStore } from '@/features/auth/public'
+import { login, useAuthStore, verifyCookieSessionAfterAuth } from '@/features/auth/public'
 import { FirebaseAuthButtons } from '@/components/auth/FirebaseAuthButtons'
 import { getStaticAssetUrl } from '@/lib/apiConfig'
 import { SiteLogo } from '@/components/ui/SiteLogo'
@@ -75,8 +75,13 @@ function LoginPageContent() {
     try {
       const res = await login(email, password)
       if (res.success && res.user) {
+        const session = await verifyCookieSessionAfterAuth(res.user)
+        if (!session.ok || !session.user) {
+          setError(session.error || 'Phiên đăng nhập không lưu được. Thử đăng nhập lại.')
+          return
+        }
         trackEvent('login_success', { provider: 'local' })
-        setUser(res.user)
+        setUser(session.user)
         router.push(redirectTo)
         return
       }
