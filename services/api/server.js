@@ -44,7 +44,7 @@ const { astronomyCalendarRouter } = require('./features/astronomy-calendar');
 const { startAstronomyReminderScheduler } = require('./features/astronomy-calendar/jobs/reminderScheduler');
 const { ensurePublishedSeed } = require('./features/astronomy-calendar/services/astronomyCalendarService');
 const { attachNotificationWebSocket, WS_PATH } = require('./features/notifications/ws/attachNotificationWs');
-const { isMailConfigured, getMailTransport, verifySmtpConnection } = require('./shared/mailer');
+const { isMailConfigured, getMailTransport, getSmtpPublicConfig, verifySmtpConnection } = require('./shared/mailer');
 const { hasS3 } = require('./features/media/uploadStorage');
 
 const env = validateApiEnv();
@@ -97,7 +97,11 @@ app.use(errorMiddleware);
 app.get('/health', async (req, res) => {
   const smtpConfigured = isMailConfigured();
   const mailTransport = getMailTransport();
-  let smtp = { configured: smtpConfigured, transport: mailTransport };
+  let smtp = {
+    configured: smtpConfigured,
+    transport: mailTransport,
+    ...(getSmtpPublicConfig() || {}),
+  };
   if (req.query.verifySmtp === '1' && smtpConfigured) {
     const verified = await verifySmtpConnection();
     smtp = {

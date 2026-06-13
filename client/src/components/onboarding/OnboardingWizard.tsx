@@ -25,6 +25,7 @@ import {
   type OnboardingIntentId,
   type OnboardingOptions,
 } from '@/features/onboarding/public'
+import { markOnboardingCompletedClient } from '@/features/onboarding/lib/onboardingCompletionGate'
 import { OnboardingLaunchOverlay } from '@/components/onboarding/OnboardingLaunchOverlay'
 import { AuthSingleColumnLayout } from '@/components/auth/AuthFlowShell'
 import { SpaceSelectCard } from '@/components/space-premium'
@@ -89,6 +90,19 @@ export function OnboardingWizard() {
     apiReady: boolean
   } | null>(null)
   const launchHrefRef = useRef('/dashboard')
+  const navigateAfterLaunchRef = useRef<(href: string) => void>(() => {})
+
+  useEffect(() => {
+    navigateAfterLaunchRef.current = (href: string) => {
+      markOnboardingCompletedClient()
+      router.replace(href)
+      window.setTimeout(() => {
+        if (window.location.pathname.startsWith('/onboarding')) {
+          window.location.assign(href)
+        }
+      }, 900)
+    }
+  }, [router])
 
   useEffect(() => {
     if (!checked && loading) return
@@ -160,6 +174,7 @@ export function OnboardingWizard() {
         toast.show(res.error || 'Lỗi lưu onboarding', { tone: 'danger' })
         return
       }
+      markOnboardingCompletedClient()
       if (res.gemReward?.gemsEarned) {
         await syncGemWallet(user?.id)
         window.dispatchEvent(new CustomEvent('gem-wallet-changed'))
@@ -183,6 +198,7 @@ export function OnboardingWizard() {
       toast.show(res.error || 'Không bỏ qua được', { tone: 'danger' })
       return
     }
+    markOnboardingCompletedClient()
     router.replace('/dashboard')
   }
 
@@ -295,7 +311,7 @@ export function OnboardingWizard() {
           intent={launch.intent}
           gemsEarned={launch.gems}
           apiReady={launch.apiReady}
-          onComplete={() => router.replace(launchHrefRef.current)}
+          onComplete={() => navigateAfterLaunchRef.current(launchHrefRef.current)}
         />
       ) : null}
       <OnboardingSpaceShell

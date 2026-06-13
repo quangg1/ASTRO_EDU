@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { useAuthStore } from '@/features/auth/public'
 import { fetchOnboardingStatus } from '@/features/onboarding/public'
+import { hasOnboardingCompletedClient, clearOnboardingCompletedClient } from '@/features/onboarding/lib/onboardingCompletionGate'
 
 const PUBLIC_PREFIXES = ['/login', '/register', '/auth', '/onboarding']
 
@@ -41,7 +42,17 @@ export function OnboardingRedirect({ children }: { children: React.ReactNode }) 
 
     void fetchOnboardingStatus().then((status) => {
       if (cancelled) return
-      if (!status?.completed) {
+      if (hasOnboardingCompletedClient() || status?.completed) {
+        if (status?.completed) clearOnboardingCompletedClient()
+        setReady(true)
+        return
+      }
+      // null = lỗi mạng / 401 — không ép về onboarding (tránh loop bước cuối)
+      if (!status) {
+        setReady(true)
+        return
+      }
+      if (!status.completed) {
         router.replace('/onboarding')
         return
       }

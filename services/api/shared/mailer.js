@@ -95,10 +95,33 @@ async function verifySmtpConnection() {
 
 function formatSendError(err) {
   const msg = err?.message || String(err);
+  const host = (process.env.SMTP_HOST || '').trim().toLowerCase();
   if (/timeout|ETIMEDOUT|ECONNREFUSED|ESOCKET/i.test(msg)) {
-    return `${msg} — SMTP (vd. Gmail) thường không kết nối được từ Render. Dùng RESEND_API_KEY + MAIL_FROM thay SMTP_HOST.`;
+    if (host.includes('gmail')) {
+      return `${msg} — SMTP_HOST vẫn là Gmail; trên Render thường timeout. Đổi sang Brevo: smtp-relay.brevo.com, port 587, SMTP_SECURE=false trên service API.`;
+    }
+    if (host.includes('brevo') || host.includes('sendinblue')) {
+      return `${msg} — Brevo: kiểm tra SMTP_USER (email đăng ký Brevo), SMTP_PASS (SMTP key xsmtpsib-…, không phải mật khẩu web), MAIL_FROM (sender đã Verified), port 587.`;
+    }
+    return `${msg} — Kiểm tra SMTP_HOST trên Render (Brevo: smtp-relay.brevo.com). Env phải ở service galaxies-api, không phải frontend.`;
+  }
+  if (/authentication|auth|535|534|invalid login/i.test(msg)) {
+    if (host.includes('brevo') || host.includes('sendinblue')) {
+      return `${msg} — Brevo: SMTP_PASS phải là SMTP key (Settings → SMTP & API), SMTP_USER là email tài khoản Brevo.`;
+    }
   }
   return msg;
+}
+
+/** Chỉ hostname/port — dùng /health?verifySmtp=1 để debug deploy. */
+function getSmtpPublicConfig() {
+  if (!isSmtpEnvConfigured()) return null;
+  return {
+    host: process.env.SMTP_HOST.trim(),
+    port: Number(process.env.SMTP_PORT || 587),
+    secure: process.env.SMTP_SECURE === 'true' || process.env.SMTP_SECURE === '1',
+    mailFromSet: Boolean(process.env.MAIL_FROM?.trim()),
+  };
 }
 
 async function sendViaResend({ to, subject, text, html }) {
@@ -469,6 +492,7 @@ Cosmo Learn`;
 module.exports = {
   isMailConfigured,
   getMailTransport,
+  getSmtpPublicConfig,
   verifySmtpConnection,
   sendMail,
   sendEmailVerificationCode,
