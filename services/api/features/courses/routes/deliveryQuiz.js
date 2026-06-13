@@ -14,6 +14,9 @@ const {
   gradeAnswers,
   getActiveAttempt,
   expireIfNeeded,
+  clientAnswersToOriginal,
+  clientAnswersFromOriginal,
+  originalAnswerToClient,
 } = require('../services/quizExamService');
 const { findCourseForLearnerOrEditor } = require('../services/courseAccess');
 
@@ -133,7 +136,7 @@ examRouter.get('/attempts/active', authMiddleware, async (req, res) => {
       data: attempt
         ? {
             id: attempt._id,
-            answers: attempt.answers || {},
+            answers: clientAnswersFromOriginal(questions, attempt.answers || {}),
             revision: attempt.revision,
             lockedQuestionIds: attempt.lockedQuestionIds || [],
             expiresAt: attempt.expiresAt,
@@ -224,7 +227,7 @@ examRouter.post('/attempts', authMiddleware, async (req, res) => {
 examRouter.patch('/attempts/:attemptId/checkpoint', authMiddleware, async (req, res) => {
   try {
     const cohortId = parseCohortId(req);
-    const { course, lesson } = await loadCourseAndLesson(req.params.slug, req.params.lessonSlug, req);
+    const { course, lesson, questions } = await loadCourseAndLesson(req.params.slug, req.params.lessonSlug, req);
     await ensureQuizDeliveryAccess(req, course, lesson);
     const { answers, revision } = req.body || {};
     const attempt = await QuizAttempt.findById(req.params.attemptId);
@@ -239,7 +242,9 @@ examRouter.patch('/attempts/:attemptId/checkpoint', authMiddleware, async (req, 
     if (!Number.isFinite(rev) || rev <= attempt.revision) {
       return res.status(409).json({ success: false, code: 'stale_revision', error: 'Dữ liệu cũ, bỏ qua' });
     }
-    if (answers && typeof answers === 'object') attempt.answers = answers;
+    if (answers && typeof answers === 'object') {
+      attempt.answers = clientAnswersToOriginal(questions, answers);
+    }
     attempt.revision = rev;
     attempt.lastSavedAt = new Date();
     await attempt.save();
@@ -266,7 +271,8 @@ examRouter.post('/attempts/:attemptId/submit', authMiddleware, async (req, res) 
       return res.status(400).json({ success: false, error: 'Lượt làm bài đã nộp' });
     }
 
-    const merged = { ...(attempt.answers || {}), ...(answers && typeof answers === 'object' ? answers : {}) };
+    const mergedRaw = { ...(attempt.answers || {}), ...(answers && typeof answers === 'object' ? answers : {}) };
+    const merged = clientAnswersToOriginal(questions, mergedRaw);
     const graded = gradeAnswers(questions, merged);
     const settings = defaultQuizSettings(lesson.quizSettings);
 
@@ -330,9 +336,10 @@ examRouter.post('/attempts/:attemptId/confirm-question', authMiddleware, async (
     const q = questions.find((x, i) => (x.id || `q-${i}`) === questionId);
     if (!q) return res.status(404).json({ success: false, error: 'Không tìm thấy câu hỏi' });
 
-    const graded = gradeAnswers([q], { [questionId]: answer });
+    const mappedAnswer = clientAnswersToOriginal([q], { [questionId]: answer })[questionId];
+    const graded = gradeAnswers([q], { [questionId]: mappedAnswer });
     const row = graded.perQuestion[0];
-    attempt.answers = { ...(attempt.answers || {}), [questionId]: answer };
+    attempt.answers = { ...(attempt.answers || {}), [questionId]: mappedAnswer };
     attempt.lockedQuestionIds = [...locked, questionId];
     attempt.lastSavedAt = new Date();
     await attempt.save();
@@ -342,7 +349,7 @@ examRouter.post('/attempts/:attemptId/confirm-question', authMiddleware, async (
       data: {
         questionId,
         correct: row.correct,
-        correctIndex: row.correctIndex,
+        correctIndex: originalAnswerToClient(q, row.correctIndex),
         explanation: row.explanation,
       },
     });

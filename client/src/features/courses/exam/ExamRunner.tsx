@@ -206,6 +206,14 @@ export function ExamRunner({
   }
   if (!session || !currentQ) return null
 
+  const answeredCount = Object.keys(answers).filter((k) => answers[k] >= 0).length
+  const allAnswered = questions.length > 0 && answeredCount >= questions.length
+
+  const optionLabel = (opt: { text?: string } | string, oi: number) => {
+    const raw = typeof opt === 'string' ? opt : String(opt?.text ?? '')
+    const trimmed = raw.trim()
+    return trimmed || `Phương án ${String.fromCharCode(65 + oi)}`
+  }
   const showReveal =
     submitted && submitResult && revealMode !== 'never'
       ? submitResult.perQuestion
@@ -214,10 +222,15 @@ export function ExamRunner({
 
   return (
     <div className="min-h-[70vh] flex flex-col bg-ds-surface">
-      <header className="border-b border-ds-border px-4 py-3 flex flex-wrap items-center gap-3 justify-between sticky top-0 z-10 bg-ds-surface/95 backdrop-blur">
-        <div>
-          <p className="text-xs text-ds-subtle">{session.lessonTitle}</p>
-          <h1 className="text-lg font-semibold text-white">Bài kiểm tra</h1>
+      <header className="border-b border-ds-border px-4 py-3 flex flex-wrap items-center gap-3 justify-between sticky top-0 z-20 bg-ds-surface/95 backdrop-blur">
+        <div className="flex items-start gap-3 min-w-0">
+          <Link href={backHref} className="text-ds-accent text-sm shrink-0 pt-0.5">
+            ←
+          </Link>
+          <div className="min-w-0">
+            <p className="text-xs text-ds-subtle truncate">{session.lessonTitle}</p>
+            <h1 className="text-lg font-semibold text-white">Bài kiểm tra</h1>
+          </div>
         </div>
         <div className="flex items-center gap-3">
           {secondsLeft != null && (
@@ -225,15 +238,15 @@ export function ExamRunner({
               ⏱ {formatTime(secondsLeft)}
             </span>
           )}
-          <span className="text-sm text-ds-muted">
-            {Object.keys(answers).filter((k) => answers[k] >= 0).length}/{questions.length} đã chọn
+          <span className="text-sm text-ds-muted hidden sm:inline">
+            {answeredCount}/{questions.length} đã chọn
           </span>
           {!submitted && (
             <Button
               type="button"
               onClick={() => void handleSubmit(false)}
               disabled={submitting}
-              className="bg-cyan-600 hover:opacity-90 text-white"
+              className="hidden sm:inline-flex bg-cyan-600 hover:opacity-90 text-white"
             >
               {submitting ? 'Đang nộp…' : 'Nộp bài'}
             </Button>
@@ -324,7 +337,7 @@ export function ExamRunner({
                         onChange={() => selectAnswer(oi)}
                         className="accent-cyan-500"
                       />
-                      <span className="text-sm text-gray-200">{opt.text}</span>
+                      <span className="text-sm text-gray-200">{optionLabel(opt, oi)}</span>
                     </label>
                   )
                 })}
@@ -341,6 +354,25 @@ export function ExamRunner({
           )}
         </main>
       </div>
+
+      {!submitted ? (
+        <footer className="sticky bottom-0 z-20 border-t border-ds-border bg-ds-surface/95 backdrop-blur px-4 py-3">
+          <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3">
+            <span className="text-sm text-ds-muted">
+              {answeredCount}/{questions.length} câu đã chọn
+              {!allAnswered ? ' · Bạn vẫn có thể nộp khi chưa trả lời hết' : ''}
+            </span>
+            <Button
+              type="button"
+              onClick={() => void handleSubmit(false)}
+              disabled={submitting}
+              className="min-w-[8rem] bg-cyan-600 hover:opacity-90 text-white"
+            >
+              {submitting ? 'Đang nộp…' : 'Nộp bài'}
+            </Button>
+          </div>
+        </footer>
+      ) : null}
     </div>
   )
 }

@@ -34,7 +34,8 @@ type Props = {
   layout?: 'stack' | 'row'
 }
 
-const pillClass =
+const OAUTH_GOOGLE = 'Tiếp tục với Google'
+const OAUTH_FACEBOOK = 'Tiếp tục với Facebook'
   'h-[52px] relative w-full flex items-center justify-center gap-2.5 text-[14px] font-medium transition-all duration-200'
 
 const defaultPillStyle: React.CSSProperties = {
@@ -176,7 +177,7 @@ export function FirebaseAuthButtons({
         style={pillStyle}
       >
         <GoogleIcon className="size-5 shrink-0" />
-        <span>{loading === 'google' ? '…' : isOnboarding ? 'Google' : 'Continue with Google'}</span>
+          <span>{loading === 'google' ? '…' : isOnboarding ? 'Google' : OAUTH_GOOGLE}</span>
       </motion.button>
       <motion.button
         type="button"
@@ -187,7 +188,7 @@ export function FirebaseAuthButtons({
         style={pillStyle}
       >
         <FacebookIcon className="size-5 shrink-0" />
-        <span>{loading === 'facebook' ? '…' : isOnboarding ? 'Facebook' : 'Continue with Facebook'}</span>
+          <span>{loading === 'facebook' ? '…' : isOnboarding ? 'Facebook' : OAUTH_FACEBOOK}</span>
       </motion.button>
     </div>
   )

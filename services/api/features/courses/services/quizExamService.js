@@ -48,8 +48,62 @@ function shuffleWithSeed(items, seed) {
   return arr;
 }
 
+function optionText(raw) {
+  if (raw == null) return '';
+  if (typeof raw === 'string') return raw;
+  if (typeof raw === 'object' && raw.text != null) return String(raw.text);
+  return String(raw);
+}
+
+/** Non-empty options in display order; keeps original indices for answer mapping. */
+function visibleOptionPairs(q) {
+  return (q?.options || [])
+    .map((o, orig) => ({ text: optionText(o).trim(), orig }))
+    .filter((p) => p.text);
+}
+
+function clientAnswerToOriginal(q, displayIdx) {
+  if (displayIdx == null || displayIdx < 0) return displayIdx;
+  const pairs = visibleOptionPairs(q);
+  return pairs[displayIdx]?.orig ?? displayIdx;
+}
+
+function originalAnswerToClient(q, origIdx) {
+  if (origIdx == null || origIdx < 0) return origIdx;
+  const pairs = visibleOptionPairs(q);
+  const displayIdx = pairs.findIndex((p) => p.orig === origIdx);
+  return displayIdx >= 0 ? displayIdx : origIdx;
+}
+
+function clientAnswersToOriginal(questions, answers) {
+  const out = { ...(answers || {}) };
+  for (let i = 0; i < questions.length; i += 1) {
+    const q = questions[i];
+    const qid = q.id || `q-${i}`;
+    if (out[qid] != null) out[qid] = clientAnswerToOriginal(q, out[qid]);
+  }
+  return out;
+}
+
+function clientAnswersFromOriginal(questions, answers) {
+  const out = { ...(answers || {}) };
+  for (let i = 0; i < questions.length; i += 1) {
+    const q = questions[i];
+    const qid = q.id || `q-${i}`;
+    if (out[qid] != null) out[qid] = originalAnswerToClient(q, out[qid]);
+  }
+  return out;
+}
+
 function sanitizeQuestionForClient(q, idx, opts = {}) {
-  let options = (q.options || []).map((o) => ({ text: String(o?.text ?? '') }));
+  let pairs = visibleOptionPairs(q);
+  if (pairs.length === 0 && (q.type === 'true_false' || q.type === 'mcq')) {
+    pairs = [
+      { text: 'Đúng', orig: 0 },
+      { text: 'Sai', orig: 1 },
+    ];
+  }
+  let options = pairs.map((p) => ({ text: p.text }));
   if (opts.shuffleOptions) {
     options = shuffleWithSeed(options, `${opts.seed || ''}:${q.id || idx}`);
   }
@@ -164,6 +218,12 @@ async function expireIfNeeded(attempt, questions) {
 module.exports = {
   mcqAnswerIndex,
   defaultQuizSettings,
+  optionText,
+  visibleOptionPairs,
+  clientAnswerToOriginal,
+  clientAnswersToOriginal,
+  originalAnswerToClient,
+  clientAnswersFromOriginal,
   sanitizeQuestionForClient,
   shuffleWithSeed,
   findLesson,
