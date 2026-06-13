@@ -40,6 +40,8 @@ services:
         sync: false
       - key: MAIL_FROM
         sync: false
+      - key: RESEND_API_KEY
+        sync: false
       - key: SMTP_HOST
         sync: false
       - key: SMTP_USER
@@ -50,6 +52,8 @@ services:
         value: "587"
       - key: SMTP_SECURE
         value: "false"
+      - key: SMTP_FAMILY
+        value: "4"
       - key: GOOGLE_CLIENT_ID
         sync: false
       - key: GOOGLE_CLIENT_SECRET
@@ -69,14 +73,6 @@ services:
       - key: AWS_REGION
         sync: false
       - key: MEDIA_CDN_URL
-        sync: false
-      - key: SMTP_HOST
-        sync: false
-      - key: SMTP_USER
-        sync: false
-      - key: SMTP_PASS
-        sync: false
-      - key: MAIL_FROM
         sync: false
       # Cosmo agent — Python AI service (deploy galaxies-ai trước hoặc cùng Blueprint)
       - key: AI_SERVICE_URL

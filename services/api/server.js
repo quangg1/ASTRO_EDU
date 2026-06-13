@@ -44,7 +44,7 @@ const { astronomyCalendarRouter } = require('./features/astronomy-calendar');
 const { startAstronomyReminderScheduler } = require('./features/astronomy-calendar/jobs/reminderScheduler');
 const { ensurePublishedSeed } = require('./features/astronomy-calendar/services/astronomyCalendarService');
 const { attachNotificationWebSocket, WS_PATH } = require('./features/notifications/ws/attachNotificationWs');
-const { isMailConfigured, verifySmtpConnection } = require('./shared/mailer');
+const { isMailConfigured, getMailTransport, verifySmtpConnection } = require('./shared/mailer');
 const { hasS3 } = require('./features/media/uploadStorage');
 
 const env = validateApiEnv();
@@ -96,10 +96,16 @@ app.use(errorMiddleware);
 
 app.get('/health', async (req, res) => {
   const smtpConfigured = isMailConfigured();
-  let smtp = { configured: smtpConfigured };
+  const mailTransport = getMailTransport();
+  let smtp = { configured: smtpConfigured, transport: mailTransport };
   if (req.query.verifySmtp === '1' && smtpConfigured) {
     const verified = await verifySmtpConnection();
-    smtp = { ...smtp, verified: verified.ok, error: verified.error || null };
+    smtp = {
+      ...smtp,
+      verified: verified.ok,
+      error: verified.error || null,
+      transport: verified.transport || mailTransport,
+    };
   }
   res.json({
     status: 'OK',
@@ -138,18 +144,19 @@ async function start() {
   server.listen(PORT, '0.0.0.0', () => {
     if (!isMailConfigured()) {
       console.warn(
-        '[mailer] SMTP chưa cấu hình — email (xác nhận đăng ký, xóa tài khoản, hóa đơn…) sẽ không gửi. Thêm biến vào services/api/.env',
+        '[mailer] Email chưa cấu hình — xác nhận đăng ký, xóa tài khoản, mã lớp… sẽ không gửi. Thêm RESEND_API_KEY + MAIL_FROM (Render) hoặc SMTP_* vào env API.',
       );
     } else {
-      console.log('[mailer] SMTP env OK (MAIL_FROM:', process.env.MAIL_FROM?.trim(), ')');
+      const transport = getMailTransport();
+      console.log('[mailer] Email env OK — transport:', transport, 'MAIL_FROM:', process.env.MAIL_FROM?.trim());
       verifySmtpConnection()
         .then((r) => {
           if (r.ok) {
-            console.log('[mailer] SMTP verify OK — server chấp nhận đăng nhập');
+            console.log(`[mailer] ${r.transport || transport} verify OK`);
             return;
           }
           console.error(
-            '[mailer] SMTP verify FAILED (env đủ nhưng Gmail/SMTP từ chối):',
+            `[mailer] ${r.transport || transport} verify FAILED:`,
             r.error || r.reason,
           );
         })

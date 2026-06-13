@@ -2,37 +2,84 @@ const nodemailer = require('nodemailer');
 
 let transporter;
 
-function isMailConfigured() {
+function isSmtpEnvConfigured() {
   return !!(
     process.env.SMTP_HOST?.trim() &&
     process.env.SMTP_USER?.trim() &&
-    process.env.SMTP_PASS?.trim() &&
-    process.env.MAIL_FROM?.trim()
+    process.env.SMTP_PASS?.trim()
   );
 }
 
+function isResendConfigured() {
+  return !!(process.env.RESEND_API_KEY?.trim() && process.env.MAIL_FROM?.trim());
+}
+
+/** SMTP hoặc Resend + MAIL_FROM. */
+function isMailConfigured() {
+  if (isResendConfigured()) return true;
+  return !!(isSmtpEnvConfigured() && process.env.MAIL_FROM?.trim());
+}
+
+function getMailTransport() {
+  if (isResendConfigured()) return 'resend';
+  if (isSmtpEnvConfigured() && process.env.MAIL_FROM?.trim()) return 'smtp';
+  return null;
+}
+
 function getTransporter() {
-  if (!isMailConfigured()) return null;
+  if (!isSmtpEnvConfigured()) return null;
   if (transporter) return transporter;
+  const port = Number(process.env.SMTP_PORT || 587);
+  const secure = process.env.SMTP_SECURE === 'true' || process.env.SMTP_SECURE === '1';
   transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST.trim(),
-    port: Number(process.env.SMTP_PORT || 587),
-    secure: process.env.SMTP_SECURE === 'true' || process.env.SMTP_SECURE === '1',
+    port,
+    secure,
     auth: {
       user: process.env.SMTP_USER.trim(),
       pass: process.env.SMTP_PASS.trim().replace(/\s+/g, ''),
     },
-    connectionTimeout: 20_000,
-    greetingTimeout: 20_000,
-    socketTimeout: 30_000,
+    connectionTimeout: 25_000,
+    greetingTimeout: 25_000,
+    socketTimeout: 45_000,
+    // Render/cloud: tránh treo IPv6 tới smtp.gmail.com
+    family: Number(process.env.SMTP_FAMILY || 4),
+    requireTLS: !secure && port === 587,
+    tls: { minVersion: 'TLSv1.2' },
   });
   return transporter;
 }
 
-/** Kiểm tra đăng nhập SMTP thật — khác `isMailConfigured()` (chỉ đọc env). */
+async function verifyResendConnection() {
+  const key = process.env.RESEND_API_KEY?.trim();
+  if (!key) {
+    return { ok: false, skipped: true, reason: 'not_configured' };
+  }
+  try {
+    const res = await fetch('https://api.resend.com/domains', {
+      headers: { Authorization: `Bearer ${key}` },
+      signal: AbortSignal.timeout(15_000),
+    });
+    if (res.status === 401) {
+      return { ok: false, error: 'RESEND_API_KEY không hợp lệ' };
+    }
+    if (!res.ok) {
+      const body = await res.text().catch(() => '');
+      return { ok: false, error: body || res.statusText || `HTTP ${res.status}` };
+    }
+    return { ok: true, transport: 'resend' };
+  } catch (err) {
+    return { ok: false, error: err?.message || String(err), transport: 'resend' };
+  }
+}
+
+/** Kiểm tra gửi mail thật — khác `isMailConfigured()` (chỉ đọc env). */
 async function verifySmtpConnection() {
   if (!isMailConfigured()) {
     return { ok: false, skipped: true, reason: 'not_configured' };
+  }
+  if (isResendConfigured()) {
+    return verifyResendConnection();
   }
   const t = getTransporter();
   if (!t) {
@@ -40,9 +87,41 @@ async function verifySmtpConnection() {
   }
   try {
     await t.verify();
-    return { ok: true };
+    return { ok: true, transport: 'smtp' };
   } catch (err) {
-    return { ok: false, error: err?.message || String(err) };
+    return { ok: false, error: err?.message || String(err), transport: 'smtp' };
+  }
+}
+
+function formatSendError(err) {
+  const msg = err?.message || String(err);
+  if (/timeout|ETIMEDOUT|ECONNREFUSED|ESOCKET/i.test(msg)) {
+    return `${msg} — SMTP (vd. Gmail) thường không kết nối được từ Render. Dùng RESEND_API_KEY + MAIL_FROM thay SMTP_HOST.`;
+  }
+  return msg;
+}
+
+async function sendViaResend({ to, subject, text, html }) {
+  const key = process.env.RESEND_API_KEY.trim();
+  const from = normalizeMailFrom(process.env.MAIL_FROM) || process.env.MAIL_FROM.trim();
+  const res = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${key}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      from,
+      to: [to],
+      subject,
+      text,
+      html: html || `<pre style="font-family:sans-serif;white-space:pre-wrap">${escapeHtml(text)}</pre>`,
+    }),
+    signal: AbortSignal.timeout(25_000),
+  });
+  if (!res.ok) {
+    const body = await res.text().catch(() => '');
+    throw new Error(body || res.statusText || `HTTP ${res.status}`);
   }
 }
 
@@ -54,6 +133,17 @@ async function sendMail({ to, subject, text, html }) {
   if (!isMailConfigured()) {
     return { sent: false, skipped: true };
   }
+
+  if (isResendConfigured()) {
+    try {
+      await sendViaResend({ to, subject, text, html });
+      return { sent: true };
+    } catch (err) {
+      console.error('[mailer] Resend send failed:', err?.message || err);
+      return { sent: false, error: formatSendError(err) };
+    }
+  }
+
   const t = getTransporter();
   if (!t) {
     return { sent: false, skipped: true };
@@ -68,8 +158,8 @@ async function sendMail({ to, subject, text, html }) {
     });
     return { sent: true };
   } catch (err) {
-    console.error('[mailer] send failed:', err?.message || err);
-    return { sent: false, error: err?.message || String(err) };
+    console.error('[mailer] SMTP send failed:', err?.message || err);
+    return { sent: false, error: formatSendError(err) };
   }
 }
 
@@ -378,6 +468,7 @@ Cosmo Learn`;
 
 module.exports = {
   isMailConfigured,
+  getMailTransport,
   verifySmtpConnection,
   sendMail,
   sendEmailVerificationCode,

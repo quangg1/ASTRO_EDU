@@ -258,8 +258,8 @@ async function deleteAdminUserPermanently({ actorUserId, targetUserId, confirmEm
     emailSent = !!emailResult.sent;
     if (!emailSent) {
       const hint = emailResult.error
-        ? `Chi tiết: ${emailResult.error}`
-        : 'Kiểm tra SMTP_HOST, SMTP_USER, SMTP_PASS, MAIL_FROM trong services/api/.env rồi restart API.';
+        ? emailResult.error
+        : 'Cấu hình RESEND_API_KEY + MAIL_FROM (khuyến nghị trên Render) hoặc SMTP_HOST/USER/PASS trên server API rồi redeploy.';
       throw new AppError(
         503,
         emailResult.skipped ? 'SMTP_NOT_CONFIGURED' : 'DELETE_EMAIL_FAILED',
