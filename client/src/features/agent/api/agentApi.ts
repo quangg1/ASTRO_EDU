@@ -139,17 +139,23 @@ export async function postAgentMessage(params: {
 }): Promise<AgentMessageResponse> {
   const useStream = params.stream !== false
   const url = `${getAgentApiBase()}/message${useStream ? '?stream=1' : '?stream=0'}`
-  const res = await fetch(url, agentFetchInit({
-    method: 'POST',
-    body: JSON.stringify({
-      messages: params.messages,
-      session_context: params.sessionContext,
-      learner_snapshot: params.learnerSnapshot,
-      sessionId: params.sessionId,
-      image_base64: params.image_base64,
-      image_media_type: params.image_media_type,
-    }),
-  }))
+  const res = await fetch(
+    url,
+    agentFetchInit(
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          messages: params.messages,
+          session_context: params.sessionContext,
+          learner_snapshot: params.learnerSnapshot,
+          sessionId: params.sessionId,
+          image_base64: params.image_base64,
+          image_media_type: params.image_media_type,
+        }),
+      },
+      useStream,
+    ),
+  )
 
   if (!res.ok) {
     const data = (await res.json().catch(() => ({}))) as { error?: string; code?: string }
@@ -163,7 +169,10 @@ export async function postAgentMessage(params: {
     }
   }
 
-  if (useStream && params.onStreamEvent) {
+  const contentType = res.headers.get('content-type') || ''
+  const isEventStream = contentType.includes('text/event-stream')
+
+  if (useStream && params.onStreamEvent && isEventStream) {
     let content = ''
     let session: AgentMessageResponse['session']
     let tool_calls: unknown
