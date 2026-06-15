@@ -124,14 +124,19 @@ const nextConfig = {
       'https://*.facebook.com',
       'https://*.firebaseapp.com',
       'https://*.web.app',
+      // YouTube embed (lesson video + VideoWithTranscriptPanel)
+      'https://www.youtube.com',
+      'https://www.youtube-nocookie.com',
     ];
     const csp = [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://apis.google.com https://www.gstatic.com",
+      "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://apis.google.com https://www.gstatic.com https://www.youtube.com https://s.ytimg.com",
       "style-src 'self' 'unsafe-inline' https:",
       `img-src ${imgSrc.join(' ')}`,
       `connect-src ${connectSrc.join(' ')}`,
       "font-src 'self' data: https:",
+      // Uploaded / CDN video (mp4, webm) — default-src 'self' alone blocks S3 URLs on Render
+      "media-src 'self' blob: https:",
       "object-src 'none'",
       `frame-src ${frameSrc.join(' ')}`,
       "frame-ancestors 'self'",
