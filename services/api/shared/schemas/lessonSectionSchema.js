@@ -55,6 +55,8 @@ const lessonSectionSchema = new mongoose.Schema(
           text: { type: String, default: '' },
         },
       ],
+      /** Per-locale tracks: { vi: [{ startSeconds, text }], en: [...] } */
+      tracks: { type: mongoose.Schema.Types.Mixed, default: undefined },
     },
   },
   { _id: false },

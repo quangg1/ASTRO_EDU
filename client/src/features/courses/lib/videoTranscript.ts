@@ -1,27 +1,146 @@
+import type { Locale } from '@/i18n/types'
+
 export type VideoTranscriptCue = {
   startSeconds: number
   text: string
 }
 
+export const VIDEO_TRANSCRIPT_LANGS = ['vi', 'en'] as const
+export type VideoTranscriptLang = (typeof VIDEO_TRANSCRIPT_LANGS)[number]
+
+export type VideoTranscriptTracks = Partial<Record<VideoTranscriptLang, VideoTranscriptCue[]>>
+
+/** Legacy `cues` + optional per-locale `tracks` (vi, en). */
 export type VideoTranscript = {
   language?: string
   cues: VideoTranscriptCue[]
+  tracks?: VideoTranscriptTracks
 }
 
-export function normalizeVideoTranscript(raw: VideoTranscript | null | undefined): VideoTranscript | null {
-  if (!raw || !Array.isArray(raw.cues)) return null
-  const cues = raw.cues
+function normalizeCues(raw: VideoTranscriptCue[] | null | undefined): VideoTranscriptCue[] {
+  if (!Array.isArray(raw)) return []
+  return raw
     .map((c) => ({
       startSeconds: Math.max(0, Number(c.startSeconds) || 0),
       text: String(c.text || '').trim(),
     }))
     .filter((c) => c.text.length > 0)
     .sort((a, b) => a.startSeconds - b.startSeconds)
-  if (cues.length === 0) return null
-  return {
-    language: String(raw.language || 'vi').trim() || 'vi',
-    cues,
+}
+
+function isTranscriptLang(value: string): value is VideoTranscriptLang {
+  return VIDEO_TRANSCRIPT_LANGS.includes(value as VideoTranscriptLang)
+}
+
+/** Merge legacy single-track data into `tracks`. */
+export function expandVideoTranscriptTracks(raw: VideoTranscript | null | undefined): VideoTranscriptTracks {
+  const tracks: VideoTranscriptTracks = {}
+  if (!raw) return tracks
+
+  const legacyLang = String(raw.language || 'vi').trim()
+  const legacyCues = normalizeCues(raw.cues)
+  if (legacyCues.length && isTranscriptLang(legacyLang)) {
+    tracks[legacyLang] = legacyCues
   }
+
+  const rawTracks = raw.tracks
+  if (rawTracks && typeof rawTracks === 'object') {
+    for (const lang of VIDEO_TRANSCRIPT_LANGS) {
+      const cues = normalizeCues(rawTracks[lang])
+      if (cues.length) tracks[lang] = cues
+    }
+  }
+
+  return tracks
+}
+
+export function normalizeVideoTranscript(raw: VideoTranscript | null | undefined): VideoTranscript | null {
+  if (!raw) return null
+  const tracks = expandVideoTranscriptTracks(raw)
+  const available = listAvailableTranscriptLangs(raw)
+  if (available.length === 0) return null
+
+  const primary = isTranscriptLang(String(raw.language || '').trim())
+    ? (String(raw.language).trim() as VideoTranscriptLang)
+    : available[0]
+
+  return {
+    language: primary,
+    cues: tracks[primary] ?? [],
+    tracks,
+  }
+}
+
+export function listAvailableTranscriptLangs(
+  raw: VideoTranscript | null | undefined,
+): VideoTranscriptLang[] {
+  const tracks = expandVideoTranscriptTracks(raw)
+  return VIDEO_TRANSCRIPT_LANGS.filter((lang) => (tracks[lang]?.length ?? 0) > 0)
+}
+
+/**
+ * Pick transcript cues for app locale (or explicit override in the video panel).
+ */
+export function resolveTranscriptForLocale(
+  raw: VideoTranscript | null | undefined,
+  locale: Locale,
+  overrideLang?: VideoTranscriptLang | null,
+): { language: VideoTranscriptLang; cues: VideoTranscriptCue[]; available: VideoTranscriptLang[] } | null {
+  const tracks = expandVideoTranscriptTracks(raw)
+  const available = VIDEO_TRANSCRIPT_LANGS.filter((lang) => (tracks[lang]?.length ?? 0) > 0)
+  if (available.length === 0) return null
+
+  const pick =
+    (overrideLang && tracks[overrideLang]?.length ? overrideLang : null) ||
+    (tracks[locale]?.length ? locale : null) ||
+    (isTranscriptLang(String(raw?.language || '')) && tracks[raw!.language as VideoTranscriptLang]?.length
+      ? (raw!.language as VideoTranscriptLang)
+      : null) ||
+    available[0]
+
+  return {
+    language: pick,
+    cues: tracks[pick] ?? [],
+    available,
+  }
+}
+
+/** Build payload for API — keeps legacy `cues` in sync with primary language. */
+export function packVideoTranscript(
+  tracks: VideoTranscriptTracks,
+  primaryLang: VideoTranscriptLang = 'vi',
+): VideoTranscript | null {
+  const packed: VideoTranscriptTracks = {}
+  for (const lang of VIDEO_TRANSCRIPT_LANGS) {
+    const cues = normalizeCues(tracks[lang])
+    if (cues.length) packed[lang] = cues
+  }
+  const available = VIDEO_TRANSCRIPT_LANGS.filter((lang) => packed[lang]?.length)
+  if (available.length === 0) return null
+
+  const language = available.includes(primaryLang) ? primaryLang : available[0]
+  return {
+    language,
+    cues: packed[language] ?? [],
+    tracks: packed,
+  }
+}
+
+export function copyTranscriptTimings(
+  from: VideoTranscriptCue[],
+  to: VideoTranscriptCue[],
+): VideoTranscriptCue[] {
+  const src = normalizeCues(from)
+  const dst = Array.isArray(to) ? [...to] : []
+  if (!src.length) return dst
+  const out: VideoTranscriptCue[] = []
+  const maxLen = Math.max(src.length, dst.length)
+  for (let i = 0; i < maxLen; i += 1) {
+    const startSeconds = src[i]?.startSeconds ?? dst[i]?.startSeconds ?? 0
+    const text = String(dst[i]?.text ?? '').trim()
+    out.push({ startSeconds, text })
+  }
+  return out
 }
 
 /** "2:33" | "1:02:05" | "153" → seconds */

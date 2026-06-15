@@ -6,10 +6,11 @@ import {
   extractYouTubeVideoId,
   findActiveCueIndex,
   formatCueTime,
-  normalizeVideoTranscript,
+  resolveTranscriptForLocale,
   type VideoTranscript,
+  type VideoTranscriptLang,
 } from '@/features/courses/lib/videoTranscript'
-import { useT } from '@/i18n/public'
+import { useLocale, useT } from '@/i18n/public'
 
 declare global {
   interface Window {
@@ -60,6 +61,8 @@ type Props = {
 
 export function VideoWithTranscriptPanel({ videoUrl, title, transcript, className = '' }: Props) {
   const { t } = useT()
+  const { locale } = useLocale()
+  const [transcriptLangOverride, setTranscriptLangOverride] = useState<VideoTranscriptLang | null>(null)
   const resolvedUrl = resolveMediaUrl(videoUrl)
   const youtubeId = extractYouTubeVideoId(resolvedUrl)
   const isDirect =
@@ -70,9 +73,18 @@ export function VideoWithTranscriptPanel({ videoUrl, title, transcript, classNam
       resolvedUrl.startsWith('/files/') ||
       resolvedUrl.startsWith('http'))
 
-  const normalizedTranscript = useMemo(() => normalizeVideoTranscript(transcript), [transcript])
-  const cues = normalizedTranscript?.cues ?? []
+  const resolvedTranscript = useMemo(
+    () => resolveTranscriptForLocale(transcript, locale, transcriptLangOverride),
+    [transcript, locale, transcriptLangOverride],
+  )
+  const cues = resolvedTranscript?.cues ?? []
   const hasTranscript = cues.length > 0
+  const availableLangs = resolvedTranscript?.available ?? []
+  const activeLang = resolvedTranscript?.language ?? locale
+
+  useEffect(() => {
+    setTranscriptLangOverride(null)
+  }, [locale])
 
   const videoRef = useRef<HTMLVideoElement>(null)
   const ytHostRef = useRef<HTMLDivElement>(null)
@@ -171,9 +183,7 @@ export function VideoWithTranscriptPanel({ videoUrl, title, transcript, classNam
   }
 
   const langLabel =
-    langLabels[normalizedTranscript?.language || 'vi'] ||
-    normalizedTranscript?.language ||
-    t('courses.videoTranscript')
+    langLabels[activeLang] || activeLang || t('courses.videoTranscript')
 
   return (
     <div className={`relative border border-ds-border rounded-xl overflow-hidden bg-ds-surface ${className}`}>
@@ -184,19 +194,43 @@ export function VideoWithTranscriptPanel({ videoUrl, title, transcript, classNam
           lg:absolute lg:inset-y-0 lg:right-0 lg:h-auto lg:w-[min(100%,380px)]`}
       >
         <div className="flex shrink-0 items-center justify-between gap-2 border-b border-ds-border px-4 py-3">
-          <div>
+          <div className="min-w-0">
             <p className="text-sm font-semibold text-white">{t('courses.videoTranscript')}</p>
             <p className="text-[11px] text-ds-subtle">
               {t('courses.videoLangLabel')} {langLabel}
             </p>
           </div>
-          <button
-            type="button"
-            onClick={() => setTranscriptOpen((v) => !v)}
-            className="lg:hidden text-[11px] text-ds-accent"
-          >
-            {transcriptOpen ? t('courses.videoHide') : t('courses.videoShow')}
-          </button>
+          <div className="flex shrink-0 items-center gap-2">
+            {availableLangs.length > 1 ? (
+              <div
+                className="inline-flex rounded-md border border-ds-border overflow-hidden"
+                role="group"
+                aria-label={t('courses.videoTranscriptLangSwitch')}
+              >
+                {availableLangs.map((lang) => (
+                  <button
+                    key={lang}
+                    type="button"
+                    onClick={() => setTranscriptLangOverride(lang)}
+                    className={`px-2 py-1 text-[10px] transition-colors ${
+                      activeLang === lang
+                        ? 'bg-cyan-600/80 text-white'
+                        : 'text-ds-subtle hover:bg-white/5'
+                    }`}
+                  >
+                    {langLabels[lang] ?? lang}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+            <button
+              type="button"
+              onClick={() => setTranscriptOpen((v) => !v)}
+              className="lg:hidden text-[11px] text-ds-accent"
+            >
+              {transcriptOpen ? t('courses.videoHide') : t('courses.videoShow')}
+            </button>
+          </div>
         </div>
 
         <div

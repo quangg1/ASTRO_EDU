@@ -126,6 +126,7 @@ export const viMessages = {
     videoOpen: "Mở video trong tab mới",
     videoShow: "Hiện phụ đề",
     videoTranscript: "Phụ đề / transcript",
+    videoTranscriptLangSwitch: "Chọn ngôn ngữ phụ đề",
     videoUnsupported: "Trình duyệt không hỗ trợ video nhúng.",
   },
   admin: {
