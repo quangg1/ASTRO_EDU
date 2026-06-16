@@ -26,6 +26,11 @@ export function validateDemoCardForm(values: CheckoutCardFormValues): string | n
 const glassInputClass =
   'cosmo-input-surface block w-full rounded-[var(--radius-control)] border px-4 py-3 text-sm text-ds-text placeholder:text-ds-subtle transition-colors focus:outline-none focus:border-ds-accent disabled:cursor-not-allowed disabled:opacity-60'
 
+/** Must live outside CheckoutCardForm — inline component remounts inputs every keystroke. */
+function GlassInput(props: ComponentProps<'input'>) {
+  return <input {...props} className={cn(glassInputClass, props.className)} />
+}
+
 export function CheckoutCardForm({
   values,
   onChange,
@@ -54,9 +59,6 @@ export function CheckoutCardForm({
   const labelClass = cn(
     'font-medium text-ds-muted block mb-2',
     isGlass ? 'text-sm' : 'text-xs',
-  )
-  const GlassInput = (props: ComponentProps<'input'>) => (
-    <input {...props} className={cn(glassInputClass, props.className)} />
   )
 
   return (
