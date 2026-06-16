@@ -783,7 +783,7 @@ export default function StudioEditorPage() {
                               ? { ...(l.quizSettings ?? { revealMode: 'after_submit' }), maxAttempts: l.quizSettings?.maxAttempts ?? 1 }
                               : l.quizSettings,
                         }))
-                        if (nextType !== 'quiz' && tab === 'quiz') setTab('blocks')
+                        if (nextType !== 'quiz') setTab((t) => (t === 'quiz' ? 'blocks' : t))
                       }} className={`mt-1 studio-field`}>
                         <option value="text">Text</option><option value="visualization">Visualization</option><option value="quiz">Quiz</option><option value="assignment">Assignment</option><option value="live_session">Live session</option>
                       </select>
