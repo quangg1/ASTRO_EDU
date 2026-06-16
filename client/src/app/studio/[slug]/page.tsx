@@ -55,7 +55,7 @@ function makeModule(n: number): CourseModule {
 }
 
 function makeLesson(n: number, moduleId?: string): Lesson {
-  return { title: `New Lesson ${n + 1}`, slug: `lesson-${Date.now()}-${n}`, description: '', type: 'text', visualizationId: null, stageTime: null, videoUrl: null, coverImage: null, galleryImages: [], week: null, moduleId: moduleId || null, content: '', learningGoals: [], sections: [], quizQuestions: [], quizSettings: { revealMode: 'after_submit', timeLimitMinutes: null, maxAttempts: null }, resourceLinks: [], sourcePdf: null, sourcePageCount: null, order: n }
+  return { title: `New Lesson ${n + 1}`, slug: `lesson-${Date.now()}-${n}`, description: '', type: 'text', visualizationId: null, stageTime: null, videoUrl: null, coverImage: null, galleryImages: [], week: null, moduleId: moduleId || null, content: '', learningGoals: [], sections: [], quizQuestions: [], quizSettings: { revealMode: 'after_submit', timeLimitMinutes: null, maxAttempts: 1 }, resourceLinks: [], sourcePdf: null, sourcePageCount: null, order: n }
 }
 
 function makeQuiz(): QuizQuestion {
@@ -679,7 +679,7 @@ export default function StudioEditorPage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-0.5 px-4 py-1.5 bg-black/20">
-                  {(['blocks', 'quiz', 'settings', 'preview'] as const).map((t) => (
+                  {(['blocks', ...(lesson.type === 'quiz' ? (['quiz'] as const) : []), 'settings', 'preview'] as const).map((t) => (
                     <button key={t} onClick={() => setTab(t)} className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${tab === t ? (t === 'preview' ? 'bg-emerald-600/90 text-white shadow-lg shadow-emerald-500/20' : 'bg-cyan-600/90 text-white shadow-lg shadow-cyan-500/20') : 'text-ds-subtle hover:text-white hover:bg-white/5'}`}>
                       {t === 'blocks' ? `Blocks (${(lesson.sections?.length ?? 0)})` : t === 'quiz' ? `Quiz (${(lesson.quizQuestions?.length ?? 0)})` : t === 'preview' ? '\u25B6 Preview' : 'Settings'}
                     </button>
@@ -773,7 +773,18 @@ export default function StudioEditorPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <label className="text-xs text-ds-muted">Slug<input value={lesson.slug} onChange={(e) => ul((l) => ({ ...l, slug: e.target.value }))} className={`mt-1 studio-field`} /></label>
                     <label className="text-xs text-ds-muted">Type
-                      <select value={lesson.type} onChange={(e) => ul((l) => ({ ...l, type: e.target.value as Lesson['type'] }))} className={`mt-1 studio-field`}>
+                      <select value={lesson.type} onChange={(e) => {
+                        const nextType = e.target.value as Lesson['type']
+                        ul((l) => ({
+                          ...l,
+                          type: nextType,
+                          quizSettings:
+                            nextType === 'quiz'
+                              ? { ...(l.quizSettings ?? { revealMode: 'after_submit' }), maxAttempts: l.quizSettings?.maxAttempts ?? 1 }
+                              : l.quizSettings,
+                        }))
+                        if (nextType !== 'quiz' && tab === 'quiz') setTab('blocks')
+                      }} className={`mt-1 studio-field`}>
                         <option value="text">Text</option><option value="visualization">Visualization</option><option value="quiz">Quiz</option><option value="assignment">Assignment</option><option value="live_session">Live session</option>
                       </select>
                     </label>
@@ -804,10 +815,11 @@ export default function StudioEditorPage() {
                           }))} className="mt-1 studio-field" />
                         </label>
                         <label className="text-xs text-ds-muted">Số lần làm tối đa
-                          <input type="number" min={1} value={lesson.quizSettings?.maxAttempts ?? ''} onChange={(e) => ul((l) => ({
+                          <input type="number" min={1} value={lesson.quizSettings?.maxAttempts ?? 1} onChange={(e) => ul((l) => ({
                             ...l,
-                            quizSettings: { ...(l.quizSettings ?? { revealMode: 'after_submit' }), maxAttempts: e.target.value ? Number(e.target.value) : null },
+                            quizSettings: { ...(l.quizSettings ?? { revealMode: 'after_submit' }), maxAttempts: e.target.value ? Number(e.target.value) : 1 },
                           }))} className="mt-1 studio-field" />
+                          <span className="block text-[10px] text-ds-subtle mt-1">Mặc định 1 lần — tăng nếu cho phép làm lại.</span>
                         </label>
                         <label className="text-xs text-ds-muted flex items-center gap-2">
                           <input
@@ -837,6 +849,11 @@ export default function StudioEditorPage() {
                           />
                         </label>
                       </>
+                    )}
+                    {lesson.type === 'assignment' && (lesson.quizQuestions?.length ?? 0) > 0 && (
+                      <p className="text-[11px] text-amber-300/90 md:col-span-2 rounded-lg border border-amber-500/30 bg-amber-950/20 px-3 py-2">
+                        Bài tập không dùng câu hỏi quiz — chuyển type sang <strong>Quiz</strong> hoặc xóa câu hỏi quiz còn sót từ bản cũ.
+                      </p>
                     )}
                     {lesson.type === 'assignment' && (
                       <>

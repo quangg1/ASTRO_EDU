@@ -26,7 +26,7 @@ function defaultQuizSettings(raw) {
     maxAttempts:
       raw?.maxAttempts != null && Number.isFinite(Number(raw.maxAttempts))
         ? Math.max(1, Number(raw.maxAttempts))
-        : null,
+        : 1,
     shuffleOptions: Boolean(raw?.shuffleOptions),
     passingScorePct:
       raw?.passingScorePct != null && Number.isFinite(Number(raw.passingScorePct))

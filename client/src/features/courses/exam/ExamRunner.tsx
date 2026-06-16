@@ -54,6 +54,7 @@ export function ExamRunner({
   } | null>(null)
   const [secondsLeft, setSecondsLeft] = useState<number | null>(null)
   const [expiresAt, setExpiresAt] = useState<string | null>(null)
+  const [attemptExhausted, setAttemptExhausted] = useState(false)
 
   const questions = session?.questions ?? []
   const settings = session?.settings
@@ -81,6 +82,7 @@ export function ExamRunner({
     }
     setSession(sess.data)
 
+    const stats = sess.data.attemptStats
     const active = await fetchActiveExamAttempt(courseSlug, lessonSlug, cohortId)
     if (active.success && active.data?.id && active.data.status === 'in_progress') {
       setAttemptId(active.data.id)
@@ -88,16 +90,29 @@ export function ExamRunner({
       setRevision(active.data.revision ?? 0)
       setLockedIds(new Set(active.data.lockedQuestionIds || []))
       if (active.data.expiresAt) setExpiresAt(active.data.expiresAt)
-    } else {
-      const started = await startExamAttempt(courseSlug, lessonSlug, cohortId)
-      if (!started.success) {
-        setError(started.error || 'Không bắt đầu được bài thi')
+      setLoading(false)
+      return
+    }
+
+    if (stats && !stats.canStartNew) {
+      setAttemptExhausted(true)
+      setLoading(false)
+      return
+    }
+
+    const started = await startExamAttempt(courseSlug, lessonSlug, cohortId)
+    if (!started.success) {
+      if (started.code === 'max_attempts') {
+        setAttemptExhausted(true)
         setLoading(false)
         return
       }
-      setAttemptId(started.data.id)
-      if (started.data.expiresAt) setExpiresAt(started.data.expiresAt)
+      setError(started.error || 'Không bắt đầu được bài thi')
+      setLoading(false)
+      return
     }
+    setAttemptId(started.data.id)
+    if (started.data.expiresAt) setExpiresAt(started.data.expiresAt)
     setLoading(false)
   }, [courseSlug, lessonSlug, cohortId])
 
@@ -204,6 +219,19 @@ export function ExamRunner({
       </div>
     )
   }
+  if (attemptExhausted && session) {
+    const stats = session.attemptStats
+    return (
+      <div className="p-8 max-w-lg mx-auto space-y-4">
+        <h2 className="text-xl font-semibold text-white">{session.lessonTitle}</h2>
+        <p className="text-ds-muted text-sm">
+          Bạn đã dùng hết {stats?.maxAttempts ?? 1} lượt làm bài
+          {stats?.bestScore != null ? ` · Điểm cao nhất: ${stats.bestScore}%` : ''}.
+        </p>
+        <Link href={backHref} className="inline-block text-ds-accent text-sm">← Quay lại</Link>
+      </div>
+    )
+  }
   if (!session || !currentQ) return null
 
   const answeredCount = Object.keys(answers).filter((k) => answers[k] >= 0).length
@@ -230,6 +258,11 @@ export function ExamRunner({
           <div className="min-w-0">
             <p className="text-xs text-ds-subtle truncate">{session.lessonTitle}</p>
             <h1 className="text-lg font-semibold text-white">Bài kiểm tra</h1>
+            {session.attemptStats && session.attemptStats.maxAttempts > 1 && (
+              <p className="text-[10px] text-ds-subtle mt-0.5">
+                Lượt {session.attemptStats.attemptsUsed + (attemptId ? 1 : 0)}/{session.attemptStats.maxAttempts}
+              </p>
+            )}
           </div>
         </div>
         <div className="flex items-center gap-3">

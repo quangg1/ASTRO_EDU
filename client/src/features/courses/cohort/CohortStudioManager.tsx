@@ -13,6 +13,7 @@ import {
   patchCohort,
   type AssignmentSubmissionRow,
   type CohortSummary,
+  type QuizAttemptGroup,
 } from '@/features/courses/api/cohortApi'
 import { CohortStudioAnnouncements } from '@/features/courses/cohort/CohortStudioAnnouncements'
 import { CohortStudioGradebook } from '@/features/courses/cohort/CohortStudioGradebook'
@@ -43,9 +44,7 @@ export function CohortStudioManager({
   const [cohortCurrencyLocal, setCohortCurrencyLocal] = useState('VND')
   const [msg, setMsg] = useState<string | null>(null)
   const [submissions, setSubmissions] = useState<AssignmentSubmissionRow[]>([])
-  const [quizAttempts, setQuizAttempts] = useState<
-    { id: string; userId: string; lessonTitle: string; score?: number; submittedAt?: string }[]
-  >([])
+  const [quizGroups, setQuizGroups] = useState<QuizAttemptGroup[]>([])
 
   const cohortsLoadedRef = useRef('')
 
@@ -89,7 +88,7 @@ export function CohortStudioManager({
       fetchCohortQuizAttempts(courseSlug, cohortId),
     ])
     if (sub.success) setSubmissions(sub.data || [])
-    if (quiz.success) setQuizAttempts(quiz.data || [])
+    if (quiz.success) setQuizGroups(quiz.data || [])
   }
 
   const handleCreate = async () => {
@@ -388,17 +387,12 @@ export function CohortStudioManager({
             </section>
             <section>
               <h2 className="text-sm font-semibold text-white mb-2">Bài kiểm tra</h2>
-              {quizAttempts.length === 0 ? (
+              {quizGroups.length === 0 ? (
                 <p className="text-ds-subtle text-sm">Chưa có lượt làm bài.</p>
               ) : (
-                <ul className="space-y-2 text-sm">
-                  {quizAttempts.map((a) => (
-                    <li key={a.id} className="rounded-lg border border-ds-border px-3 py-2 flex justify-between">
-                      <span className="text-gray-200">
-                        {a.lessonTitle} · <span className="text-ds-subtle font-mono text-xs">{a.userId.slice(0, 8)}…</span>
-                      </span>
-                      <span className="text-ds-accent">{a.score ?? '—'}%</span>
-                    </li>
+                <ul className="space-y-3">
+                  {quizGroups.map((g) => (
+                    <QuizAttemptGroupCard key={`${g.userId}-${g.lessonSlug}`} group={g} />
                   ))}
                 </ul>
               )}
@@ -409,6 +403,70 @@ export function CohortStudioManager({
         )}
       </div>
     </div>
+  )
+}
+
+function QuizAttemptGroupCard({ group }: { group: QuizAttemptGroup }) {
+  const [expanded, setExpanded] = useState(false)
+  const latest = group.latestAttempt || group.attempts[0]
+  const latestScore = latest?.score ?? group.bestScore
+  const canExpand = group.attemptCount > 1
+
+  const inner = (
+    <>
+      <div className="min-w-0">
+        <p className="text-white font-medium truncate">{group.lessonTitle}</p>
+        <p className="text-[11px] text-ds-subtle mt-0.5">
+          {group.studentName}
+          {group.attemptCount > 1 ? ` · ${group.attemptCount} lượt` : ''}
+          {group.maxAttempts > 1 ? ` · tối đa ${group.maxAttempts}` : ''}
+        </p>
+        {latest?.submittedAt && (
+          <p className="text-[10px] text-ds-subtle mt-0.5">
+            {group.attemptCount > 1 ? 'Lần gần nhất: ' : ''}
+            {new Date(latest.submittedAt).toLocaleString('vi-VN')}
+          </p>
+        )}
+      </div>
+      <div className="text-right shrink-0">
+        <p className="text-ds-accent font-semibold tabular-nums">{latestScore ?? '—'}%</p>
+        {group.bestScore != null && group.attemptCount > 1 && group.bestScore !== latestScore && (
+          <p className="text-[10px] text-emerald-300">Cao nhất {group.bestScore}%</p>
+        )}
+        {canExpand && (
+          <p className="text-[10px] text-ds-subtle mt-0.5">{expanded ? 'Thu gọn' : 'Chi tiết'}</p>
+        )}
+      </div>
+    </>
+  )
+
+  return (
+    <li className="rounded-xl border border-ds-border bg-ds-overlay overflow-hidden">
+      {canExpand ? (
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          className="w-full px-4 py-3 flex items-start justify-between gap-3 text-left hover:bg-white/[0.02] transition-colors"
+        >
+          {inner}
+        </button>
+      ) : (
+        <div className="w-full px-4 py-3 flex items-start justify-between gap-3">{inner}</div>
+      )}
+      {expanded && canExpand && (
+        <ul className="border-t border-ds-border/60 divide-y divide-ds-border/40">
+          {group.attempts.map((a) => (
+            <li key={a.id} className="px-4 py-2 flex justify-between text-xs text-ds-muted">
+              <span>
+                Lần {a.attemptNumber}
+                {a.submittedAt ? ` · ${new Date(a.submittedAt).toLocaleString('vi-VN')}` : ''}
+              </span>
+              <span className="text-ds-accent tabular-nums">{a.score ?? '—'}%</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </li>
   )
 }
 

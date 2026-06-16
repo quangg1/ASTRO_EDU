@@ -30,9 +30,21 @@ function pickUpcoming(lessons, now = new Date(), limit = 5) {
   }));
 }
 
+function isLearningLesson(type) {
+  return ['text', 'visualization', 'live_session'].includes(type || 'text');
+}
+
+function isAssessmentLesson(type) {
+  return type === 'quiz' || type === 'assignment';
+}
+
 function buildProgressSummary(lessons, enrollmentProgress, submissions, quizAttempts) {
-  const totalLessons = lessons.length;
-  const completedFromEnrollment = (enrollmentProgress || []).filter((p) => p.completed).length;
+  const learningLessons = lessons.filter((l) => isLearningLesson(l.type));
+  const assessmentLessons = lessons.filter((l) => isAssessmentLesson(l.type));
+  const completedSlugs = new Set(
+    (enrollmentProgress || []).filter((p) => p.completed).map((p) => p.lessonSlug),
+  );
+  const completedLearning = learningLessons.filter((l) => completedSlugs.has(l.slug)).length;
   const submittedCount = submissions.filter((s) => s.status === 'submitted' || s.status === 'graded').length;
   const gradedCount = submissions.filter((s) => s.status === 'graded').length;
   const pendingAssignments = submissions.filter((s) => s.status === 'submitted').length;
@@ -42,13 +54,28 @@ function buildProgressSummary(lessons, enrollmentProgress, submissions, quizAtte
   const avgQuizScore =
     quizScores.length > 0 ? Math.round(quizScores.reduce((a, b) => a + b, 0) / quizScores.length) : null;
 
-  const completedLessons = Math.max(completedFromEnrollment, 0);
-  const pct = totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0;
+  const bestByLesson = new Map();
+  for (const a of quizAttempts) {
+    if (typeof a.score !== 'number') continue;
+    const prev = bestByLesson.get(a.lessonSlug);
+    if (prev == null || a.score > prev) bestByLesson.set(a.lessonSlug, a.score);
+  }
+  const quizLessons = assessmentLessons.filter((l) => l.type === 'quiz');
+  const quizzesWithScore = quizLessons.filter((l) => bestByLesson.has(l.slug)).length;
+
+  const totalLearning = learningLessons.length;
+  const learningPct = totalLearning > 0 ? Math.round((completedLearning / totalLearning) * 100) : 0;
 
   return {
-    completedLessons,
-    totalLessons,
-    percent: pct,
+    completedLessons: completedLearning,
+    totalLessons: totalLearning,
+    percent: learningPct,
+    completedLearning,
+    totalLearning,
+    learningPercent: learningPct,
+    totalAssessment: assessmentLessons.length,
+    quizzesWithScore,
+    totalQuizzes: quizLessons.length,
     pendingAssignments,
     gradedAssignments: gradedCount,
     submittedAssignments: submittedCount,
@@ -132,4 +159,4 @@ async function buildCohortHome({ course, cohort, userId }) {
   };
 }
 
-module.exports = { buildCohortHome, pickUpcoming, buildProgressSummary };
+module.exports = { buildCohortHome, pickUpcoming, buildProgressSummary, isLearningLesson, isAssessmentLesson };

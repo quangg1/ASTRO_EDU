@@ -25,6 +25,7 @@ const {
 } = require('../services/cohortEnrollmentService');
 const { assertCohortMemberOrStaff } = require('../services/cohortAccess');
 const { buildCohortHome } = require('../services/cohortHomeService');
+const { defaultQuizSettings } = require('../services/quizExamService');
 const { buildCohortAnalytics } = require('../services/cohortAnalyticsService');
 const { ensureCohortForum } = require('../services/cohortForumService');
 const { notifyCohortAnnouncement } = require('../services/cohortAnnouncementService');
@@ -759,7 +760,7 @@ router.patch(
   },
 );
 
-/** GET quiz attempts summary for cohort */
+/** GET quiz attempts summary for cohort — grouped by student + lesson */
 router.get('/:slug/cohort/:cohortId/quiz-attempts', authMiddleware, requireRole('teacher', 'admin'), async (req, res) => {
   try {
     const course = await Course.findOne({ slug: req.params.slug }).lean();
@@ -771,24 +772,66 @@ router.get('/:slug/cohort/:cohortId/quiz-attempts', authMiddleware, requireRole(
       cohortId: cohort._id,
       status: { $in: ['submitted', 'timed_out'] },
     })
-      .sort({ submittedAt: -1 })
-      .limit(200)
+      .sort({ submittedAt: 1 })
+      .limit(500)
       .lean();
-    const lessonMap = Object.fromEntries((course.lessons || []).map((l) => [l.slug, l.title]));
-    res.json({
-      success: true,
-      data: attempts.map((a) => ({
+    const lessonMap = Object.fromEntries((course.lessons || []).map((l) => [l.slug, l]));
+    const userIds = [...new Set(attempts.map((a) => a.userId))];
+    const users = await User.find({ _id: { $in: userIds } })
+      .select('_id displayName email')
+      .lean();
+    const userMap = Object.fromEntries(
+      users.map((u) => [String(u._id), u.displayName || u.email || String(u._id)]),
+    );
+
+    const groupKey = (a) => `${a.userId}::${a.lessonSlug}`;
+    const groups = new Map();
+    for (const a of attempts) {
+      const key = groupKey(a);
+      if (!groups.has(key)) {
+        const lesson = lessonMap[a.lessonSlug];
+        const maxAttempts = defaultQuizSettings(lesson?.quizSettings).maxAttempts ?? 1;
+        groups.set(key, {
+          userId: a.userId,
+          studentName: userMap[a.userId] || a.userId.slice(0, 8),
+          lessonSlug: a.lessonSlug,
+          lessonTitle: lesson?.title || a.lessonSlug,
+          maxAttempts,
+          bestScore: null,
+          attemptCount: 0,
+          attempts: [],
+        });
+      }
+      const g = groups.get(key);
+      const score = typeof a.score === 'number' ? a.score : null;
+      g.attemptCount += 1;
+      if (score != null) {
+        g.bestScore = g.bestScore == null ? score : Math.max(g.bestScore, score);
+      }
+      g.attempts.push({
         id: a._id,
-        userId: a.userId,
-        lessonSlug: a.lessonSlug,
-        lessonTitle: lessonMap[a.lessonSlug] || a.lessonSlug,
-        score: a.score,
+        attemptNumber: g.attemptCount,
+        score,
         correctCount: a.correctCount,
         questionCount: a.questionCount,
         submittedAt: a.submittedAt,
         status: a.status,
-      })),
-    });
+      });
+    }
+
+    const data = [...groups.values()]
+      .map((g) => ({
+        ...g,
+        attempts: [...g.attempts].reverse(),
+        latestAttempt: g.attempts[g.attempts.length - 1] || null,
+      }))
+      .sort((a, b) => {
+        const ta = a.latestAttempt?.submittedAt ? new Date(a.latestAttempt.submittedAt).getTime() : 0;
+        const tb = b.latestAttempt?.submittedAt ? new Date(b.latestAttempt.submittedAt).getTime() : 0;
+        return tb - ta;
+      });
+
+    res.json({ success: true, data });
   } catch (err) {
     console.error('[cohorts] quiz attempts error:', err);
     res.status(500).json({ success: false, error: 'Lỗi server' });

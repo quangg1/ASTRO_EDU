@@ -28,6 +28,7 @@ const {
   isCourseEditor,
   ensureStaffEnrollment,
 } = require('../services/courseContentSecurity');
+const { applyCohortScheduleToLessons } = require('../services/cohortLessonAccess');
 
 const router = express.Router();
 
@@ -109,6 +110,13 @@ async function buildCourseDetailPayload(course, enrollment, outlineOnly, options
     lessons = lessons.map((l) => redactLessonForPaywall(l));
   } else if (!includeQuizSecrets) {
     lessons = redactLessonsForLearnerDelivery(lessons);
+    if (
+      deliveryContext?.mode === 'cohort' &&
+      deliveryContext.cohortId &&
+      !locksContent
+    ) {
+      lessons = await applyCohortScheduleToLessons(course, deliveryContext.cohortId, lessons);
+    }
   }
   let teacher = null;
   if (course.teacherId) {

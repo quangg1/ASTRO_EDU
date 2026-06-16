@@ -35,6 +35,14 @@ export function typeLabel(type: string) {
   }
 }
 
+export function isLearningLesson(type: string) {
+  return ['text', 'visualization', 'live_session'].includes(type)
+}
+
+export function isAssessmentLesson(type: string) {
+  return type === 'quiz' || type === 'assignment'
+}
+
 export function upcomingKindLabel(kind: 'opens' | 'due') {
   return kind === 'opens' ? 'Mở bài' : 'Hạn nộp'
 }

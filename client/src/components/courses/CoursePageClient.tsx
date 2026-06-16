@@ -630,6 +630,27 @@ export function CoursePageClient({
                       </p>
                     </div>
                   </div>
+                ) : selectedLesson.cohortAccess === 'locked' || selectedLesson.cohortAccess === 'closed' ? (
+                  <div className="flex flex-col items-center justify-center min-h-[320px] p-8 text-center">
+                    <div className="rounded-2xl border border-amber-500/30 bg-amber-950/20 p-8 max-w-md">
+                      <p className="text-amber-200 font-medium mb-2">
+                        {selectedLesson.cohortAccess === 'closed' ? 'Bài học đã đóng' : 'Bài học chưa mở'}
+                      </p>
+                      <p className="text-sm text-ds-muted mb-4">
+                        {selectedLesson.cohortAccess === 'closed'
+                          ? 'Nội dung không còn khả dụng theo lịch lớp.'
+                          : 'Hãy quay lại trang lớp để xem lịch mở bài.'}
+                      </p>
+                      {activeCohortId && (
+                        <Link
+                          href={`/courses/${slug}/cohort/${activeCohortId}`}
+                          className="inline-flex px-4 py-2 rounded-xl bg-cyan-600 text-white text-sm font-medium hover:opacity-90"
+                        >
+                          Về trang lớp →
+                        </Link>
+                      )}
+                    </div>
+                  </div>
                 ) : selectedLesson.type === 'text' ? (
                   <>
                     <LessonContentBody lesson={selectedLesson} />

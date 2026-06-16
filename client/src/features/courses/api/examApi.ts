@@ -32,6 +32,13 @@ export type ExamSession = {
   settings: QuizSettings
   questions: ExamQuestionClient[]
   questionCount: number
+  attemptStats?: {
+    maxAttempts: number
+    attemptsUsed: number
+    attemptsRemaining: number
+    canStartNew: boolean
+    bestScore: number | null
+  }
 }
 
 function examBase(slug: string, lessonSlug: string, cohortId?: string | null) {

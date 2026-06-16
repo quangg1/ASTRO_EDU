@@ -126,6 +126,8 @@ export interface Lesson {
   sourcePdf?: string | null
   sourcePageCount?: number | null
   order: number
+  /** Khi học qua lớp cohort — open | locked | closed the undefined nếu không áp lịch */
+  cohortAccess?: 'open' | 'locked' | 'closed'
 }
 
 export interface Course {

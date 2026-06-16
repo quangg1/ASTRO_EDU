@@ -98,21 +98,29 @@ export function CohortHomePanel({
             <h2 className="text-sm font-semibold text-white">Tiến độ của tôi</h2>
           </div>
           <p className="text-2xl font-semibold text-white tabular-nums">
-            {progress.completedLessons}
-            <span className="text-ds-subtle text-base font-normal"> / {progress.totalLessons} bài</span>
+            {progress.completedLearning ?? progress.completedLessons}
+            <span className="text-ds-subtle text-base font-normal">
+              {' '}
+              / {progress.totalLearning ?? progress.totalLessons} bài học
+            </span>
           </p>
           <div className="mt-2 h-2 rounded-full bg-white/10 overflow-hidden">
             <div
               className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-emerald-400 transition-all"
-              style={{ width: `${Math.min(100, progress.percent)}%` }}
+              style={{ width: `${Math.min(100, progress.learningPercent ?? progress.percent)}%` }}
             />
           </div>
           <ul className="mt-3 space-y-1 text-[11px] text-ds-muted">
+            {(progress.totalQuizzes ?? 0) > 0 && (
+              <li>
+                Kiểm tra: {progress.quizzesWithScore ?? 0}/{progress.totalQuizzes} đã có điểm
+                {progress.avgQuizScore != null ? ` · TB ${progress.avgQuizScore}%` : ''}
+              </li>
+            )}
             <li>
               Bài tập: {progress.pendingAssignments > 0 ? `${progress.pendingAssignments} chờ chấm` : 'không chờ chấm'}
               {progress.gradedAssignments > 0 ? ` · ${progress.gradedAssignments} đã chấm` : ''}
             </li>
-            {progress.avgQuizScore != null && <li>Điểm TB kiểm tra: {progress.avgQuizScore}</li>}
           </ul>
         </section>
       </div>

@@ -122,11 +122,39 @@ export type CohortProgressSummary = {
   completedLessons: number
   totalLessons: number
   percent: number
+  completedLearning?: number
+  totalLearning?: number
+  learningPercent?: number
+  totalAssessment?: number
+  quizzesWithScore?: number
+  totalQuizzes?: number
   pendingAssignments: number
   gradedAssignments: number
   submittedAssignments: number
   avgQuizScore: number | null
   quizAttemptCount: number
+}
+
+export type QuizAttemptRow = {
+  id: string
+  attemptNumber: number
+  score?: number | null
+  correctCount?: number
+  questionCount?: number
+  submittedAt?: string
+  status: string
+}
+
+export type QuizAttemptGroup = {
+  userId: string
+  studentName: string
+  lessonSlug: string
+  lessonTitle: string
+  maxAttempts: number
+  bestScore: number | null
+  attemptCount: number
+  attempts: QuizAttemptRow[]
+  latestAttempt?: QuizAttemptRow | null
 }
 
 export type CohortHomeData = {

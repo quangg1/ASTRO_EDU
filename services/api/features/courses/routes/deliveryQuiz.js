@@ -94,6 +94,23 @@ examRouter.get('/session', authMiddleware, async (req, res) => {
       }),
     );
 
+    const finishedAttempts = await QuizAttempt.find({
+      userId: req.userId,
+      courseId: course._id,
+      lessonSlug: lesson.slug,
+      cohortId: cohort?._id || null,
+      status: { $in: ['submitted', 'timed_out'] },
+    }).lean();
+    const attemptsUsed = countFinishedAttempts(finishedAttempts);
+    const maxAttempts = settings.maxAttempts ?? 1;
+    const attemptsRemaining = Math.max(0, maxAttempts - attemptsUsed);
+    const activeAttempt = await getActiveAttempt({
+      userId: req.userId,
+      courseId: course._id,
+      lessonSlug: lesson.slug,
+      cohortId: cohort?._id || null,
+    });
+
     res.json({
       success: true,
       data: {
@@ -104,6 +121,16 @@ examRouter.get('/session', authMiddleware, async (req, res) => {
         settings,
         questions: sanitized,
         questionCount: sanitized.length,
+        attemptStats: {
+          maxAttempts,
+          attemptsUsed,
+          attemptsRemaining,
+          canStartNew: attemptsRemaining > 0 || (activeAttempt && activeAttempt.status === 'in_progress'),
+          bestScore:
+            finishedAttempts.length > 0
+              ? Math.max(...finishedAttempts.map((a) => (typeof a.score === 'number' ? a.score : 0)))
+              : null,
+        },
       },
     });
   } catch (err) {
