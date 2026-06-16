@@ -111,7 +111,7 @@ const nextConfig = {
   async headers() {
     const mediaOrigin = resolveMediaOrigin();
     const apiOrigin = resolveApiProxyOrigin();
-    const connectSrc = ["'self'", 'https:', 'wss:'];
+    const connectSrc = ["'self'", 'https:', 'wss:', 'blob:'];
     if (mediaOrigin) connectSrc.push(mediaOrigin);
     if (apiOrigin) connectSrc.push(apiOrigin);
     const imgSrc = ["'self'", 'data:', 'blob:', 'https:'];

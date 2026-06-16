@@ -1,12 +1,13 @@
 'use client'
 
-import React, { Suspense, useRef, useEffect, useState } from 'react'
+import React, { Suspense, useRef, useEffect, useState, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import dynamic from 'next/dynamic'
 import * as THREE from 'three'
 import { useGLTF, OrbitControls, Environment } from '@react-three/drei'
 import type { IconicOrganism } from '@/lib/iconicOrganisms'
 import { getStaticAssetUrl } from '@/lib/apiConfig'
+import { configureGltfRenderer, prepareGltfSceneForDisplay } from '@/lib/gltfDisplay'
 
 const Canvas = dynamic(() => import('@react-three/fiber').then((m) => m.Canvas), { ssr: false })
 
@@ -18,11 +19,12 @@ interface Organism3DViewerProps {
 /** Nội dung 3D bên trong Canvas: load GLB, scale vừa khung, ánh sáng + OrbitControls */
 function SceneContent({ modelUrl }: { modelUrl: string }) {
   const { scene } = useGLTF(modelUrl)
+  const displayScene = useMemo(() => prepareGltfSceneForDisplay(scene), [scene])
   const groupRef = useRef<THREE.Group>(null)
 
   useEffect(() => {
-    if (!scene) return
-    const box = new THREE.Box3().setFromObject(scene)
+    if (!displayScene) return
+    const box = new THREE.Box3().setFromObject(displayScene)
     const size = box.getSize(new THREE.Vector3())
     const maxDim = Math.max(size.x, size.y, size.z, 0.001)
     const scale = 2 / maxDim
@@ -31,17 +33,17 @@ function SceneContent({ modelUrl }: { modelUrl: string }) {
       const center = box.getCenter(new THREE.Vector3())
       groupRef.current.position.sub(center.multiplyScalar(scale))
     }
-  }, [scene])
+  }, [displayScene])
 
   return (
     <>
-      <ambientLight intensity={1.4} />
-      <directionalLight position={[5, 8, 5]} intensity={2} />
-      <directionalLight position={[-4, 6, 4]} intensity={1.2} />
-      <directionalLight position={[0, 5, -3]} intensity={1} />
+      <ambientLight intensity={0.85} />
+      <directionalLight position={[5, 8, 5]} intensity={1.35} />
+      <directionalLight position={[-4, 6, 4]} intensity={0.75} />
+      <hemisphereLight color="#c8d8f0" groundColor="#1a2030" intensity={0.45} />
       <Environment preset="studio" />
       <group ref={groupRef}>
-        <primitive object={scene} />
+        <primitive object={displayScene} />
       </group>
       <OrbitControls enableDamping dampingFactor={0.05} />
     </>
@@ -83,6 +85,7 @@ export function Organism3DViewer({ organism, onClose }: Organism3DViewerProps) {
               camera={{ position: [0, 0, 4], fov: 45 }}
               gl={{ antialias: true, alpha: true }}
               className="w-full h-full"
+              onCreated={({ gl }) => configureGltfRenderer(gl)}
             >
               <Suspense
                 fallback={

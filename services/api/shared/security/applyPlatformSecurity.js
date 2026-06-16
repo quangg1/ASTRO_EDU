@@ -31,7 +31,7 @@ function applyPlatformSecurity(app) {
               scriptSrc: ["'self'"],
               styleSrc: ["'self'", "'unsafe-inline'"],
               imgSrc: ["'self'", 'data:', 'blob:', 'https:'],
-              connectSrc: ["'self'", 'https:'],
+              connectSrc: ["'self'", 'https:', 'blob:'],
               fontSrc: ["'self'", 'data:', 'https:'],
               objectSrc: ["'none'"],
               frameAncestors: ["'self'"],
