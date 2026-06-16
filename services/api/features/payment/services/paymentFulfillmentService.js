@@ -151,7 +151,7 @@ async function completeOrderAndEnroll({ txnRef, transactionId }) {
         let cohortInviteNote = null;
         if (receiptContext.cohortTitle) {
           cohortInviteNote = receiptContext.cohortEmailSent
-            ? `Lớp «${receiptContext.cohortTitle}»: mã lớp đã gửi trong email riêng (không hiển thị trên web).`
+            ? `Lớp «${receiptContext.cohortTitle}»: email xác nhận đăng ký đã gửi (nếu SMTP đã cấu hình).`
             : `Lớp «${receiptContext.cohortTitle}»: kiểm tra thông báo trên app hoặc liên hệ giáo viên nếu chưa nhận mã qua email.`;
         }
         void sendPaymentReceiptEmail({

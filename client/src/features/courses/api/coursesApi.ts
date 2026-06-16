@@ -143,7 +143,7 @@ export interface Course {
   isPaid?: boolean
   /** Catalog self-paced enroll; false = chỉ cohort */
   catalogEnabled?: boolean
-  /** self_paced | instructor_led | hybrid */
+  /** self_paced | instructor_led (legacy hybrid → self_paced) */
   distributionStrategy?: 'self_paced' | 'instructor_led' | 'hybrid'
   published?: boolean
   /** true when GV/admin xem khóa chưa publish */

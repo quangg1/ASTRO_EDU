@@ -250,51 +250,16 @@ router.post('/:slug/cohorts/enroll', authMiddleware, async (req, res) => {
   }
 });
 
-/** POST join by mã — tắt với khóa theo kỳ / trả phí (mã chỉ qua email sau đăng ký). */
-router.post('/:slug/cohorts/join', authMiddleware, async (req, res) => {
-  try {
-    const course = await Course.findOne({ slug: req.params.slug, published: true });
-    if (!course) return res.status(404).json({ success: false, error: 'Không tìm thấy khóa học' });
-    if (courseRequiresPayment(course) || course.catalogEnabled === false) {
-      return res.status(403).json({
-        success: false,
-        code: 'invite_code_disabled',
-        error:
-          'Không nhập mã trên web. Chọn lớp trên trang khóa học, thanh toán (nếu có phí) — mã lớp gửi qua email.',
-      });
-    }
-    const code = String(req.body?.inviteCode || '').trim().toUpperCase();
-    const cohort = await Cohort.findOne({ courseId: course._id, inviteCode: code, status: 'open' });
-    if (!cohort) return res.status(404).json({ success: false, error: 'Mã lớp không hợp lệ' });
-    if (!isCohortEnrollmentOpen(cohort)) {
-      return res.status(403).json({ success: false, error: 'Lớp đã đóng đăng ký' });
-    }
-    const existing = await CohortEnrollment.findOne({ cohortId: cohort._id, userId: req.userId });
-    if (existing) {
-      return res.json({ success: true, data: { cohortId: cohort._id, slug: cohort.slug } });
-    }
-    const placement = await placeStudentInCohort({
-      userId: req.userId,
-      course,
-      cohort,
-    });
-    res.status(201).json({
-      success: true,
-      data: {
-        cohortId: placement.cohortId,
-        slug: placement.cohortSlug,
-        title: cohort.title,
-        inviteEmailSent: placement.emailSent,
-        message: cohortInviteEmailMessage(placement),
-      },
-    });
-  } catch (err) {
-    console.error('[cohorts] join error:', err);
-    res.status(500).json({ success: false, error: 'Lỗi server' });
-  }
+/** POST join by mã — đã bỏ; đăng ký qua chọn lớp trên trang khóa học. */
+router.post('/:slug/cohorts/join', authMiddleware, async (_req, res) => {
+  return res.status(403).json({
+    success: false,
+    code: 'invite_code_disabled',
+    error: 'Không dùng mã lớp. Chọn lớp trên trang khóa học và đăng ký (hoặc thanh toán nếu có phí).',
+  });
 });
 
-/** POST gửi lại email mã lớp — học viên đã trong lớp. */
+/** POST gửi lại email xác nhận đăng ký lớp. */
 router.post('/:slug/cohort/:cohortId/resend-invite-email', authMiddleware, async (req, res) => {
   try {
     const course = await Course.findOne({ slug: req.params.slug, published: true });

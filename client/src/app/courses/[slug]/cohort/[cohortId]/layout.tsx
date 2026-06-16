@@ -58,7 +58,7 @@ export default function CohortLayout({ children }: { children: React.ReactNode }
             Giáo viên chỉnh lịch và chấm bài trong Studio → Lớp học theo kỳ, không qua trang học viên.
           </p>
         ) : (
-          <p className="text-sm text-ds-muted">Đăng ký lớp trên trang khóa học — mã lớp gửi qua email.</p>
+          <p className="text-sm text-ds-muted">Đăng ký lớp trên trang khóa học để vào học.</p>
         )}
         {isStaff ? (
           <Button type="button" onClick={() => router.push(`/studio/${slug}/cohorts`)}>

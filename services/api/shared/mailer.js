@@ -528,15 +528,15 @@ Cosmo Learn`;
 }
 
 /**
- * Mã lớp — chỉ qua email, không hiển thị trên app.
+ * Email xác nhận đăng ký lớp — không chứa mã, chỉ link vào lớp.
  */
-async function sendCohortInviteEmail({
+async function sendCohortEnrollmentEmail({
   to,
   displayName,
   courseTitle,
   courseSlug,
   cohortTitle,
-  inviteCode,
+  cohortId,
   startAt,
   timezone,
 }) {
@@ -544,28 +544,31 @@ async function sendCohortInviteEmail({
     return { sent: false, skipped: true };
   }
   const clientUrl = (process.env.CLIENT_URL || '').replace(/\/$/, '');
-  const hubUrl = clientUrl ? `${clientUrl}/courses/${courseSlug}` : `/courses/${courseSlug}`;
+  const cohortPath = cohortId
+    ? `/courses/${courseSlug}/cohort/${cohortId}`
+    : `/courses/${courseSlug}`;
+  const hubUrl = clientUrl ? `${clientUrl}${cohortPath}` : cohortPath;
   const name = displayName?.trim() || 'Bạn';
   const startLine = startAt
     ? `\nKhai giảng (theo lịch lớp): ${new Date(startAt).toLocaleString('vi-VN', { timeZone: timezone || 'Asia/Ho_Chi_Minh' })}`
     : '';
-  const subject = `[Cosmo Learn] Mã lớp «${cohortTitle}» — ${courseTitle}`;
+  const subject = `[Cosmo Learn] Đăng ký lớp «${cohortTitle}» — ${courseTitle}`;
   const text = `Xin chào ${name},
 
 Bạn đã đăng ký thành công khóa «${courseTitle}», lớp «${cohortTitle}».
-
-Mã lớp của bạn (giữ bí mật, không chia sẻ công khai):
-${inviteCode}
 ${startLine}
 
-Sau khi đăng nhập Cosmo Learn, vào trang khóa học và mục «Lớp của bạn» để học:
+Vào lớp và xem lịch học tại:
 ${hubUrl}
-
-Lưu ý: Mã lớp không hiển thị trên website vì lý do bảo mật — chỉ gửi qua email này.
 
 Trân trọng,
 Cosmo Learn`;
   return sendMail({ to, subject, text });
+}
+
+/** @deprecated — alias for sendCohortEnrollmentEmail */
+async function sendCohortInviteEmail(params) {
+  return sendCohortEnrollmentEmail(params);
 }
 
 /**
@@ -606,6 +609,7 @@ module.exports = {
   sendPaymentReceiptEmail,
   sendTeacherApplicationReceivedEmail,
   sendTeacherApplicationDecisionEmail,
+  sendCohortEnrollmentEmail,
   sendCohortInviteEmail,
   sendAccountDeletedEmail,
 };

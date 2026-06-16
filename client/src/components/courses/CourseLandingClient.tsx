@@ -24,6 +24,7 @@ import { CourseCohortsJoin } from '@/features/courses/cohort/CourseCohortsJoin'
 import { ModuleMaterialsList } from '@/features/courses/cohort/ModuleMaterialsList'
 import { CourseInstructorCard } from '@/components/courses/CourseInstructorCard'
 import { hasCourseLearnerAccess } from '@/features/courses/lib/courseLearnerAccess'
+import { resolveDistributionStrategy } from '@/features/courses/lib/distributionStrategy'
 
 function isOutlineEntry(l: Lesson | CourseLessonOutline): l is CourseLessonOutline {
   return !('content' in l)
@@ -222,11 +223,19 @@ export function CourseLandingClient({
   }
 
   const hasLearnerAccess = hasCourseLearnerAccess(course)
-  const catalogOpen = course.catalogEnabled !== false
+  const distributionStrategy = resolveDistributionStrategy(course)
+  const isInstructorLed = distributionStrategy === 'instructor_led'
+  const catalogOpen = !isInstructorLed
 
   const firstLessonSlug = lessons.length ? [...lessons].sort((a, b) => a.order - b.order)[0]?.slug : null
 
   const learnHref = firstLessonSlug ? `/courses/${slug}/learn/${encodeURIComponent(firstLessonSlug)}` : null
+  const cohortHref =
+    course.deliveryContext?.mode === 'cohort' && course.deliveryContext.cohortId
+      ? `/courses/${slug}/cohort/${course.deliveryContext.cohortId}`
+      : null
+  const primaryHref = isInstructorLed ? cohortHref : learnHref
+  const primaryLabel = isInstructorLed ? 'Vào lớp' : 'Vào học'
 
   const crossHref = course.crossSellTutorialHref?.trim() || '/tutorial'
 
@@ -265,11 +274,10 @@ export function CourseLandingClient({
           </div>
         </div>
       )}
-      {ownedFlash && !enrolledFlash && (
+      {ownedFlash && !enrolledFlash && catalogOpen && (
         <div className="pt-14 px-4">
           <div className="max-w-3xl mx-auto rounded-xl border border-cyan-500/30 bg-cyan-500/10 px-4 py-3 text-sm text-ds-text">
-            Bạn đã có quyền truy cập khóa học này — không cần mua lại gói tự học. Muốn học theo lớp có GV,
-            chọn lớp ở mục bên dưới.
+            Bạn đã có quyền truy cập khóa học này — không cần mua lại.
           </div>
         </div>
       )}
@@ -326,14 +334,14 @@ export function CourseLandingClient({
             ) : null}
 
             <div className="mt-6 flex flex-wrap gap-3">
-              {hasLearnerAccess && learnHref && (
+              {hasLearnerAccess && primaryHref && (
                 <Link
-                  href={learnHref}
+                  href={primaryHref}
                   className="inline-flex items-center justify-center px-5 py-2.5 rounded-xl bg-cyan-600 text-white text-sm font-medium hover:opacity-90 transition-colors"
                 >
                   {course.deliveryContext?.mode === 'editor' && !course.enrollment
-                    ? 'Vào học (giảng viên)'
-                    : 'Vào học'}
+                    ? `${primaryLabel} (giảng viên)`
+                    : primaryLabel}
                 </Link>
               )}
               {!hasLearnerAccess && isPaid && catalogOpen && (
@@ -345,7 +353,7 @@ export function CourseLandingClient({
                   Mua ngay · {priceLabel}
                 </button>
               )}
-              {!hasLearnerAccess && learnHref && (
+              {!hasLearnerAccess && !isInstructorLed && learnHref && (
                 <Link
                   href={learnHref}
                   className="inline-flex items-center justify-center px-5 py-2.5 rounded-xl border border-ds-border-strong text-gray-200 text-sm hover:bg-white/5 transition-colors"
@@ -372,7 +380,7 @@ export function CourseLandingClient({
                 Hỏi cộng đồng về khóa này
               </CommunityAskButton>
             </div>
-            {!hasLearnerAccess && isPaid && (
+            {!hasLearnerAccess && isPaid && catalogOpen && (
               <p className="mt-4 text-xs text-ds-subtle leading-relaxed">
                 Thanh toán trên trang checkout (demo thẻ — không trừ tiền thật). Gem chỉ dùng để giảm giá.
               </p>
@@ -380,7 +388,7 @@ export function CourseLandingClient({
           </div>
         </div>
 
-        {!hasLearnerAccess && isPaid && catalogOpen && (
+        {!isInstructorLed && !hasLearnerAccess && isPaid && catalogOpen && (
           <aside className="rounded-2xl border border-amber-500/25 bg-amber-500/5 p-5 mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
               <p className="text-sm font-semibold text-amber-100">Một lần mua — truy cập trọn khóa</p>
@@ -396,21 +404,19 @@ export function CourseLandingClient({
           </aside>
         )}
 
-        {!catalogOpen && !hasLearnerAccess && (
+        {isInstructorLed && !hasLearnerAccess && (
           <p className="text-sm text-amber-200/90 mb-4 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3">
-            Khóa theo kỳ — chọn lớp bên dưới và đăng ký trước ngày khai giảng. Mã lớp gửi qua email sau khi hoàn tất.
+            Khóa theo lớp — chọn lớp bên dưới và đăng ký trước ngày khai giảng.
           </p>
         )}
 
-        <CourseCohortsJoin
-          courseSlug={slug}
-          courseId={course.id}
-          catalogPrice={course.price}
-          catalogCurrency={course.currency}
-          catalogEnrolled={hasLearnerAccess}
-          catalogOpen={catalogOpen}
-          cohortPlacedFlash={cohortPlacedFlash}
-        />
+        {isInstructorLed && (
+          <CourseCohortsJoin
+            courseSlug={slug}
+            courseId={course.id}
+            cohortPlacedFlash={cohortPlacedFlash}
+          />
+        )}
 
         <section className="rounded-2xl border border-ds-border bg-ds-surface p-6 mb-8">
           <h2 className="text-lg font-semibold text-white mb-1">Chương trình (syllabus)</h2>

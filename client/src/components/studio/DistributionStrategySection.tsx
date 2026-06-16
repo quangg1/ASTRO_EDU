@@ -1,6 +1,6 @@
 'use client'
 
-import { BookOpen, GraduationCap, Layers } from 'lucide-react'
+import { BookOpen, GraduationCap } from 'lucide-react'
 import {
   DISTRIBUTION_STRATEGY_LABELS,
   type DistributionStrategy,
@@ -28,13 +28,6 @@ const OPTIONS: {
     borderActive: 'border-violet-500/50',
     bgActive: 'bg-violet-950/25',
   },
-  {
-    id: 'hybrid',
-    icon: Layers,
-    accent: 'text-amber-300',
-    borderActive: 'border-amber-500/45',
-    bgActive: 'bg-amber-950/20',
-  },
 ]
 
 export function DistributionStrategySection({
@@ -49,10 +42,10 @@ export function DistributionStrategySection({
       <div>
         <p className="text-xs font-semibold text-gray-200">Chế độ phân phối</p>
         <p className="text-[10px] text-ds-subtle mt-1 leading-relaxed">
-          Chọn cách học viên vào khóa — quyết định catalog, lớp theo kỳ và màn hình Studio hiển thị gì.
+          Mỗi khóa chỉ một trong hai: tự học catalog hoặc lớp có giáo viên — không kết hợp.
         </p>
       </div>
-      <div className="grid gap-2 sm:grid-cols-3" role="radiogroup" aria-label="Chế độ phân phối">
+      <div className="grid gap-2 sm:grid-cols-2" role="radiogroup" aria-label="Chế độ phân phối">
         {OPTIONS.map((opt) => {
           const meta = DISTRIBUTION_STRATEGY_LABELS[opt.id]
           const selected = value === opt.id

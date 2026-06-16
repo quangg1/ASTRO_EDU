@@ -283,17 +283,11 @@ export function CourseCheckoutClient({
               {quote?.checkoutKind === 'cohort' && quote.cohortTitle ? (
                 <>
                   <strong>Học phí lớp:</strong> {quote.cohortTitle} — giá có GV, lịch theo tuần.
-                  {quote.isCatalogUpgrade && quote.catalogCredit ? (
-                    <>
-                      {' '}
-                      Bạn đã có gói tự học — chỉ thanh toán phần chênh lệch.
-                    </>
-                  ) : null}
                 </>
               ) : (
                 'Đăng ký kèm lớp đã chọn.'
               )}{' '}
-              Sau thanh toán, mã lớp gửi qua email — không hiển thị trên web.
+              Sau thanh toán, vào lớp từ mục «Lớp của bạn» trên trang khóa học.
             </p>
           )}
         </header>
@@ -484,7 +478,7 @@ export function CourseCheckoutClient({
             <p className="text-base font-medium text-ds-text">Giao dịch thành công</p>
             <p className="text-sm text-ds-muted max-w-sm">
               Đã ghi danh khóa học
-              {cohortIdFromUrl ? ' và đăng ký lớp' : ''}. Mã lớp (nếu có) gửi qua email.
+              {cohortIdFromUrl ? ' và đăng ký lớp' : ''}. Vào lớp từ trang khóa học.
             </p>
             {session?.txnRef && (
               <p className="text-xs text-ds-muted font-mono">Mã đơn: {session.txnRef}</p>

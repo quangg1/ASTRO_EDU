@@ -41,7 +41,7 @@ export function CohortHub({ courseSlug, cohortId }: { courseSlug: string; cohort
       <div className="p-8 max-w-lg mx-auto space-y-4">
         <p className="text-red-400">{error}</p>
         <p className="text-sm text-ds-muted">
-          Chưa vào được lớp này. Đăng ký trên trang khóa học — mã lớp chỉ gửi qua email, không nhập trên web.
+          Chưa vào được lớp này. Đăng ký trên trang khóa học — chọn lớp đang mở đăng ký.
         </p>
         <Link href={`/courses/${courseSlug}`}>
           <Button type="button" variant="secondary">

@@ -95,11 +95,11 @@ const courseSchema = new mongoose.Schema({
   teacherId: { type: String, default: null, index: true },
   /** Catalog = mở quanh năm; cohort = có thể gắn nhiều lớp (delivery layer) */
   catalogEnabled: { type: Boolean, default: true },
-  /** self_paced | instructor_led | hybrid — đồng bộ với catalogEnabled khi lưu */
+  /** self_paced | instructor_led — đồng bộ với catalogEnabled khi lưu */
   distributionStrategy: {
     type: String,
     enum: ['self_paced', 'instructor_led', 'hybrid'],
-    default: 'hybrid',
+    default: 'self_paced',
   },
   /** Link CTA học miễn phí (Learning Path Hub), ví dụ /tutorial */
   crossSellTutorialHref: { type: String, default: '/tutorial' },

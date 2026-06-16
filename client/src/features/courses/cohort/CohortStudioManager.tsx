@@ -97,7 +97,7 @@ export function CohortStudioManager({
     const res = await createCohort(courseSlug, { title, status: 'open' })
     if (res.success) {
       setNewTitle('')
-      setMsg('Đã tạo lớp · mã: ' + (res.data?.inviteCode || ''))
+      setMsg('Đã tạo lớp «' + (res.data?.title || title) + '»')
       await loadCohorts()
       const id = res.data?._id || res.data?.id
       if (id) {
@@ -205,7 +205,6 @@ export function CohortStudioManager({
                       <div>
                         <p className="text-white font-medium">{c.title}</p>
                         <p className="text-[11px] text-ds-subtle mt-1">
-                          Mã lớp: <span className="font-mono text-ds-accent">{c.inviteCode}</span> ·{' '}
                           {c.studentCount ?? 0} học sinh · {c.status}
                         </p>
                       </div>
@@ -246,7 +245,7 @@ export function CohortStudioManager({
                           <button
                             type="button"
                             className="text-[10px] text-emerald-400"
-                            title="Cho phép học viên tham gia bằng mã lớp"
+                            title="Mở đăng ký — học viên chọn lớp trên trang khóa học"
                             onClick={(e) => {
                               e.stopPropagation()
                               void patchCohort(courseSlug, id, { status: 'open' }).then(() => loadCohorts())

@@ -40,7 +40,7 @@ export default function StudioCohortsPage() {
   if (!checked) return null
   if (!user) return null
 
-  const strategy = distributionStrategy ? resolveDistributionStrategy({ distributionStrategy }) : 'hybrid'
+  const strategy = distributionStrategy ? resolveDistributionStrategy({ distributionStrategy }) : 'self_paced'
   if (distributionStrategy && !cohortsNavEnabledForStrategy(strategy)) {
     return (
       <div className="min-h-screen bg-ds-base pt-20 px-6 max-w-lg mx-auto space-y-4 text-center">

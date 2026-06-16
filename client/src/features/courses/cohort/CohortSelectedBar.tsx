@@ -34,10 +34,8 @@ export function CohortSelectedBar({
           )
         })}
       </select>
-      {selected?.inviteCode && (
-        <span className="text-[10px] text-ds-subtle font-mono">
-          Mã: <span className="text-ds-accent">{selected.inviteCode}</span>
-        </span>
+      {selected?.status && (
+        <span className="text-[10px] text-ds-subtle capitalize">{selected.status}</span>
       )}
     </div>
   )

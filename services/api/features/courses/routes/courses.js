@@ -423,7 +423,7 @@ router.post('/:slug/enroll', authMiddleware, async (req, res) => {
       return res.status(403).json({
         success: false,
         code: 'catalog_disabled',
-        error: 'Khóa học chỉ mở qua lớp theo kỳ. Dùng mã lớp để tham gia.',
+        error: 'Khóa học chỉ mở qua lớp theo kỳ — chọn lớp trên trang khóa học.',
       });
     }
     if (course.isPaid && (course.price ?? 0) > 0 && !isStaff) {
@@ -623,9 +623,7 @@ router.put('/:slug/editor', authMiddleware, requireRole('teacher', 'admin'), asy
     } else if (typeof catalogEnabled === 'boolean') {
       course.catalogEnabled = catalogEnabled;
       if (catalogEnabled === false) course.distributionStrategy = 'instructor_led';
-      else if (course.distributionStrategy === 'instructor_led') {
-        course.distributionStrategy = 'hybrid';
-      }
+      else course.distributionStrategy = 'self_paced';
     }
     normalizeCoursePricingFields(course);
     normalizeCourseCohortPricingFields(course);

@@ -13,8 +13,8 @@ async function notifyCohortJoined({ userId, courseTitle, courseSlug, cohortTitle
   });
 }
 
-/** Thông báo in-app — không chứa mã lớp (mã chỉ trong email). */
-async function notifyCohortInviteSent({
+/** Thông báo in-app — xác nhận email đăng ký lớp (không chứa mã). */
+async function notifyCohortEnrollmentConfirmed({
   userId,
   courseTitle,
   courseSlug,
@@ -25,18 +25,21 @@ async function notifyCohortInviteSent({
 }) {
   const emailHint = email
     ? emailSent
-      ? `Mã lớp đã gửi tới ${email}. Kiểm tra hộp thư (cả thư rác).`
-      : `Không gửi được email tới ${email} — liên hệ giáo viên để nhận mã.`
+      ? `Email xác nhận đã gửi tới ${email}.`
+      : `Không gửi được email tới ${email} — liên hệ giáo viên.`
     : 'Chưa có email trên tài khoản — cập nhật hồ sơ hoặc liên hệ giáo viên.';
   return createNotification({
     userId,
     type: 'cohort_invite_email',
     titleVi: 'Đăng ký lớp thành công',
-    bodyVi: `«${cohortTitle}» — ${courseTitle}. ${emailHint}`,
+    bodyVi: `«${cohortTitle}» — ${courseTitle}. ${emailHint} Vào lớp từ trang khóa học.`,
     href: `/courses/${courseSlug}/cohort/${cohortId}`,
-    metadata: { courseSlug, cohortId, emailSent: !!emailSent, noCodeInApp: true },
+    metadata: { courseSlug, cohortId, emailSent: !!emailSent },
   });
 }
+
+/** @deprecated */
+const notifyCohortInviteSent = notifyCohortEnrollmentConfirmed;
 
 async function notifyAssignmentSubmitted({ teacherId, courseTitle, courseSlug, cohortId, lessonTitle, studentId }) {
   if (!teacherId) return null;
@@ -78,6 +81,7 @@ async function notifyAssignmentGraded({
 
 module.exports = {
   notifyCohortJoined,
+  notifyCohortEnrollmentConfirmed,
   notifyCohortInviteSent,
   notifyAssignmentSubmitted,
   notifyAssignmentGraded,
