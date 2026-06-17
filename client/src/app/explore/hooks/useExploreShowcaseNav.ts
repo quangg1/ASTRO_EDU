@@ -16,6 +16,8 @@ type NavArgs = {
   exploreView: import('@/features/explore/public').ExploreView
   showcaseActiveItemId: string
   setShowcaseActiveItemId: (id: string) => void
+  setEarthHistoryOpen: (open: boolean) => void
+  closePlanetHistory: () => void
   selectedSolarPlanetIndex: number | null
   setSelectedSolarPlanetIndex: (idx: number | null) => void
   activeResolved: ResolvedNasaCatalogItem | null
@@ -32,6 +34,8 @@ export function useExploreShowcaseNav({
   exploreView,
   showcaseActiveItemId,
   setShowcaseActiveItemId,
+  setEarthHistoryOpen,
+  closePlanetHistory,
   selectedSolarPlanetIndex,
   setSelectedSolarPlanetIndex,
   activeResolved,
@@ -42,6 +46,8 @@ export function useExploreShowcaseNav({
 }: NavArgs) {
   const showcaseCameraUrlTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const lastCameraQueryRef = useRef('')
+  const activeEntityUrlRef = useRef(showcaseActiveItemId)
+  activeEntityUrlRef.current = showcaseActiveItemId
 
   const distQ = searchParams.get('dist')
   const azQ = searchParams.get('az')
@@ -77,17 +83,60 @@ export function useExploreShowcaseNav({
     if (idx >= 0) setSelectedSolarPlanetIndex(idx)
   }, [setSelectedSolarPlanetIndex])
 
+  /** Push `?entity=` immediately so URL→state effects cannot snap back to the previous body. */
+  const syncShowcaseEntityUrl = useCallback(
+    (entityId: string) => {
+      if (exploreView !== 'solar') return
+      if (useShowcaseStore.getState().storyTourActive) return
+      const id = String(entityId || '').trim()
+      if (!id) return
+
+      const next = new URLSearchParams(searchParams.toString())
+      next.set('view', 'solar')
+      next.set('mode', 'showcase')
+      next.set('entity', id)
+      const item = getNasaCatalogItemById(id)
+      if (item?.group) next.set('group', item.group)
+      else next.delete('group')
+      next.delete('stage')
+      next.delete('target')
+      next.delete('history')
+      next.delete('beat')
+      next.delete('pin')
+
+      const updated = next.toString()
+      if (updated === searchParams.toString()) return
+      router.replace(`${pathname}?${updated}`, { scroll: false })
+    },
+    [exploreView, pathname, router, searchParams],
+  )
+
   const handleShowcaseEntityClicked = useCallback(
     (entityId: string, source: string) => {
-      setShowcaseActiveItemId(entityId)
-      syncSelectedPlanetFromItem(entityId)
+      const id = String(entityId || '').trim()
+      if (!id) return
+
+      setEarthHistoryOpen(false)
+      if (planetHistoryOpen) closePlanetHistory()
+      setShowcaseActiveItemId(id)
+      activeEntityUrlRef.current = id
+      syncSelectedPlanetFromItem(id)
+      syncShowcaseEntityUrl(id)
       trackLearningPathBehavior({
         eventName: 'scene_entity_clicked',
-        metadata: { schemaVersion: 'scene_event_v2', entityId, source },
+        metadata: { schemaVersion: 'scene_event_v2', entityId: id, source },
       })
-      pushBridgeDebug(`click ${entityId} (${source})`)
+      pushBridgeDebug(`click ${id} (${source})`)
     },
-    [setShowcaseActiveItemId, syncSelectedPlanetFromItem, pushBridgeDebug],
+    [
+      setShowcaseActiveItemId,
+      setEarthHistoryOpen,
+      closePlanetHistory,
+      planetHistoryOpen,
+      syncSelectedPlanetFromItem,
+      syncShowcaseEntityUrl,
+      pushBridgeDebug,
+    ],
   )
 
   const handleShowcaseCameraSettled = useCallback(
@@ -104,6 +153,8 @@ export function useExploreShowcaseNav({
         if (next.get('dist') === dist && next.get('az') === az && next.get('el') === el) {
           return
         }
+        const entityId = activeEntityUrlRef.current?.trim()
+        if (entityId) next.set('entity', entityId)
         next.set('dist', dist)
         next.set('az', az)
         next.set('el', el)

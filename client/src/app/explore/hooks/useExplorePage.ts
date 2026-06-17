@@ -201,6 +201,8 @@ export function useExplorePage() {
     exploreView: mode.exploreView,
     showcaseActiveItemId: mode.showcaseActiveItemId,
     setShowcaseActiveItemId: mode.setShowcaseActiveItemId,
+    setEarthHistoryOpen: mode.setEarthHistoryOpen,
+    closePlanetHistory: mode.closePlanetHistory,
     selectedSolarPlanetIndex: mode.selectedSolarPlanetIndex,
     setSelectedSolarPlanetIndex: mode.setSelectedSolarPlanetIndex,
     activeResolved,
