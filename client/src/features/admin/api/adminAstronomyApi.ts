@@ -12,6 +12,27 @@ function authInit(method: string, body?: unknown): RequestInit {
   })
 }
 
+async function parseAdminJson<T extends { success?: boolean; error?: string }>(
+  res: Response,
+  fallbackError: string,
+): Promise<T & { success: boolean; error?: string }> {
+  let json: T
+  try {
+    json = (await res.json()) as T
+  } catch {
+    return {
+      success: false,
+      error: res.ok ? fallbackError : `${fallbackError} (HTTP ${res.status})`,
+    } as T & { success: boolean; error?: string }
+  }
+  if (json.success) return { ...json, success: true }
+  return {
+    ...json,
+    success: false,
+    error: json.error || `${fallbackError} (HTTP ${res.status})`,
+  }
+}
+
 export async function fetchAdminAstronomyEvents(): Promise<AstronomyEventAdmin[]> {
   const res = await fetch(BASE, authInit('GET'))
   const json = (await res.json()) as { success?: boolean; data?: AstronomyEventAdmin[] }
@@ -51,7 +72,10 @@ export async function createAdminAstronomyEvent(
   body: Partial<AstronomyEventAdmin> & { eventId: string; startAt: string; endAt: string },
 ): Promise<{ success: boolean; data?: AstronomyEventAdmin; error?: string }> {
   const res = await fetch(BASE, authInit('POST', body))
-  const json = (await res.json()) as { success?: boolean; data?: AstronomyEventAdmin; error?: string }
+  const json = await parseAdminJson<{ success?: boolean; data?: AstronomyEventAdmin; error?: string }>(
+    res,
+    'Tạo sự kiện thất bại',
+  )
   if (json.success && json.data) return { success: true, data: json.data }
   return { success: false, error: json.error || 'Tạo sự kiện thất bại' }
 }

@@ -71,17 +71,24 @@ router.post('/import-suggestions', async (req, res) => {
 
 router.post('/', async (req, res) => {
   try {
-    const eventId = String(req.body?.eventId || req.body?.id || '').trim();
+    const eventId = String(req.body?.eventId || '').trim();
     if (!eventId) throw new AppError(400, 'INVALID_ID', 'Thiếu eventId');
     const startAt = new Date(req.body?.startAt);
     const endAt = new Date(req.body?.endAt);
     if (Number.isNaN(startAt.getTime()) || Number.isNaN(endAt.getTime())) {
       throw new AppError(400, 'INVALID_DATE', 'Ngày không hợp lệ');
     }
+    if (endAt.getTime() < startAt.getTime()) {
+      throw new AppError(400, 'INVALID_RANGE', 'Ngày kết thúc phải sau ngày bắt đầu');
+    }
+
+    const statusRaw = String(req.body?.status || 'draft');
+    const status = ['draft', 'review', 'published', 'archived'].includes(statusRaw) ? statusRaw : 'draft';
+    const publishNow = status === 'published';
 
     const doc = await AstronomyEvent.create({
       eventId,
-      status: req.body?.status === 'published' ? 'published' : 'draft',
+      status,
       eventKind: req.body?.eventKind === 'educational' ? 'educational' : 'observable',
       type: req.body?.type || 'moon_phase',
       source: 'editorial',
@@ -104,9 +111,15 @@ router.post('/', async (req, res) => {
       moonPhaseHint: req.body?.moonPhaseHint || null,
       priority: Number(req.body?.priority) || 0,
       featured: req.body?.featured === true,
+      urgencyRank: Number(req.body?.urgencyRank) || 0,
+      gemRewardOverride:
+        req.body?.gemRewardOverride === null || req.body?.gemRewardOverride === undefined
+          ? null
+          : Number(req.body.gemRewardOverride),
+      reviewNote: String(req.body?.reviewNote || '').trim(),
       authoredBy: String(req.userId),
-      publishedBy: req.body?.status === 'published' ? String(req.userId) : null,
-      publishedAt: req.body?.status === 'published' ? new Date() : null,
+      publishedBy: publishNow ? String(req.userId) : null,
+      publishedAt: publishNow ? new Date() : null,
     });
     res.status(201).json({ success: true, data: eventToAdminDto(doc) });
   } catch (err) {

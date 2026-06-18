@@ -152,3 +152,43 @@ export function buildPreviewCalendarEvent(
 export function kitMapFromList(kits: AstronomyEventTypeKit[]): Record<string, AstronomyEventTypeKit> {
   return Object.fromEntries(kits.map((k) => [k.type, k]))
 }
+
+/** Payload gửi POST — không gửi `id` Mongo (server nhầm thành eventId nếu dùng fallback). */
+export function buildCreateEventPayload(
+  draft: Partial<AstronomyEventAdmin>,
+  overrides: { eventId: string; titleVi: string; startAt: string; endAt: string; peakAt: string },
+): Partial<AstronomyEventAdmin> {
+  return {
+    status: draft.status || 'draft',
+    eventKind: draft.eventKind || 'observable',
+    type: draft.type || 'moon_phase',
+    source: draft.source || 'editorial',
+    titleVi: overrides.titleVi,
+    summaryVi: draft.summaryVi || '',
+    subtitleVi: draft.subtitleVi || '',
+    subtitleEn: draft.subtitleEn || '',
+    descriptionVi: draft.descriptionVi || '',
+    observationTipsVi: draft.observationTipsVi || '',
+    visibilityLabelVi: draft.visibilityLabelVi || '',
+    typeLabelVi: draft.typeLabelVi || '',
+    startAt: overrides.startAt,
+    endAt: overrides.endAt,
+    peakAt: overrides.peakAt,
+    exploreView: draft.exploreView || null,
+    exploreTarget: draft.exploreTarget?.trim() || null,
+    lessonHref: draft.lessonHref?.trim() || null,
+    quizHref: draft.quizHref?.trim() || null,
+    difficulty: draft.difficulty || null,
+    moonPhaseHint: draft.moonPhaseHint?.trim() || null,
+    priority: draft.priority ?? 0,
+    featured: Boolean(draft.featured),
+    urgencyRank: draft.urgencyRank ?? 0,
+    gemRewardOverride: draft.gemRewardOverride ?? null,
+    reviewNote: draft.reviewNote || '',
+    eventId: overrides.eventId,
+  }
+}
+
+export function sortEventsByStartAt(rows: AstronomyEventAdmin[]): AstronomyEventAdmin[] {
+  return [...rows].sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime())
+}

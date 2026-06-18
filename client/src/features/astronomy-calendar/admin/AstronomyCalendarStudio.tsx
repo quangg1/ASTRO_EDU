@@ -40,12 +40,14 @@ import {
 } from './studioConstants'
 import {
   applyKitToDraft,
+  buildCreateEventPayload,
   buildPreviewCalendarEvent,
   emptyEventDraft,
   formatEventListDate,
   fromDatetimeLocal,
   kitMapFromList,
   slugifyEventId,
+  sortEventsByStartAt,
   toDatetimeLocal,
 } from './studioHelpers'
 import {
@@ -111,6 +113,7 @@ export function AstronomyCalendarStudio({ title = 'Studio · Lịch Thiên Văn'
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState<string | null>(null)
+  const [msgIsError, setMsgIsError] = useState(false)
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [monthFilter, setMonthFilter] = useState<string>('')
   const [search, setSearch] = useState('')
@@ -196,10 +199,16 @@ export function AstronomyCalendarStudio({ title = 'Studio · Lịch Thiên Văn'
 
   const load = useCallback(async () => {
     setLoading(true)
-    const [events, typeKits] = await Promise.all([fetchAdminAstronomyEvents(), fetchAdminTypeKits()])
-    setRows(events)
-    setKits(typeKits)
-    setLoading(false)
+    try {
+      const [events, typeKits] = await Promise.all([fetchAdminAstronomyEvents(), fetchAdminTypeKits()])
+      setRows(events)
+      setKits(typeKits)
+    } catch (err) {
+      setMsg(err instanceof Error ? err.message : 'Không tải được danh sách sự kiện')
+      setMsgIsError(true)
+    } finally {
+      setLoading(false)
+    }
   }, [])
 
   useEffect(() => {
@@ -238,11 +247,13 @@ export function AstronomyCalendarStudio({ title = 'Studio · Lịch Thiên Văn'
   }
 
   const startCreate = () => {
-    const kit = kitMap.moon_phase
+    const type = (draft.type || selectedKitType || 'moon_phase') as AstronomyEventType
+    const kit = kitMap[type] || kitMap.moon_phase
     setIsCreating(true)
     setSelectedId(null)
     setDraft(emptyEventDraft(kit))
     setMsg(null)
+    setMsgIsError(false)
   }
 
   const handleTypeChange = (type: AstronomyEventType) => {
@@ -253,42 +264,58 @@ export function AstronomyCalendarStudio({ title = 'Studio · Lịch Thiên Văn'
   const saveEvent = async () => {
     setBusy(true)
     setMsg(null)
+    setMsgIsError(false)
 
-    if (isCreating) {
-      const startAt = draft.startAt
-      const endAt = draft.endAt
-      const titleVi = String(draft.titleVi || '').trim()
-      if (!titleVi || !startAt || !endAt) {
-        setBusy(false)
-        setMsg('Cần tiêu đề, ngày bắt đầu và kết thúc')
+    try {
+      if (isCreating) {
+        const startAt = draft.startAt
+        const endAt = draft.endAt
+        const titleVi = String(draft.titleVi || '').trim()
+        if (!titleVi || !startAt || !endAt) {
+          setMsg('Cần tiêu đề, ngày bắt đầu và kết thúc')
+          setMsgIsError(true)
+          return
+        }
+        if (new Date(endAt).getTime() < new Date(startAt).getTime()) {
+          setMsg('Ngày kết thúc phải sau ngày bắt đầu')
+          setMsgIsError(true)
+          return
+        }
+        const eventId = String(draft.eventId || '').trim() || slugifyEventId(titleVi, startAt)
+        const peakAt = draft.peakAt || startAt
+        const res = await createAdminAstronomyEvent(
+          buildCreateEventPayload(draft, { eventId, titleVi, startAt, endAt, peakAt }),
+        )
+        if (res.success && res.data) {
+          setMsg('Đã tạo sự kiện mới')
+          setMsgIsError(false)
+          setRows((prev) => sortEventsByStartAt([...prev.filter((r) => r.id !== res.data!.id), res.data!]))
+          setDraft(res.data)
+          setSelectedId(res.data.id)
+          setIsCreating(false)
+          void load()
+        } else {
+          setMsg(res.error || 'Tạo thất bại')
+          setMsgIsError(true)
+        }
         return
       }
-      const eventId = String(draft.eventId || '').trim() || slugifyEventId(titleVi, startAt)
-      const res = await createAdminAstronomyEvent({
-        ...(draft as AstronomyEventAdmin),
-        eventId,
-        titleVi,
-        startAt,
-        endAt,
-        peakAt: draft.peakAt || startAt,
-      })
-      setBusy(false)
-      if (res.success && res.data) {
-        setMsg('Đã tạo sự kiện mới')
-        setIsCreating(false)
-        setSelectedId(res.data.id)
-        void load()
-      } else {
-        setMsg(res.error || 'Tạo thất bại')
-      }
-      return
-    }
 
-    if (!selected) return
-    const res = await patchAdminAstronomyEvent(selected.id, draft)
-    setBusy(false)
-    setMsg(res.success ? 'Đã lưu sự kiện' : res.error || 'Lỗi lưu')
-    if (res.success) void load()
+      if (!selected) {
+        setMsg('Chọn sự kiện cần lưu')
+        setMsgIsError(true)
+        return
+      }
+      const res = await patchAdminAstronomyEvent(selected.id, draft)
+      setMsg(res.success ? 'Đã lưu sự kiện' : res.error || 'Lỗi lưu')
+      setMsgIsError(!res.success)
+      if (res.success) void load()
+    } catch (err) {
+      setMsg(err instanceof Error ? err.message : 'Lỗi không xác định')
+      setMsgIsError(true)
+    } finally {
+      setBusy(false)
+    }
   }
 
   const removeEvent = async () => {
@@ -302,8 +329,10 @@ export function AstronomyCalendarStudio({ title = 'Studio · Lịch Thiên Văn'
       setDraft({})
       void load()
       setMsg('Đã xóa sự kiện')
+      setMsgIsError(false)
     } else {
       setMsg(res.error || 'Xóa thất bại')
+      setMsgIsError(true)
     }
   }
 
@@ -398,7 +427,15 @@ export function AstronomyCalendarStudio({ title = 'Studio · Lịch Thiên Văn'
       </StudioPanel>
 
       {msg ? (
-        <p className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-slate-300">{msg}</p>
+        <p
+          className={`rounded-xl border px-4 py-2 text-sm ${
+            msgIsError
+              ? 'border-rose-400/30 bg-rose-500/10 text-rose-100'
+              : 'border-emerald-400/25 bg-emerald-500/10 text-emerald-50'
+          }`}
+        >
+          {msg}
+        </p>
       ) : null}
 
       <div className="flex gap-2 rounded-xl border border-white/10 bg-black/20 p-1">
