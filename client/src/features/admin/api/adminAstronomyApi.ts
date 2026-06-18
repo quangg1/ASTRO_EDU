@@ -1,6 +1,6 @@
 import { getApiPathBase } from '@/lib/apiConfig'
 import { apiClientHeaders, apiFetchInit } from '@/lib/apiClientHeaders'
-import type { AstronomyEventAdmin } from '@/features/astronomy-calendar/types'
+import type { AstronomyEventAdmin, CreateAstronomyEventPayload } from '@/features/astronomy-calendar/types'
 
 const BASE = `${getApiPathBase()}/admin/astronomy-calendar`
 
@@ -69,7 +69,7 @@ export async function patchAdminAstronomyEvent(
 }
 
 export async function createAdminAstronomyEvent(
-  body: Partial<AstronomyEventAdmin> & { eventId: string; startAt: string; endAt: string },
+  body: CreateAstronomyEventPayload,
 ): Promise<{ success: boolean; data?: AstronomyEventAdmin; error?: string }> {
   const res = await fetch(BASE, authInit('POST', body))
   const json = await parseAdminJson<{ success?: boolean; data?: AstronomyEventAdmin; error?: string }>(

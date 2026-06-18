@@ -5,6 +5,7 @@ const { resolveObserverFromQuery, VN_OBSERVER_PRESETS } = require('../lib/vnObse
 const { GEM_EARN } = require('../../rewards/constants/gemEarn');
 const { getCachedSeasonalMultiplier, scaleEarn } = require('../../rewards/services/gemRuntimeConfigService');
 const { getTypeKitMap, resolveEventContent } = require('./typeKitService');
+const { dayKeysForEventInMonth } = require('../lib/eventDateRange');
 
 const URGENT_WINDOW_MS = 7 * 86400000;
 
@@ -206,12 +207,15 @@ async function getMonthCalendar({ year, month, query, userId = null }) {
 
   const days = {};
   for (const ev of events) {
-    const peak = ev.peakAt || ev.startAt;
-    if (!peak) continue;
-    const d = new Date(peak);
-    const key = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
-    if (!days[key]) days[key] = [];
-    days[key].push(ev);
+    const start = new Date(ev.startAt);
+    const end = new Date(ev.endAt);
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) continue;
+
+    const keys = dayKeysForEventInMonth(start, end, y, m, observer.tzOffsetMinutes);
+    for (const key of keys) {
+      if (!days[key]) days[key] = [];
+      if (!days[key].some((row) => row.id === ev.id)) days[key].push(ev);
+    }
   }
 
   const moonPhases = events

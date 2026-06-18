@@ -309,6 +309,14 @@ export type AstronomyEventAdmin = {
 
 
 
+export type CreateAstronomyEventPayload = Partial<AstronomyEventAdmin> & {
+  eventId: string
+  startAt: string
+  endAt: string
+}
+
+
+
 export type CalendarFilterChip =
 
   | 'all'

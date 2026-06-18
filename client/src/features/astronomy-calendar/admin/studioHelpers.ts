@@ -1,4 +1,9 @@
-import type { AstronomyCalendarEvent, AstronomyEventAdmin, AstronomyEventTypeKit } from '../types'
+import type {
+  AstronomyCalendarEvent,
+  AstronomyEventAdmin,
+  AstronomyEventTypeKit,
+  CreateAstronomyEventPayload,
+} from '../types'
 import { TYPE_META } from './studioConstants'
 
 export function toDatetimeLocal(iso: string | null | undefined): string {
@@ -157,7 +162,7 @@ export function kitMapFromList(kits: AstronomyEventTypeKit[]): Record<string, As
 export function buildCreateEventPayload(
   draft: Partial<AstronomyEventAdmin>,
   overrides: { eventId: string; titleVi: string; startAt: string; endAt: string; peakAt: string },
-): Partial<AstronomyEventAdmin> {
+): CreateAstronomyEventPayload {
   return {
     status: draft.status || 'draft',
     eventKind: draft.eventKind || 'observable',

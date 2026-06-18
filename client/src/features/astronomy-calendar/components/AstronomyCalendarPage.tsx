@@ -16,14 +16,10 @@ import { AstronomyEventDetailSheet } from './AstronomyEventDetailSheet'
 import { MonthEventCalendar } from './MonthEventCalendar'
 import { MonthEventListSection } from './MonthEventListSection'
 import { filterEvents } from '../lib/eventUi'
+import { eventOverlapsMonth, eventSortTime } from '../lib/eventDateRange'
 import type { AstronomyCalendarEvent, CalendarFilterChip } from '../types'
 
 type CalendarView = 'month' | 'week' | 'year'
-
-function eventInMonth(ev: AstronomyCalendarEvent, year: number, month: number) {
-  const d = new Date(ev.peakAt || ev.startAt)
-  return d.getFullYear() === year && d.getMonth() + 1 === month
-}
 
 export function AstronomyCalendarPage() {
   const router = useRouter()
@@ -53,11 +49,8 @@ export function AstronomyCalendarPage() {
   const monthEvents = useMemo(
     () =>
       filterEvents(catalogEvents, filter)
-        .filter((ev) => eventInMonth(ev, year, month))
-        .sort(
-          (a, b) =>
-            new Date(a.peakAt || a.startAt).getTime() - new Date(b.peakAt || b.startAt).getTime(),
-        ),
+        .filter((ev) => eventOverlapsMonth(ev, year, month))
+        .sort((a, b) => eventSortTime(a) - eventSortTime(b)),
     [catalogEvents, filter, year, month],
   )
 

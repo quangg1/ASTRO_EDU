@@ -2,6 +2,10 @@ const { describe, it } = require('node:test');
 const assert = require('node:assert/strict');
 const { generateCalendarEvents } = require('../features/astronomy-calendar/lib/generateCalendarEvents');
 const { inferEventKind, rawComputeToDocFields } = require('../features/astronomy-calendar/services/astronomyEventService');
+const {
+  dayKeysForEventInMonth,
+  eventOverlapsMonth,
+} = require('../features/astronomy-calendar/lib/eventDateRange');
 
 describe('astronomy calendar generator', () => {
   it('produces moon phases and meteor showers in 90-day window', () => {
@@ -64,5 +68,19 @@ describe('astronomy calendar generator', () => {
       assert.equal(newMoon.exploreView, null);
       assert.ok(typeof newMoon.lessonHref === 'string');
     }
+  });
+
+  it('maps multi-month events onto each active day in month grid', () => {
+    const start = new Date('2026-06-18T10:00:00.000Z');
+    const end = new Date('2026-08-27T10:00:00.000Z');
+    const tz = 420;
+    assert.equal(eventOverlapsMonth(start, end, 2026, 6, tz), true);
+    assert.equal(eventOverlapsMonth(start, end, 2026, 5, tz), false);
+    const juneKeys = dayKeysForEventInMonth(start, end, 2026, 6, tz);
+    assert.ok(juneKeys.includes('2026-06-18'));
+    assert.ok(juneKeys.includes('2026-06-30'));
+    assert.equal(juneKeys.includes('2026-06-01'), false);
+    const augustKeys = dayKeysForEventInMonth(start, end, 2026, 8, tz);
+    assert.ok(augustKeys.includes('2026-08-27'));
   });
 });
