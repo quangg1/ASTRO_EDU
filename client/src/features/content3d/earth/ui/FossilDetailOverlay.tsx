@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
-import { useSceneCommandStore } from '@/features/content3d/earth/public'
+import { useSceneCommandStore } from '@/features/content3d/earth/stores/sceneCommandStore'
 import type { Fossil } from '@/types'
 
 function Row({ label, value }: { label: string; value: string | number | null | undefined }) {

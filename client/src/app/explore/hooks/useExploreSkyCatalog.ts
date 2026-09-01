@@ -5,18 +5,14 @@ import {
   fetchSkyExploreTargets,
   getBundledSkyExploreTargets,
   type SkyExploreTarget,
-} from '@/features/explore/public'
-import {
   mergeSkyTargetContent,
   type SkyTargetContentDTO,
-} from '@/features/explore/lib/mergeSkyTargetContent'
-import { loadWesternExploreTargets } from '@/features/explore/lib/westernSkyCulture'
-import {
+  loadWesternExploreTargets,
   fetchHipCatalogIndex,
   getHipCatalogIndexSync,
   preloadHipCatalogIndex,
   type HipCatalogEntry,
-} from '@/features/explore/lib/hipBrightCatalogCache'
+} from '@/features/explore/public'
 
 function mergeSkyTargets(
   base: SkyExploreTarget[],

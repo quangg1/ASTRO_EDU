@@ -3,7 +3,7 @@ import {
   handleAuthUnauthorized,
   isUnauthorizedResponse,
   mapAuthApiError,
-} from '@/features/auth/lib/authSessionSync'
+} from '@/features/auth/public'
 import { getApiPathBase } from '@/lib/apiConfig'
 import { apiClientHeaders, apiFetchInit } from '@/lib/apiClientHeaders'
 

@@ -2,7 +2,6 @@ const Enrollment = require('../models/Enrollment');
 const AssignmentSubmission = require('../models/AssignmentSubmission');
 const QuizAttempt = require('../models/QuizAttempt');
 const CohortAnnouncement = require('../models/CohortAnnouncement');
-const CohortActivitySchedule = require('../models/CohortActivitySchedule');
 const { loadScheduleMap, buildSyllabusLessons } = require('./scheduleResolver');
 
 function pickUpcoming(lessons, now = new Date(), limit = 5) {
@@ -85,7 +84,7 @@ function buildProgressSummary(lessons, enrollmentProgress, submissions, quizAtte
 }
 
 async function buildCohortHome({ course, cohort, userId }) {
-  const scheduleMap = await loadScheduleMap(CohortActivitySchedule, cohort._id);
+  const scheduleMap = await loadScheduleMap(cohort._id);
   const lessons = buildSyllabusLessons(course, scheduleMap);
   const modules = [...(course.modules || [])]
     .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))

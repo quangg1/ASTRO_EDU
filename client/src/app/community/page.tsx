@@ -2,11 +2,17 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { fetchForums, fetchNews, fetchNewsCategories, type Forum, type Post } from '@/features/community/public'
-import { CommunitySearchBar } from '@/components/community/shared/CommunitySearchBar'
-import { NewsHeroSlider } from '@/components/community/NewsHeroSlider'
-import { NewsHotRow } from '@/components/community/NewsHotRow'
-import { NewsTopicChips } from '@/components/community/NewsTopicChips'
+import {
+  fetchForums,
+  fetchNews,
+  fetchNewsCategories,
+  type Forum,
+  type Post,
+  CommunitySearchBar,
+  NewsHeroSlider,
+  NewsHotRow,
+  NewsTopicChips,
+} from '@/features/community/public'
 import { CornerBrackets } from '@/components/landing/CornerBrackets'
 
 export default function CommunityPage() {

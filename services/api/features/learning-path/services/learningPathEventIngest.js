@@ -1,4 +1,4 @@
-const LearningPathEvent = require('../models/LearningPathEvent');
+const { learningPathEventRepository } = require('../repositories/learningPathRepository');
 const { normalizeLearningPathEvent } = require('../lib/normalizeLearningPathEvent');
 const { processLearnerSignalsForEvents } = require('./learnerSignalProcessor');
 const { bridgeLearningPathEvents } = require('../../learning-state/services/learningStateEngine');
@@ -24,15 +24,7 @@ async function ingestLearningPathEvents(rawEvents, userId) {
     return { normalized: [], inserted: [], rejections };
   }
 
-  const ops = normalized.map((ev) => ({
-    updateOne: {
-      filter: { eventId: ev.eventId },
-      update: { $setOnInsert: ev },
-      upsert: true,
-    },
-  }));
-
-  const bulkResult = await LearningPathEvent.bulkWrite(ops, { ordered: false });
+  const bulkResult = await learningPathEventRepository.upsertByEventId(normalized);
   const upsertedIndices = new Set(
     Object.keys(bulkResult.upsertedIds || {}).map((k) => Number(k)),
   );

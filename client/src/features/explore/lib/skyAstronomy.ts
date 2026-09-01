@@ -16,6 +16,7 @@ export type HorizontalCoords = { altDeg: number; azDeg: number; altRad: number; 
 
 function observerFromSky(obs: SkyObserver): Observer {
   return new Observer(obs.latDeg, obs.lonDeg, 0)
+  
 }
 
 function timeFromSky(obs: SkyObserver) {

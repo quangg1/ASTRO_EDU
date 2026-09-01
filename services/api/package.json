@@ -8,6 +8,9 @@
     "start": "node server.js",
     "dev": "node server.js",
     "test": "node --test",
+    "check:architecture": "node scripts/check-architecture.mjs",
+    "check:architecture:report": "node scripts/check-architecture.mjs --report",
+    "verify": "npm run check:architecture && npm test",
     "sync:learning-path": "node scripts/sync-learning-path-modules-from-json.js",
     "export:concepts-json": "node scripts/export-concepts-json.js --out data/concepts.json",
     "build:concept-prerequisites": "node scripts/build-concept-prerequisites.js --dry-run",
@@ -47,6 +50,7 @@
     "nodemailer": "^6.10.1",
     "redis": "^4.7.0",
     "rss-parser": "^3.13.0",
-    "ws": "^8.21.0"
+    "ws": "^8.21.0",
+    "zod": "^4.4.3"
   }
 }

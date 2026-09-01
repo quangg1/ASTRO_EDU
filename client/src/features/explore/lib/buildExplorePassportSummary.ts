@@ -1,5 +1,8 @@
-import { loadDiscoveryMap } from '@/features/content3d/showcase/lib/showcaseLearningBridge'
-import { NASA_SHOWCASE_ITEMS, NASA_SHOWCASE_STORIES } from '@/features/content3d/showcase/lib/showcaseCatalogRuntime'
+import {
+  loadDiscoveryMap,
+  NASA_SHOWCASE_ITEMS,
+  NASA_SHOWCASE_STORIES,
+} from '@/features/content3d/showcase/public'
 import { buildExploreHref } from '@/features/explore/lib/exploreViewUrl'
 import { getSkyTargetLabel, isConstellationTargetId, isSkyOnlyTarget } from '@/features/explore/lib/exploreTargets'
 import { SKY_EXPLORE_SEED } from '@/features/explore/data/skyExploreSeed'

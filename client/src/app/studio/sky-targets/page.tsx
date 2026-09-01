@@ -15,9 +15,9 @@ import type { ShowcasePanelBlockDTO } from '@/features/content3d/showcase/public
 import {
   fetchHipCatalogIndex,
   preloadHipCatalogIndex,
-} from '@/features/explore/lib/hipBrightCatalogCache'
-import { loadWesternExploreTargets } from '@/features/explore/lib/westernSkyCulture'
-import type { SkyExploreTarget } from '@/features/explore/public'
+  loadWesternExploreTargets,
+  type SkyExploreTarget,
+} from '@/features/explore/public'
 import { useLearningPath } from '@/features/learning-path/public'
 
 type PickerRow = {

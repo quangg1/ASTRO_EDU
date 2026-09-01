@@ -3,12 +3,14 @@
  */
 export {
   addGemTransaction,
+  GEM_EARN_CONTEXTUAL_QUIZ,
   GEM_REWARD_LEARNING_PATH_LESSON,
   isGuestGemUser,
   loadGemWallet,
   saveGemWallet,
   syncGemWallet,
 } from './lib/gemWallet'
+export { labelShopCategoryVi } from './lib/shopCategoryVi'
 export type { GemTransaction, GemWalletState } from './lib/gemWallet'
 export {
   fetchLearnerTiersCatalog,
@@ -56,6 +58,7 @@ export type {
   DecorationBulkImportResult,
 } from './api/avatarDecorationApi'
 export { useEquippedDecoration } from './hooks/useEquippedDecoration'
+export { GemShopDecorationCatalog } from './ui/GemShopDecorationCatalog'
 export {
   gemActivityDirection,
   gemActivityDirectionLabel,

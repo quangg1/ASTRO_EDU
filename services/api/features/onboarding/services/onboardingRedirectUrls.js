@@ -32,6 +32,7 @@ function cosmosFocusForTopic(primaryTopicId) {
 
 /**
  * B1 → đích · B2 → topics/focus · B3 → depth/tour/sort
+ * Golden path: LP spine; explore/sky/community chỉ đổi cửa vào đầu.
  */
 function buildOnboardingPrimaryHref(input) {
   const intent = input.primaryIntent || 'mixed';
@@ -41,16 +42,20 @@ function buildOnboardingPrimaryHref(input) {
   const depth = experienceToDepth(input.experienceLevel);
   const tour = input.experienceLevel === 'advanced' ? '0' : '1';
   const baseFrom = { from: 'onboarding' };
+  const starterHref = input.starterHref || null;
 
   switch (intent) {
     case 'learn_path':
-      return appendQuery(`/topics/${encodeURIComponent(primaryTopicId)}`, {
-        ...baseFrom,
-        topics,
-        depth,
-      });
+      return (
+        starterHref ||
+        appendQuery('/dashboard', {
+          ...baseFrom,
+          welcome: '1',
+          topics,
+          depth,
+        })
+      );
     case 'explore_3d':
-      // Luôn mở Showcase Trái Đất — tour 3D chạy trên solar/showcase, không planet-history.
       return appendQuery('/explore', {
         ...baseFrom,
         view: 'solar',
@@ -59,11 +64,11 @@ function buildOnboardingPrimaryHref(input) {
         topics,
       });
     case 'stargazing':
-      return appendQuery('/cosmos', {
+      return appendQuery('/explore', {
         ...baseFrom,
-        topics,
+        view: 'sky',
         tour,
-        focus: cosmosFocusForTopic(primaryTopicId),
+        topics,
       });
     case 'community': {
       const slug = INTENT_FORUM_SLUG.community || 'hoi-dap-hoc-tap';
@@ -75,14 +80,17 @@ function buildOnboardingPrimaryHref(input) {
       });
     }
     case 'mixed':
-      return appendQuery('/dashboard', {
-        ...baseFrom,
-        welcome: '1',
-        topics,
-        depth,
-      });
+      return (
+        starterHref ||
+        appendQuery('/dashboard', {
+          ...baseFrom,
+          welcome: '1',
+          topics,
+          depth,
+        })
+      );
     default:
-      return appendQuery('/dashboard', baseFrom);
+      return appendQuery('/dashboard', { ...baseFrom, welcome: '1' });
   }
 }
 

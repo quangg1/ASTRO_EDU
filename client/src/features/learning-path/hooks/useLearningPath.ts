@@ -6,7 +6,7 @@ import {
   LEARNING_MODULES,
   type LearningConcept,
   type LearningModule,
-} from '@/data/learningPathCurriculum'
+} from '@/features/learning-path/data/learningPathCurriculum'
 import { fetchPublicConcepts } from '@/features/concepts/public'
 import { fetchPublicLearningPathData } from '@/features/learning-path/public'
 

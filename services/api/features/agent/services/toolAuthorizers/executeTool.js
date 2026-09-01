@@ -1,5 +1,7 @@
-const Enrollment = require('../../../courses/models/Enrollment');
-const Course = require('../../../courses/models/Course');
+const {
+  getCourseBySlug,
+  findCatalogEnrollment,
+} = require('../../../courses/services/courseAccessService');
 const { isToolAllowedForTier, resolveToolName } = require('../../lib/toolSchema');
 const { getLearningPathLessonIndex } = require('./lpCurriculum');
 const { assertShowcaseEntityAccess } = require('./showcaseAccess');
@@ -49,7 +51,7 @@ async function executeAuthorizedTool({
     if (!userId || !courseId) {
       return { ok: false, code: 'not_enrolled', suggestion: 'Đăng ký khóa học để mở bài.' };
     }
-    const enrollment = await Enrollment.findOne({ userId, courseId }).lean();
+    const enrollment = await findCatalogEnrollment(userId, courseId);
     if (!enrollment) {
       return { ok: false, code: 'not_enrolled', suggestion: 'Bạn chưa ghi danh khóa học này.' };
     }
@@ -389,9 +391,7 @@ async function executeAuthorizedTool({
 
 async function loadCourseForTools(courseSlug) {
   if (!courseSlug) return null;
-  const course = await Course.findOne({ slug: courseSlug })
-    .select('slug title lessons.slug lessons.title')
-    .lean();
+  const course = await getCourseBySlug(courseSlug);
   if (!course) return null;
   return {
     courseSlug: course.slug,

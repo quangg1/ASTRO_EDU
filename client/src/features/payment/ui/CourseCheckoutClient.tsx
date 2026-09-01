@@ -25,7 +25,7 @@ import { formatCourseMoney } from './formatCourseMoney'
 import { validateDemoCardForm, type CheckoutCardFormValues } from './CheckoutCardForm'
 import { CheckoutOrderPanel } from './CheckoutOrderPanel'
 import { CheckoutPaymentView } from './CheckoutPaymentView'
-import { validatePromoCode } from '@/features/promotions/api/promoApi'
+import { validatePromoCode } from '@/features/promotions/public'
 
 type Phase = 'loading' | 'review' | 'payment' | 'processing' | 'completed' | 'error'
 

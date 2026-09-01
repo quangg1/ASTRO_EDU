@@ -1,4 +1,4 @@
-import type { LessonItem } from '@/data/learningPathCurriculum'
+import type { LessonItem } from '@/features/learning-path/data/learningPathCurriculum'
 import {
   isValidMcq,
   normalizeQuizList,

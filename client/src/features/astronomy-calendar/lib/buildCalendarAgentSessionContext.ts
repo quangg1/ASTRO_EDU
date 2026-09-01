@@ -1,4 +1,4 @@
-import { buildSessionContext } from '@/features/agent/lib/buildSessionContext'
+import { buildSessionContext } from '@/features/agent/public'
 import type { SessionContext } from '@/features/agent/types'
 import type { AstronomyCalendarEvent } from '../types'
 

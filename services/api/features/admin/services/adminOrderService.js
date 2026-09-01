@@ -1,9 +1,9 @@
-const Order = require('../../payment/models/Order');
-const User = require('../../auth/models/User');
-const Cohort = require('../../courses/models/Cohort');
-const Enrollment = require('../../courses/models/Enrollment');
-const CohortEnrollment = require('../../courses/models/CohortEnrollment');
-const { amountToVndAggExpr, getUsdToVndRate } = require('../../../shared/money/revenueVnd');
+const commerce = require('../repositories/adminCommerceReportingRepository');
+const {
+  listDirectoryEntries,
+  searchDirectoryIds,
+} = require('../../auth/services/userDirectoryService');
+const { getUsdToVndRate } = require('../../../shared/money/revenueVnd');
 const { runOrderMaintenance, pendingExpiresAt } = require('../../payment/lib/orderMaintenance');
 const { resolveOrderKind } = require('../../payment/lib/serializeUserOrder');
 const { AppError } = require('../../../shared/errors');
@@ -53,30 +53,21 @@ function serializeAdminOrder(order, userById, cohortById = new Map()) {
 }
 
 async function loadUserMap(userIds) {
-  if (!userIds.length) return new Map();
-  const users = await User.find({ _id: { $in: userIds } })
-    .select('email displayName')
-    .lean();
-  return new Map(users.map((u) => [String(u._id), u]));
+  const entries = await listDirectoryEntries(userIds);
+  return new Map(entries.map((entry) => [entry.id, entry]));
 }
 
 async function loadCohortMap(cohortIds) {
   if (!cohortIds.length) return new Map();
-  const cohorts = await Cohort.find({ _id: { $in: cohortIds } })
-    .select('title slug')
-    .lean();
+  const cohorts = await commerce.findCohortsByIds(cohortIds, 'title slug');
   return new Map(cohorts.map((c) => [String(c._id), c]));
 }
 
+/** Mã đơn (`GAL…`, `TXN…`) tra thẳng, không phí một vòng tìm người mua. */
 async function resolveOrderSearchUserIds(q) {
   const trimmed = String(q || '').trim();
   if (!trimmed || trimmed.startsWith('GAL') || trimmed.startsWith('TXN')) return null;
-  const rx = new RegExp(trimmed.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
-  const users = await User.find({ $or: [{ email: rx }, { displayName: rx }] })
-    .select('_id')
-    .limit(50)
-    .lean();
-  return users.map((u) => String(u._id));
+  return searchDirectoryIds(trimmed);
 }
 
 async function buildOrderListFilter({ status, q, courseSlug, from, to }) {
@@ -118,8 +109,8 @@ async function listAdminOrders({ status, q, courseSlug, from, to, page = 1, limi
   const skip = Math.max(0, (Math.max(1, page) - 1) * take);
 
   const [rows, total] = await Promise.all([
-    Order.find(filter).sort({ createdAt: -1 }).skip(skip).limit(take).lean(),
-    Order.countDocuments(filter),
+    commerce.listOrders(filter, { skip, limit: take }),
+    commerce.countOrders(filter),
   ]);
 
   const userIds = [...new Set(rows.map((o) => String(o.userId)).filter(Boolean))];
@@ -139,7 +130,7 @@ async function listAdminOrders({ status, q, courseSlug, from, to, page = 1, limi
 
 async function getAdminOrderDetail(txnRef) {
   await runOrderMaintenance();
-  const order = await Order.findOne({ txnRef }).lean();
+  const order = await commerce.findOrderByTxnRefLean(txnRef);
   if (!order) {
     throw new AppError(404, 'ORDER_NOT_FOUND', 'Không tìm thấy đơn hàng');
   }
@@ -151,7 +142,7 @@ async function getAdminOrderDetail(txnRef) {
 }
 
 async function updateAdminOrderNote({ actorUserId, txnRef, adminNote }) {
-  const order = await Order.findOne({ txnRef });
+  const order = await commerce.findOrderDocByTxnRef(txnRef);
   if (!order) {
     throw new AppError(404, 'ORDER_NOT_FOUND', 'Không tìm thấy đơn hàng');
   }
@@ -172,7 +163,7 @@ async function updateAdminOrderNote({ actorUserId, txnRef, adminNote }) {
 }
 
 async function cancelAdminPendingOrder({ actorUserId, txnRef, reason }) {
-  const order = await Order.findOne({ txnRef });
+  const order = await commerce.findOrderDocByTxnRef(txnRef);
   if (!order) {
     throw new AppError(404, 'ORDER_NOT_FOUND', 'Không tìm thấy đơn hàng');
   }
@@ -195,7 +186,7 @@ async function cancelAdminPendingOrder({ actorUserId, txnRef, reason }) {
 }
 
 async function refundAdminOrder({ actorUserId, txnRef, reason, revokeAccess = true }) {
-  const order = await Order.findOne({ txnRef });
+  const order = await commerce.findOrderDocByTxnRef(txnRef);
   if (!order) {
     throw new AppError(404, 'ORDER_NOT_FOUND', 'Không tìm thấy đơn hàng');
   }
@@ -210,15 +201,7 @@ async function refundAdminOrder({ actorUserId, txnRef, reason, revokeAccess = tr
   await order.save();
 
   if (revokeAccess) {
-    if (order.cohortId) {
-      await CohortEnrollment.deleteOne({ userId: order.userId, cohortId: order.cohortId });
-      const meta = order.metadata || {};
-      if (!meta.upgradeFromCatalog) {
-        await Enrollment.deleteOne({ userId: order.userId, courseId: order.courseId });
-      }
-    } else {
-      await Enrollment.deleteOne({ userId: order.userId, courseId: order.courseId });
-    }
+    await commerce.revokeAccessForRefundedOrder(order);
   }
 
   await recordAdminAction({
@@ -237,22 +220,8 @@ async function refundAdminOrder({ actorUserId, txnRef, reason, revokeAccess = tr
 async function getAdminOrderOverview() {
   await runOrderMaintenance();
 
-  const totalOrders = await Order.countDocuments({ status: { $nin: ['cancelled'] } });
-  const completedOrders = await Order.countDocuments({ status: 'completed' });
-  const failedOrders = await Order.countDocuments({ status: 'failed' });
-  const refundedOrders = await Order.countDocuments({ status: 'refunded' });
-  const cancelledOrders = await Order.countDocuments({ status: 'cancelled' });
-  const pendingOrders = await Order.countDocuments({ status: 'pending' });
-  const agg = await Order.aggregate([
-    { $match: { status: 'completed' } },
-    { $group: { _id: null, sum: { $sum: amountToVndAggExpr() } } },
-  ]);
-  const totalRevenue = agg.length > 0 ? Math.round(agg[0].sum) : 0;
-
-  const recentRaw = await Order.find({ status: { $ne: 'cancelled' } })
-    .sort({ createdAt: -1 })
-    .limit(20)
-    .lean();
+  const statsCounts = await commerce.getOrderOverviewCounts();
+  const recentRaw = await commerce.listRecentNonCancelledOrders(20);
 
   const userIds = [...new Set(recentRaw.map((o) => String(o.userId)).filter(Boolean))];
   const cohortIds = [...new Set(recentRaw.filter((o) => o.cohortId).map((o) => String(o.cohortId)))];
@@ -265,13 +234,7 @@ async function getAdminOrderOverview() {
 
   return {
     stats: {
-      totalOrders,
-      completedOrders,
-      failedOrders,
-      refundedOrders,
-      cancelledOrders,
-      pendingOrders,
-      totalRevenue,
+      ...statsCounts,
       revenueCurrency: 'VND',
       usdToVndRate: getUsdToVndRate(),
     },

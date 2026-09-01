@@ -10,10 +10,10 @@ import {
   markAllNotificationsRead,
   markNotificationRead,
   type AppNotification,
-} from '@/features/notifications/api/notificationsApi'
+} from '@/features/notifications/public'
 import { useNotificationRealtime } from '@/features/notifications/hooks/useNotificationRealtime'
 import { PromoNotificationsSection } from '@/components/promotions/PromoNotificationsSection'
-import { fetchActivePromotions } from '@/features/promotions/api/promoApi'
+import { fetchActivePromotions } from '@/features/promotions/public'
 import { undismissedPromos } from '@/features/promotions/lib/promoDismiss'
 import { useT } from '@/i18n/public'
 

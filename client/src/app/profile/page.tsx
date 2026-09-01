@@ -5,11 +5,13 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { changePassword, deactivateMyAccount, updateProfile, useAuthStore } from '@/features/auth/public'
 import { canModerate } from '@/lib/roles'
-import { TeacherProfileEditor } from '@/components/profile/TeacherProfileEditor'
-import { LearnerProfileEditor } from '@/components/profile/LearnerProfileEditor'
-import { AvatarDecorationPicker } from '@/components/profile/AvatarDecorationPicker'
-import { AvatarWithDecoration } from '@/components/profile/AvatarWithDecoration'
-import { useEquippedDecoration } from '@/features/rewards/hooks/useEquippedDecoration'
+import {
+  TeacherProfileEditor,
+  LearnerProfileEditor,
+  AvatarDecorationPicker,
+  AvatarWithDecoration,
+} from '@/features/users/public'
+import { useEquippedDecoration } from '@/features/rewards/public'
 import { useLiveClock } from '@/hooks/useLiveClock'
 
 // ── Design primitives ──────────────────────────────────────────────────────────

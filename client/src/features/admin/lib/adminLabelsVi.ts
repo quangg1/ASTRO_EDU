@@ -1,4 +1,4 @@
-import { labelGemActivityVi } from '@/features/rewards/lib/formatGemActivity'
+import { labelGemActivityVi } from '@/features/rewards/public'
 
 export const ADMIN_SCOPE_OPTIONS = [
   { id: 'users', label: 'Người dùng' },

@@ -35,8 +35,8 @@ export {
   fetchAdminTeacherApplications,
   reviewTeacherApplication,
   markTeacherApplicationCvReviewed,
-} from '@/features/auth/api/teacherApplicationsApi'
-export type { TeacherApplication, TeacherApplicationWithUser } from '@/features/auth/api/teacherApplicationsApi'
+} from '@/features/auth/public'
+export type { TeacherApplication, TeacherApplicationWithUser } from '@/features/auth/public'
 
 // Analytics (cross-domain reporting) -------------------------------------------
 export {
@@ -128,10 +128,23 @@ export {
 export type { PromoCodeAdmin } from './api/adminPromoCodesApi'
 
 export {
+  fetchAdminAstronomyEvents,
+  importAdminAstronomySuggestions,
+  publishAdminAstronomyEvent,
+  patchAdminAstronomyEvent,
+  createAdminAstronomyEvent,
+  deleteAdminAstronomyEvent,
+  fetchAdminTypeKits,
+  patchAdminTypeKit,
+} from './api/adminAstronomyApi'
+
+export {
   labelUserRoleVi,
   labelAccountStatusVi,
+  labelEnrollmentStatusVi,
   labelGemReasonCode,
   labelGemEconomyActionVi,
+  labelGemTxnSignVi,
   labelAdminScopeVi,
   formatAdminScopesSummary,
   ADMIN_SCOPE_OPTIONS,

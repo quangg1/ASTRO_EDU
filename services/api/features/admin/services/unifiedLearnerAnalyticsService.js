@@ -1,37 +1,14 @@
-const LearningPathEvent = require('../../learning-path/models/LearningPathEvent');
-const CourseLearningEvent = require('../../courses/models/CourseLearningEvent');
+const reporting = require('../repositories/reportingRepository');
 
 /**
  * Read-model aggregate — LP + Course, không merge collection.
  */
 async function getUnifiedLearnerAnalytics(startDate) {
-  const tsMatch = { timestamp: { $gte: startDate } };
-
   const [lpStats, courseStats, lpUsers, courseUsers] = await Promise.all([
-    LearningPathEvent.aggregate([
-      { $match: tsMatch },
-      {
-        $group: {
-          _id: null,
-          totalEvents: { $sum: 1 },
-          users: { $addToSet: '$userId' },
-          sessions: { $addToSet: '$sessionId' },
-        },
-      },
-    ]),
-    CourseLearningEvent.aggregate([
-      { $match: tsMatch },
-      {
-        $group: {
-          _id: null,
-          totalEvents: { $sum: 1 },
-          users: { $addToSet: '$userId' },
-          sessions: { $addToSet: '$sessionId' },
-        },
-      },
-    ]),
-    LearningPathEvent.distinct('userId', { ...tsMatch, userId: { $nin: [null, ''] } }),
-    CourseLearningEvent.distinct('userId', { ...tsMatch, userId: { $nin: [null, ''] } }),
+    reporting.learningPathEventStats(startDate),
+    reporting.courseLearningEventStats(startDate),
+    reporting.distinctLearningPathUsers(startDate),
+    reporting.distinctCourseLearningUsers(startDate),
   ]);
 
   const lpRow = lpStats[0] || {};
@@ -44,26 +21,9 @@ async function getUnifiedLearnerAnalytics(startDate) {
     if (courseUserSet.has(u)) bothModules += 1;
   }
 
-  const dailyLp = await LearningPathEvent.aggregate([
-    { $match: tsMatch },
-    {
-      $group: {
-        _id: { $dateToString: { format: '%Y-%m-%d', date: '$timestamp' } },
-        count: { $sum: 1 },
-      },
-    },
-    { $sort: { _id: 1 } },
-  ]);
-
-  const dailyCourse = await CourseLearningEvent.aggregate([
-    { $match: tsMatch },
-    {
-      $group: {
-        _id: { $dateToString: { format: '%Y-%m-%d', date: '$timestamp' } },
-        count: { $sum: 1 },
-      },
-    },
-    { $sort: { _id: 1 } },
+  const [dailyLp, dailyCourse] = await Promise.all([
+    reporting.dailyLearningPathEvents(startDate),
+    reporting.dailyCourseLearningEvents(startDate),
   ]);
 
   return {

@@ -3,7 +3,7 @@
 import { useEffect } from 'react'
 import dynamic from 'next/dynamic'
 import { Suspense } from 'react'
-import { preloadHipBrightCatalog } from '@/features/explore/lib/hipBrightCatalogCache'
+import { preloadHipBrightCatalog } from '@/features/explore/public'
 import { isConstellationTargetId } from '@/features/explore/public'
 import { Loading } from '@/components/ui/Loading'
 import { planetsData } from '@/lib/solarSystemData'
@@ -51,8 +51,8 @@ type Props = Pick<
   | 'syncSelectedPlanetFromItem'
   | 'handleShowcaseCameraSettled'
 > & {
-  earthHistoryStage: import('@/features/content3d/earth/lib/earthHistoryTypes').EarthStage | null
-  earthHistoryFossils: import('@/features/content3d/earth/lib/earthHistoryTypes').Fossil[]
+  earthHistoryStage: import('@/features/content3d/earth/public').EarthStage | null
+  earthHistoryFossils: import('@/features/content3d/earth/public').Fossil[]
 }
 
 export function ExploreSceneCanvas({

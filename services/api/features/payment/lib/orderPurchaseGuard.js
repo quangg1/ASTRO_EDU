@@ -1,75 +1,59 @@
-const Order = require('../models/Order');
-const Enrollment = require('../../courses/models/Enrollment');
 const { AppError } = require('../../../shared/errors');
+const { hasCatalogEnrollment } = require('../../courses/services/courseAccessService');
+const { orderRepository } = require('../repositories/orderRepository');
 const { PENDING_TTL_MS, pendingExpiresAt, catalogOrderFilter } = require('./orderMaintenance');
 
-function cohortOrderFilter(cohortId) {
-  return { cohortId: String(cohortId) };
-}
+const skuFilter = (courseId, cohortId) => ({
+  courseId: String(courseId),
+  ...(cohortId ? { cohortId: String(cohortId) } : catalogOrderFilter()),
+});
+
+const pendingExpiresMs = (order) =>
+  order.expiresAt
+    ? new Date(order.expiresAt).getTime()
+    : new Date(order.createdAt).getTime() + PENDING_TTL_MS;
 
 /**
  * Đã sở hữu gói tự học (catalog) — không mua lại. Hết hạn do GV quản lý sau.
  */
 async function assertCatalogNotAlreadyOwned({ userId, courseId }) {
   const courseIdStr = String(courseId);
-  const enrollment = await Enrollment.findOne({ userId, courseId: courseIdStr }).lean();
-  if (enrollment) {
+  if (await hasCatalogEnrollment(userId, courseIdStr)) {
     throw new AppError(
       400,
       'ALREADY_ENROLLED',
       'Bạn đã có quyền truy cập khóa học này — không cần mua lại.',
     );
   }
-  const completedCatalog = await Order.findOne({
+
+  const completedCatalog = await orderRepository.findCompleted({
     userId,
-    courseId: courseIdStr,
-    status: 'completed',
-    ...catalogOrderFilter(),
-  }).lean();
+    ...skuFilter(courseIdStr, null),
+  });
   if (completedCatalog) {
-    throw new AppError(
-      400,
-      'ALREADY_PURCHASED',
-      'Bạn đã thanh toán gói tự học cho khóa này.',
-    );
+    throw new AppError(400, 'ALREADY_PURCHASED', 'Bạn đã thanh toán gói tự học cho khóa này.');
   }
 }
 
 /**
- * Đơn pending còn hiệu lực cho cùng khóa + loại (catalog vs cohort).
+ * Trả về đơn pending còn hiệu lực cho cùng khóa + loại (tự học hay theo lớp),
+ * đồng thời dọn các đơn trùng để mỗi SKU chỉ còn đúng một đơn đang chờ.
  */
 async function findReusablePendingOrder({ userId, courseId, cohortId = null }) {
-  const base = {
+  const orders = await orderRepository.listPending({
     userId,
-    courseId: String(courseId),
-    status: 'pending',
-  };
-  const filter = cohortId ? { ...base, ...cohortOrderFilter(cohortId) } : { ...base, ...catalogOrderFilter() };
+    ...skuFilter(courseId, cohortId),
+  });
 
-  const orders = await Order.find(filter).sort({ createdAt: -1 }).lean();
   const now = Date.now();
   let reusable = null;
 
-  function pendingExpiresMs(o) {
-    if (o.expiresAt) return new Date(o.expiresAt).getTime();
-    return new Date(o.createdAt).getTime() + PENDING_TTL_MS;
-  }
-
-  for (const o of orders) {
-    if (now <= pendingExpiresMs(o)) {
-      if (!reusable) reusable = o;
+  for (const order of orders) {
+    if (now <= pendingExpiresMs(order)) {
+      if (!reusable) reusable = order;
+      else await orderRepository.cancelById(order._id);
     } else {
-      await Order.updateOne({ _id: o._id }, { status: 'cancelled' });
-    }
-  }
-
-  if (orders.length > 1 && reusable) {
-    for (const o of orders) {
-      if (String(o._id) !== String(reusable._id) && o.status === 'pending') {
-        if (now <= pendingExpiresMs(o)) {
-          await Order.updateOne({ _id: o._id }, { status: 'cancelled' });
-        }
-      }
+      await orderRepository.cancelById(order._id);
     }
   }
 
@@ -78,15 +62,14 @@ async function findReusablePendingOrder({ userId, courseId, cohortId = null }) {
 
 /** Huỷ mọi đơn pending khác cùng SKU trước khi tạo đơn mới. */
 async function cancelOtherPendingOrders({ userId, courseId, cohortId = null, exceptTxnRef = null }) {
-  const base = {
+  const filter = {
     userId,
-    courseId: String(courseId),
     status: 'pending',
+    ...skuFilter(courseId, cohortId),
   };
-  const filter = cohortId ? { ...base, ...cohortOrderFilter(cohortId) } : { ...base, ...catalogOrderFilter() };
   if (exceptTxnRef) filter.txnRef = { $ne: exceptTxnRef };
 
-  await Order.updateMany(filter, { status: 'cancelled' });
+  await orderRepository.cancelMany(filter);
 }
 
 module.exports = {

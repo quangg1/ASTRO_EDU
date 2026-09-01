@@ -1,6 +1,6 @@
 'use client'
 
-import { OrderHistoryClient } from '@/features/payment/ui/OrderHistoryClient'
+import { OrderHistoryClient } from '@/features/payment/public'
 
 export default function MyOrdersPage() {
   return (

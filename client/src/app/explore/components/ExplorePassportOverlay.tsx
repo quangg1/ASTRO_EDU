@@ -13,13 +13,15 @@ import {
   Stars,
   X,
 } from 'lucide-react'
-import type { ExplorePassportSummary, PassportStamp, PassportStampKind } from '@/features/explore/lib/explorePassportTypes'
 import {
+  type ExplorePassportSummary,
+  type PassportStamp,
+  type PassportStampKind,
   formatPassportId,
   listStoryVisaStamps,
   passportKindLabel,
   resolvePassportStampVisual,
-} from '@/features/explore/lib/explorePassportDisplay'
+} from '@/features/explore/public'
 
 type TabId = 'discovery' | 'story' | 'history' | 'sky'
 

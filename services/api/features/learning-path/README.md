@@ -1,13 +1,7 @@
-# Learning Path Feature
+# learning-path
 
-Ownership:
+HTTP: `/api/learning-path`.
 
-- Learning path structure (`LearningPath`)
-- Learning telemetry/events (`LearningPathEvent`)
-- User learning-path progress (`UserProgress`)
-- Learning path APIs (`/api/learning-path/*`)
+Public query APIs: `learningPathQueryService`, `learningPathEventQueryService`, `exploreQuizProgressService`.
 
-Notes:
-
-- Public API path remains `/api/learning-path`.
-- Current route/model implementation is being migrated from legacy `features/courses`.
+FE mirror: `client/src/features/learning-path` (`public.ts` / `server.ts`). Trace: `client/ROUTE_INVENTORY.md`.

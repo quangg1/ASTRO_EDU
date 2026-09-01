@@ -1,8 +1,12 @@
 const crypto = require('crypto');
 const UserSavedItem = require('../models/UserSavedItem');
-const LearningPathEvent = require('../../learning-path/models/LearningPathEvent');
-const CourseLearningEvent = require('../../courses/models/CourseLearningEvent');
-const Course = require('../../courses/models/Course');
+const {
+  recordLessonFavoriteEvent: recordLpFavoriteEvent,
+} = require('../../learning-path/services/learningPathEventQueryService');
+const {
+  recordLessonFavoriteEvent: recordCourseFavoriteEvent,
+  findCourseIdBySlug,
+} = require('../../courses/services/courseLearningEventService');
 
 function buildItemKey(source, payload) {
   if (source === 'learning-path') {
@@ -57,35 +61,27 @@ async function recordFavoriteEvent({ userId, source, saved, payload }) {
   const eventId = crypto.randomUUID();
   const timestamp = new Date();
   if (source === 'learning-path') {
-    await LearningPathEvent.create({
-      eventId,
-      schemaVersion: 1,
+    await recordLpFavoriteEvent({
       userId,
+      saved,
       sessionId,
-      eventName: saved ? 'lp_lesson_favorited' : 'lp_lesson_unfavorited',
+      eventId,
       timestamp,
       moduleId: payload.moduleId || null,
       nodeId: payload.nodeId || null,
       lessonId: payload.lessonId || null,
       depth: payload.depth || null,
-      client: 'web',
       metadata: { title: payload.title || '', subtitle: payload.subtitle || '' },
     });
     return;
   }
-  const courseSlug = String(payload.courseSlug || '').trim();
-  const course = courseSlug ? await Course.findOne({ slug: courseSlug }).select('_id slug').lean() : null;
-  if (!course) return;
-  await CourseLearningEvent.create({
+  await recordCourseFavoriteEvent({
     userId,
-    sessionId,
-    courseId: course._id,
-    courseSlug: course.slug,
-    lessonSlug: String(payload.lessonSlug || '').trim(),
-    eventName: saved ? 'course_lesson_favorited' : 'course_lesson_unfavorited',
-    timestamp,
-    client: 'web',
-    metadata: { title: payload.title || '', subtitle: payload.subtitle || '' },
+    saved,
+    courseSlug: payload.courseSlug,
+    lessonSlug: payload.lessonSlug,
+    title: payload.title,
+    subtitle: payload.subtitle,
   });
 }
 
@@ -121,8 +117,7 @@ async function toggleSavedItem(userId, body) {
 
   let courseId = null;
   if (source === 'course') {
-    const course = await Course.findOne({ slug: String(body.courseSlug || '').trim() }).select('_id').lean();
-    courseId = course?._id ? String(course._id) : null;
+    courseId = await findCourseIdBySlug(String(body.courseSlug || '').trim());
   }
 
   const depthRaw = String(body?.depth || '').trim();

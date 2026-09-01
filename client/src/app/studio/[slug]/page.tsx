@@ -23,18 +23,17 @@ import { canEnterStudio } from '@/lib/roles'
 import { useBlockEditorActions } from '@/components/studio/hooks/useBlockEditorActions'
 import { CourseStorefrontEditor } from '@/components/studio/CourseStorefrontEditor'
 import { CohortStudioNavLink } from '@/components/studio/CohortStudioNavLink'
+import { ModuleMaterialsEditor } from '@/components/studio/ModuleMaterialsEditor'
 import {
   catalogPricingVisibleForStrategy,
   resolveDistributionStrategy,
-} from '@/features/courses/lib/distributionStrategy'
-import { ModuleMaterialsEditor } from '@/components/studio/ModuleMaterialsEditor'
-import { courseRequiresPayment } from '@/components/courses/courseCatalogMeta'
-import {
+  courseRequiresPayment,
   loadStudioEditorDraft,
   saveStudioEditorDraft,
   studioDraftIsDirty,
-} from '@/features/courses/lib/studioEditorDraft'
-import { LessonTypeIcon, lessonTypeIconKey } from '@/features/courses/cohort/LessonTypeIcon'
+  LessonTypeIcon,
+  lessonTypeIconKey,
+} from '@/features/courses/public'
 import { emptyMcqQuestion, mcqAnswerIndex, mcqOptionTexts, patchMcqOption, setMcqAnswer } from '@/shared/types/quizQuestion'
 
 const BlockEditor = dynamic(() => import('@/components/studio/BlockEditor'), { ssr: false })

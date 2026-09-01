@@ -3,7 +3,7 @@ import {
   LEARNING_MODULES,
   type LearningConcept,
   type LearningModule,
-} from '@/data/learningPathCurriculum'
+} from '@/features/learning-path/data/learningPathCurriculum'
 import { getApiPathBase } from '@/lib/apiConfig'
 
 /** Server-only: merge API learning path with static defaults */

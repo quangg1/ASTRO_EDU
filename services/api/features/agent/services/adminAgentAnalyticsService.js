@@ -1,6 +1,11 @@
 const AgentSession = require('../models/AgentSession');
-const LearnerAgentProfile = require('../models/LearnerAgentProfile');
-const LearningPathEvent = require('../../learning-path/models/LearningPathEvent');
+const {
+  listProfilesWithQuizFailMap,
+  countProfiles,
+} = require('./learnerAgentProfileService');
+const {
+  aggregateHighDwellLessons,
+} = require('../../learning-path/services/learningPathEventQueryService');
 const { getLearningPathLessonIndex } = require('./toolAuthorizers/lpCurriculum');
 
 const RANGE_TO_DAYS = { '7d': 7, '30d': 30, '90d': 90 };
@@ -46,31 +51,9 @@ async function getAgentAdminAnalytics(opts = {}) {
       },
       { $sort: { _id: 1 } },
     ]),
-    LearningPathEvent.aggregate([
-      {
-        $match: {
-          timestamp: { $gte: startDate },
-          eventName: 'lp_lesson_dwell',
-          lessonId: { $ne: null },
-        },
-      },
-      {
-        $group: {
-          _id: '$lessonId',
-          users: { $addToSet: '$userId' },
-          totalSec: { $sum: { $ifNull: ['$activeSec', '$durationSec', 0] } },
-          events: { $sum: 1 },
-        },
-      },
-      { $match: { totalSec: { $gte: 480 } } },
-      { $sort: { totalSec: -1 } },
-      { $limit: 15 },
-    ]),
-    LearnerAgentProfile.aggregate([
-      { $project: { userId: 1, quizMap: '$coach.quizFailStreakByLesson' } },
-      { $match: { quizMap: { $exists: true, $ne: {} } } },
-    ]),
-    LearnerAgentProfile.countDocuments({}),
+    aggregateHighDwellLessons(startDate, { minTotalSec: 480, limit: 15 }),
+    listProfilesWithQuizFailMap(),
+    countProfiles(),
     getLearningPathLessonIndex(),
   ]);
 

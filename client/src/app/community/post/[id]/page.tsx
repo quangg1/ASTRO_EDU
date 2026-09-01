@@ -20,8 +20,7 @@ import {
   recordPostSourceOpen,
 } from '@/features/community/public'
 import { canModerate } from '@/lib/roles'
-import { PostMarkdown } from '@/components/community/PostMarkdown'
-import { CommentThread } from '@/components/community/comments/CommentThread'
+import { PostMarkdown, CommentThread } from '@/features/community/public'
 
 function formatDate(date?: string): string {
   if (!date) return ''

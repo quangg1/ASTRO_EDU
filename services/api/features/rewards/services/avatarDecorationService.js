@@ -1,6 +1,7 @@
-const ShopItem = require('../models/ShopItem');
-const UserReward = require('../models/UserReward');
-const GemTransaction = require('../models/GemTransaction');
+const { AppError } = require('../../../shared/errors');
+const { shopItemRepository } = require('../repositories/shopItemRepository');
+const { userRewardRepository } = require('../repositories/userRewardRepository');
+const gemTransactionRepository = require('../repositories/gemTransactionRepository');
 const {
   AVATAR_DECORATION_CATEGORY,
   DECORATION_CATEGORY_UNCATEGORIZED,
@@ -13,25 +14,12 @@ const { listVisiblePublic } = require('./shopCatalogService');
 const { listCategoriesPublic } = require('./decorationCategoryService');
 
 async function ensureUserReward(userId) {
-  await UserReward.updateOne(
-    { userId },
-    {
-      $setOnInsert: {
-        userId,
-        gemBalance: 0,
-        totalGemsEarned: 0,
-        level: 1,
-        streakDays: 0,
-        streakShields: 0,
-        lastStreakDay: '',
-        ownedDecorationSkus: [],
-        equippedDecorationSkuId: null,
-      },
-    },
-    { upsert: true },
-  );
-  return UserReward.findOne({ userId }).lean();
+  await userRewardRepository.ensureForUser(userId);
+  return userRewardRepository.findForUser(userId);
 }
+
+const ownedSkus = (reward) =>
+  Array.isArray(reward?.ownedDecorationSkus) ? reward.ownedDecorationSkus : [];
 
 function mapDecorationRow(row) {
   const meta = row.metadata || {};
@@ -92,13 +80,12 @@ async function listDecorationCatalogGroupedPublic() {
 }
 
 async function getDecorationState(userId) {
-  await ensureUserReward(userId);
-  const [ur, cfg] = await Promise.all([UserReward.findOne({ userId }).lean(), getOrCreateConfigDoc()]);
-  const owned = Array.isArray(ur?.ownedDecorationSkus) ? ur.ownedDecorationSkus : [];
+  const ur = await ensureUserReward(userId);
+  const owned = ownedSkus(ur);
   const equippedSkuId = ur?.equippedDecorationSkuId || null;
   let equippedOverlayUrl = null;
   if (equippedSkuId) {
-    const item = await ShopItem.findOne({ skuId: equippedSkuId }).lean();
+    const item = await shopItemRepository.findBySku(equippedSkuId);
     if (item && isAvatarDecorationItem(item)) {
       equippedOverlayUrl = getOverlayUrl(item.metadata);
     }
@@ -129,101 +116,126 @@ async function getDecorationState(userId) {
   };
 }
 
-async function purchaseDecoration(userId, skuId) {
-  const sku = String(skuId || '').trim();
-  if (!sku) {
-    const e = new Error('Thiếu mã trang trí (skuId)');
-    e.status = 400;
-    throw e;
-  }
-  const item = await ShopItem.findOne({ skuId: sku, visible: true }).lean();
+/** Chỉ bán được trang trí đang hiển thị và đã có overlay trên CDN. */
+async function loadPurchasableDecoration(sku) {
+  const item = await shopItemRepository.findVisibleBySku(sku);
   if (!item || !isAvatarDecorationItem(item)) {
-    const e = new Error('Không tìm thấy trang trí avatar trong cửa hàng');
-    e.status = 404;
-    throw e;
+    throw AppError.notFound('Không tìm thấy trang trí avatar trong cửa hàng');
   }
   if (!getOverlayUrl(item.metadata)) {
-    const e = new Error('Trang trí chưa có file overlay trên CDN');
-    e.status = 400;
-    throw e;
+    throw AppError.badRequest('Trang trí chưa có file overlay trên CDN');
   }
+  return item;
+}
 
-  await ensureUserReward(userId);
-  const ur = await UserReward.findOne({ userId }).lean();
-  const owned = Array.isArray(ur?.ownedDecorationSkus) ? ur.ownedDecorationSkus : [];
-  if (owned.includes(sku)) {
+async function purchaseDecoration(userId, skuId) {
+  const sku = String(skuId || '').trim();
+  if (!sku) throw AppError.badRequest('Thiếu mã trang trí (skuId)');
+
+  const item = await loadPurchasableDecoration(sku);
+
+  const ur = await ensureUserReward(userId);
+  if (ownedSkus(ur).includes(sku)) {
     return { alreadyOwned: true, gemBalance: ur?.gemBalance ?? 0, skuId: sku };
   }
 
   const cfg = await getOrCreateConfigDoc();
   const cost = effectiveGemPrice(item.basePriceGem, sku, cfg.itemPriceOverrides);
-  if (cost > 0) {
-    const updated = await UserReward.findOneAndUpdate(
-      { userId, gemBalance: { $gte: cost } },
-      {
-        $inc: { gemBalance: -cost },
-        $addToSet: { ownedDecorationSkus: sku },
-      },
-      { new: true },
-    ).lean();
-    if (!updated) {
-      const e = new Error('Không đủ gem để mua trang trí này');
-      e.status = 402;
-      e.code = 'INSUFFICIENT_GEMS';
-      throw e;
-    }
-    await GemTransaction.create({
-      userId,
-      delta: -cost,
-      reason: 'shop_avatar_decoration',
-      balanceAfter: updated.gemBalance,
-      metadata: { skuId: sku, cost },
-    });
-    return {
-      alreadyOwned: false,
-      gemBalance: updated.gemBalance,
-      skuId: sku,
-      cost,
-    };
+
+  // Trang trí miễn phí (hoặc đang giảm về 0) thì chỉ cần ghi quyền sở hữu.
+  if (cost <= 0) {
+    const granted = await userRewardRepository.grantDecoration(userId, sku);
+    return { alreadyOwned: false, gemBalance: granted?.gemBalance ?? 0, skuId: sku, cost: 0 };
   }
 
-  const updated = await UserReward.findOneAndUpdate(
-    { userId },
-    { $addToSet: { ownedDecorationSkus: sku } },
-    { new: true },
-  ).lean();
-  return { alreadyOwned: false, gemBalance: updated?.gemBalance ?? 0, skuId: sku, cost: 0 };
+  const updated = await userRewardRepository.debitAndGrantDecoration(userId, sku, cost);
+  if (!updated) {
+    throw new AppError(402, 'INSUFFICIENT_GEMS', 'Không đủ gem để mua trang trí này');
+  }
+
+  await gemTransactionRepository.recordSpend({
+    userId,
+    cost,
+    reason: 'shop_avatar_decoration',
+    balanceAfter: updated.gemBalance,
+    metadata: { skuId: sku, cost },
+  });
+
+  return { alreadyOwned: false, gemBalance: updated.gemBalance, skuId: sku, cost };
 }
 
 async function equipDecoration(userId, skuId) {
-  await ensureUserReward(userId);
+  const ur = await ensureUserReward(userId);
   const sku = skuId == null || skuId === '' ? null : String(skuId).trim();
+
   if (!sku) {
-    await UserReward.updateOne({ userId }, { $set: { equippedDecorationSkuId: null } });
+    await userRewardRepository.setEquippedDecoration(userId, null);
     return { equippedDecorationSkuId: null, equippedOverlayUrl: null };
   }
-  const ur = await UserReward.findOne({ userId }).lean();
-  const owned = Array.isArray(ur?.ownedDecorationSkus) ? ur.ownedDecorationSkus : [];
-  if (!owned.includes(sku)) {
-    const e = new Error('Bạn chưa sở hữu trang trí này');
-    e.status = 403;
-    e.code = 'DECORATION_NOT_OWNED';
-    throw e;
+
+  if (!ownedSkus(ur).includes(sku)) {
+    throw new AppError(403, 'DECORATION_NOT_OWNED', 'Bạn chưa sở hữu trang trí này');
   }
-  const item = await ShopItem.findOne({ skuId: sku }).lean();
+
+  const item = await shopItemRepository.findBySku(sku);
   if (!item || !isAvatarDecorationItem(item)) {
-    const e = new Error('Trang trí không hợp lệ');
-    e.status = 404;
-    throw e;
+    throw AppError.notFound('Trang trí không hợp lệ');
   }
   const overlayUrl = getOverlayUrl(item.metadata);
-  if (!overlayUrl) {
-    const e = new Error('Trang trí thiếu file overlay');
-    e.status = 400;
-    throw e;
-  }
-  await UserReward.updateOne({ userId }, { $set: { equippedDecorationSkuId: sku } });
+  if (!overlayUrl) throw AppError.badRequest('Trang trí thiếu file overlay');
+
+  await userRewardRepository.setEquippedDecoration(userId, sku);
   return { equippedDecorationSkuId: sku, equippedOverlayUrl: overlayUrl };
+}
+
+/**
+ * Overlay + totalGemsEarned cho nhiều user (public profile / author snippets).
+ */
+async function resolveEquippedOverlaysForUsers(userIds) {
+  const ids = [...new Set((userIds || []).map(String).filter(Boolean))];
+  const rewards = ids.length
+    ? await userRewardRepository.findMany(
+        { userId: { $in: ids } },
+        { projection: 'userId equippedDecorationSkuId totalGemsEarned' },
+      )
+    : [];
+  const skuIds = [
+    ...new Set(rewards.map((r) => r.equippedDecorationSkuId).filter(Boolean)),
+  ];
+  const items = skuIds.length
+    ? await shopItemRepository.findMany({ skuId: { $in: skuIds } })
+    : [];
+  const overlayBySku = new Map();
+  for (const item of items) {
+    if (isAvatarDecorationItem(item)) {
+      overlayBySku.set(item.skuId, getOverlayUrl(item.metadata));
+    }
+  }
+  const rewardByUser = new Map(rewards.map((r) => [String(r.userId), r]));
+  const overlayByUser = new Map();
+  for (const uid of ids) {
+    const r = rewardByUser.get(uid);
+    const sku = r?.equippedDecorationSkuId;
+    overlayByUser.set(uid, sku ? overlayBySku.get(sku) || null : null);
+  }
+  return { rewardByUser, overlayByUser };
+}
+
+async function getPublicRewardMeta(userId) {
+  const reward = await userRewardRepository.findForUser(userId);
+  let equippedOverlayUrl = null;
+  const equippedSku = reward?.equippedDecorationSkuId;
+  if (equippedSku) {
+    const item = await shopItemRepository.findBySku(equippedSku);
+    if (item && isAvatarDecorationItem(item)) {
+      equippedOverlayUrl = getOverlayUrl(item.metadata);
+    }
+  }
+  return {
+    totalGemsEarned: reward?.totalGemsEarned ?? 0,
+    equippedDecorationSkuId: equippedSku || null,
+    equippedOverlayUrl,
+  };
 }
 
 module.exports = {
@@ -232,5 +244,7 @@ module.exports = {
   getDecorationState,
   purchaseDecoration,
   equipDecoration,
+  resolveEquippedOverlaysForUsers,
+  getPublicRewardMeta,
   AVATAR_DECORATION_CATEGORY,
 };

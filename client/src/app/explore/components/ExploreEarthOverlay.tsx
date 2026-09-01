@@ -1,10 +1,12 @@
 'use client'
 
-import { Timeline } from '@/features/content3d/earth/ui/Timeline'
-import { InfoPanel } from '@/features/content3d/earth/ui/InfoPanel'
-import { FossilPanel } from '@/features/content3d/earth/ui/FossilPanel'
-import { FossilDetailDock } from '@/features/content3d/earth/ui/FossilDetailOverlay'
-import { Controls } from '@/features/content3d/earth/ui/Controls'
+import {
+  Timeline,
+  InfoPanel,
+  FossilPanel,
+  FossilDetailDock,
+  Controls,
+} from '@/features/content3d/earth/public'
 
 type Props = {
   onBackToShowcase: () => void

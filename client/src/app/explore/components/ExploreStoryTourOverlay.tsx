@@ -3,14 +3,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { clsx } from 'clsx'
 import { ChevronLeft, ChevronRight, Pause, Play, Sparkles, X } from 'lucide-react'
-import { useShowcaseStore } from '@/features/content3d/showcase/public'
 import {
+  useShowcaseStore,
   DEFAULT_STORY_WAYPOINT_SEC,
   type ShowcaseStoryCampaign,
   type ShowcaseStoryWaypoint,
-} from '@/features/content3d/showcase/lib/showcaseStoryTypes'
-import { resolveStoryTourCameraForWaypoint } from '@/features/content3d/showcase/lib/showcaseCameraFraming'
-import type { ShowcaseOrbitEntity } from '@/features/content3d/showcase/lib/showcaseCatalogRuntime'
+  resolveStoryTourCameraForWaypoint,
+  type ShowcaseOrbitEntity,
+} from '@/features/content3d/showcase/public'
 
 type Props = {
   story: ShowcaseStoryCampaign

@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation'
-import { CoursePageClient } from '@/components/courses/CoursePageClient'
+import { CoursePageClient } from '@/features/courses/public'
 import { fetchPublicCourseServer } from '@/features/courses/server'
 
 export default async function CourseLearnLessonPage({

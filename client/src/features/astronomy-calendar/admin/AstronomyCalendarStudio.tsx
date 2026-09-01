@@ -21,7 +21,7 @@ import {
   patchAdminAstronomyEvent,
   patchAdminTypeKit,
   publishAdminAstronomyEvent,
-} from '@/features/admin/api/adminAstronomyApi'
+} from '@/features/admin/public'
 import type {
   AstronomyEventAdmin,
   AstronomyEventType,
@@ -55,7 +55,7 @@ import {
   flattenLpLessons,
   type LessonLinkOption,
 } from './lessonLinkHelpers'
-import { fetchPublicLearningPath } from '@/features/learning-path/api/learningPathApi'
+import { fetchPublicLearningPath } from '@/features/learning-path/public'
 import { Spinner } from '@/components/ui/Spinner'
 
 type Tab = 'events' | 'kits'

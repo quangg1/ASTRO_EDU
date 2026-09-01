@@ -1,19 +1,21 @@
 const mongoose = require('mongoose');
 
 const Order = require('../models/Order');
-const Course = require('../../courses/models/Course');
-const Enrollment = require('../../courses/models/Enrollment');
 const { burnCommittedGemsForOrder } = require('./courseCheckoutService');
 const { recordPromoRedemption } = require('../../promotions/services/promoCodeService');
 const {
   notifyCoursePurchase,
   pushNotificationRealtime,
 } = require('../../notifications/services/notificationService');
-const Cohort = require('../../courses/models/Cohort');
-const User = require('../../auth/models/User');
+const { findDirectoryEntry } = require('../../auth/services/userDirectoryService');
 const { placeStudentInCohort } = require('../../courses/services/cohortEnrollmentService');
 const { sendPaymentReceiptEmail } = require('../../../shared/mailer');
 const { cancelOtherPendingOrders } = require('../lib/orderPurchaseGuard');
+const {
+  getPublishedCourseById,
+  ensureCatalogEnrollment,
+  getCohortById,
+} = require('../../courses/services/courseAccessService');
 
 async function completeOrderAndEnroll({ txnRef, transactionId }) {
   const session = await mongoose.startSession();
@@ -30,36 +32,14 @@ async function completeOrderAndEnroll({ txnRef, transactionId }) {
         throw err;
       }
 
-      const course = await Course.findOne({ _id: order.courseId, published: true }).session(session);
+      const course = await getPublishedCourseById(order.courseId, { session });
       if (!course) {
         const err = new Error('Khong tim thay khoa hoc');
         err.code = 'COURSE_NOT_FOUND';
         throw err;
       }
 
-      let enrollment = await Enrollment.findOne({
-        userId: order.userId,
-        courseId: course._id,
-      }).session(session);
-
-      if (!enrollment) {
-        const progress = (course.lessons || []).map((lesson) => ({
-          lessonSlug: lesson.slug,
-          completed: false,
-          completedAt: null,
-        }));
-
-        enrollment = await Enrollment.create(
-          [
-            {
-              userId: order.userId,
-              courseId: course._id,
-              progress,
-            },
-          ],
-          { session },
-        ).then((docs) => docs[0]);
-      }
+      const enrollment = await ensureCatalogEnrollment(order.userId, course, { session });
 
       const completingNow = order.status !== 'completed';
       if (completingNow) {
@@ -101,7 +81,7 @@ async function completeOrderAndEnroll({ txnRef, transactionId }) {
       let cohortPlacement = null;
       let cohortDoc = null;
       if (order.cohortId) {
-        cohortDoc = await Cohort.findById(order.cohortId).session(session);
+        cohortDoc = await getCohortById(order.cohortId, { session });
         if (cohortDoc && cohortDoc.status === 'open') {
           cohortPlacement = await placeStudentInCohort({
             userId: order.userId,
@@ -144,9 +124,7 @@ async function completeOrderAndEnroll({ txnRef, transactionId }) {
     }
 
     if (receiptContext) {
-      const buyer = await User.findById(receiptContext.order.userId)
-        .select('email displayName')
-        .lean();
+      const buyer = await findDirectoryEntry(receiptContext.order.userId);
       if (buyer?.email) {
         let cohortInviteNote = null;
         if (receiptContext.cohortTitle) {

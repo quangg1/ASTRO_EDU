@@ -1,5 +1,5 @@
-import type { LearningModule } from '@/data/learningPathCurriculum'
-import { DEPTH_ORDER, LEARNING_MODULES } from '@/data/learningPathCurriculum'
+import type { LearningModule } from '@/features/learning-path/data/learningPathCurriculum'
+import { DEPTH_ORDER, LEARNING_MODULES } from '@/features/learning-path/data/learningPathCurriculum'
 import { hasClientSession } from '@/features/auth/public'
 import { getApiPathBase } from '@/lib/apiConfig'
 import { apiFetch } from '@/lib/apiRequestInit'

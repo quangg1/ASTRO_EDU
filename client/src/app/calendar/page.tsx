@@ -1,5 +1,5 @@
 import { Suspense } from 'react'
-import { AstronomyCalendarPage } from '@/features/astronomy-calendar/components/AstronomyCalendarPage'
+import { AstronomyCalendarPage } from '@/features/astronomy-calendar/public'
 
 function CalendarFallback() {
   return (

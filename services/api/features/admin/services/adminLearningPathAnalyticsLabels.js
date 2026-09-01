@@ -84,6 +84,58 @@ function resolveLessonDisplay(lessonId, eventModuleId, eventNodeId, lookup) {
   };
 }
 
+const DEPTHS = Object.keys(DEPTH_LABEL_VI);
+
+/**
+ * Indexes the learning-path document so analytics rows (which only carry ids)
+ * can be labelled without an extra query per row.
+ */
+function buildLearningPathLookup(doc) {
+  const modules = Array.isArray(doc?.modules) ? doc.modules : [];
+  const moduleMap = new Map();
+  const nodeMap = new Map();
+  const lessonMap = new Map();
+  const conceptMap = new Map();
+
+  for (const concept of Array.isArray(doc?.concepts) ? doc.concepts : []) {
+    const id = String(concept?.id || '').trim();
+    if (!id) continue;
+    const label = String(
+      concept.labelVi || concept.label || concept.title || concept.short_description || id,
+    ).trim();
+    conceptMap.set(id, label || id);
+  }
+
+  for (const module of modules) {
+    const moduleId = String(module.id);
+    const moduleTitle = module.titleVi || module.title || moduleId;
+    moduleMap.set(moduleId, { moduleId, moduleTitle, moduleOrder: Number(module.order) || null });
+
+    for (const node of module.nodes || []) {
+      const nodeId = String(node.id);
+      const nodeTitle = node.titleVi || node.title || nodeId;
+      nodeMap.set(nodeId, { moduleId, nodeId, nodeTitle });
+
+      for (const depth of DEPTHS) {
+        for (const lesson of node?.depths?.[depth] || []) {
+          const lessonId = String(lesson.id);
+          lessonMap.set(lessonId, {
+            moduleId,
+            nodeId,
+            lessonId,
+            moduleTitle,
+            nodeTitle,
+            lessonTitle: lesson.titleVi || lesson.title || lessonId,
+            depth,
+          });
+        }
+      }
+    }
+  }
+
+  return { modules, moduleMap, nodeMap, lessonMap, conceptMap };
+}
+
 function resolveConceptTitle(conceptId, lookup) {
   const id = String(conceptId || '').trim();
   if (!id) return '—';
@@ -94,9 +146,11 @@ function resolveConceptTitle(conceptId, lookup) {
 
 module.exports = {
   DEPTH_LABEL_VI,
+  DEPTHS,
   humanizeSlug,
   depthLabelVi,
   parseLessonIdParts,
+  buildLearningPathLookup,
   resolveLessonDisplay,
   resolveConceptTitle,
 };

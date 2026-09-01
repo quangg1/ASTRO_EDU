@@ -2,7 +2,9 @@
 
 import { useEffect } from 'react'
 import { clsx } from 'clsx'
-import { useEarthHistoryStore, usePlaybackStore, useSceneCommandStore } from '@/features/content3d/earth/public'
+import { useEarthHistoryStore } from '@/features/content3d/earth/stores/earthHistoryStore'
+import { usePlaybackStore } from '@/features/content3d/earth/stores/playbackStore'
+import { useSceneCommandStore } from '@/features/content3d/earth/stores/sceneCommandStore'
 
 function isTypingTarget(el: EventTarget | null) {
   if (!el || !(el instanceof HTMLElement)) return false

@@ -4,12 +4,12 @@ import { useEffect, useRef, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useAuthStore } from '@/features/auth/public'
 import { canEnterStudio } from '@/lib/roles'
-import { fetchCourseForEditor } from '@/features/courses/public'
-import { CohortStudioManager } from '@/features/courses/cohort/CohortStudioManager'
 import {
+  fetchCourseForEditor,
+  CohortStudioManager,
   cohortsNavEnabledForStrategy,
   resolveDistributionStrategy,
-} from '@/features/courses/lib/distributionStrategy'
+} from '@/features/courses/public'
 import Link from 'next/link'
 
 export default function StudioCohortsPage() {

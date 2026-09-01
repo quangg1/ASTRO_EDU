@@ -1,19 +1,20 @@
-const ShowcaseUnlock = require('../../../rewards/models/ShowcaseUnlock');
-const ShowcaseEntityContent = require('../../../content3d/models/ShowcaseEntityContent');
-const PlanetNarrative = require('../../../content3d/planet-narrative/models/PlanetNarrative');
-const LearningPath = require('../../../learning-path/models/LearningPath');
-const UserProgress = require('../../../learning-path/models/UserProgress');
 const { collectLpLessons } = require('../../../learning-path/lib/collectLpLessons');
+const {
+  getMainCurriculum,
+  getLearnerProgress,
+} = require('../../../learning-path/services/learningPathQueryService');
+const {
+  hasUnlockForEntity,
+} = require('../../../rewards/services/showcaseUnlockService');
+const showcaseContent = require('../../../content3d/services/showcaseContentService');
+const planetNarrativeService = require('../../../content3d/services/planetNarrativeService');
 
 /**
  * @param {string} userId
  * @param {string} entityId
  */
 async function hasShowcaseUnlock(userId, entityId) {
-  if (!userId || !entityId) return false;
-  const id = String(entityId).trim();
-  const rows = await ShowcaseUnlock.find({ userId, entityId: id }).lean();
-  return rows.length > 0;
+  return hasUnlockForEntity(userId, entityId);
 }
 
 function lessonClaimsEntity(lesson, entityId) {
@@ -29,20 +30,20 @@ async function loadEntityLessonLinks(entityId) {
   const id = String(entityId || '').trim();
   const lessonIds = new Set();
 
-  const lp = await LearningPath.findOne({ slug: 'main' }).select('modules').lean();
-  for (const { lesson } of collectLpLessons(lp)) {
+  const { modules } = await getMainCurriculum();
+  for (const { lesson } of collectLpLessons({ modules })) {
     if (lessonClaimsEntity(lesson, id) && lesson.id) {
       lessonIds.add(String(lesson.id).trim());
     }
   }
 
-  const content = await ShowcaseEntityContent.findOne({ entityId: id }).select('panelConfig').lean();
+  const content = await showcaseContent.getEntityContent(id);
   for (const lid of content?.panelConfig?.lessonIds || []) {
     const x = String(lid || '').trim();
     if (x) lessonIds.add(x);
   }
 
-  const narrative = await PlanetNarrative.findOne({ entityId: id }).select('linkedLessonIds').lean();
+  const { data: narrative } = await planetNarrativeService.getPublished(id);
   for (const lid of narrative?.linkedLessonIds || []) {
     const x = String(lid || '').trim();
     if (x) lessonIds.add(x);
@@ -67,8 +68,10 @@ async function hasLearningPathAccessToEntity(userId, entityId) {
   const links = await loadEntityLessonLinks(entityId);
   if (links.size === 0) return false;
 
-  const up = await UserProgress.findOne({ userId }).select('learningPathCompletedLessonIds').lean();
-  const completed = new Set((up?.learningPathCompletedLessonIds || []).map((x) => String(x || '').trim()));
+  const up = await getLearnerProgress(userId);
+  const completed = new Set(
+    (up?.learningPathCompletedLessonIds || []).map((x) => String(x || '').trim()),
+  );
   for (const lid of links) {
     if (completed.has(lid)) return true;
   }
@@ -78,9 +81,7 @@ async function hasLearningPathAccessToEntity(userId, entityId) {
 async function entityHasDeepHistory(entityId) {
   const id = String(entityId || '').trim();
   if (!id) return false;
-  const doc = await PlanetNarrative.findOne({ entityId: id, published: { $ne: false } })
-    .select('beats stages')
-    .lean();
+  const { data: doc } = await planetNarrativeService.getPublished(id);
   const beats = Array.isArray(doc?.beats) ? doc.beats : Array.isArray(doc?.stages) ? doc.stages : [];
   return beats.length > 0;
 }

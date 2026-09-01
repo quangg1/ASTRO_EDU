@@ -1,0 +1,5 @@
+{
+  "note": "Frozen architecture debt. Entries may be removed as code is refactored, never added by hand.",
+  "generatedFrom": "node scripts/check-architecture.mjs --update-baseline",
+  "entries": []
+}

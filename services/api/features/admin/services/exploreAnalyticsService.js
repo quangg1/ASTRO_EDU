@@ -1,4 +1,4 @@
-const LearningPathEvent = require('../../learning-path/models/LearningPathEvent');
+const reporting = require('../repositories/reportingRepository');
 
 const EXPLORE_FUNNEL_STEPS = [
   { step: 'scene_entity_clicked', label: 'Click thiên thể', eventName: 'scene_entity_clicked' },
@@ -9,24 +9,8 @@ const EXPLORE_FUNNEL_STEPS = [
 ];
 
 async function getExploreAnalytics(startDate) {
-  const match = { timestamp: { $gte: startDate } };
-
-  const countsAgg = await LearningPathEvent.aggregate([
-    {
-      $match: {
-        ...match,
-        eventName: { $in: EXPLORE_FUNNEL_STEPS.map((s) => s.eventName).concat(['scene_entity_discovered']) },
-      },
-    },
-    {
-      $group: {
-        _id: '$eventName',
-        events: { $sum: 1 },
-        users: { $addToSet: '$userId' },
-        sessions: { $addToSet: '$sessionId' },
-      },
-    },
-  ]);
+  const eventNames = EXPLORE_FUNNEL_STEPS.map((s) => s.eventName).concat(['scene_entity_discovered']);
+  const countsAgg = await reporting.exploreEventCounts(startDate, eventNames);
 
   const byEvent = new Map(
     countsAgg.map((row) => [
@@ -64,22 +48,9 @@ async function getExploreAnalytics(startDate) {
 
   const discovery = byEvent.get('scene_entity_discovered') || { events: 0, uniqueUsers: 0, uniqueSessions: 0 };
 
-  const topEntitiesAgg = await LearningPathEvent.aggregate([
-    {
-      $match: {
-        ...match,
-        eventName: { $in: ['scene_entity_discovered', 'scene_contextual_quiz_passed'] },
-        'metadata.entityId': { $exists: true, $nin: [null, ''] },
-      },
-    },
-    {
-      $group: {
-        _id: { entityId: { $toString: '$metadata.entityId' }, eventName: '$eventName' },
-        count: { $sum: 1 },
-      },
-    },
-    { $sort: { count: -1 } },
-    { $limit: 40 },
+  const topEntitiesAgg = await reporting.exploreTopEntityEvents(startDate, [
+    'scene_entity_discovered',
+    'scene_contextual_quiz_passed',
   ]);
 
   const entityMap = new Map();

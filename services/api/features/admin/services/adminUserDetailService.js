@@ -1,50 +1,26 @@
-const mongoose = require('mongoose');
-const User = require('../../auth/models/User');
-const Order = require('../../payment/models/Order');
-const Enrollment = require('../../courses/models/Enrollment');
-const CohortEnrollment = require('../../courses/models/CohortEnrollment');
-const Cohort = require('../../courses/models/Cohort');
-const Course = require('../../courses/models/Course');
-const UserReward = require('../../rewards/models/UserReward');
-const GemTransaction = require('../../rewards/models/GemTransaction');
+const userReporting = require('../repositories/adminUserReportingRepository');
 const { getWalletLearnerMeta } = require('../../rewards/services/learnerTierService');
 const { enrichOrdersForUser } = require('../../payment/lib/serializeUserOrder');
 const { AppError } = require('../../../shared/errors');
 
 async function getAdminUserDetail(userId) {
-  const user = await User.findById(userId)
-    .select(
-      'email displayName avatar provider role accountStatus deactivatedAt deactivationReason createdAt',
-    )
-    .lean();
-  if (!user) {
+  const bundle = await userReporting.loadUserDetailBundle(userId);
+  if (!bundle) {
     throw new AppError(404, 'USER_NOT_FOUND', 'Không tìm thấy người dùng');
   }
 
+  const {
+    user,
+    ordersRaw,
+    enrollments,
+    cohortEnrollments,
+    userReward: ur,
+    gemTransactions: gemTxs,
+    courses,
+    cohorts,
+  } = bundle;
+
   const uid = String(user._id);
-
-  const [ordersRaw, enrollments, cohortEnrollments, ur, gemTxs] = await Promise.all([
-    Order.find({ userId: uid }).sort({ createdAt: -1 }).limit(50).lean(),
-    Enrollment.find({ userId: uid }).sort({ enrolledAt: -1 }).lean(),
-    CohortEnrollment.find({ userId: uid }).sort({ joinedAt: -1 }).lean(),
-    UserReward.findOne({ userId: uid }).lean(),
-    GemTransaction.find({ userId: uid }).sort({ createdAt: -1 }).limit(20).lean(),
-  ]);
-
-  const courseIds = [...new Set(enrollments.map((e) => String(e.courseId)))];
-  const cohortIds = [...new Set(cohortEnrollments.map((e) => String(e.cohortId)))];
-  const [courses, cohorts] = await Promise.all([
-    courseIds.length
-      ? Course.find({ _id: { $in: courseIds } })
-          .select('title slug published')
-          .lean()
-      : [],
-    cohortIds.length
-      ? Cohort.find({ _id: { $in: cohortIds } })
-          .select('title slug courseId status startAt')
-          .lean()
-      : [],
-  ]);
   const courseById = Object.fromEntries(courses.map((c) => [String(c._id), c]));
   const cohortById = Object.fromEntries(cohorts.map((c) => [String(c._id), c]));
 

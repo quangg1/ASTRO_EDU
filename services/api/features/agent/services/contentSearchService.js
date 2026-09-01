@@ -1,7 +1,8 @@
-const mongoose = require('mongoose');
 const { normalizeQueryString } = require('../../community/lib/postListQuery');
-const Post = require('../../community/models/Post');
-const Forum = require('../../community/models/Forum');
+const {
+  listVisiblePostsByIds,
+  listAllForums,
+} = require('../../community/services/communityReadService');
 const { getLearningPathLessonIndex } = require('./toolAuthorizers/lpCurriculum');
 const { appendCommunityPostChunk, callRagSearch } = require('./ragIndexService');
 
@@ -77,11 +78,8 @@ async function mapCommunityRagHitsToThreads(hits, limit) {
     .map(([id]) => id);
   if (!ids.length) return [];
 
-  const objectIds = ids
-    .filter((id) => mongoose.Types.ObjectId.isValid(id))
-    .map((id) => new mongoose.Types.ObjectId(id));
-  const posts = await Post.find({ _id: { $in: objectIds }, isHidden: { $ne: true } }).lean();
-  const forums = await Forum.find().lean();
+  const posts = await listVisiblePostsByIds(ids);
+  const forums = await listAllForums();
   const forumById = new Map(forums.map((f) => [String(f._id), f]));
 
   return ids

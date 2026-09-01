@@ -5,7 +5,7 @@ import { clsx } from 'clsx'
 import { CheckCircle2, Sparkles, X } from 'lucide-react'
 import type { QuizQuestion } from '@/shared/types/quizQuestion'
 import { mcqAnswerIndex, mcqOptionTexts } from '@/shared/types/quizQuestion'
-import { GEM_EARN_CONTEXTUAL_QUIZ } from '@/features/rewards/lib/gemWallet'
+import { GEM_EARN_CONTEXTUAL_QUIZ } from '@/features/rewards/public'
 
 type Props = {
   open: boolean

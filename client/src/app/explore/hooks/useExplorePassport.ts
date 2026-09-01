@@ -2,8 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { fetchExplorePassport } from '@/features/explore/public'
-import { buildExplorePassportSummary } from '@/features/explore/lib/buildExplorePassportSummary'
-import type { ExplorePassportSummary } from '@/features/explore/lib/explorePassportTypes'
+import { buildExplorePassportSummary, type ExplorePassportSummary } from '@/features/explore/public'
 
 export function useExplorePassport(userId: string | undefined) {
   const [serverPayload, setServerPayload] = useState<Awaited<ReturnType<typeof fetchExplorePassport>>>(null)

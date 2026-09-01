@@ -21,8 +21,8 @@ import {
 import { Badge, Button, Card, Input, Tabs, Tab, TabList, TabPanel, Textarea } from '@/design-system'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Spinner } from '@/components/ui/Spinner'
-import { labelShopCategoryVi } from '@/features/rewards/lib/shopCategoryVi'
-import { labelGemReasonCode, labelGemTxnSignVi } from '@/features/admin/lib/adminLabelsVi'
+import { labelShopCategoryVi } from '@/features/rewards/public'
+import { labelGemReasonCode, labelGemTxnSignVi } from '@/features/admin/public'
 import { AdminAvatarDecorationsPanel } from '@/app/admin/gem-economy/AdminAvatarDecorationsPanel'
 
 function toLocalInputValue(iso: string | null | undefined): string {

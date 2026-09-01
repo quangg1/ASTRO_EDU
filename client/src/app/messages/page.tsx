@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { MessageCircle } from 'lucide-react'
 import { useAuthStore } from '@/features/auth/public'
-import { AvatarWithDecoration } from '@/components/profile/AvatarWithDecoration'
+import { AvatarWithDecoration } from '@/features/users/public'
 import {
   fetchConversations,
   useDmRealtime,

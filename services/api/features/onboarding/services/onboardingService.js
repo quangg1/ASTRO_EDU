@@ -1,5 +1,5 @@
 const UserOnboardingProfile = require('../models/UserOnboardingProfile');
-const GemTransaction = require('../../rewards/models/GemTransaction');
+const { hasEarnedReason } = require('../../rewards/services/gemLedgerService');
 const { GEM_EARN } = require('../../rewards/constants/gemEarn');
 const { getCachedSeasonalMultiplier, scaleEarn } = require('../../rewards/services/gemRuntimeConfigService');
 const { applyGemEarn } = require('../../rewards/services/rewardEngine');
@@ -54,7 +54,7 @@ async function getOnboardingStatus(userId) {
 }
 
 async function onboardingGemAlreadyAwarded(userId) {
-  return GemTransaction.exists({ userId, reason: 'onboarding_complete' });
+  return hasEarnedReason({ userId, reason: 'onboarding_complete' });
 }
 
 async function completeOnboarding(userId, body, { skip = false } = {}) {

@@ -1,7 +1,7 @@
-const ShowcaseCatalogBundle = require('../models/ShowcaseCatalogBundle');
 const ExploreContextualQuestionPool = require('../models/ExploreContextualQuestionPool');
-const Concept = require('../../concepts/models/Concept');
-const UserProgress = require('../../learning-path/models/UserProgress');
+const conceptService = require('../../concepts/services/conceptService');
+const { getCatalogBundle } = require('./showcaseContentService');
+const exploreQuizProgress = require('../../learning-path/services/exploreQuizProgressService');
 const { calendarDayKeyVi } = require('../../../shared/calendarDayKey');
 const { buildExploreContextualQuizTemplate } = require('../lib/buildExploreContextualQuizTemplate');
 const { buildSkyConstellationQuizTemplate } = require('../lib/buildSkyConstellationQuizTemplate');
@@ -57,7 +57,7 @@ function pickQuestions(poolQuestions, recentIds, limit = PICK_LIMIT) {
 }
 
 async function loadShowcaseBundle() {
-  return ShowcaseCatalogBundle.findOne({ slug: 'main' }).lean();
+  return getCatalogBundle();
 }
 
 function resolveCatalogEntry(bundle, entityId) {
@@ -87,33 +87,14 @@ async function loadConceptsForEntity(item) {
     ? item.panelConfig.conceptTagIds.map((x) => String(x || '').trim()).filter(Boolean)
     : [];
   if (!ids.length) return [];
-  const rows = await Concept.find({ id: { $in: ids }, published: { $ne: false } })
-    .select('id title short_description')
-    .lean();
-  return rows.map((c) => ({ id: c.id, title: String(c.title || '').trim() }));
+  const rows = await conceptService.listConceptsByIds(ids);
+  return rows
+    .filter((c) => c.published !== false)
+    .map((c) => ({ id: c.id, title: String(c.title || '').trim() }));
 }
 
 async function loadConceptsForHints(conceptHints) {
-  const hints = (conceptHints || []).map((h) => String(h || '').trim().toLowerCase()).filter(Boolean);
-  if (!hints.length) return [];
-  const rows = await Concept.find({ published: { $ne: false } })
-    .select('id title short_description explanation aliases')
-    .lean();
-  return rows
-    .filter((c) => {
-      const hay = [
-        c.id,
-        c.title,
-        c.short_description,
-        c.explanation,
-        ...(Array.isArray(c.aliases) ? c.aliases : []),
-      ]
-        .join(' ')
-        .toLowerCase();
-      return hints.some((h) => hay.includes(h));
-    })
-    .slice(0, 12)
-    .map((c) => ({ id: c.id, title: String(c.title || '').trim() }));
+  return conceptService.findConceptsMatchingHints(conceptHints, { limit: 12 });
 }
 
 function buildAiContext(entityId, item, orbit, concepts) {
@@ -201,80 +182,19 @@ async function ensureTemplatePool(entityId) {
 }
 
 async function getExploreContextualQuizCompletedToday(userId, entityId) {
-  if (!userId || !entityId) return false;
-  const today = calendarDayKeyVi();
-  const doc = await UserProgress.findOne({ userId })
-    .select('exploreContextualQuizDayByEntity')
-    .lean();
-  const map = doc?.exploreContextualQuizDayByEntity;
-  if (!map || typeof map !== 'object') return false;
-  return String(map[entityId] || '').trim() === today;
+  return exploreQuizProgress.getExploreContextualQuizCompletedToday(userId, entityId);
 }
 
 async function markExploreContextualQuizDayCompleted(userId, entityId) {
-  if (!userId || !entityId) return;
-  const today = calendarDayKeyVi();
-  const doc = await UserProgress.findOne({ userId })
-    .select('exploreContextualQuizDayByEntity')
-    .lean();
-  const map =
-    doc?.exploreContextualQuizDayByEntity && typeof doc.exploreContextualQuizDayByEntity === 'object'
-      ? { ...doc.exploreContextualQuizDayByEntity }
-      : {};
-  map[entityId] = today;
-  await UserProgress.findOneAndUpdate(
-    { userId },
-    { $set: { exploreContextualQuizDayByEntity: map } },
-    { upsert: true, setDefaultsOnInsert: true },
-  );
+  return exploreQuizProgress.markExploreContextualQuizDayCompleted(userId, entityId);
 }
 
 async function getRecentQuestionIds(userId, entityId) {
-  if (!userId) return [];
-  const today = calendarDayKeyVi();
-  const doc = await UserProgress.findOne({ userId })
-    .select('exploreQuizRecentByEntity exploreQuizRecentDayByEntity')
-    .lean();
-  const dayMap = doc?.exploreQuizRecentDayByEntity;
-  if (!dayMap || typeof dayMap !== 'object' || String(dayMap[entityId] || '').trim() !== today) {
-    return [];
-  }
-  const map = doc?.exploreQuizRecentByEntity;
-  if (!map || typeof map !== 'object') return [];
-  const rows = map[entityId];
-  return Array.isArray(rows) ? rows.map((x) => String(x || '').trim()).filter(Boolean) : [];
+  return exploreQuizProgress.getRecentQuestionIds(userId, entityId);
 }
 
 async function recordRecentQuestionIds(userId, entityId, questionIds) {
-  if (!userId || !entityId || !questionIds?.length) return;
-  const today = calendarDayKeyVi();
-  const doc = await UserProgress.findOne({ userId })
-    .select('exploreQuizRecentByEntity exploreQuizRecentDayByEntity')
-    .lean();
-  const map =
-    doc?.exploreQuizRecentByEntity && typeof doc.exploreQuizRecentByEntity === 'object'
-      ? { ...doc.exploreQuizRecentByEntity }
-      : {};
-  const dayMap =
-    doc?.exploreQuizRecentDayByEntity && typeof doc.exploreQuizRecentDayByEntity === 'object'
-      ? { ...doc.exploreQuizRecentDayByEntity }
-      : {};
-  const prevDay = String(dayMap[entityId] || '').trim();
-  const prev =
-    prevDay === today && Array.isArray(map[entityId]) ? map[entityId] : [];
-  const next = [...questionIds, ...prev.filter((id) => !questionIds.includes(id))].slice(0, RECENT_KEEP);
-  map[entityId] = next;
-  dayMap[entityId] = today;
-  await UserProgress.findOneAndUpdate(
-    { userId },
-    {
-      $set: {
-        exploreQuizRecentByEntity: map,
-        exploreQuizRecentDayByEntity: dayMap,
-      },
-    },
-    { upsert: true, setDefaultsOnInsert: true },
-  );
+  return exploreQuizProgress.recordRecentQuestionIds(userId, entityId, questionIds);
 }
 
 /**

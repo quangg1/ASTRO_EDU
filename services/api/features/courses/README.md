@@ -1,20 +1,7 @@
-# Courses Feature Domains
+# courses
 
-This feature currently contains four sub-domains. Files are not physically separated yet (Phase 1), but new changes should follow these boundaries:
+HTTP: `/api/courses`, `/api/tutorials` (mounted in `services/api/server.js`).
 
-- `tutorials/`  
-  Tutorial catalog, tutorial progress, tutorial tracks.
+Public services for other features: `courseAccessService`, enrollment/cohort services under `services/`.
 
-- `curriculum/`  
-  Learning path, concepts, lesson structure, progress events.
-
-- `delivery/`  
-  Course publishing, enrollment, lesson delivery, paywall behavior.
-
-- `showcase3d/`  
-  3D showcase entities, catalog bundles, orbit integrations, narrative bridges.
-
-Notes:
-
-- Keep external API routes stable (`/api/courses`, `/api/learning-path`, `/api/concepts`, etc.).
-- Prefer service-level integration (`services/eventBus`) over direct cross-feature calls.
+FE mirror: `client/src/features/courses` (`public.ts` client, `server.ts` RSC).

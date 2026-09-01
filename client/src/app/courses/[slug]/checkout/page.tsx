@@ -1,6 +1,6 @@
 import { Suspense } from 'react'
 import { notFound, redirect } from 'next/navigation'
-import { CourseCheckoutClient } from '@/features/payment/ui/CourseCheckoutClient'
+import { CourseCheckoutClient } from '@/features/payment/public'
 import { fetchCourseOutlineServer } from '@/features/courses/server'
 
 export default async function CourseCheckoutPage({

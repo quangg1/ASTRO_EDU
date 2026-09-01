@@ -4,7 +4,7 @@ import type { AgentClientAction } from '../types'
 import {
   toolCallsToTutorActions,
   type TutorAction,
-} from '@/components/ai-tutor/parseTutorActions'
+} from '@/features/agent/ui/parseTutorActions'
 
 export function clientActionToTutorAction(action: AgentClientAction): TutorAction | null {
   if (action.type === 'open_lesson') {

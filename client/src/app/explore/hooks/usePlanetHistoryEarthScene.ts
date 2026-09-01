@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { beatToEarthStage } from '@/features/content3d/narrative/adapters/earthAdapter'
-import { usePlanetNarrativeStore } from '@/features/content3d/narrative/stores/planetNarrativeStore'
+import { usePlanetNarrativeStore } from '@/features/content3d/narrative/public'
 import {
   fetchFossilsForStage,
   useSceneCommandStore,

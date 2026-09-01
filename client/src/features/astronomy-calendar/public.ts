@@ -75,6 +75,7 @@ export { CalendarUrgencyBanner } from './components/CalendarUrgencyBanner'
 export { MoonPhaseStrip } from './components/MoonPhaseStrip'
 
 export { AstronomyCalendarPage } from './components/AstronomyCalendarPage'
+export { AstronomyCalendarStudio } from './admin/AstronomyCalendarStudio'
 
 export { CALENDAR_FILTER_CHIPS, filterEvents, formatCountdown } from './lib/eventUi'
 

@@ -1,7 +1,4 @@
-const Enrollment = require('../../courses/models/Enrollment');
-const CohortEnrollment = require('../../courses/models/CohortEnrollment');
-const Course = require('../../courses/models/Course');
-const Cohort = require('../../courses/models/Cohort');
+const commerce = require('../repositories/adminCommerceReportingRepository');
 const { AppError } = require('../../../shared/errors');
 const { placeStudentInCohort } = require('../../courses/services/cohortEnrollmentService');
 const { recordAdminAction } = require('../lib/recordAdminAction');
@@ -20,12 +17,12 @@ function assertRevokeReason(reason) {
 }
 
 async function grantCatalogEnrollment({ actorUserId, userId, courseId, reason }) {
-  const course = await Course.findById(courseId).lean();
+  const course = await commerce.findCourseByIdLean(courseId);
   if (!course) {
     throw new AppError(404, 'COURSE_NOT_FOUND', 'Không tìm thấy khóa học');
   }
 
-  let enrollment = await Enrollment.findOne({ userId: String(userId), courseId: course._id });
+  let enrollment = await commerce.findCatalogEnrollment(userId, course._id);
   if (enrollment) {
     if (enrollment.status !== 'active') {
       enrollment.status = 'active';
@@ -41,7 +38,7 @@ async function grantCatalogEnrollment({ actorUserId, userId, courseId, reason })
     completedAt: null,
   }));
 
-  enrollment = await Enrollment.create({
+  enrollment = await commerce.createCatalogEnrollment({
     userId: String(userId),
     courseId: course._id,
     status: 'active',
@@ -62,15 +59,12 @@ async function grantCatalogEnrollment({ actorUserId, userId, courseId, reason })
 
 async function revokeCatalogEnrollment({ actorUserId, userId, courseId, reason }) {
   const reasonText = assertRevokeReason(reason);
-  const course = await Course.findById(courseId).lean();
+  const course = await commerce.findCourseByIdLean(courseId);
   if (!course) {
     throw new AppError(404, 'COURSE_NOT_FOUND', 'Không tìm thấy khóa học');
   }
 
-  const res = await Enrollment.deleteOne({
-    userId: String(userId),
-    courseId,
-  });
+  const res = await commerce.deleteCatalogEnrollment(userId, courseId);
   if (!res.deletedCount) {
     throw new AppError(404, 'ENROLLMENT_NOT_FOUND', 'Không tìm thấy ghi danh catalog');
   }
@@ -96,16 +90,16 @@ async function revokeCatalogEnrollment({ actorUserId, userId, courseId, reason }
 }
 
 async function grantCohortEnrollment({ actorUserId, userId, cohortId, reason }) {
-  const cohort = await Cohort.findById(cohortId).lean();
+  const cohort = await commerce.findCohortByIdLean(cohortId);
   if (!cohort) {
     throw new AppError(404, 'COHORT_NOT_FOUND', 'Không tìm thấy lớp');
   }
-  const course = await Course.findById(cohort.courseId).lean();
+  const course = await commerce.findCourseByIdLean(cohort.courseId);
   if (!course) {
     throw new AppError(404, 'COURSE_NOT_FOUND', 'Không tìm thấy khóa học của lớp');
   }
 
-  const existing = await CohortEnrollment.findOne({ cohortId, userId: String(userId) }).lean();
+  const existing = await commerce.findCohortEnrollmentLean(userId, cohortId);
   if (existing) {
     return { cohortEnrollment: existing, created: false, courseSlug: course.slug };
   }
@@ -116,10 +110,7 @@ async function grantCohortEnrollment({ actorUserId, userId, cohortId, reason }) 
     cohort,
   });
 
-  const cohortEnrollment = await CohortEnrollment.findOne({
-    cohortId,
-    userId: String(userId),
-  }).lean();
+  const cohortEnrollment = await commerce.findCohortEnrollmentLean(userId, cohortId);
 
   await recordAdminAction({
     actorUserId,
@@ -139,16 +130,13 @@ async function grantCohortEnrollment({ actorUserId, userId, cohortId, reason }) 
 
 async function revokeCohortEnrollment({ actorUserId, userId, cohortId, reason }) {
   const reasonText = assertRevokeReason(reason);
-  const cohort = await Cohort.findById(cohortId).lean();
+  const cohort = await commerce.findCohortByIdLean(cohortId);
   if (!cohort) {
     throw new AppError(404, 'COHORT_NOT_FOUND', 'Không tìm thấy lớp');
   }
-  const course = await Course.findById(cohort.courseId).lean();
+  const course = await commerce.findCourseByIdLean(cohort.courseId);
 
-  const res = await CohortEnrollment.deleteOne({
-    userId: String(userId),
-    cohortId,
-  });
+  const res = await commerce.deleteCohortEnrollment(userId, cohortId);
   if (!res.deletedCount) {
     throw new AppError(404, 'COHORT_ENROLLMENT_NOT_FOUND', 'Không tìm thấy ghi danh lớp');
   }

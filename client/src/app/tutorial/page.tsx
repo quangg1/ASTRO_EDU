@@ -1,4 +1,4 @@
-import LearningPathHub from '@/components/learning-path/LearningPathHub'
+import { LearningPathHub, TutorialJourneyGuide } from '@/features/learning-path/public'
 
 export const metadata = {
   title: 'Learning Path',
@@ -6,5 +6,10 @@ export const metadata = {
 }
 
 export default function TutorialPage() {
-  return <LearningPathHub />
+  return (
+    <div className="space-y-6">
+      <TutorialJourneyGuide />
+      <LearningPathHub />
+    </div>
+  )
 }

@@ -1,5 +1,9 @@
-const LearningPathEvent = require('../../learning-path/models/LearningPathEvent');
-const UserProgress = require('../../learning-path/models/UserProgress');
+const {
+  findLessonOpenTimestamp,
+} = require('../../learning-path/services/learningPathEventQueryService');
+const {
+  getLearnerProgress,
+} = require('../../learning-path/services/learningPathQueryService');
 const UserReward = require('../models/UserReward');
 const GemTransaction = require('../models/GemTransaction');
 const Achievement = require('../models/Achievement');
@@ -118,18 +122,7 @@ async function checkAchievements(userId) {
 }
 
 async function findOpenTimestamp(userId, lessonId, sessionId, beforeTs) {
-  if (!lessonId || !sessionId) return null;
-  const row = await LearningPathEvent.findOne({
-    userId,
-    lessonId,
-    sessionId,
-    eventName: 'lp_lesson_opened',
-    timestamp: { $lt: beforeTs },
-  })
-    .sort({ timestamp: -1 })
-    .select('timestamp')
-    .lean();
-  return row?.timestamp || null;
+  return findLessonOpenTimestamp(userId, lessonId, sessionId, beforeTs);
 }
 
 async function lessonDwellRewardedToday(userId, lessonId) {
@@ -344,7 +337,7 @@ async function processLearningPathRewardEvent(userId, ev) {
     const entityId = String(meta.entityId || '').trim();
     if (!entityId) return null;
 
-    const up = await UserProgress.findOne({ userId }).select('learningPathCompletedLessonIds').lean();
+    const up = await getLearnerProgress(userId);
     const completed = up?.learningPathCompletedLessonIds || [];
     if (!Array.isArray(completed) || completed.length < 1) return null;
 
@@ -379,7 +372,7 @@ async function processLearningPathRewardEvent(userId, ev) {
     const totalCount = Number(meta.totalCount ?? 0);
     if (!entityId || totalCount < 1 || correctCount < totalCount) return null;
 
-    const up = await UserProgress.findOne({ userId }).select('learningPathCompletedLessonIds').lean();
+    const up = await getLearnerProgress(userId);
     const completed = up?.learningPathCompletedLessonIds || [];
     if (!Array.isArray(completed) || completed.length < 1) return null;
 

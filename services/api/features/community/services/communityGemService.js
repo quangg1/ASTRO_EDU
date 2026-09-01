@@ -1,6 +1,5 @@
-const Post = require('../models/Post');
-const Forum = require('../models/Forum');
-const GemTransaction = require('../../rewards/models/GemTransaction');
+const postRepository = require('../repositories/postRepository');
+const forumRepository = require('../repositories/forumRepository');
 const { isNewsForum } = require('../constants/forumCatalog');
 const {
   GEM_EARN,
@@ -10,7 +9,8 @@ const {
   COMMUNITY_EARN_REASONS,
 } = require('../../rewards/constants/gemEarn');
 const { getCachedSeasonalMultiplier, scaleEarn } = require('../../rewards/services/gemRuntimeConfigService');
-const { applyGemEarn, utcDayBounds } = require('../../rewards/services/rewardEngine');
+const { applyGemEarn } = require('../../rewards/services/rewardEngine');
+const gemLedger = require('../../rewards/services/gemLedgerService');
 
 function stripHtml(text) {
   return String(text || '')
@@ -54,70 +54,23 @@ function helpfulMarkTriggersGem({ markerId, markerRole, postAuthorId, commentAut
 }
 
 async function isDiscussionPost(postId) {
-  const post = await Post.findById(postId).select('forumId isCrawled isExternalArticle isHidden reportCount').lean();
+  const post = await postRepository.findById(postId, {
+    projection: 'forumId isCrawled isExternalArticle isHidden reportCount',
+  });
   if (!post || post.isHidden || post.isCrawled || post.isExternalArticle) return null;
   if ((post.reportCount || 0) > 0) return null;
-  const forum = await Forum.findById(post.forumId).lean();
+  const forum = await forumRepository.findById(post.forumId);
   if (!forum || isNewsForum(forum)) return null;
   return { post, forum };
-}
-
-async function communityPostRewardedToday(userId) {
-  const { start, end } = utcDayBounds(new Date());
-  return GemTransaction.exists({
-    userId,
-    reason: 'community_post',
-    createdAt: { $gte: start, $lt: end },
-  });
-}
-
-async function hasCommunityPostReward(userId, postId) {
-  return GemTransaction.exists({
-    userId,
-    reason: 'community_post',
-    entityId: String(postId),
-  });
-}
-
-async function countCommunityHelpfulAnswersThisWeek(userId) {
-  const since = new Date(Date.now() - 7 * 86400_000);
-  return GemTransaction.countDocuments({
-    userId,
-    reason: 'community_helpful_answer',
-    createdAt: { $gte: since },
-  });
-}
-
-async function countCommunityHelpfulVotesThisWeek(userId) {
-  const since = new Date(Date.now() - 7 * 86400_000);
-  return GemTransaction.countDocuments({
-    userId,
-    reason: 'community_helpful_vote',
-    createdAt: { $gte: since },
-  });
-}
-
-async function hasCommunityHelpfulAnswerReward(userId, commentId) {
-  return GemTransaction.exists({
-    userId,
-    reason: 'community_helpful_answer',
-    entityId: String(commentId),
-  });
-}
-
-async function hasCommunityHelpfulVoteReward(authorId, commentId, voterId) {
-  return GemTransaction.exists({
-    userId: authorId,
-    reason: 'community_helpful_vote',
-    entityId: String(commentId),
-    'metadata.voterId': String(voterId),
-  });
 }
 
 async function recentPostByUser(userId, excludePostId) {
   const filter = { authorId: userId };
   if (excludePostId) filter._id = { $ne: excludePostId };
-  return Post.findOne(filter).sort({ createdAt: -1 }).select('createdAt title').lean();
+  return postRepository.findOne(filter, {
+    sort: { createdAt: -1 },
+    projection: 'createdAt title',
+  });
 }
 
 async function duplicateTitleRecently(userId, title, excludePostId) {
@@ -129,7 +82,7 @@ async function duplicateTitleRecently(userId, title, excludePostId) {
     createdAt: { $gte: since },
   };
   if (excludePostId) filter._id = { $ne: excludePostId };
-  const recent = await Post.find(filter).select('title').lean();
+  const recent = await postRepository.findMany(filter, { projection: 'title' });
   return recent.some((p) => normalizeTitle(p.title) === norm);
 }
 
@@ -163,8 +116,10 @@ async function maybeRewardCommunityPost({ userId, post, forum }) {
     if (elapsed < COMMUNITY_POST_COOLDOWN_MS) return null;
   }
 
-  if (await communityPostRewardedToday(userId)) return null;
-  if (await hasCommunityPostReward(userId, post._id)) return null;
+  if (await gemLedger.hasEarnedToday({ userId, reason: 'community_post' })) return null;
+  if (await gemLedger.hasEarnedFor({ userId, reason: 'community_post', entityId: post._id })) {
+    return null;
+  }
 
   const seasonalMult = await getCachedSeasonalMultiplier();
   const amt = scaleEarn(GEM_EARN.community_post, seasonalMult);
@@ -202,9 +157,10 @@ async function maybeRewardHelpfulAnswer({ comment, post, forum, markerId, marker
   if (!ctx) return null;
 
   const authorId = String(comment.authorId);
-  if (await hasCommunityHelpfulAnswerReward(authorId, comment._id)) return null;
+  const reason = 'community_helpful_answer';
+  if (await gemLedger.hasEarnedFor({ userId: authorId, reason, entityId: comment._id })) return null;
 
-  const weekCount = await countCommunityHelpfulAnswersThisWeek(authorId);
+  const weekCount = await gemLedger.countEarnedWithinDays({ userId: authorId, reason, days: 7 });
   if (weekCount >= COMMUNITY_CAP.helpfulAnswersPerWeek) return null;
 
   const seasonalMult = await getCachedSeasonalMultiplier();
@@ -244,9 +200,16 @@ async function maybeRewardCommentUpvote({ comment, post, forum, voterId }) {
   }
 
   const authorId = String(comment.authorId);
-  if (await hasCommunityHelpfulVoteReward(authorId, comment._id, voterId)) return null;
+  const reason = 'community_helpful_vote';
+  const alreadyRewarded = await gemLedger.hasEarnedFor({
+    userId: authorId,
+    reason,
+    entityId: comment._id,
+    metadata: { voterId },
+  });
+  if (alreadyRewarded) return null;
 
-  const weekCount = await countCommunityHelpfulVotesThisWeek(authorId);
+  const weekCount = await gemLedger.countEarnedWithinDays({ userId: authorId, reason, days: 7 });
   if (weekCount >= COMMUNITY_CAP.helpfulVotesPerWeek) return null;
 
   const seasonalMult = await getCachedSeasonalMultiplier();

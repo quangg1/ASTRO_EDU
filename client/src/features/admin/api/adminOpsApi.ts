@@ -1,6 +1,6 @@
 import { getApiPathBase } from '@/lib/apiConfig'
 import { apiClientHeaders, apiFetchInit } from '@/lib/apiClientHeaders'
-import type { AdminOrder } from '@/features/payment/api/paymentApi'
+import type { AdminOrder } from '@/features/payment/public'
 
 const API = getApiPathBase()
 

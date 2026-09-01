@@ -3,7 +3,7 @@ import {
   getNasaCatalogItemById,
   getShowcaseOrbitEntityById,
   NASA_SHOWCASE_STORIES,
-} from '@/features/content3d/showcase/lib/showcaseCatalogRuntime'
+} from '@/features/content3d/showcase/public'
 import { buildExploreHref } from '@/features/explore/lib/exploreViewUrl'
 import { SKY_EXPLORE_SEED } from '@/features/explore/data/skyExploreSeed'
 import { getSkyTargetLabel, isConstellationTargetId } from '@/features/explore/lib/exploreTargets'

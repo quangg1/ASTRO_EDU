@@ -1,3 +1,4 @@
+/* eslint-disable no-restricted-imports -- Admin read-model: cross-feature aggregates for ops console. */
 const mongoose = require('mongoose');
 const CommunityJobState = require('../../community/models/CommunityJobState');
 const { runScheduledNewsCrawl, JOB_ID, INTERVAL_MS } = require('../../community/jobs/newsCrawlScheduler');

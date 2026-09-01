@@ -1,6 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-const LearningPath = require('../../learning-path/models/LearningPath');
+const { getMainModules } = require('../../learning-path/services/learningPathQueryService');
 const { INTENT_FORUM_SLUG } = require('../constants/onboardingOptions');
 const {
   experienceToDepth,
@@ -11,8 +11,9 @@ const {
 } = require('./onboardingRedirectUrls');
 
 async function loadLearningPathModules() {
-  const doc = await LearningPath.findOne({ slug: 'main' }).select('modules').lean();
-  if (doc?.modules?.length) return doc.modules;
+  const modules = await getMainModules();
+  if (modules.length) return modules;
+  // Môi trường mới chưa seed lộ trình: dựa vào bản mặc định để gợi ý vẫn chạy.
   const p = path.join(__dirname, '../../../data/learningPathDefault.json');
   if (fs.existsSync(p)) {
     const parsed = JSON.parse(fs.readFileSync(p, 'utf8'));
@@ -121,8 +122,8 @@ async function buildOnboardingRecommendations(input) {
         experienceLevel: input.experienceLevel,
         primaryTopicId,
       }),
-      labelVi: 'Bản đồ thiên hà 200 Mpc',
-      descriptionVi: '4.673 thiên hà quanh Dải Ngân Hà — mô phỏng tương tác.',
+      labelVi: 'La bàn bầu trời',
+      descriptionVi: 'Explore chế độ bầu trời — quan sát theo vị trí của bạn.',
     });
     recommendations.push({
       kind: 'forum',
@@ -171,6 +172,7 @@ async function buildOnboardingRecommendations(input) {
       topicIds,
       experienceLevel: input.experienceLevel,
       primaryTopicId,
+      starterHref,
     }) ||
     recommendations[0]?.href ||
     '/dashboard';

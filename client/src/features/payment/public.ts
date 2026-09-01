@@ -27,6 +27,7 @@ export { CourseCheckoutClient } from './ui/CourseCheckoutClient'
 export { OrderHistoryClient } from './ui/OrderHistoryClient'
 export {
   orderStatusLabelVi,
+  orderStatusTone,
   orderKindLabelVi,
   discountSourceLabelVi,
   formatOrderDateVi,

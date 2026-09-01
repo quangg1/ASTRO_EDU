@@ -1,3 +1,4 @@
+/* eslint-disable no-restricted-imports -- Admin read-model: cross-feature aggregates for ops console. */
 const AdminActionLog = require('../models/AdminActionLog');
 const GemEconomyAuditLog = require('../../rewards/models/GemEconomyAuditLog');
 const SecurityAuditLog = require('../../security/models/SecurityAuditLog');

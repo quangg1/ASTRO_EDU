@@ -19,9 +19,13 @@ import { getLessonById } from '@/data/learningPathCurriculum'
 import { loadGemWallet, syncGemWallet } from '@/features/rewards/public'
 import { fetchLearnerTiersWithProgress, type LearnerTierProgress } from '@/features/rewards/public'
 import { useLiveClock } from '@/hooks/useLiveClock'
-import { DashboardForYouPanel } from '@/components/onboarding/DashboardForYouPanel'
-import { DashboardOnboardingWelcome } from '@/components/onboarding/DashboardOnboardingWelcome'
+import {
+  DashboardForYouPanel,
+  DashboardOnboardingWelcome,
+  LearningStartGuide,
+} from '@/features/onboarding/public'
 import { TonightSkyPanel } from '@/features/astronomy-calendar/public'
+import { useLearnerNextAction } from '@/features/learning-path/public'
 
 const chamfer = (cut = 18) => ({
   clipPath: `polygon(${cut}px 0,100% 0,100% calc(100% - ${cut}px),calc(100% - ${cut}px) 100%,0 100%,0 ${cut}px)`,
@@ -72,7 +76,9 @@ export default function DashboardOverviewPage() {
   const [lastLessonId, setLastLessonId] = useState<string | null>(null)
   const [gemBalance, setGemBalance] = useState(0)
   const [tierProgress, setTierProgress] = useState<LearnerTierProgress | null>(null)
+  const { intent } = useLearnerNextAction()
   const { time: localTime, zoneLabel } = useLiveClock()
+  const showSecondaryRecs = learningPathDoneCount > 0 || intent === 'mixed'
 
   const gemProgressPct = tierProgress?.progressPct ?? 0
   const gemToNext = tierProgress?.gemsToNext ?? 0
@@ -182,9 +188,10 @@ export default function DashboardOverviewPage() {
       </header>
 
       <Suspense fallback={null}>
-        <DashboardOnboardingWelcome />
+        <DashboardOnboardingWelcome explainOnly />
       </Suspense>
-      <DashboardForYouPanel />
+      <LearningStartGuide compact primaryOnly hideKnowledgeMap />
+      {showSecondaryRecs ? <DashboardForYouPanel secondaryOnly /> : null}
 
       <TonightSkyPanel maxItems={3} />
 
@@ -455,11 +462,10 @@ export default function DashboardOverviewPage() {
               style={{ border: '1px dashed var(--color-accent-soft)', background: 'rgba(126,231,255,0.02)', ...chamfer(10) }}
             >
               <p className="text-sm mb-3" style={{ color: 'var(--color-text-subtle)' }}>
-                {userId ? 'Hoàn thành một bài trong lộ trình học để thấy tiến độ tại đây.' : 'Đăng nhập để đồng bộ tiến độ.'}
+                {userId
+                  ? 'Tiến độ lộ trình sẽ hiện tại đây sau bài đầu tiên. Dùng nút phía trên để bắt đầu.'
+                  : 'Đăng nhập để đồng bộ tiến độ.'}
               </p>
-              <Link href="/tutorial" className="text-sm" style={{ color: 'var(--color-accent)' }}>
-                Mở Lộ trình →
-              </Link>
             </div>
           )}
         </HudPanel>

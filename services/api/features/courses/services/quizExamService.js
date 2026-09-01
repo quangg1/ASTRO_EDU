@@ -1,8 +1,8 @@
-const QuizAttempt = require('../models/QuizAttempt');
 const Enrollment = require('../models/Enrollment');
 const Cohort = require('../models/Cohort');
 const Course = require('../models/Course');
 const CohortEnrollment = require('../models/CohortEnrollment');
+const { quizAttemptRepository } = require('../repositories/gradebookRepository');
 const { canEditCourse } = require('../../../shared/jwtAuth');
 const {
   assertCatalogAccess,
@@ -191,13 +191,7 @@ function gradeAnswers(questions, answers) {
 }
 
 async function getActiveAttempt({ userId, courseId, lessonSlug, cohortId }) {
-  return QuizAttempt.findOne({
-    userId,
-    courseId,
-    lessonSlug,
-    cohortId: cohortId || null,
-    status: 'in_progress',
-  }).sort({ startedAt: -1 });
+  return quizAttemptRepository.findActiveAttemptDoc({ userId, courseId, lessonSlug, cohortId });
 }
 
 async function expireIfNeeded(attempt, questions) {

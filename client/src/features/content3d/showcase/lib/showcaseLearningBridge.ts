@@ -3,7 +3,7 @@ import type {
   LearningModule,
   LessonHistoryFocus,
   LessonItem,
-} from '@/data/learningPathCurriculum'
+} from '@/features/learning-path/data/learningPathCurriculum'
 import {
   WESTERN_CONSTELLATION_BRIDGE_MAP,
   WESTERN_CONSTELLATION_MUSEUM_VI,
@@ -11,8 +11,8 @@ import {
 import {
   LEGACY_CONSTELLATION_TARGET_MAP,
   resolveWesternConstellationTargetId,
-} from '@/features/explore/lib/westernSkyCulture'
-import { buildExploreHref } from '@/features/explore/lib/exploreViewUrl'
+  buildExploreHref,
+} from '@/features/explore/public'
 import { NASA_SHOWCASE_ITEMS } from './showcaseCatalogRuntime'
 
 export type ShowcaseBridgeMap = {

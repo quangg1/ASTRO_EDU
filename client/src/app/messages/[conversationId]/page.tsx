@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import { ChevronLeft, Send } from 'lucide-react'
 import { useAuthStore } from '@/features/auth/public'
-import { AvatarWithDecoration } from '@/components/profile/AvatarWithDecoration'
+import { AvatarWithDecoration } from '@/features/users/public'
 import {
   fetchConversationMessages,
   fetchConversations,

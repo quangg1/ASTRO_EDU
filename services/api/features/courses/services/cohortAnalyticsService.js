@@ -1,5 +1,4 @@
-const User = require('../../auth/models/User');
-const CohortActivitySchedule = require('../models/CohortActivitySchedule');
+const { listDirectoryEntries } = require('../../auth/services/userDirectoryService');
 const CohortEnrollment = require('../models/CohortEnrollment');
 const Enrollment = require('../models/Enrollment');
 const AssignmentSubmission = require('../models/AssignmentSubmission');
@@ -103,7 +102,7 @@ function evaluateAtRisk({
 }
 
 async function buildCohortAnalytics({ course, cohort }) {
-  const scheduleMap = await loadScheduleMap(CohortActivitySchedule, cohort._id);
+  const scheduleMap = await loadScheduleMap(cohort._id);
   const rawLessons = [...(course.lessons || [])].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
   const modules = [...(course.modules || [])].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
   let moduleWeekMap = normalizeModuleWeekMap(cohort.moduleWeekMap);
@@ -141,9 +140,7 @@ async function buildCohortAnalytics({ course, cohort }) {
   }
 
   const [users, courseEnrollments, submissions, quizAttempts] = await Promise.all([
-    User.find({ _id: { $in: userIds } })
-      .select('_id displayName email')
-      .lean(),
+    listDirectoryEntries(userIds),
     Enrollment.find({ courseId: course._id, userId: { $in: userIds } }).lean(),
     AssignmentSubmission.find({ cohortId: cohort._id, courseId: course._id, userId: { $in: userIds } }).lean(),
     QuizAttempt.find({
@@ -154,7 +151,7 @@ async function buildCohortAnalytics({ course, cohort }) {
     }).lean(),
   ]);
 
-  const userById = Object.fromEntries(users.map((u) => [String(u._id), u]));
+  const userById = Object.fromEntries(users.map((u) => [u.id, u]));
   const enrollmentByUser = Object.fromEntries(courseEnrollments.map((e) => [e.userId, e]));
   const subsByUser = {};
   const quizByUser = {};

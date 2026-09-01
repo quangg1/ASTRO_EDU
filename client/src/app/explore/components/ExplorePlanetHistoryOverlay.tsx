@@ -1,13 +1,13 @@
 'use client'
 
 import Link from 'next/link'
-import { FossilDetailDock } from '@/features/content3d/earth/ui/FossilDetailOverlay'
+import { FossilDetailDock } from '@/features/content3d/earth/public'
 import {
   NarrativeBeatDetailLeft,
   NarrativeBeatDetailRight,
   NarrativeBottomDock,
+  NarrativeEarthFossilPanel,
 } from '@/features/content3d/narrative/public'
-import { NarrativeEarthFossilPanel } from '@/features/content3d/narrative/ui/NarrativeEarthFossilPanel'
 import type { ExploreLessonLink } from '../hooks/types'
 import { useDeepHistoryGemRewards } from '../hooks/useDeepHistoryGemRewards'
 

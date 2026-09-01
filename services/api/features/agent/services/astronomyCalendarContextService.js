@@ -1,4 +1,7 @@
-const AstronomyEvent = require('../../astronomy-calendar/models/AstronomyEvent');
+const {
+  findEventByPublicId,
+  listUpcomingPublished,
+} = require('../../astronomy-calendar/services/astronomyEventService');
 const { resolveEventContent, getTypeKitMap } = require('../../astronomy-calendar/services/typeKitService');
 
 function compactEvent(doc, kitMap) {
@@ -37,21 +40,11 @@ async function buildAstronomyCalendarContext(sessionContext) {
 
   let focusedEvent = null;
   if (focusedId) {
-    const doc = await AstronomyEvent.findOne({
-      eventId: focusedId,
-      status: 'published',
-    }).lean();
+    const doc = await findEventByPublicId(focusedId);
     if (doc) focusedEvent = compactEvent(doc, kitMap);
   }
 
-  const upcomingDocs = await AstronomyEvent.find({
-    status: 'published',
-    endAt: { $gte: now },
-  })
-    .sort({ peakAt: 1, startAt: 1 })
-    .limit(6)
-    .lean();
-
+  const upcomingDocs = await listUpcomingPublished({ now, limit: 6 });
   const upcoming = upcomingDocs.map((d) => compactEvent(d, kitMap));
 
   return {

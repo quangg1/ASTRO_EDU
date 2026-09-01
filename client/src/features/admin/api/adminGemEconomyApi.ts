@@ -197,7 +197,7 @@ export type DecorationCategoryAdminDTO = {
   updatedAt?: string
 }
 
-export type { DecorationBulkImportResult } from '@/features/rewards/api/avatarDecorationApi'
+export type { DecorationBulkImportResult } from '@/features/rewards/public'
 
 export async function fetchDecorationCategoriesAdmin(): Promise<DecorationCategoryAdminDTO[]> {
   const res = await apiFetch(`${API_BASE}/admin/gem-economy/decoration-categories`)

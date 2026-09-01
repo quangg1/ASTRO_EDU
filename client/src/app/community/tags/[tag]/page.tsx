@@ -3,8 +3,7 @@
 import { Suspense, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
-import { fetchPostsByTag, type Post } from '@/features/community/public'
-import { DiscussionPostList } from '@/components/community/discussion/DiscussionPostList'
+import { fetchPostsByTag, type Post, DiscussionPostList } from '@/features/community/public'
 
 function TagPageContent() {
   const params = useParams()

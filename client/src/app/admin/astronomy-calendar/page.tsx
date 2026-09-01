@@ -4,7 +4,7 @@ import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuthStore } from '@/features/auth/public'
 import { canAccessAdmin, canAccessAdminPath } from '@/lib/roles'
-import { AstronomyCalendarStudio } from '@/features/astronomy-calendar/admin/AstronomyCalendarStudio'
+import { AstronomyCalendarStudio } from '@/features/astronomy-calendar/public'
 import { Spinner } from '@/components/ui/Spinner'
 
 export default function AdminAstronomyCalendarPage() {

@@ -3,7 +3,7 @@
 import { useEffect, useRef } from 'react'
 import { useAuthStore } from '@/features/auth/public'
 import { trackLearningPathBehavior } from '@/features/learning-path/public'
-import { usePlanetNarrativeStore } from '@/features/content3d/narrative/stores/planetNarrativeStore'
+import { usePlanetNarrativeStore } from '@/features/content3d/narrative/public'
 
 /** Khớp `DH_BEAT_DWELL_SEC_MIN` trên server — thời gian xem một beat trước khi thưởng. */
 const DH_BEAT_DWELL_SEC = 30

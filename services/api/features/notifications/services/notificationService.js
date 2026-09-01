@@ -269,6 +269,60 @@ async function notifyEnrollmentRevoked(
   );
 }
 
+const BROADCAST_BATCH = 200;
+
+function chunkIds(arr, size) {
+  const out = [];
+  for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
+  return out;
+}
+
+/**
+ * Bulk-create admin broadcast notifications and push realtime per doc.
+ * @param {{
+ *   userIds: string[],
+ *   titleVi: string,
+ *   bodyVi?: string,
+ *   href?: string|null,
+ *   metadata?: object,
+ * }} payload
+ */
+async function createAdminBroadcastNotifications({
+  userIds,
+  titleVi,
+  bodyVi,
+  href,
+  metadata = {},
+}) {
+  const ids = [...new Set((userIds || []).map(String).filter(Boolean))];
+  if (!ids.length) return { recipientCount: 0 };
+
+  const title = String(titleVi || '').trim() || 'Thông báo';
+  const body = String(bodyVi || '').trim();
+  const link = href ? String(href).trim() : null;
+
+  let sent = 0;
+  for (const batch of chunkIds(ids, BROADCAST_BATCH)) {
+    const docs = await Notification.insertMany(
+      batch.map((userId) => ({
+        userId,
+        type: 'admin_broadcast',
+        titleVi: title,
+        bodyVi: body,
+        href: link,
+        metadata,
+      })),
+      { ordered: false },
+    );
+    sent += docs.length;
+    for (const doc of docs) {
+      pushNotificationRealtime(doc);
+    }
+  }
+
+  return { recipientCount: sent };
+}
+
 module.exports = {
   createNotification,
   pushNotificationRealtime,
@@ -283,4 +337,5 @@ module.exports = {
   notifyCommunityCommentUpvote,
   notifyEnrollmentRevoked,
   notifyDirectMessage,
+  createAdminBroadcastNotifications,
 };

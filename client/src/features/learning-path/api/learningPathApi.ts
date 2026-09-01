@@ -1,6 +1,6 @@
 import { getApiPathBase } from '@/lib/apiConfig'
 import { apiFetch } from '@/lib/apiRequestInit'
-import type { LearningConcept, LearningModule, LessonItem, QuizQuestion } from '@/data/learningPathCurriculum'
+import type { LearningConcept, LearningModule, LessonItem, QuizQuestion } from '@/features/learning-path/data/learningPathCurriculum'
 
 const API = `${getApiPathBase()}/learning-path`
 

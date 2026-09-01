@@ -1,5 +1,9 @@
-const UserProgress = require('../../learning-path/models/UserProgress');
-const LearnerAgentProfile = require('../models/LearnerAgentProfile');
+const {
+  getProfile: getAgentProfile,
+} = require('./learnerAgentProfileService');
+const {
+  getLearnerProgress,
+} = require('../../learning-path/services/learningPathQueryService');
 const { getCachedContext } = require('./contextCache');
 const { getLearningPathLessonIndex } = require('./toolAuthorizers/lpCurriculum');
 const { buildNarrativeContext } = require('./narrativeContextService');
@@ -19,9 +23,9 @@ const {
 const { buildExploreSceneContext } = require('./exploreSceneContextService');
 const { buildShowcaseAgentContext } = require('./showcaseNavigationService');
 const { buildAstronomyCalendarContext } = require('./astronomyCalendarContextService');
-const UserReward = require('../../rewards/models/UserReward');
+const { getBalanceSummary } = require('../../rewards/services/gemWalletService');
 const { getWalletLearnerMeta } = require('../../rewards/services/learnerTierService');
-const LearnerProfile = require('../../users/models/LearnerProfile');
+const { getLearnerInterests } = require('../../users/services/learnerProfileService');
 
 /**
  * @param {string|null|undefined} userId
@@ -38,11 +42,7 @@ async function buildAgentContext(userId, sessionContext, learnerSnapshot, userRo
 
   let progress = null;
   if (userId) {
-    progress = await UserProgress.findOne({ userId })
-      .select(
-        'learningPathCompletedLessonIds learningPathMasteredLessonIds learningPathLastLessonId',
-      )
-      .lean();
+    progress = await getLearnerProgress(userId);
   }
 
   const completedCount = progress?.learningPathCompletedLessonIds?.length ?? 0;
@@ -175,17 +175,14 @@ async function buildAgentContext(userId, sessionContext, learnerSnapshot, userRo
   };
 
   if (userId) {
-    const [profile, learnerProfile] = await Promise.all([
-      LearnerAgentProfile.findOne({ userId })
-        .select('misconceptions proceduralMemory depthPrefs')
-        .lean(),
-      LearnerProfile.findOne({ userId }).select('interests').lean(),
+    const [profile, interests] = await Promise.all([
+      getAgentProfile(userId, {
+        projection: 'misconceptions proceduralMemory depthPrefs',
+      }),
+      getLearnerInterests(userId),
     ]);
-    if (Array.isArray(learnerProfile?.interests) && learnerProfile.interests.length) {
-      built.learnerInterests = learnerProfile.interests
-        .map((x) => String(x || '').trim())
-        .filter(Boolean)
-        .slice(0, 8);
+    if (Array.isArray(interests) && interests.length) {
+      built.learnerInterests = interests.slice(0, 8);
     }
     if (!built.misconceptions?.length && profile?.misconceptions?.length) {
       built.misconceptions = profile.misconceptions.slice(-12);
@@ -233,7 +230,7 @@ async function buildLearnerSnapshot(userId) {
   let learnerTier = null;
   let gemBalance = economy?.gemBalance ?? 0;
   if (!economy) {
-    const ur = await UserReward.findOne({ userId }).select('gemBalance totalGemsEarned').lean();
+    const ur = await getBalanceSummary(userId);
     gemBalance = ur?.gemBalance ?? 0;
     const tierMeta = getWalletLearnerMeta(ur?.totalGemsEarned ?? 0);
     learnerTier = {

@@ -1,4 +1,4 @@
-import type { Lesson, LessonSection, QuizQuestion } from '@/features/courses/api/coursesApi'
+import type { Lesson, LessonSection, QuizQuestion } from '@/features/courses/public'
 import type { LearningConcept, LessonConceptAnchor } from '@/data/learningPathCurriculum'
 
 /**

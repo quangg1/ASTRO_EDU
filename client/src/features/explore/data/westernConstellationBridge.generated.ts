@@ -1,5 +1,5 @@
 /** Auto-generated — run: npm run sky:build-western-bridge */
-import type { ShowcaseBridgeMap } from '@/features/content3d/showcase/lib/showcaseLearningBridge'
+import type { ShowcaseBridgeMap } from '@/features/content3d/showcase/public'
 
 export const WESTERN_CONSTELLATION_BRIDGE_MAP: ShowcaseBridgeMap[] = [
   {

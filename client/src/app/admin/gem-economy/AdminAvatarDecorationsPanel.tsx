@@ -18,7 +18,7 @@ import {
   bulkUploadDecorationOverlaysAdmin,
   uploadDecorationCategoryBannerAdmin,
 } from '@/features/rewards/public'
-import { DecorationCategoryBanner } from '@/components/profile/DecorationCategoryBanner'
+import { DecorationCategoryBanner } from '@/features/users/public'
 import { resolveMediaUrl } from '@/lib/apiConfig'
 import { Button, Card, Input, Textarea } from '@/design-system'
 

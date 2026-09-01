@@ -10,7 +10,7 @@ import {
 } from 'lucide-react'
 import { useAuthStore } from '@/features/auth/public'
 import { useEquippedDecoration } from '@/features/rewards/hooks/useEquippedDecoration'
-import { AvatarWithDecoration } from '@/components/profile/AvatarWithDecoration'
+import { AvatarWithDecoration } from '@/features/users/ui/AvatarWithDecoration'
 import { canModerate } from '@/lib/roles'
 import { CosmoPageBackdrop } from '@/components/layout/CosmoPageBackdrop'
 

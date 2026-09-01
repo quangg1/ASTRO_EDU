@@ -4,7 +4,7 @@ import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuthStore } from '@/features/auth/public'
 import { canAccessAdmin, canAccessAdminPath } from '@/lib/roles'
-import { ModerationQueuePanel } from '@/components/community/moderation/ModerationQueuePanel'
+import { ModerationQueuePanel } from '@/features/community/public'
 import { AdminGate } from '@/components/admin/AdminShell'
 import { PageHeader } from '@/components/ui/PageHeader'
 

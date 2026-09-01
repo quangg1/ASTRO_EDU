@@ -1,4 +1,8 @@
-const AstronomyEvent = require('../models/AstronomyEvent');
+const { AppError } = require('../../../shared/errors');
+const {
+  astronomyEventRepository,
+  eventEngagementRepository,
+} = require('../repositories/astronomyEventRepository');
 const { generateCalendarEvents } = require('../lib/generateCalendarEvents');
 const { serializeCalendarEvent } = require('../lib/eventPresentation');
 const { resolveObserverFromQuery, VN_OBSERVER_PRESETS } = require('../lib/vnObserverPresets');
@@ -107,12 +111,13 @@ function serializeDoc(doc, { now, observer, engagement, kitMap }) {
   return enrichSerializedEvent(base, doc, engagement, kitMap);
 }
 
-async function listPublishedDocs({ start, end, type, eventKind, limit = 500 }) {
-  const q = { status: 'published', endAt: { $gte: start } };
-  if (end) q.startAt = { $lte: end };
-  if (type) q.type = type;
-  if (eventKind) q.eventKind = eventKind;
-  return AstronomyEvent.find(q).sort({ peakAt: 1, startAt: 1, priority: -1 }).limit(limit).lean();
+async function loadEngagementMap(userId, docs) {
+  if (!userId || !docs.length) return {};
+  const rows = await eventEngagementRepository.listForUserEvents(
+    userId,
+    docs.map((doc) => doc.eventId),
+  );
+  return Object.fromEntries(rows.map((row) => [row.eventId, row]));
 }
 
 async function buildCalendarFromDb({
@@ -128,24 +133,12 @@ async function buildCalendarFromDb({
   const start = tonightOnly ? localDayStart(now, observer.tzOffsetMinutes) : now;
   const end = tonightOnly ? addDays(start, 1) : addDays(now, days);
 
-  const docs = await listPublishedDocs({ start, end, type, eventKind });
-  let filtered = docs;
-  if (tonightOnly) {
-    filtered = docs.filter((d) => d.endAt >= now && d.startAt <= addDays(start, 1));
-  } else {
-    filtered = docs.filter((d) => d.endAt >= now);
-  }
+  const docs = await astronomyEventRepository.listPublished({ start, end, type, eventKind });
+  const filtered = tonightOnly
+    ? docs.filter((d) => d.endAt >= now && d.startAt <= addDays(start, 1))
+    : docs.filter((d) => d.endAt >= now);
 
-  let engagementMap = {};
-  if (userId && filtered.length) {
-    const UserAstronomyEventEngagement = require('../models/UserAstronomyEventEngagement');
-    const rows = await UserAstronomyEventEngagement.find({
-      userId: String(userId),
-      eventId: { $in: filtered.map((d) => d.eventId) },
-    }).lean();
-    engagementMap = Object.fromEntries(rows.map((r) => [r.eventId, r]));
-  }
-
+  const engagementMap = await loadEngagementMap(userId, filtered);
   const kitMap = await getTypeKitMap();
 
   const events = filtered.map((d) =>
@@ -181,24 +174,19 @@ async function getMonthCalendar({ year, month, query, userId = null }) {
   const y = Number(year);
   const m = Number(month);
   if (!Number.isFinite(y) || !Number.isFinite(m) || m < 1 || m > 12) {
-    throw new Error('INVALID_MONTH');
+    throw new AppError(400, 'INVALID_MONTH', 'Tháng không hợp lệ');
   }
   const observer = resolveObserverFromQuery(query);
   const monthStart = new Date(Date.UTC(y, m - 1, 1, 0, 0, 0));
   const monthEnd = new Date(Date.UTC(y, m, 0, 23, 59, 59, 999));
   const now = new Date();
 
-  const docs = await listPublishedDocs({ start: monthStart, end: monthEnd, limit: 200 });
-  let engagementMap = {};
-  if (userId && docs.length) {
-    const UserAstronomyEventEngagement = require('../models/UserAstronomyEventEngagement');
-    const rows = await UserAstronomyEventEngagement.find({
-      userId: String(userId),
-      eventId: { $in: docs.map((d) => d.eventId) },
-    }).lean();
-    engagementMap = Object.fromEntries(rows.map((r) => [r.eventId, r]));
-  }
-
+  const docs = await astronomyEventRepository.listPublished({
+    start: monthStart,
+    end: monthEnd,
+    limit: 200,
+  });
+  const engagementMap = await loadEngagementMap(userId, docs);
   const kitMap = await getTypeKitMap();
 
   const events = docs.map((d) =>
@@ -337,28 +325,24 @@ async function importSuggestionsFromCompute({ days = 90, actorUserId = null, pub
       publishedBy: publish && actorUserId ? String(actorUserId) : null,
       publishedAt: publish ? now : null,
     });
-    const existing = await AstronomyEvent.findOne({ computeId: raw.id });
+    const existing = await astronomyEventRepository.findByComputeId(raw.id);
     if (existing) {
-      await AstronomyEvent.updateOne(
-        { _id: existing._id },
-        {
-          $set: {
-            titleVi: fields.titleVi,
-            summaryVi: fields.summaryVi,
-            startAt: fields.startAt,
-            endAt: fields.endAt,
-            peakAt: fields.peakAt,
-            exploreView: fields.exploreView,
-            exploreTarget: fields.exploreTarget,
-            lessonHref: fields.lessonHref,
-            priority: fields.priority,
-            eventKind: fields.eventKind,
-          },
-        },
-      );
+      // Chỉ đồng bộ phần tính toán được; nội dung biên tập viết tay giữ nguyên.
+      await astronomyEventRepository.applyComputeUpdate(existing._id, {
+        titleVi: fields.titleVi,
+        summaryVi: fields.summaryVi,
+        startAt: fields.startAt,
+        endAt: fields.endAt,
+        peakAt: fields.peakAt,
+        exploreView: fields.exploreView,
+        exploreTarget: fields.exploreTarget,
+        lessonHref: fields.lessonHref,
+        priority: fields.priority,
+        eventKind: fields.eventKind,
+      });
       updated += 1;
     } else {
-      await AstronomyEvent.create({
+      await astronomyEventRepository.create({
         ...fields,
         authoredBy: actorUserId ? String(actorUserId) : null,
       });
@@ -371,7 +355,7 @@ async function importSuggestionsFromCompute({ days = 90, actorUserId = null, pub
 async function ensurePublishedSeed() {
   const { ensureTypeKitsSeed } = require('./typeKitService');
   await ensureTypeKitsSeed();
-  const count = await AstronomyEvent.countDocuments({ status: 'published' });
+  const count = await astronomyEventRepository.countPublished();
   if (count > 0) return { seeded: false, count };
   const result = await importSuggestionsFromCompute({ days: 365, publish: true });
   return { seeded: true, ...result };
@@ -417,8 +401,12 @@ function eventToAdminDto(doc) {
   };
 }
 
+async function listUpcomingPublished({ now = new Date(), limit = 6 } = {}) {
+  return astronomyEventRepository.listPublished({ start: now, limit });
+}
+
 async function findEventByPublicId(eventId) {
-  return AstronomyEvent.findOne({ eventId: String(eventId), status: 'published' }).lean();
+  return astronomyEventRepository.findPublishedByPublicId(eventId);
 }
 
 module.exports = {
@@ -433,5 +421,6 @@ module.exports = {
   ensurePublishedSeed,
   eventToAdminDto,
   findEventByPublicId,
+  listUpcomingPublished,
   inferEventKind,
 };

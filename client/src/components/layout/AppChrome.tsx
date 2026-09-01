@@ -5,7 +5,7 @@ import { AppHeader } from '@/components/ui/AppHeader'
 import { AppShell } from '@/components/layout/AppShell'
 import { useLayoutChrome } from '@/components/layout/LayoutChromeContext'
 import { PromoCampaignBar } from '@/components/promotions/PromoCampaignBar'
-import { OnboardingRedirect } from '@/components/onboarding/OnboardingRedirect'
+import { OnboardingRedirect } from '@/features/onboarding/ui/OnboardingRedirect'
 
 export function AppChrome({ children }: { children: React.ReactNode }) {
   const { options } = useLayoutChrome()

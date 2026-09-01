@@ -13,38 +13,7 @@ const SCAN_ROOT = join(SCRIPT_DIR, '..', 'src', 'components')
 const FORBIDDEN_RE = /from\s+['"]@\/features\/[^'"]+\/api\/[^'"]+['"]/g
 
 /** Files still importing deep `api/*` — shrink this list over time. */
-const ALLOWLIST = new Set([
-  'src/components/auth/AuthProvider.tsx',
-  'src/components/community/comments/CommentRichEditor.tsx',
-  'src/components/community/comments/CommentThread.tsx',
-  'src/components/community/discussion/DiscussionForumView.tsx',
-  'src/components/community/discussion/DiscussionPostList.tsx',
-  'src/components/community/learning/LessonRelatedQuestions.tsx',
-  'src/components/community/learning/PostLearningContextChip.tsx',
-  'src/components/community/moderation/ModerationQueuePanel.tsx',
-  'src/components/community/moderation/ReportContentButton.tsx',
-  'src/components/community/news/NewsForumView.tsx',
-  'src/components/community/shared/TagChips.tsx',
-  'src/components/courses/CourseLandingClient.tsx',
-  'src/components/courses/CoursePromoBanner.tsx',
-  'src/components/courses/LessonContentBody.tsx',
-  'src/components/courses/QuizLessonBlock.tsx',
-  'src/components/gem-shop/GemShopDecorationCatalog.tsx',
-  'src/components/notifications/NotificationBell.tsx',
-  'src/components/profile/ProfileAvatarEditor.tsx',
-  'src/components/promotions/PromoCampaignBar.tsx',
-  'src/components/promotions/PromoNotificationsSection.tsx',
-  'src/components/rewards/DecorationCatalogExperience.tsx',
-  'src/components/showcase/ShowcaseCatalogProvider.tsx',
-  'src/components/studio/BlockEditor.tsx',
-  'src/components/studio/BlockPalette.tsx',
-  'src/components/studio/blocks/ChartBlock.tsx',
-  'src/components/studio/blocks/SliderBlock.tsx',
-  'src/components/studio/CourseStorefrontEditor.tsx',
-  'src/components/studio/hooks/useBlockEditorActions.ts',
-  'src/components/studio/lessonPreviewTypes.ts',
-  'src/components/studio/LessonPreview.tsx',
-])
+const ALLOWLIST = new Set([])
 
 function* walk(dir) {
   let entries

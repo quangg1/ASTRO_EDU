@@ -1,5 +1,6 @@
-const ShopItem = require('../models/ShopItem');
+const { AppError } = require('../../../shared/errors');
 const GemEconomyAuditLog = require('../models/GemEconomyAuditLog');
+const { shopItemRepository } = require('../repositories/shopItemRepository');
 const { effectiveGemPrice, getOrCreateConfigDoc } = require('./gemRuntimeConfigService');
 
 function visibleBySeason(doc, now = new Date()) {
@@ -13,7 +14,7 @@ function visibleBySeason(doc, now = new Date()) {
 
 async function listVisiblePublic(extraFilter = {}) {
   const cfg = await getOrCreateConfigDoc();
-  const items = await ShopItem.find({ visible: true, ...extraFilter }).sort({ skuId: 1 }).lean();
+  const items = await shopItemRepository.listVisible(extraFilter);
   const now = new Date();
   return items.filter((doc) => visibleBySeason(doc, now)).map((doc) => ({
     skuId: doc.skuId,
@@ -26,24 +27,32 @@ async function listVisiblePublic(extraFilter = {}) {
   }));
 }
 
+/** Shop items trong khoảng giá vừa ngoài số dư (agent nearby unlocks). */
+async function listNearbyShopItems({ balance, maxGap = 80, limit = 3 } = {}) {
+  const bal = Math.max(0, Number(balance) || 0);
+  const gap = Math.max(0, Number(maxGap) || 80);
+  const cap = Math.min(5, Math.max(1, Number(limit) || 3));
+  return shopItemRepository.findMany(
+    {
+      visible: true,
+      basePriceGem: { $gt: bal, $lte: bal + gap },
+    },
+    { sort: { basePriceGem: 1 }, limit: cap },
+  );
+}
+
 async function listAllAdmin() {
-  return ShopItem.find({}).sort({ updatedAt: -1 }).lean();
+  return shopItemRepository.listAll();
 }
 
 async function createShopItem(payload, actorUserId) {
   const skuId = String(payload?.skuId || '').trim();
-  if (!skuId) {
-    const e = new Error('skuId bắt buộc');
-    e.status = 400;
-    throw e;
+  if (!skuId) throw AppError.badRequest('skuId bắt buộc');
+
+  if (await shopItemRepository.findBySku(skuId)) {
+    throw AppError.conflict(`SKU đã tồn tại: ${skuId}`);
   }
-  const dup = await ShopItem.findOne({ skuId }).lean();
-  if (dup) {
-    const e = new Error(`SKU đã tồn tại: ${skuId}`);
-    e.status = 409;
-    throw e;
-  }
-  const row = await ShopItem.create({
+  const row = await shopItemRepository.create({
     skuId,
     nameVi: String(payload?.nameVi || ''),
     descriptionVi: String(payload?.descriptionVi || ''),
@@ -65,12 +74,8 @@ async function createShopItem(payload, actorUserId) {
 
 async function updateShopItem(skuId, payload, actorUserId) {
   const sku = String(skuId || '').trim();
-  const row = await ShopItem.findOne({ skuId: sku });
-  if (!row) {
-    const e = new Error('Không tìm thấy SKU');
-    e.status = 404;
-    throw e;
-  }
+  const row = await shopItemRepository.findDocBySku(sku);
+  if (!row) throw AppError.notFound('Không tìm thấy SKU');
   const set = {};
   if (payload.nameVi !== undefined) set.nameVi = String(payload.nameVi);
   if (payload.descriptionVi !== undefined) set.descriptionVi = String(payload.descriptionVi);
@@ -93,11 +98,12 @@ async function updateShopItem(skuId, payload, actorUserId) {
     reason: String(payload?.editNote || 'update ShopItem').slice(0, 2000),
     payload: { skuId: sku, set },
   });
-  return ShopItem.findOne({ skuId: sku }).lean();
+  return shopItemRepository.findBySku(sku);
 }
 
 module.exports = {
   listVisiblePublic,
+  listNearbyShopItems,
   listAllAdmin,
   createShopItem,
   updateShopItem,

@@ -1,5 +1,5 @@
 import { notFound, redirect } from 'next/navigation'
-import { CourseLandingClient } from '@/components/courses/CourseLandingClient'
+import { CourseLandingClient } from '@/features/courses/public'
 import { fetchCourseOutlineServer } from '@/features/courses/server'
 
 export default async function CourseSlugPage({
@@ -21,7 +21,6 @@ export default async function CourseSlugPage({
   if (searchParams?.lesson?.trim()) {
     redirect(`/courses/${slug}/learn/${encodeURIComponent(searchParams.lesson.trim())}`)
   }
-
   const preview = searchParams?.preview === '1'
   const outline = await fetchCourseOutlineServer(slug)
   if (searchParams?.checkout === '1' && outline?.isPaid && (outline.price ?? 0) > 0 && !outline.enrollment) {

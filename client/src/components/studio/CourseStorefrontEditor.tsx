@@ -2,11 +2,10 @@
 
 import { useRef, useState } from 'react'
 import Image from 'next/image'
-import { CourseCatalogCard } from '@/components/courses/CourseCatalogCard'
-import { courseRequiresPayment, formatCatalogPrice } from '@/components/courses/courseCatalogMeta'
+import { CourseCatalogCard } from '@/features/courses/ui/CourseCatalogCard'
+import { courseRequiresPayment, formatCatalogPrice } from '@/features/courses/ui/courseCatalogMeta'
 import { resolveMediaUrl } from '@/lib/apiConfig'
-import { uploadMedia } from '@/features/courses/api/coursesApi'
-import type { Course } from '@/features/courses/api/coursesApi'
+import { uploadMedia, type Course } from '@/features/courses/public'
 import { DistributionStrategySection } from '@/components/studio/DistributionStrategySection'
 import {
   catalogPricingVisibleForStrategy,

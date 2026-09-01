@@ -17,13 +17,11 @@ import { useExploreSkyCatalog } from './useExploreSkyCatalog'
 import { useExploreViewNavigation } from './useExploreViewNavigation'
 import { useExploreSkyObserver } from './useExploreSkyObserver'
 import { useSkyWeather } from '@/features/astronomy-calendar/public'
+import { expandVisibleOrbitEntitiesForFocus } from '@/features/content3d/showcase/public'
 import {
   formatObserverTimeParam,
   parseObserverTimeParam,
-} from '@/features/explore/lib/skyObserver'
-import { preloadHipBrightCatalog } from '@/features/explore/lib/hipBrightCatalogCache'
-import { expandVisibleOrbitEntitiesForFocus } from '@/features/content3d/showcase/lib/filterShowcaseOrbits'
-import {
+  preloadHipBrightCatalog,
   EXPLORE_SOLAR_ONLY_PARAMS,
   isConstellationTargetId,
   resolveSolarEntityIdForTarget,

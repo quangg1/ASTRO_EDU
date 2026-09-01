@@ -12,7 +12,7 @@ import {
   cohortsNavEnabledForStrategy,
   distributionStrategyBadge,
   resolveDistributionStrategy,
-} from '@/features/courses/lib/distributionStrategy'
+} from '@/features/courses/public'
 
 const chamfer = (cut = 14) => ({
   clipPath: `polygon(${cut}px 0,100% 0,100% calc(100% - ${cut}px),calc(100% - ${cut}px) 100%,0 100%,0 ${cut}px)`,

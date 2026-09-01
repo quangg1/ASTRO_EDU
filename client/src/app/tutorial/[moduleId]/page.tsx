@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation'
-import { getMergedLearningModules } from '@/features/learning-path/public'
-import LearningModuleView from '@/components/learning-path/LearningModuleView'
+import { getMergedLearningModules } from '@/features/learning-path/server'
+import { LearningModuleView } from '@/features/learning-path/public'
 
 type Props = { params: { moduleId: string } }
 

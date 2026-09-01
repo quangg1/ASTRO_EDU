@@ -1,7 +1,7 @@
 import { Suspense } from 'react'
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
-import { TopicExploreView } from '@/components/learning-path/TopicExploreView'
+import { TopicExploreView } from '@/features/learning-path/public'
 import { getTopicBySlug, isValidTopicSlug } from '@/data/learningTopics'
 
 type Props = { params: { slug: string } }

@@ -14,16 +14,16 @@ import {
   type AdminUserDetail,
 } from '@/features/admin/public'
 import { formatOrderAmount } from '@/lib/money'
-import { formatOrderDateVi, orderKindLabelVi, orderStatusLabelVi } from '@/features/payment/lib/orderLabels'
+import { formatOrderDateVi, orderKindLabelVi, orderStatusLabelVi } from '@/features/payment/public'
 import { AdminGate } from '@/components/admin/AdminShell'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Button, Card } from '@/design-system'
-import { postManualGemAdjust } from '@/features/admin/public'
 import {
+  postManualGemAdjust,
   labelAccountStatusVi,
   labelEnrollmentStatusVi,
   labelUserRoleVi,
-} from '@/features/admin/lib/adminLabelsVi'
+} from '@/features/admin/public'
 
 function promptRevokeReason(kind: 'catalog' | 'cohort'): string | null {
   const label = kind === 'cohort' ? 'lớp cohort' : 'quyền tự học'

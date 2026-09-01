@@ -12,8 +12,8 @@ import {
   verifyRegistrationEmail,
   verifyCookieSessionAfterAuth,
 } from '@/features/auth/public'
-import { FirebaseAuthButtons } from '@/components/auth/FirebaseAuthButtons'
 import {
+  FirebaseAuthButtons,
   AuthAlert,
   AuthEyebrow,
   AuthHudPanel,
@@ -22,7 +22,7 @@ import {
   AuthSplitLayout,
   AuthTextField,
   authInputClass,
-} from '@/components/auth/AuthFlowShell'
+} from '@/features/auth/public'
 import { SiteLogo } from '@/components/ui/SiteLogo'
 import { trackEvent } from '@/lib/analytics'
 import { APP_DISPLAY_NAME } from '@/lib/appBrand'

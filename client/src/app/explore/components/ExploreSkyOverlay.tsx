@@ -14,9 +14,8 @@ import {
   countSkyHudEvents,
   ExploreSkyCalendarPanel,
 } from '@/features/astronomy-calendar/public'
-import { useUpcomingAstronomyCalendar } from '@/features/astronomy-calendar/hooks/useAstronomyCalendar'
-import { computeSunSkyState } from '@/features/explore/lib/skyAstronomy'
-import { showScreenWeatherLayers } from '@/features/explore/lib/skyTimeMode'
+import { useUpcomingAstronomyCalendar } from '@/features/astronomy-calendar/public'
+import { computeSunSkyState, showScreenWeatherLayers } from '@/features/explore/public'
 import { getSkyTargetLabel, resolveSolarEntityIdForTarget } from '@/features/explore/public'
 import { SkyHudSheet } from '@/components/explore/SkyHudSheet'
 import type { ExplorePageModel } from '../hooks/useExplorePage'
@@ -25,6 +24,7 @@ import { ExploreBridgeQuiz } from './ExploreBridgeQuiz'
 import { useExplorePanelLearning } from '../hooks/useExplorePanelLearning'
 import { ExploreSkyHudClock } from './ExploreSkyHudClock'
 import { ExploreSkyLearnPanel } from './ExploreSkyLearnPanel'
+import { ExploreJourneyCta } from './ExploreJourneyCta'
 
 type Props = Pick<
   ExplorePageModel,
@@ -301,6 +301,13 @@ export function ExploreSkyOverlay(props: Props) {
           Kéo để xoay · Cuộn để zoom
         </p>
       </div>
+
+      <ExploreJourneyCta
+        entityLabel={label}
+        lessonHref={effectiveLessonLinks[0]?.href}
+        lessonTitle={effectiveLessonLinks[0]?.title}
+        exploreHref={`/explore?view=sky&target=${encodeURIComponent(skyActiveTargetId || '')}`}
+      />
 
       <ExploreSkyLearnPanel
         open={hudTab === 'learn'}

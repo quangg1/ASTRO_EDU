@@ -83,6 +83,15 @@ async function getLearnerProfileForPublic(userId) {
   return formatLearnerProfile(doc);
 }
 
+/** Interests for agent context (own-feature read). */
+async function getLearnerInterests(userId) {
+  if (!userId) return [];
+  const doc = await LearnerProfile.findOne({ userId: String(userId) }).select('interests').lean();
+  return (doc?.interests || [])
+    .map((x) => String(x || '').trim())
+    .filter(Boolean);
+}
+
 async function updateMyLearnerProfile(userId, body) {
   const patch = {};
   if (typeof body.bio === 'string') {
@@ -113,6 +122,7 @@ async function updateMyLearnerProfile(userId, body) {
 module.exports = {
   getOrCreateLearnerProfile,
   getLearnerProfileForPublic,
+  getLearnerInterests,
   updateMyLearnerProfile,
   formatLearnerProfile,
 };

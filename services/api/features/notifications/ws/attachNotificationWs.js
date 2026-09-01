@@ -1,6 +1,6 @@
 const { WebSocketServer } = require('ws');
 const { verifyToken } = require('@galaxies/auth-shared');
-const User = require('../../auth/models/User');
+const { findAccountSummary } = require('../../auth/services/userDirectoryService');
 const { extractAuthTokenFromRequest } = require('../../../shared/authCookie');
 const { addConnection, removeConnection } = require('./notificationHub');
 
@@ -48,8 +48,8 @@ function attachNotificationWebSocket(server) {
           ws.close(4401, 'unauthorized');
           return;
         }
-        const user = await User.findById(payload.sub).select('accountStatus').lean();
-        if (!user || user.accountStatus === 'deactivated') {
+        const account = await findAccountSummary(payload.sub);
+        if (!account?.isActive) {
           ws.close(4403, 'account_deactivated');
           return;
         }

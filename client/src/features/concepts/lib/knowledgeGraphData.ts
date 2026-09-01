@@ -1,5 +1,5 @@
 import { DEPTH_ORDER, type LearningConcept, type LearningModule } from '@/data/learningPathCurriculum'
-import type { LessonCompletionMap } from '@/features/learning-path/lib/learningPathProgress'
+import type { LessonCompletionMap } from '@/features/learning-path/public'
 
 export type StarMapNode = {
   id: string

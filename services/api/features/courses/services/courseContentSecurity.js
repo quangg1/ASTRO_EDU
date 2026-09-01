@@ -108,8 +108,8 @@ async function assertCatalogAccess({ course, userId }) {
   return enrollment;
 }
 
-async function assertCohortScheduleWindow({ lesson, cohortId, CohortActivitySchedule }) {
-  const map = await loadScheduleMap(CohortActivitySchedule, cohortId);
+async function assertCohortScheduleWindow({ lesson, cohortId }) {
+  const map = await loadScheduleMap(cohortId);
   const schedule = effectiveSchedule(lesson, map);
   const access = computeAccess(schedule);
   if (access === 'locked') {
@@ -129,17 +129,10 @@ async function assertCohortScheduleWindow({ lesson, cohortId, CohortActivitySche
 /**
  * Quiz / exam routes: enforce cohort-only delivery when user has any cohort enrollment on this course.
  */
-async function assertQuizDeliveryAccess({
-  course,
-  lesson,
-  cohortId,
-  userId,
-  userRole,
-  CohortActivitySchedule,
-}) {
+async function assertQuizDeliveryAccess({ course, lesson, cohortId, userId, userRole }) {
   if (isCourseEditor(userId, userRole, course)) {
     if (cohortId) {
-      await assertCohortScheduleWindow({ lesson, cohortId, CohortActivitySchedule });
+      await assertCohortScheduleWindow({ lesson, cohortId });
     }
     return { mode: 'editor' };
   }
@@ -163,7 +156,7 @@ async function assertQuizDeliveryAccess({
       err.code = 'wrong_cohort';
       throw err;
     }
-    await assertCohortScheduleWindow({ lesson, cohortId: routeCohort, CohortActivitySchedule });
+    await assertCohortScheduleWindow({ lesson, cohortId: routeCohort });
     return { mode: 'cohort', cohortId: routeCohort };
   }
 
@@ -175,7 +168,7 @@ async function assertQuizDeliveryAccess({
       err.code = 'not_in_cohort';
       throw err;
     }
-    await assertCohortScheduleWindow({ lesson, cohortId: routeCohort, CohortActivitySchedule });
+    await assertCohortScheduleWindow({ lesson, cohortId: routeCohort });
     return { mode: 'cohort', cohortId: routeCohort };
   }
 

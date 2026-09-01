@@ -2,8 +2,9 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { clsx } from 'clsx'
-import { useEarthHistoryStore, useSceneCommandStore } from '@/features/content3d/earth/public'
-import { getPhylumColor, getPhylumInfo } from '@/lib/fossilPhyla'
+import { useEarthHistoryStore } from '@/features/content3d/earth/stores/earthHistoryStore'
+import { useSceneCommandStore } from '@/features/content3d/earth/stores/sceneCommandStore'
+import { getPhylumColor, getPhylumInfo } from '@/features/content3d/earth/lib/fossilPhyla'
 import { searchFossils } from '@/features/content3d/earth/api/earthApi'
 import type { Fossil } from '@/types'
 

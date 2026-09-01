@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import type { LessonSection } from '@/features/courses/api/coursesApi'
+import type { LessonSection } from '@/features/courses/public'
 
 function evalFormula(formula: string, x: number): string {
   if (!formula?.trim()) return String(x)

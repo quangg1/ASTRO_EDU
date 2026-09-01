@@ -1,4 +1,4 @@
-const Vote = require('../models/Vote');
+const voteRepository = require('../repositories/voteRepository');
 const {
   notifyCommunityPostUpvote,
   notifyCommunityCommentUpvote,
@@ -18,11 +18,7 @@ async function applyVote({
   postId,
   postTitle,
 }) {
-  const existing = await Vote.findOne({
-    userId,
-    targetType,
-    targetId,
-  });
+  const existing = await voteRepository.findUserVote(userId, targetType, targetId);
 
   let delta = value;
   let myVote = value;
@@ -30,22 +26,18 @@ async function applyVote({
 
   if (existing) {
     if (existing.value === value) {
-      await Vote.deleteOne({ _id: existing._id });
+      // Bấm lại cùng chiều = rút phiếu.
+      await voteRepository.deleteById(existing._id);
       delta = -value;
       myVote = null;
     } else {
-      await Vote.updateOne({ _id: existing._id }, { $set: { value } });
+      await voteRepository.setValue(existing._id, value);
       delta = value * 2;
       myVote = value;
-      if (value === 1 && existing.value !== 1) shouldNotifyUpvote = true;
+      if (value === 1) shouldNotifyUpvote = true;
     }
   } else {
-    await Vote.create({
-      userId,
-      targetType,
-      targetId,
-      value,
-    });
+    await voteRepository.create({ userId, targetType, targetId, value });
     if (value === 1) shouldNotifyUpvote = true;
   }
 
@@ -78,12 +70,8 @@ async function applyVote({
  */
 async function mapMyVotes(userId, targetType, targetIds) {
   if (!userId || !targetIds.length) return {};
-  const votes = await Vote.find({
-    userId,
-    targetType,
-    targetId: { $in: targetIds },
-  }).lean();
-  return Object.fromEntries(votes.map((v) => [String(v.targetId), v.value]));
+  const votes = await voteRepository.listUserVotes(userId, targetType, targetIds);
+  return Object.fromEntries(votes.map((vote) => [String(vote.targetId), vote.value]));
 }
 
 module.exports = { applyVote, mapMyVotes };

@@ -1,6 +1,6 @@
 import { getApiPathBase } from '@/lib/apiConfig'
 import { apiFetch } from '@/lib/apiRequestInit'
-import type { ShowcasePanelConfigDTO } from '@/features/content3d/showcase/api/showcaseEntitiesApi'
+import type { ShowcasePanelConfigDTO } from '@/features/content3d/showcase/public'
 import type { SkyTargetContentDTO } from '../lib/mergeSkyTargetContent'
 
 const API = `${getApiPathBase()}/explore/sky-targets`

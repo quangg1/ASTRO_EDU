@@ -1,5 +1,15 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## Architecture & traceability
+
+- Domain map: [`DOMAIN_MAP.md`](./DOMAIN_MAP.md)
+- Generated page → feature → API → backend inventory: [`ROUTE_INVENTORY.md`](./ROUTE_INVENTORY.md)  
+  Regenerate: `npm run gen:route-inventory`
+- Layering docs: [`docs/architecture/frontend-layering.md`](../docs/architecture/frontend-layering.md)
+- Guards (also run on `prebuild`): `npm run check:guards`
+
+**How to trace a page:** open `ROUTE_INVENTORY.md`, find the route, then follow `features/<domain>/public.ts` and optional `app/<route>/TRACE.md`.
+
 ## Getting Started
 
 First, run the development server:

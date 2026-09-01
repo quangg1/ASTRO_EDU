@@ -13,8 +13,7 @@ import {
   saveBridgeVisitedEntityMap,
   saveDiscoveryMap,
 } from '@/features/content3d/showcase/public'
-import { dispatchExplorePassportChanged } from '@/features/explore/lib/explorePassportActions'
-import { markPassportSkyTarget } from '@/features/explore/lib/explorePassportStorage'
+import { dispatchExplorePassportChanged, markPassportSkyTarget } from '@/features/explore/public'
 import type { ExploreView, SkyExploreTarget } from '@/features/explore/public'
 import { getSkyTargetLabel, isSkyOnlyTarget } from '@/features/explore/public'
 import {

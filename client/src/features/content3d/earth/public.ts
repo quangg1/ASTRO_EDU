@@ -17,3 +17,26 @@ export type {
 export { fetchFossilsForStage } from './api/earthApi'
 export { loadEarthStages } from './lib/loadEarthStages'
 export { useExploreStageFossils, useCourseStageFossils } from './hooks/useStageFossils'
+export {
+  PALEOMAP_AGES_IN_WEB,
+  getClosestPaleoAge,
+  hasPaleoTexture,
+  getPaleoTexturePath,
+} from './lib/paleoTextureMap'
+export { applyGlobeTextureQuality } from './lib/planetTextureQuality'
+export { STAGE_HOTSPOTS, getHotspotsForTime } from './lib/stageHotspots'
+export type { StageHotspot } from './lib/stageHotspots'
+export {
+  ICONIC_ORGANISMS_BY_STAGE,
+  getIconicOrganismsByStageId,
+  getIconicOrganismsForStage,
+} from './lib/iconicOrganisms'
+export type { IconicOrganism } from './lib/iconicOrganisms'
+export { PHYLUM_INFO, getPhylumColor, getPhylumInfo } from './lib/fossilPhyla'
+export type { PhylumInfo, PhylumMetadataMap } from './lib/fossilPhyla'
+export { Timeline } from './ui/Timeline'
+export { InfoPanel } from './ui/InfoPanel'
+export { FossilPanel } from './ui/FossilPanel'
+export { FossilDetailDock, FossilDetailOverlay } from './ui/FossilDetailOverlay'
+export { Controls } from './ui/Controls'
+export { FeaturedOrganisms } from './ui/FeaturedOrganisms'

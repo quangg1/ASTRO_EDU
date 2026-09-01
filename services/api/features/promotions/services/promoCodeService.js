@@ -1,7 +1,14 @@
-const PromoCode = require('../models/PromoCode');
-const PromoRedemption = require('../models/PromoRedemption');
-const Course = require('../../courses/models/Course');
+const {
+  promoCodeRepository,
+  promoRedemptionRepository,
+} = require('../repositories/promoRepository');
+const {
+  listPublishedPricingByIds,
+} = require('../../courses/services/coursePricingLookupService');
 const { AppError } = require('../../../shared/errors');
+
+/** Quét tối đa bấy nhiêu campaign để tìm mã còn lượt dùng. */
+const MAX_ACTIVE_SCAN = 30;
 
 function normalizeCode(raw) {
   return String(raw || '')
@@ -90,7 +97,7 @@ async function resolvePromoForCheckout({ code, courseId, userId, forDisplay = fa
   if (!normalized) {
     throw new AppError(400, 'PROMO_REQUIRED', 'Nhập mã giảm giá');
   }
-  const promo = await PromoCode.findOne({ code: normalized }).lean();
+  const promo = await promoCodeRepository.findByCode(normalized);
   if (!promo || !promo.active) {
     throw new AppError(404, 'PROMO_INVALID', 'Mã giảm giá không hợp lệ hoặc đã hết hạn');
   }
@@ -104,10 +111,7 @@ async function resolvePromoForCheckout({ code, courseId, userId, forDisplay = fa
     throw new AppError(400, 'PROMO_EXHAUSTED', 'Mã đã hết lượt sử dụng');
   }
   const maxPerUser = Math.max(1, promo.maxPerUser || 1);
-  const usedByUser = await PromoRedemption.countDocuments({
-    promoCodeId: promo._id,
-    userId: String(userId),
-  });
+  const usedByUser = await promoRedemptionRepository.countForUser(promo._id, String(userId));
   if (usedByUser >= maxPerUser) {
     throw new AppError(400, 'PROMO_ALREADY_USED', 'Bạn đã dùng mã này');
   }
@@ -129,9 +133,9 @@ async function resolvePromoForCheckout({ code, courseId, userId, forDisplay = fa
 
 async function findActiveBannerForCourse(courseId) {
   const now = new Date();
-  const promos = await PromoCode.find(activePromoQuery(now))
-    .sort({ endsAt: 1, createdAt: -1 })
-    .lean();
+  const promos = await promoCodeRepository.listActive(activePromoQuery(now), {
+    sort: { endsAt: 1, createdAt: -1 },
+  });
 
   for (const p of promos) {
     if (!isPromoAvailable(p, now)) continue;
@@ -147,10 +151,11 @@ async function findActiveBannerForCourse(courseId) {
  */
 async function listActivePromotions({ limit = 8 } = {}) {
   const now = new Date();
-  const promos = await PromoCode.find(activePromoQuery(now))
-    .sort({ createdAt: -1 })
-    .limit(Math.min(limit * 3, 30))
-    .lean();
+  // Lấy dư rồi lọc, vì "còn lượt dùng" không biểu diễn được bằng query.
+  const promos = await promoCodeRepository.listActive(activePromoQuery(now), {
+    sort: { createdAt: -1 },
+    limit: Math.min(limit * 3, MAX_ACTIVE_SCAN),
+  });
 
   const available = promos.filter((p) => isPromoAvailable(p, now)).slice(0, limit);
   if (!available.length) return [];
@@ -160,9 +165,7 @@ async function listActivePromotions({ limit = 8 } = {}) {
   ];
   let courseMap = {};
   if (allCourseIds.length) {
-    const courses = await Course.find({ _id: { $in: allCourseIds }, published: true })
-      .select('title slug price isPaid')
-      .lean();
+    const courses = await listPublishedPricingByIds(allCourseIds);
     courseMap = Object.fromEntries(courses.map((c) => [String(c._id), c]));
   }
 
@@ -194,22 +197,15 @@ async function listActivePromotions({ limit = 8 } = {}) {
   });
 }
 
-async function recordPromoRedemption({ promoCodeId, code, userId, courseId, orderId, txnRef, discountAmount }, session) {
-  await PromoRedemption.create(
-    [
-      {
-        promoCodeId,
-        code,
-        userId,
-        courseId,
-        orderId,
-        txnRef,
-        discountAmount,
-      },
-    ],
-    session ? { session } : undefined,
+async function recordPromoRedemption(
+  { promoCodeId, code, userId, courseId, orderId, txnRef, discountAmount },
+  session,
+) {
+  await promoRedemptionRepository.record(
+    { promoCodeId, code, userId, courseId, orderId, txnRef, discountAmount },
+    session,
   );
-  await PromoCode.updateOne({ _id: promoCodeId }, { $inc: { redemptionCount: 1 } }, session ? { session } : undefined);
+  await promoCodeRepository.incrementRedemptions(promoCodeId, session);
 }
 
 function promoToAdminDto(doc) {

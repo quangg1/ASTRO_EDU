@@ -5,7 +5,7 @@ import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Compass, Search, X } from 'lucide-react'
 import { parseOnboardingLanding } from '@/lib/onboardingLanding'
-import { OnboardingWelcomeBanner } from '@/components/onboarding/OnboardingWelcomeBanner'
+import { OnboardingWelcomeBanner } from '@/features/onboarding/public'
 
 const TOUR_STEPS = [
   { title: 'Xoay bản đồ', body: 'Giữ chuột trái và kéo để xoay 4.673 thiên hà quanh Dải Ngân Hà.' },

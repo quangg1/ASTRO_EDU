@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import type { LessonSection, SectionType } from '@/features/courses/api/coursesApi'
+import type { LessonSection, SectionType } from '@/features/courses/public'
 
 interface BlockDef {
   type: SectionType

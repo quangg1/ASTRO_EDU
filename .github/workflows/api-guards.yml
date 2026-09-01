@@ -1,0 +1,41 @@
+# Architecture guard + unit tests for the unified API.
+# Mirrors client-guards.yml: the guard script is pure Node, so it runs without
+# an install. Tests need the package's dependencies, hence the separate step.
+name: API guards
+
+on:
+  pull_request:
+    paths:
+      - "services/api/**"
+      - "packages/**"
+      - ".github/workflows/api-guards.yml"
+  push:
+    branches: [main, master]
+    paths:
+      - "services/api/**"
+      - "packages/**"
+
+jobs:
+  guards:
+    name: Layering boundary + tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      # Zero-dependency check — runs first so a layering regression fails fast.
+      - name: Architecture boundary
+        working-directory: services/api
+        run: node scripts/check-architecture.mjs
+
+      - name: Install dependencies
+        working-directory: services/api
+        run: npm install --no-audit --no-fund
+
+      - name: Unit tests
+        working-directory: services/api
+        run: npm test

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { useGLTF } from '@react-three/drei'
-import { getIconicOrganismsForStage, type IconicOrganism } from '@/lib/iconicOrganisms'
+import { getIconicOrganismsForStage, type IconicOrganism } from '@/features/content3d/earth/lib/iconicOrganisms'
 import { getStaticAssetUrl } from '@/lib/apiConfig'
 import { Organism3DViewer } from './Organism3DViewer'
 

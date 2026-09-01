@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { Check, ChevronLeft } from 'lucide-react'
 import { Button, Card } from '@/design-system'
-import { LearnerTierBadge } from '@/components/profile/LearnerTierBadge'
+import { LearnerTierBadge } from '@/features/users/public'
 import {
   fetchLearnerTiersWithProgress,
   formatGemsEarnedRange,

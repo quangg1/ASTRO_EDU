@@ -42,7 +42,7 @@ describe('onboardingRecommendations', () => {
     assert.equal(starter.depth, 'explorer');
   });
 
-  it('buildOnboardingRecommendations learn_path opens topic landing', async () => {
+  it('buildOnboardingRecommendations learn_path opens the starter lesson', async () => {
     const built = await buildOnboardingRecommendations({
       primaryIntent: 'learn_path',
       topicIds: ['astrophysics'],
@@ -50,10 +50,24 @@ describe('onboardingRecommendations', () => {
       modules: MOCK_MODULES,
     });
     assert.equal(built.primaryTopicId, 'astrophysics');
-    assert.match(built.primaryHref, /^\/topics\/astrophysics\?/);
+    assert.match(built.primaryHref, /^\/tutorial\/mod-1\/node-a\/lesson-1\?/);
     assert.match(built.primaryHref, /from=onboarding/);
     assert.match(built.primaryHref, /depth=beginner/);
     assert.ok(built.recommendations.some((r) => r.kind === 'lesson'));
+    assert.ok(built.recommendations.some((r) => r.kind === 'topic'));
+  });
+
+  it('buildOnboardingRecommendations learn_path falls back to dashboard without a starter', async () => {
+    const built = await buildOnboardingRecommendations({
+      primaryIntent: 'learn_path',
+      topicIds: ['astrophysics'],
+      experienceLevel: 'beginner',
+      modules: [],
+    });
+    assert.equal(built.starter, null);
+    assert.match(built.primaryHref, /^\/dashboard\?/);
+    assert.match(built.primaryHref, /welcome=1/);
+    assert.match(built.primaryHref, /depth=beginner/);
   });
 
   it('buildOnboardingRecommendations explore_3d opens Explore with entity', async () => {
@@ -71,24 +85,36 @@ describe('onboardingRecommendations', () => {
     assert.match(built.primaryHref, /tour=1/);
   });
 
-  it('buildOnboardingRecommendations stargazing opens cosmos map', async () => {
+  it('buildOnboardingRecommendations stargazing opens the Explore sky view', async () => {
     const built = await buildOnboardingRecommendations({
       primaryIntent: 'stargazing',
       topicIds: ['galaxies-nebulae'],
       experienceLevel: 'some',
       modules: MOCK_MODULES,
     });
-    assert.match(built.primaryHref, /^\/cosmos\?/);
-    assert.match(built.primaryHref, /focus=search/);
+    assert.match(built.primaryHref, /^\/explore\?/);
+    assert.match(built.primaryHref, /view=sky/);
     assert.match(built.primaryHref, /tour=1/);
+    assert.match(built.primaryHref, /topics=galaxies-nebulae/);
   });
 
-  it('buildOnboardingRecommendations mixed opens dashboard welcome', async () => {
+  it('buildOnboardingRecommendations mixed opens the starter lesson at the learner depth', async () => {
     const built = await buildOnboardingRecommendations({
       primaryIntent: 'mixed',
       topicIds: ['astrophysics'],
       experienceLevel: 'advanced',
       modules: MOCK_MODULES,
+    });
+    assert.match(built.primaryHref, /^\/tutorial\/mod-1\/node-a\/lesson-1\?/);
+    assert.match(built.primaryHref, /depth=researcher/);
+  });
+
+  it('buildOnboardingRecommendations mixed falls back to dashboard welcome without a starter', async () => {
+    const built = await buildOnboardingRecommendations({
+      primaryIntent: 'mixed',
+      topicIds: ['astrophysics'],
+      experienceLevel: 'advanced',
+      modules: [],
     });
     assert.match(built.primaryHref, /^\/dashboard\?/);
     assert.match(built.primaryHref, /welcome=1/);

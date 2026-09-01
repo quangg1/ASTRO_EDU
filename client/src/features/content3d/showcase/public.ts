@@ -48,6 +48,7 @@ export {
   NASA_SHOWCASE_STORIES,
   hydrateShowcaseCatalogBundle,
   getNasaCatalogItemById,
+  getShowcaseOrbitEntityById,
   getShowcaseStoryById,
   listShowcaseStoriesForPlanet,
   resolveShowcaseOrbitParentPlanetName,
@@ -72,7 +73,7 @@ export {
   resolveStoryTourCameraForWaypoint,
   showcaseEntityHasModel,
 } from './lib/showcaseCameraFraming'
-export type { NasaCatalogItem, NasaStory, ShowcaseOrbitEntity } from './lib/showcaseCatalogRuntime'
+export type { NasaCatalogItem, NasaStory, ShowcaseOrbitEntity } from './lib/showcaseEntities'
 export {
   mergeNasaCatalog,
   mergeOrbitEntities,
@@ -84,3 +85,8 @@ export type { ResolvedNasaCatalogItem } from './lib/mergeShowcaseCatalog'
 export { planetsData, sunData } from './lib/solarSystemData'
 export type { PlanetData } from './lib/solarSystemData'
 export { computeOrbitalPosition } from './lib/solarOrbitMath'
+
+export {
+  StudioShowcaseEntitiesPage,
+  StudioShowcaseEntitiesPageWithSuspense,
+} from './ui/studio/StudioShowcaseEntitiesPage'

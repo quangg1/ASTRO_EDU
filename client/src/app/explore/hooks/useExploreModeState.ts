@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { parseExploreView, buildExploreHref, mergeExplorePreservedParams, normalizeSkyTargetId } from '@/features/explore/public'
 import { useShowcaseStore } from '@/features/content3d/showcase/public'
-import { DEFAULT_WESTERN_SKY_TARGET_ID } from '@/features/explore/lib/westernSkyCulture'
+import { DEFAULT_WESTERN_SKY_TARGET_ID } from '@/features/explore/public'
 import type { ExploreSceneMode } from './types'
 
 const DEFAULT_SKY_TARGET = DEFAULT_WESTERN_SKY_TARGET_ID

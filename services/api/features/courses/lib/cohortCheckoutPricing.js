@@ -1,27 +1,9 @@
-const Order = require('../../payment/models/Order');
-const { amountToVnd } = require('../../../shared/money/revenueVnd');
+const { getCatalogPaymentCreditVnd } = require('../../payment/services/orderCreditService');
 const { resolveCohortPrice, computeCohortUpgradeDue } = require('./cohortPricing');
 
 /**
- * Tổng học phí catalog đã thanh toán (đơn completed, không kèm cohort).
- */
-async function getCatalogPaymentCreditVnd({ userId, courseId }) {
-  const orders = await Order.find({
-    userId,
-    courseId: String(courseId),
-    status: 'completed',
-    $or: [{ cohortId: null }, { cohortId: '' }, { cohortId: { $exists: false } }],
-  }).lean();
-
-  let creditVnd = 0;
-  for (const o of orders) {
-    creditVnd += amountToVnd(o.amount, o.currency || 'VND');
-  }
-  return { creditVnd, orderCount: orders.length };
-}
-
-/**
  * Giá checkout cohort sau khi trừ credit catalog (nếu có).
+ * Credit lookup nằm ở payment/orderCreditService — không đọc Order model tại đây.
  */
 async function resolveCohortCheckoutPrice({ userId, cohort, course }) {
   const pricing = resolveCohortPrice(cohort, course);

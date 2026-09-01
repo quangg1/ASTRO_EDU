@@ -1,4 +1,4 @@
-const Cohort = require('../../courses/models/Cohort');
+const { listCohortTitlesByIds } = require('../../courses/services/courseAccessService');
 const { pendingExpiresAt } = require('./orderMaintenance');
 
 function resolveOrderKind(order) {
@@ -16,12 +16,7 @@ async function enrichOrdersForUser(orders) {
   const cohortIds = [
     ...new Set(orders.filter((o) => o.cohortId).map((o) => String(o.cohortId))),
   ];
-  const cohorts =
-    cohortIds.length > 0
-      ? await Cohort.find({ _id: { $in: cohortIds } })
-          .select('title')
-          .lean()
-      : [];
+  const cohorts = await listCohortTitlesByIds(cohortIds);
   const titleById = Object.fromEntries(cohorts.map((c) => [String(c._id), c.title]));
 
   return orders.map((o) => {

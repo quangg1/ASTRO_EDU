@@ -2,6 +2,7 @@
  * Gem Economy admin — §8 gem-rewards-system.md (Tầng 2 + Tầng 3 + metrics).
  * Base earn (GEM_EARN) chỉ đổi qua code, không PATCH từ đây.
  */
+/* eslint-disable no-restricted-imports -- Admin read-model: cross-feature aggregates for ops console. */
 const express = require('express');
 const { authMiddleware } = require('../../shared/jwtAuth');
 const { requireAdminScope } = require('../../shared/adminScopes');

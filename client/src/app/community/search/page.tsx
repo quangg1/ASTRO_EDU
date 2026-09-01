@@ -3,11 +3,14 @@
 import { Suspense, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { searchCommunityPosts, type Post } from '@/features/community/public'
-import { CommunitySearchBar } from '@/components/community/shared/CommunitySearchBar'
-import { DiscussionPostList } from '@/components/community/discussion/DiscussionPostList'
-import { NewsCardLink } from '@/components/community/NewsCardLink'
-import { postThumbnailUrl } from '@/features/community/lib/postContent'
+import {
+  searchCommunityPosts,
+  type Post,
+  CommunitySearchBar,
+  DiscussionPostList,
+  NewsCardLink,
+  postThumbnailUrl,
+} from '@/features/community/public'
 
 function formatDate(date?: string) {
   if (!date) return ''

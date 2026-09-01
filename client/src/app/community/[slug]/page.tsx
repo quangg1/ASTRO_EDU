@@ -19,7 +19,7 @@ import {
   isHtmlFragmentEmpty,
 } from '@/features/community/public'
 import { CornerBrackets } from '@/components/landing/CornerBrackets'
-import { OnboardingWelcomeBanner } from '@/components/onboarding/OnboardingWelcomeBanner'
+import { OnboardingWelcomeBanner } from '@/features/onboarding/public'
 import { parseOnboardingLanding } from '@/lib/onboardingLanding'
 
 const RichTextEditor = dynamic(() => import('@/components/studio/RichTextEditor'), {
@@ -28,10 +28,12 @@ const RichTextEditor = dynamic(() => import('@/components/studio/RichTextEditor'
     <div className="min-h-[180px] rounded-xl border border-ds-border bg-ds-surface/70 animate-pulse" aria-hidden />
   ),
 })
-import { NewsCardLink } from '@/components/community/NewsCardLink'
-import { NewsHeroSlider } from '@/components/community/NewsHeroSlider'
-import { DiscussionPostList } from '@/components/community/discussion/DiscussionPostList'
-import { PostSortBar } from '@/components/community/shared/PostSortBar'
+import {
+  NewsCardLink,
+  NewsHeroSlider,
+  DiscussionPostList,
+  PostSortBar,
+} from '@/features/community/public'
 
 function formatDate(date?: string): string {
   if (!date) return ''

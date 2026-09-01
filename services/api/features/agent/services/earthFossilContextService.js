@@ -1,5 +1,5 @@
-const Fossil = require('../../content3d/earth-history/models/Fossil');
-const EarthHistory = require('../../content3d/earth-history/models/EarthHistory');
+const earthHistoryService = require('../../content3d/earth-history/services/earthHistoryService');
+const fossilService = require('../../content3d/earth-history/services/fossilService');
 
 const QUATERNARY_BUFFER_MA = 2.6;
 const PHANEROZOIC_BUFFER_MA = 50;
@@ -51,20 +51,6 @@ function shouldBuildEarthFossilContext(sessionContext) {
 }
 
 /**
- * @param {number} stageTimeMa
- */
-async function findNearestEarthStage(stageTimeMa) {
-  const stage = await EarthHistory.findOne({
-    isActive: true,
-    time: { $lte: stageTimeMa + 0.001 },
-  })
-    .sort({ time: -1 })
-    .select('stageId name nameEn time timeDisplay era period eon')
-    .lean();
-  return stage || null;
-}
-
-/**
  * @param {Record<string, unknown>|null|undefined} sessionContext
  */
 async function buildEarthFossilContext(sessionContext) {
@@ -77,43 +63,12 @@ async function buildEarthFossilContext(sessionContext) {
   if (!range || range.maxMa < range.minMa) return null;
 
   const { maxMa, minMa } = range;
-  const timeMatch = {
-    'time.maxMa': { $gte: minMa },
-    'time.minMa': { $lte: maxMa },
-    'taxonomy.acceptedName': { $exists: true, $nin: [null, ''] },
-  };
 
   const [stage, totalInDb, phylaDistribution, notableAgg] = await Promise.all([
-    findNearestEarthStage(stageTimeMa),
-    Fossil.countDocuments(timeMatch),
-    Fossil.getPhylaDistribution(maxMa, minMa),
-    Fossil.aggregate([
-      { $match: timeMatch },
-      {
-        $group: {
-          _id: '$taxonomy.acceptedName',
-          phylum: { $first: '$taxonomy.phylum' },
-          taxonClass: { $first: '$taxonomy.class' },
-          environment: {
-            $first: {
-              $ifNull: ['$ecology.taxonEnvironment', '$geology.environment'],
-            },
-          },
-          count: { $sum: 1 },
-        },
-      },
-      { $sort: { count: -1 } },
-      { $limit: NOTABLE_FOSSIL_LIMIT },
-      {
-        $project: {
-          _id: 0,
-          name: '$_id',
-          phylum: 1,
-          class: '$taxonClass',
-          environment: 1,
-        },
-      },
-    ]),
+    earthHistoryService.findNearestActiveStageByTime(stageTimeMa),
+    fossilService.countAcceptedInTimeRange({ maxMa, minMa }),
+    fossilService.getPhylaDistribution(maxMa, minMa),
+    fossilService.listNotableFossils({ maxMa, minMa, limit: NOTABLE_FOSSIL_LIMIT }),
   ]);
 
   const topPhyla = (phylaDistribution || [])

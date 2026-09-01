@@ -1,0 +1,4 @@
+{
+  "note": "Frozen FE architecture debt. Remove via --prune-baseline only; never add by hand.",
+  "entries": []
+}

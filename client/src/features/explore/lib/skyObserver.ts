@@ -147,6 +147,7 @@ export function parseSkyObserverFromSearchParams(
     lonDeg,
     at,
     lightPollution,
+    
     magLimit: magLimitForPollution(lightPollution),
   }
 }

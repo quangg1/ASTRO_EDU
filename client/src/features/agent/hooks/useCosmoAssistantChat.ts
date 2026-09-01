@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import type { DepthLevel } from '@/data/learningPathCurriculum'
-import type { TutorAction } from '@/components/ai-tutor/parseTutorActions'
+import type { TutorAction } from '@/features/agent/ui/parseTutorActions'
 import { useAuthStore } from '@/features/auth/public'
 import { useToast } from '@/design-system'
 import {

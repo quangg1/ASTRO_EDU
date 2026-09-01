@@ -1,4 +1,3 @@
-const CohortActivitySchedule = require('../models/CohortActivitySchedule');
 const { redactLessonForLearnerDelivery } = require('./courseContentRedact');
 const { loadScheduleMap, effectiveSchedule, computeAccess } = require('./scheduleResolver');
 
@@ -23,7 +22,7 @@ function redactBodyForScheduleLock(lesson, access) {
 }
 
 async function applyCohortScheduleToLessons(course, cohortId, lessons) {
-  const map = await loadScheduleMap(CohortActivitySchedule, cohortId);
+  const map = await loadScheduleMap(cohortId);
   const now = new Date();
   return (lessons || []).map((lesson) => {
     if (!LEARNING_TYPES.has(lesson.type || 'text')) {

@@ -1,4 +1,4 @@
-import { buildSessionContext } from '@/features/agent/lib/buildSessionContext'
+import { buildSessionContext } from '@/features/agent/public'
 import type {
   ExploreIconicOrganismContext,
   ExploreNarrativeSiteContext,
@@ -7,7 +7,7 @@ import type {
 } from '@/features/agent/types'
 import type { NarrativeBeat, NarrativeSite } from '@/features/content3d/narrative/types'
 import { getSkyTargetLabel, type SkyExploreTarget } from '@/features/explore/public'
-import type { SkyObserver } from '@/features/explore/lib/skyObserver'
+import type { SkyObserver } from '@/features/explore/public'
 import { getIconicOrganismsForStage } from '@/lib/iconicOrganisms'
 
 const EARTH_ENTITY_ID = 'planet-earth'

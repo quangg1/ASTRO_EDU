@@ -1,10 +1,39 @@
 const Forum = require('../models/Forum');
 const Post = require('../models/Post');
+const forumRepository = require('../repositories/forumRepository');
 const {
   NEWS_FORUM_SLUG,
   DISCUSSION_FORUMS,
   ALLOWED_FORUM_SLUGS,
 } = require('../constants/forumCatalog');
+
+function cohortForumSlug(cohortId) {
+  return `cohort-${String(cohortId)}`;
+}
+
+/** API công khai: lớp học nhờ community tạo diễn đàn riêng, không chạm model Forum. */
+async function ensureCohortForum({ cohort, course }) {
+  const slug = cohortForumSlug(cohort._id);
+  let forum = await forumRepository.findOne({ cohortId: cohort._id });
+  if (!forum) {
+    const created = await forumRepository.create({
+      slug,
+      title: `${cohort.title} — Thảo luận`,
+      description: `Diễn đàn riêng lớp «${cohort.title}» — khóa «${course.title}».`,
+      icon: '💬',
+      order: 9000,
+      cohortId: cohort._id,
+      courseId: course._id,
+    });
+    forum = created.toObject ? created.toObject() : created;
+  }
+  return {
+    slug: forum.slug,
+    title: forum.title,
+    description: forum.description,
+    cohortId: String(forum.cohortId || cohort._id),
+  };
+}
 
 async function ensureNewsForumRecord() {
   let forum = await Forum.findOne({ slug: NEWS_FORUM_SLUG }).lean();
@@ -64,4 +93,6 @@ async function bootstrapCommunityForums() {
 module.exports = {
   ensureNewsForumRecord,
   bootstrapCommunityForums,
+  cohortForumSlug,
+  ensureCohortForum,
 };

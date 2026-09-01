@@ -6,7 +6,7 @@ import { Sparkles } from 'lucide-react'
 import {
   fetchActivePromotions,
   type ActivePromoCampaign,
-} from '@/features/promotions/api/promoApi'
+} from '@/features/promotions/public'
 import { dismissPromo, undismissedPromos } from '@/features/promotions/lib/promoDismiss'
 import { useT } from '@/i18n/public'
 

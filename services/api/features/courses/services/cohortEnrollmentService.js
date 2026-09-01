@@ -1,4 +1,4 @@
-const User = require('../../auth/models/User');
+const { findDirectoryEntry } = require('../../auth/services/userDirectoryService');
 const Cohort = require('../models/Cohort');
 const CohortEnrollment = require('../models/CohortEnrollment');
 const { sendCohortEnrollmentEmail, isMailConfigured } = require('../../../shared/mailer');
@@ -126,7 +126,7 @@ async function placeStudentInCohort({ userId, course, cohort, session }) {
     en = created[0];
   }
 
-  const user = await User.findById(userId).select('email displayName').lean();
+  const user = await findDirectoryEntry(userId);
   const emailResult = await trySendCohortEnrollmentEmail({
     en,
     user,
@@ -177,7 +177,7 @@ async function resendCohortEnrollmentEmail({ userId, course, cohortId }) {
   if (!en) {
     throw new AppError(403, 'NOT_ENROLLED', 'Bạn chưa tham gia lớp này');
   }
-  const user = await User.findById(userId).select('email displayName').lean();
+  const user = await findDirectoryEntry(userId);
   const emailResult = await trySendCohortEnrollmentEmail({
     en,
     user,

@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { clsx } from 'clsx'
-import { useEarthHistoryStore } from '@/features/content3d/earth/public'
+import { useEarthHistoryStore } from '@/features/content3d/earth/stores/earthHistoryStore'
 import { FeaturedOrganisms } from './FeaturedOrganisms'
 import type {
   ClimateInfo,

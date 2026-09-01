@@ -14,3 +14,6 @@ export type { TaxonomyRegistry } from './api/conceptsApi'
 export type { ConceptAnchorInput } from './lib/conceptAnchorsHtml'
 export { applyConceptAnchorsToHtml } from './lib/conceptAnchorsHtml'
 export * from './lib/knowledgeGraphData'
+
+export { StudioConceptsPage } from './ui/studio/StudioConceptsPage'
+// KnowledgeStarMap imports this barrel — keep at `@/features/concepts/ui/KnowledgeStarMap`.

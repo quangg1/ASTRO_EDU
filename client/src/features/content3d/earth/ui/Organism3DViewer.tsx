@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom'
 import dynamic from 'next/dynamic'
 import * as THREE from 'three'
 import { useGLTF, OrbitControls, Environment } from '@react-three/drei'
-import type { IconicOrganism } from '@/lib/iconicOrganisms'
+import type { IconicOrganism } from '@/features/content3d/earth/lib/iconicOrganisms'
 import { getStaticAssetUrl } from '@/lib/apiConfig'
 import { configureGltfRenderer, prepareGltfSceneForDisplay } from '@/lib/gltfDisplay'
 

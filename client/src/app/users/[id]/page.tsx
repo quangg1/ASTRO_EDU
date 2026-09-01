@@ -12,11 +12,14 @@ import {
   MessageSquare,
   Sparkles,
 } from 'lucide-react'
-import { AvatarWithDecoration } from '@/components/profile/AvatarWithDecoration'
-import { LearnerTierBadge } from '@/components/profile/LearnerTierBadge'
 import { MessageUserButton } from '@/components/messages/MessageUserButton'
 import { useAuthStore } from '@/features/auth/public'
-import { fetchPublicUserProfile, type PublicUserProfile } from '@/features/users/public'
+import {
+  AvatarWithDecoration,
+  LearnerTierBadge,
+  fetchPublicUserProfile,
+  type PublicUserProfile,
+} from '@/features/users/public'
 import { formatGemsEarnedRange } from '@/features/rewards/public'
 import { useT } from '@/i18n/public'
 

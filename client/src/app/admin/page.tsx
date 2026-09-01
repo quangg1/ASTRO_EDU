@@ -17,7 +17,7 @@ import {
 } from 'recharts'
 import { useAuthStore } from '@/features/auth/public'
 import { canAccessAdmin, canAccessAdminPath, hasAdminScope } from '@/lib/roles'
-import { labelUserRoleVi } from '@/features/admin/lib/adminLabelsVi'
+import { labelUserRoleVi } from '@/features/admin/public'
 import {
   fetchAdminTeacherApplications,
   reviewTeacherApplication,

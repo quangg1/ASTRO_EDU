@@ -1,10 +1,12 @@
-import type { LearningConcept } from '@/data/learningPathCurriculum'
-import type { ShowcaseOrbitEntity } from '@/lib/showcaseEntities'
+import type { LearningConcept } from '@/features/learning-path/data/learningPathCurriculum'
+import type { ShowcaseOrbitEntity } from '@/features/content3d/showcase/lib/showcaseEntities'
 import type { QuizQuestion } from '@/shared/types/quizQuestion'
 import { newQuizQuestionId, setMcqAnswer } from '@/shared/types/quizQuestion'
 import type { ResolvedNasaCatalogItem } from './mergeShowcaseCatalog'
-import type { SkyExploreTarget } from '@/features/explore/lib/exploreTargets'
-import { buildSkyConstellationContextualQuiz } from '@/features/explore/lib/buildSkyContextualQuiz'
+import {
+  buildSkyConstellationContextualQuiz,
+  type SkyExploreTarget,
+} from '@/features/explore/public'
 
 const GROUP_LABEL_VI: Record<ResolvedNasaCatalogItem['group'], string> = {
   planets_moons: 'Hành tinh · vệ tinh',

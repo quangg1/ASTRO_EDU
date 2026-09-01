@@ -1,4 +1,4 @@
-const PlanetNarrative = require('../../content3d/planet-narrative/models/PlanetNarrative');
+const { getPublished } = require('../../content3d/services/planetNarrativeService');
 const {
   extractBeatConfidence,
   confidenceDisclaimerVi,
@@ -70,9 +70,7 @@ async function buildNarrativeContext(sessionContext = {}) {
     };
   }
 
-  const doc = await PlanetNarrative.findOne({ entityId, published: { $ne: false } })
-    .select('entityId kind beats stages linkedLessonIds linkedConceptIds panelSchema')
-    .lean();
+  const { data: doc } = await getPublished(entityId);
 
   if (!doc) {
     return {

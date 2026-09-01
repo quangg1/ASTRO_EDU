@@ -1,6 +1,6 @@
 import { getApiPathBase } from '@/lib/apiConfig'
 import { apiClientHeaders, apiFetchInit } from '@/lib/apiClientHeaders'
-import type { LearnerTierPublic } from '@/features/rewards/api/learnerTiersApi'
+import type { LearnerTierPublic } from '@/features/rewards/public'
 
 const API = `${getApiPathBase()}/messages`
 

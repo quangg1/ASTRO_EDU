@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useState } from 'react'
-import type { LessonSection } from '@/features/courses/api/coursesApi'
+import type { LessonSection } from '@/features/courses/public'
 
 /** Giữ key cũ — LP clipboard tương thích localStorage */
 export const STUDIO_BLOCK_CLIPBOARD_KEY = 'lp_studio_block_clipboard_v1'

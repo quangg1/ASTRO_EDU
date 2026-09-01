@@ -1,6 +1,7 @@
 /**
  * Resolve cohort activity schedules in batch (avoid N+1).
  */
+const { cohortScheduleRepository } = require('../repositories/cohortScheduleRepository');
 
 function effectiveSchedule(lesson, scheduleByLessonSlug) {
   const override = scheduleByLessonSlug?.[lesson.slug];
@@ -25,9 +26,8 @@ function scheduleMapFromRows(rows) {
   return Object.fromEntries(rows.map((s) => [s.lessonSlug, s]));
 }
 
-async function loadScheduleMap(CohortActivitySchedule, cohortId) {
-  const rows = await CohortActivitySchedule.find({ cohortId }).lean();
-  return scheduleMapFromRows(rows);
+async function loadScheduleMap(cohortId) {
+  return scheduleMapFromRows(await cohortScheduleRepository.listForCohort(cohortId));
 }
 
 function buildSyllabusLessons(course, scheduleByLessonSlug, now = new Date()) {

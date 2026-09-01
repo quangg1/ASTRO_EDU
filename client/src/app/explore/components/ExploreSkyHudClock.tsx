@@ -1,8 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { observerTimeLabel } from '@/features/explore/lib/skyEphemeris'
-import type { SkyObserver, SkyTimePreset } from '@/features/explore/lib/skyObserver'
+import { observerTimeLabel, type SkyObserver, type SkyTimePreset } from '@/features/explore/public'
 
 const PLACEHOLDER = { time: '--:--:--', date: '\u00a0' }
 

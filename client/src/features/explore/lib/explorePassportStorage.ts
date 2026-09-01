@@ -1,5 +1,5 @@
 import { isSkyOnlyTarget } from '@/features/explore/lib/exploreTargets'
-import { loadDiscoveryMap, saveDiscoveryMap } from '@/features/content3d/showcase/lib/showcaseLearningBridge'
+import { loadDiscoveryMap, saveDiscoveryMap } from '@/features/content3d/showcase/public'
 
 const SKY_PREFIX = 'explore-passport-sky-v1'
 const STORY_PREFIX = 'explore-passport-story-v1'

@@ -23,7 +23,7 @@ import {
   formatAdminScopesSummary,
   labelAccountStatusVi,
   labelUserRoleVi,
-} from '@/features/admin/lib/adminLabelsVi'
+} from '@/features/admin/public'
 
 export default function AdminUsersPage() {
   const router = useRouter()

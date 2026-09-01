@@ -1,7 +1,4 @@
-const Course = require('../../courses/models/Course')
-const Enrollment = require('../../courses/models/Enrollment')
-const UserReward = require('../../rewards/models/UserReward')
-const GemTransaction = require('../../rewards/models/GemTransaction')
+const { getBalanceSummary, burnGemsForCheckout } = require('../../rewards/services/gemWalletService')
 const { getOrCreateConfigDoc } = require('../../rewards/services/gemRuntimeConfigService')
 const { getWalletLearnerMeta } = require('../../rewards/services/learnerTierService')
 const { AppError } = require('../../../shared/errors')
@@ -14,7 +11,10 @@ const {
 const { loadEnrollableCohort } = require('../../courses/services/cohortEnrollmentService')
 const { resolveCohortCheckoutPrice } = require('../../courses/lib/cohortCheckoutPricing')
 const { assertCatalogNotAlreadyOwned } = require('../lib/orderPurchaseGuard')
-const CohortEnrollment = require('../../courses/models/CohortEnrollment')
+const {
+  getPublishedCourseById,
+  isInCohort,
+} = require('../../courses/services/courseAccessService')
 
 function clampDiscountPct(pct, maxCap) {
   const p = Math.round(Number(pct) || 0)
@@ -34,7 +34,7 @@ function computeGemVoucherDiscount(listPriceVnd, discountPct) {
 }
 
 async function assertPaidCoursePurchasable({ userId, courseId }) {
-  const course = await Course.findOne({ _id: courseId, published: true }).lean()
+  const course = await getPublishedCourseById(courseId)
   if (!course) throw new AppError(404, 'COURSE_NOT_FOUND', 'Không tìm thấy khóa học')
   if (!course.isPaid || !(course.price > 0)) {
     throw new AppError(400, 'NOT_PAID_COURSE', 'Khóa học không yêu cầu thanh toán')
@@ -44,7 +44,7 @@ async function assertPaidCoursePurchasable({ userId, courseId }) {
 }
 
 async function assertCohortCheckoutPurchasable({ userId, courseId, cohortId }) {
-  const course = await Course.findOne({ _id: courseId, published: true }).lean()
+  const course = await getPublishedCourseById(courseId)
   if (!course) throw new AppError(404, 'COURSE_NOT_FOUND', 'Không tìm thấy khóa học')
   const cohort = await loadEnrollableCohort({ courseId: course._id, cohortId })
   const pricing = await resolveCohortCheckoutPrice({ userId, cohort, course })
@@ -54,8 +54,7 @@ async function assertCohortCheckoutPurchasable({ userId, courseId, cohortId }) {
       : 'Lớp này không yêu cầu thanh toán — dùng đăng ký lớp trực tiếp.'
     throw new AppError(400, pricing.isCatalogUpgrade ? 'COHORT_UPGRADE_FREE' : 'COHORT_FREE', msg)
   }
-  const inCohort = await CohortEnrollment.findOne({ userId, cohortId: cohort._id }).lean()
-  if (inCohort) {
+  if (await isInCohort(userId, cohort._id)) {
     throw new AppError(400, 'ALREADY_IN_COHORT', 'Bạn đã ở trong lớp này')
   }
   return {
@@ -105,7 +104,7 @@ async function getCheckoutQuote({
 
   const cfg = await getOrCreateConfigDoc()
   const maxCap = cfg?.voucherMaxDiscountPct ?? 15
-  const ur = await UserReward.findOne({ userId }).lean()
+  const ur = await getBalanceSummary(userId)
   const gemBalance = ur?.gemBalance ?? 0
   const totalGemsEarned = ur?.totalGemsEarned ?? 0
   const learnerProgress = getWalletLearnerMeta(totalGemsEarned)
@@ -278,38 +277,18 @@ async function burnCommittedGemsForOrder(order, session = null) {
   const tierId = String(order.voucherTierId || '').trim()
   if (!gems || !tierId) return { burned: 0 }
 
-  const q = UserReward.findOneAndUpdate(
-    { userId: order.userId, gemBalance: { $gte: gems } },
-    { $inc: { gemBalance: -gems } },
-    { new: true, session: session || undefined },
-  )
-  const updated = await q.lean()
-
-  if (!updated) {
-    const err = new Error('INSUFFICIENT_GEMS_AT_FULFILL')
-    err.code = 'INSUFFICIENT_GEMS_AT_FULFILL'
-    throw err
-  }
-
-  await GemTransaction.create(
-    [
-      {
-        userId: order.userId,
-        delta: -gems,
-        reason: 'course_voucher_checkout',
-        balanceAfter: updated.gemBalance,
-        metadata: {
-          txnRef: order.txnRef,
-          courseId: order.courseId,
-          voucherTierId: tierId,
-          discountPct: order.discountPct,
-        },
-      },
-    ],
-    session ? { session } : undefined,
-  )
-
-  return { burned: gems, gemBalance: updated.gemBalance }
+  return burnGemsForCheckout({
+    userId: order.userId,
+    gems,
+    reason: 'course_voucher_checkout',
+    metadata: {
+      txnRef: order.txnRef,
+      courseId: order.courseId,
+      voucherTierId: tierId,
+      discountPct: order.discountPct,
+    },
+    session,
+  })
 }
 
 module.exports = {

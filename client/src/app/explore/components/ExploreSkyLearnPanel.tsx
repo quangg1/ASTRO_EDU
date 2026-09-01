@@ -8,7 +8,7 @@ import {
   resolveSkyTargetIllustrationUrl,
   skyTargetStarStats,
   skyTargetSubtitle,
-} from '@/features/explore/lib/skyTargetPanel'
+} from '@/features/explore/public'
 import { ExploreLearningSteps } from './ExploreLearningSteps'
 import { ExploreConceptChips } from './ExploreConceptChips'
 import { ExploreSkyPanelBlocks } from './ExploreSkyPanelBlocks'

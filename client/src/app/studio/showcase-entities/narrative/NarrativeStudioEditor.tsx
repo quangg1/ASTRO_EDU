@@ -8,7 +8,6 @@ import { NarrativePanelPreview } from '@/app/studio/showcase-entities/narrative/
 import { NarrativePanelSchemaEditor } from '@/app/studio/showcase-entities/narrative/NarrativePanelSchemaEditor'
 import { NarrativeGlobeMapPicker } from '@/app/studio/showcase-entities/narrative/NarrativeGlobeMapPicker'
 import { StageMultiSelect } from '@/app/studio/showcase-entities/narrative/StageMultiSelect'
-import { getStudioGlobeDisplayName, getStudioGlobeTextureUrl } from '@/features/content3d/narrative/lib/studioGlobeTexture'
 import type { ShowcaseEntityContentDTO } from '@/features/content3d/showcase/public'
 import { useShowcaseCatalogGen } from '@/components/showcase/ShowcaseCatalogProvider'
 import {
@@ -17,13 +16,19 @@ import {
   entityHasFossilsTab,
 } from '@/app/studio/showcase-entities/entityHistoryCapability'
 import { ensureBeatVisual } from '@/features/content3d/narrative/adapters'
-import { applyPlanetNarrativeBundle } from '@/features/content3d/narrative/stores/planetNarrativeStore'
 import type { NarrativeBeat, NarrativeSite, PlanetNarrativeBundle } from '@/features/content3d/narrative/types'
-import { createEmptyBeat } from '@/features/content3d/narrative/lib/narrativeDefaults'
-import { hasLegacyPreset, studioFallbackBundle } from '@/features/content3d/narrative/lib/legacyPresets'
 import { resolvePanelSchema } from '@/features/content3d/narrative/panel-schema/mergeSchema'
 import type { NarrativePanelSchema } from '@/features/content3d/narrative/panel-schema/types'
-import { fetchEditorPlanetNarrative, savePlanetNarrative } from '@/features/content3d/narrative/public'
+import {
+  getStudioGlobeDisplayName,
+  getStudioGlobeTextureUrl,
+  applyPlanetNarrativeBundle,
+  createEmptyBeat,
+  hasLegacyPreset,
+  studioFallbackBundle,
+  fetchEditorPlanetNarrative,
+  savePlanetNarrative,
+} from '@/features/content3d/narrative/public'
 import { notifyShowcaseCatalogChanged } from '@/lib/showcaseCatalogRefresh'
 
 type SubTab = 'beat' | 'design' | 'sites' | 'fossils'

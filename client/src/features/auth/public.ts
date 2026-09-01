@@ -58,6 +58,9 @@ export {
   submitTeacherApplication,
   fetchMyTeacherApplicationStatus,
   markTeacherApplicationCvReviewed,
+  // Admin review (prefer `@/features/admin/public` for app/admin consumers)
+  fetchAdminTeacherApplications,
+  reviewTeacherApplication,
 } from './api/teacherApplicationsApi'
 export type {
   TeacherApplication,
@@ -76,3 +79,23 @@ export {
 export type { PublicTeacherProfile } from './api/teacherProfileApi'
 export { uploadProfileAvatar } from './api/avatarUploadApi'
 export type { AvatarUploadResult } from './api/avatarUploadApi'
+
+// UI leaves (do not re-export modules that import this barrel)
+export {
+  AuthSplitLayout,
+  AuthSingleColumnLayout,
+  AuthFloatingParticles,
+  AuthStarfield,
+  AuthHudPanel,
+  AuthEyebrow,
+  AuthOrDivider,
+  AuthProgressBar,
+  AuthAlert,
+  AuthPrimaryButton,
+  AuthTextField,
+  authInputClass,
+} from './ui/AuthFlowShell'
+export { UniversitySearchField } from './ui/UniversitySearchField'
+export { AuthProvider } from './ui/AuthProvider'
+export { FirebaseAuthButtons } from './ui/FirebaseAuthButtons'
+export { ApplyTeacherForm } from './ui/ApplyTeacherForm'

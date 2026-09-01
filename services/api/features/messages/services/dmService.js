@@ -1,5 +1,8 @@
 const mongoose = require('mongoose');
-const User = require('../../auth/models/User');
+const {
+  findAccountSummary,
+  listProfileCards,
+} = require('../../auth/services/userDirectoryService');
 const DmConversation = require('../models/DmConversation');
 const DmMessage = require('../models/DmMessage');
 const { publishToUser } = require('../../notifications/ws/notificationHub');
@@ -22,13 +25,13 @@ function assertValidUserId(id) {
 }
 
 async function assertActiveUser(userId) {
-  const user = await User.findById(userId).select('accountStatus displayName avatar').lean();
-  if (!user || user.accountStatus === 'deactivated') {
+  const account = await findAccountSummary(userId);
+  if (!account?.isActive) {
     const err = new Error('Người dùng không khả dụng');
     err.status = 404;
     throw err;
   }
-  return user;
+  return account;
 }
 
 async function getOrCreateConversation(userIdA, userIdB) {
@@ -71,12 +74,9 @@ async function listConversations(userId) {
 
   const otherIds = rows.map((r) => otherParticipantId(r, me)).filter(Boolean);
   const snippets = await getAuthorSnippetsForIds(otherIds);
-  const users = otherIds.length
-    ? await User.find({ _id: { $in: otherIds } })
-        .select('displayName avatar')
-        .lean()
-    : [];
-  const userById = new Map(users.map((u) => [String(u._id), u]));
+  const userById = new Map(
+    (await listProfileCards(otherIds)).map((card) => [card.id, card]),
+  );
 
   const unreadCounts = await Promise.all(
     rows.map(async (conv) => {
@@ -231,7 +231,7 @@ async function sendDirectMessage(senderId, { recipientId, body, conversationId }
     message: { ...base, isMine: true },
   });
 
-  const sender = await User.findById(me).select('displayName').lean();
+  const sender = await findAccountSummary(me);
   void notifyDirectMessage({
     userId: otherId,
     senderName: (sender?.displayName || '').trim() || 'Học viên',

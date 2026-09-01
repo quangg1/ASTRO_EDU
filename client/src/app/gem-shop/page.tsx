@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
-import { GemShopDecorationCatalog } from '@/components/gem-shop/GemShopDecorationCatalog'
+import { GemShopDecorationCatalog } from '@/features/rewards/public'
 import {
   fetchDecorationCatalog,
   fetchGemShopBootstrap,

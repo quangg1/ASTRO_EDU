@@ -1,5 +1,5 @@
 import { getApiPathBase } from '@/lib/apiConfig'
-import type { LearnerTierPublic } from '@/features/rewards/api/learnerTiersApi'
+import type { LearnerTierPublic } from '@/features/rewards/public'
 import type { LearnerProfile } from '@/features/users/api/learnerProfileApi'
 
 const API = `${getApiPathBase()}/users`

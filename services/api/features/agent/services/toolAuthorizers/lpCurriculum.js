@@ -1,4 +1,6 @@
-const LearningPath = require('../../../learning-path/models/LearningPath');
+const {
+  getMainCurriculum,
+} = require('../../../learning-path/services/learningPathQueryService');
 const { collectLpLessons } = require('../../../learning-path/lib/collectLpLessons');
 
 let cachedIds = null;
@@ -8,7 +10,7 @@ const CACHE_MS = 60_000;
 async function getLearningPathLessonIndex() {
   const now = Date.now();
   if (cachedIds && now - cachedAt < CACHE_MS) return cachedIds;
-  const doc = await LearningPath.findOne({ slug: 'main' }).select('modules concepts').lean();
+  const doc = await getMainCurriculum();
   const byId = new Map();
   const byConceptId = new Map();
   const allIds = [];

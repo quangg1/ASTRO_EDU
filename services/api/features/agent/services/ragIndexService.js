@@ -1,4 +1,5 @@
 const { getLearningPathLessonIndex } = require('./toolAuthorizers/lpCurriculum');
+const { listPostsForRagIndex } = require('../../community/services/communityReadService');
 const { internalServiceHeaders } = require('../../../shared/internalServiceAuth');
 
 const AI_URL = (process.env.AI_SERVICE_URL || 'http://127.0.0.1:5005').replace(/\/$/, '');
@@ -136,37 +137,10 @@ async function rebuildFullProjectRagIndex(opts = {}) {
     }
   }
 
-  const Post = require('../../community/models/Post');
-  const Forum = require('../../community/models/Forum');
-  const { isNewsForum } = require('../../community/constants/forumCatalog');
-
-  const forums = await Forum.find().lean();
-  const discussionIds = forums.filter((f) => !isNewsForum(f)).map((f) => f._id);
-  const newsIds = forums.filter((f) => isNewsForum(f)).map((f) => f._id);
-
-  const discussionPosts =
-    discussionIds.length > 0
-      ? await Post.find({
-          forumId: { $in: discussionIds },
-          isHidden: { $ne: true },
-        })
-          .sort({ voteCount: -1, commentCount: -1, createdAt: -1 })
-          .limit(discussionLimit)
-          .lean()
-      : [];
-
-  const newsPosts =
-    newsIds.length > 0
-      ? await Post.find({
-          forumId: { $in: newsIds },
-          isHidden: { $ne: true },
-        })
-          .sort({ publishedAt: -1, createdAt: -1 })
-          .limit(newsLimit)
-          .lean()
-      : [];
-
-  const posts = [...discussionPosts, ...newsPosts];
+  const { posts, discussionPosts, newsPosts } = await listPostsForRagIndex({
+    discussionLimit,
+    newsLimit,
+  });
 
   let commOk = 0;
   let commSkip = 0;

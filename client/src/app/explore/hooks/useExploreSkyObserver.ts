@@ -8,8 +8,9 @@ import {
   resolveSkyTimePreset,
   type SkyObserver,
   type SkyTimePreset,
-} from '@/features/explore/lib/skyObserver'
-import { computeSkyEphemerisBodies, observerTimeLabel } from '@/features/explore/lib/skyEphemeris'
+  computeSkyEphemerisBodies,
+  observerTimeLabel,
+} from '@/features/explore/public'
 
 type GeoState =
   | { status: 'pending' }

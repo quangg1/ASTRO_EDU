@@ -1,4 +1,4 @@
-import { getToken } from '@/features/auth/api/authApi'
+import { getToken } from '@/features/auth/public'
 import { getApiPathBase } from '@/lib/apiConfig'
 import { apiClientHeaders, apiFetchInit } from '@/lib/apiClientHeaders'
 

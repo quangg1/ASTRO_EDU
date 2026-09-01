@@ -2,13 +2,13 @@
 
 import dynamic from 'next/dynamic'
 import { useMemo } from 'react'
-import type { Lesson, LessonSection, QuizQuestion } from '@/features/courses/api/coursesApi'
+import type { Lesson, LessonSection, QuizQuestion } from '@/features/courses/public'
 import { mcqAnswerIndex, mcqOptionTexts } from '@/shared/types/quizQuestion'
 import type { LearningConcept, LessonConceptAnchor } from '@/data/learningPathCurriculum'
 import { lessonPreviewFromCourseLesson, type LessonPreviewContract } from '@/components/studio/lessonPreviewTypes'
 import { applyConceptAnchorsToHtml } from '@/features/concepts/public'
 import { resolveMediaUrl } from '@/lib/apiConfig'
-import { VideoWithTranscriptPanel } from '@/components/courses/VideoWithTranscriptPanel'
+import { VideoWithTranscriptPanel } from '@/features/courses/ui/VideoWithTranscriptPanel'
 import { earthHistoryData, findStageByTime, useCourseStageFossils } from '@/features/content3d/earth/public'
 
 const EarthScene = dynamic(() => import('@/components/3d/EarthScene'), { ssr: false, loading: () => <div className="h-full flex items-center justify-center text-ds-subtle text-sm">Loading 3D scene...</div> })

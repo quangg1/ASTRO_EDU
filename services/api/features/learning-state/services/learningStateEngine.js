@@ -2,10 +2,17 @@ const { randomUUID } = require('crypto');
 const LearningStateEvent = require('../models/LearningStateEvent');
 const LessonLearningState = require('../models/LessonLearningState');
 const ConceptLearningState = require('../models/ConceptLearningState');
-const LearnerAgentProfile = require('../../agent/models/LearnerAgentProfile');
-const UserProgress = require('../../learning-path/models/UserProgress');
+const {
+  getProfile: getAgentProfile,
+  setPreferredDepth,
+  markLearningStateMigrated,
+} = require('../../agent/services/learnerAgentProfileService');
+const {
+  getLearnerProgress,
+  markLessonCompletedAndMastered,
+} = require('../../learning-path/services/learningPathQueryService');
 const { getLearningPathLessonIndex } = require('../../agent/services/toolAuthorizers/lpCurriculum');
-const ShowcaseCatalogBundle = require('../../content3d/models/ShowcaseCatalogBundle');
+const showcaseContent = require('../../content3d/services/showcaseContentService');
 const {
   markExploreContextualQuizDayCompleted,
 } = require('../../content3d/services/exploreContextualQuizService');
@@ -26,14 +33,26 @@ const DEPTH_ORDER = ['beginner', 'explorer', 'researcher'];
 async function resolveEntityCurriculumLinks(entityId) {
   const eid = String(entityId || '').trim();
   if (!eid) return { conceptIds: [], lessonIds: [] };
-  const bundle = await ShowcaseCatalogBundle.findOne({ slug: 'main' }).select('catalog').lean();
-  const row = (bundle?.catalog || []).find((c) => String(c?.id || '').trim() === eid);
-  const conceptIds = Array.isArray(row?.panelConfig?.conceptTagIds)
-    ? row.panelConfig.conceptTagIds.map((x) => String(x || '').trim()).filter(Boolean)
+
+  const content = await showcaseContent.getEntityContent(eid);
+  let conceptIds = Array.isArray(content?.panelConfig?.conceptTagIds)
+    ? content.panelConfig.conceptTagIds.map((x) => String(x || '').trim()).filter(Boolean)
     : [];
-  const lessonIds = Array.isArray(row?.panelConfig?.lessonIds)
-    ? row.panelConfig.lessonIds.map((x) => String(x || '').trim()).filter(Boolean)
+  let lessonIds = Array.isArray(content?.panelConfig?.lessonIds)
+    ? content.panelConfig.lessonIds.map((x) => String(x || '').trim()).filter(Boolean)
     : [];
+
+  if (!conceptIds.length && !lessonIds.length) {
+    const bundle = await showcaseContent.getCatalogBundle();
+    const row = (bundle?.catalog || []).find((c) => String(c?.id || '').trim() === eid);
+    conceptIds = Array.isArray(row?.panelConfig?.conceptTagIds)
+      ? row.panelConfig.conceptTagIds.map((x) => String(x || '').trim()).filter(Boolean)
+      : [];
+    lessonIds = Array.isArray(row?.panelConfig?.lessonIds)
+      ? row.panelConfig.lessonIds.map((x) => String(x || '').trim()).filter(Boolean)
+      : [];
+  }
+
   return { conceptIds: [...new Set(conceptIds)], lessonIds: [...new Set(lessonIds)] };
 }
 
@@ -99,7 +118,7 @@ async function getOrCreateConceptState(userId, conceptId) {
  * One-time import misconceptions + spaced + quiz streak from LearnerAgentProfile.
  */
 async function migrateLegacyProfile(userId) {
-  const profile = await LearnerAgentProfile.findOne({ userId }).lean();
+  const profile = await getAgentProfile(userId);
   if (!profile) return;
 
   const quizMap = profile.coach?.quizFailStreakByLesson || {};
@@ -147,16 +166,13 @@ async function migrateLegacyProfile(userId) {
     }
   }
 
-  await LearnerAgentProfile.findOneAndUpdate(
-    { userId },
-    { $set: { learningStateMigratedAt: new Date() } },
-  );
+  await markLearningStateMigrated(userId);
 }
 
 async function ensureMigrated(userId) {
-  const profile = await LearnerAgentProfile.findOne({ userId })
-    .select('learningStateMigratedAt misconceptions coach spacedReview')
-    .lean();
+  const profile = await getAgentProfile(userId, {
+    projection: 'learningStateMigratedAt misconceptions coach spacedReview',
+  });
   if (!profile) return;
   if (profile.learningStateMigratedAt) return;
   const hasLegacy =
@@ -164,11 +180,7 @@ async function ensureMigrated(userId) {
     Object.keys(profile.coach?.quizFailStreakByLesson || {}).length > 0 ||
     Object.keys(profile.spacedReview?.lastReviewByLesson || {}).length > 0;
   if (!hasLegacy) {
-    await LearnerAgentProfile.findOneAndUpdate(
-      { userId },
-      { $set: { learningStateMigratedAt: new Date() } },
-      { upsert: true },
-    );
+    await markLearningStateMigrated(userId);
     return;
   }
   await migrateLegacyProfile(userId);
@@ -303,11 +315,7 @@ async function recordLearningEvent(userId, event) {
   if (type === 'depth_preference_set') {
     const depth = String(doc.payload.depth || '').toLowerCase();
     if (DEPTH_ORDER.includes(depth)) {
-      await LearnerAgentProfile.findOneAndUpdate(
-        { userId },
-        { $set: { 'depthPrefs.preferredDepth': depth, 'depthPrefs.updatedAt': new Date() } },
-        { upsert: true },
-      );
+      await setPreferredDepth(userId, depth);
     }
   }
 
@@ -315,23 +323,7 @@ async function recordLearningEvent(userId, event) {
 }
 
 async function syncLessonMasteryToUserProgress(userId, lessonId) {
-  const lid = String(lessonId).trim();
-  const doc = await UserProgress.findOne({ userId }).lean();
-  const mastered = new Set((doc?.learningPathMasteredLessonIds || []).map(String));
-  const completed = new Set((doc?.learningPathCompletedLessonIds || []).map(String));
-  mastered.add(lid);
-  completed.add(lid);
-  await UserProgress.findOneAndUpdate(
-    { userId },
-    {
-      $set: {
-        learningPathMasteredLessonIds: [...mastered],
-        learningPathCompletedLessonIds: [...completed],
-        learningPathLastLessonId: lid,
-      },
-    },
-    { upsert: true, setDefaultsOnInsert: true },
-  );
+  await markLessonCompletedAndMastered(userId, lessonId);
 }
 
 async function recordQuizOutcome(userId, { lessonId, passed, misconceptionTag, score }) {
@@ -419,7 +411,7 @@ async function getSpacedReviewDue(userId, opts = {}) {
   await ensureMigrated(userId);
 
   const [progress, lessons, { byId }] = await Promise.all([
-    UserProgress.findOne({ userId }).select('learningPathMasteredLessonIds').lean(),
+    getLearnerProgress(userId),
     LessonLearningState.find({
       userId,
       $or: [{ masteredAt: { $ne: null } }, { mastery: { $gte: 80 } }],
@@ -474,7 +466,7 @@ async function evaluateDepthSuggestion(userId, ctx = {}) {
   if (!DEPTH_ORDER.includes(current)) return null;
 
   const [profile, weak] = await Promise.all([
-    LearnerAgentProfile.findOne({ userId }).select('depthPrefs').lean(),
+    getAgentProfile(userId, { projection: 'depthPrefs' }),
     getWeakLessons(userId, { lessonId: ctx.lessonId }),
   ]);
 
@@ -588,12 +580,12 @@ async function getLearnerSnapshot(userId) {
 
   const [progress, weakLessons, misconceptions, spacedReviewDue, depthSuggestion, profile, lessonCount, conceptCount] =
     await Promise.all([
-      UserProgress.findOne({ userId }).lean(),
+      getLearnerProgress(userId),
       getWeakLessons(userId),
       getMisconceptions(userId),
       getSpacedReviewDue(userId, { limit: 3 }),
       evaluateDepthSuggestion(userId, {}),
-      LearnerAgentProfile.findOne({ userId }).select('depthPrefs').lean(),
+      getAgentProfile(userId, { projection: 'depthPrefs' }),
       LessonLearningState.countDocuments({ userId }),
       ConceptLearningState.countDocuments({ userId }),
     ]);

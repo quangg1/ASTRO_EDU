@@ -28,6 +28,8 @@ export type {
   CourseModule,
   CourseLessonOutline,
   LessonSection,
+  SectionType,
+  ResourceLink,
   FetchCoursesOpts,
   MyCourse,
   CourseEditorPayload,
@@ -50,7 +52,34 @@ export { ExamRunner } from './exam/ExamRunner'
 export { CohortHub } from './cohort/CohortHub'
 export { CohortStudioManager } from './cohort/CohortStudioManager'
 export { CourseCohortsJoin } from './cohort/CourseCohortsJoin'
+export { LessonTypeIcon, lessonTypeIconKey } from './cohort/LessonTypeIcon'
+export {
+  catalogPricingVisibleForStrategy,
+  cohortsNavEnabledForStrategy,
+  distributionStrategyBadge,
+  resolveDistributionStrategy,
+  type DistributionStrategy,
+} from './lib/distributionStrategy'
+export {
+  loadStudioEditorDraft,
+  saveStudioEditorDraft,
+  studioDraftIsDirty,
+  type StudioEditorDraft,
+} from './lib/studioEditorDraft'
 export { fetchCohortSyllabus, fetchCohortHome } from './api/cohortApi'
 export { AssignmentSubmit } from './assignments/AssignmentSubmit'
+
+export { MyCoursesPage } from './ui/my-courses/MyCoursesPage'
+export {
+  courseLevelLabel,
+  courseRequiresPayment,
+  formatCatalogPrice,
+} from './ui/courseCatalogMeta'
+export { CourseCatalogCard } from './ui/CourseCatalogCard'
+export { VideoWithTranscriptPanel } from './ui/VideoWithTranscriptPanel'
+export { CoursePromoBanner } from './ui/CoursePromoBanner'
+export { CourseInstructorCard } from './ui/CourseInstructorCard'
+export { CourseLandingClient } from './ui/CourseLandingClient'
+export { CoursePageClient } from './ui/CoursePageClient'
 
 /** SSR/RSC fetchers: import from features/courses/server (server-only). */

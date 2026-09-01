@@ -1,5 +1,7 @@
-const Enrollment = require('../../courses/models/Enrollment');
-const Course = require('../../courses/models/Course');
+const {
+  getCourseBySlug,
+  findCatalogEnrollment,
+} = require('../../courses/services/courseAccessService');
 
 /**
  * @typedef {'guest'|'lp_free'|'course_trial'|'course_enrolled'|'teacher'|'trial_expired'} AgentTier
@@ -23,9 +25,9 @@ async function resolveAgentTier({ userId, userRole, sessionContext }) {
   }
 
   if (courseSlug && userId) {
-    const course = await Course.findOne({ slug: courseSlug }).select('_id slug').lean();
+    const course = await getCourseBySlug(courseSlug);
     if (course) {
-      const enrollment = await Enrollment.findOne({ userId, courseId: course._id }).lean();
+      const enrollment = await findCatalogEnrollment(userId, course._id);
       if (enrollment) {
         if (enrollment.status === 'trial') {
           const exp = enrollment.trialExpiresAt ? new Date(enrollment.trialExpiresAt) : null;

@@ -1,5 +1,5 @@
-const Course = require('../../courses/models/Course');
-const User = require('../../auth/models/User');
+const commerce = require('../repositories/adminCommerceReportingRepository');
+const { listDirectoryEntries } = require('../../auth/services/userDirectoryService');
 const { AppError } = require('../../../shared/errors');
 const { recordAdminAction } = require('../lib/recordAdminAction');
 
@@ -16,22 +16,12 @@ async function listAdminCourses({ q = '', published, page = 1, limit = 30 }) {
   const take = Math.min(100, Math.max(1, limit));
 
   const [items, total] = await Promise.all([
-    Course.find(filter)
-      .select('title slug published price currency isPaid teacherId createdAt updatedAt')
-      .sort({ updatedAt: -1 })
-      .skip(skip)
-      .limit(take)
-      .lean(),
-    Course.countDocuments(filter),
+    commerce.listCourses(filter, { skip, limit: take }),
+    commerce.countCourses(filter),
   ]);
 
-  const ownerIds = [...new Set(items.map((c) => c.teacherId).filter(Boolean))];
-  const owners = ownerIds.length
-    ? await User.find({ _id: { $in: ownerIds } })
-        .select('email displayName')
-        .lean()
-    : [];
-  const ownerById = Object.fromEntries(owners.map((u) => [String(u._id), u]));
+  const owners = await listDirectoryEntries(items.map((c) => c.teacherId));
+  const ownerById = Object.fromEntries(owners.map((owner) => [owner.id, owner]));
 
   return {
     items: items.map((c) => ({
@@ -55,7 +45,7 @@ async function listAdminCourses({ q = '', published, page = 1, limit = 30 }) {
 }
 
 async function setAdminCoursePublished({ actorUserId, courseId, published, reason }) {
-  const course = await Course.findById(courseId);
+  const course = await commerce.findCourseDocById(courseId);
   if (!course) {
     throw new AppError(404, 'COURSE_NOT_FOUND', 'Không tìm thấy khóa học');
   }

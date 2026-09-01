@@ -1,18 +1,16 @@
-const Forum = require('../models/Forum');
-const Post = require('../models/Post');
+const forumRepository = require('../repositories/forumRepository');
+const postRepository = require('../repositories/postRepository');
 const { isNewsForum } = require('../constants/forumCatalog');
 const { buildGlobalSearchFilter, normalizeQueryString } = require('../lib/postListQuery');
 const { enrichPostsWithAuthors } = require('../../users/publicProfileService');
-const { findPostsHot } = require('../postSort');
+const presenter = require('../presenters/communityPresenter');
+
+const MAX_PAGE_SIZE = 50;
 
 async function resolveForumScope(scope) {
-  const forums = await Forum.find().lean();
-  if (scope === 'news') {
-    return forums.filter((f) => isNewsForum(f));
-  }
-  if (scope === 'discussion') {
-    return forums.filter((f) => !isNewsForum(f));
-  }
+  const forums = await forumRepository.listAll();
+  if (scope === 'news') return forums.filter(isNewsForum);
+  if (scope === 'discussion') return forums.filter((forum) => !isNewsForum(forum));
   return forums;
 }
 
@@ -30,24 +28,25 @@ async function searchCommunityPosts({
 }) {
   let forums = await resolveForumScope(scope);
   if (forumSlug) {
-    forums = forums.filter((f) => f.slug === forumSlug);
+    forums = forums.filter((forum) => forum.slug === forumSlug);
   }
   if (!forums.length) {
     return { data: [], total: 0, page, limit };
   }
 
-  const forumIds = forums.map((f) => f._id);
   const qStr = normalizeQueryString(q);
   const tagNorm = typeof tag === 'string' ? tag.trim().toLowerCase() : '';
   const cat = typeof category === 'string' ? category.trim() : '';
 
+  // Tìm kiếm không tiêu chí sẽ quét cả collection — bắt client gửi ít nhất một.
   if (!qStr && !tagNorm && !cat) {
     return { data: [], total: 0, page, limit, needsQuery: true };
   }
 
   const filter = buildGlobalSearchFilter({
-    forumIds,
-    scope: forumSlug && forums[0] && isNewsForum(forums[0]) ? 'news' : forumSlug ? 'discussion' : scope,
+    forumIds: forums.map((forum) => forum._id),
+    // Khi đã khóa vào một forum, phạm vi được suy ra từ chính forum đó.
+    scope: forumSlug ? (isNewsForum(forums[0]) ? 'news' : 'discussion') : scope,
     q,
     tag,
     category,
@@ -55,51 +54,39 @@ async function searchCommunityPosts({
     viewerDoc,
   });
 
-  const skip = (Math.max(1, page) - 1) * Math.min(50, limit);
-  const limitNum = Math.min(50, limit);
+  const limitNum = Math.min(MAX_PAGE_SIZE, limit);
+  const skip = (Math.max(1, page) - 1) * limitNum;
 
-  let sortOpt = { isPinned: -1, createdAt: -1 };
-  if (sort === 'top') sortOpt = { isPinned: -1, voteCount: -1, createdAt: -1 };
+  const [posts, total] = await Promise.all([
+    postRepository.listPage(filter, { sort, skip, limit: limitNum }),
+    postRepository.count(filter),
+  ]);
 
-  const posts =
-    sort === 'hot'
-      ? await findPostsHot(filter, skip, limitNum)
-      : await Post.find(filter).sort(sortOpt).skip(skip).limit(limitNum).lean();
-
-  const total = await Post.countDocuments(filter);
-  const data = await enrichPostsWithAuthors(posts);
-
-  const forumById = new Map(forums.map((f) => [String(f._id), f]));
-  const withForum = data.map((p) => {
-    const f = forumById.get(String(p.forumId));
-    return {
-      ...p,
-      forumSlug: f?.slug || null,
-      forumTitle: f?.title || null,
-      forumIsNews: f ? isNewsForum(f) : false,
-    };
-  });
-
-  return { data: withForum, total, page, limit: limitNum };
+  const enriched = await enrichPostsWithAuthors(posts);
+  return { data: presenter.withForumMeta(enriched, forums), total, page, limit: limitNum };
 }
 
 async function listPopularTags({ limit = 30 } = {}) {
-  const discussionForums = await Forum.find({ isNews: { $ne: true } }).select('_id').lean();
-  const ids = discussionForums.map((f) => f._id);
-  if (!ids.length) return [];
-
-  const tags = await Post.aggregate([
-    { $match: { forumId: { $in: ids }, tags: { $exists: true, $ne: [] } } },
-    { $unwind: '$tags' },
-    { $group: { _id: '$tags', count: { $sum: 1 } } },
-    { $sort: { count: -1 } },
-    { $limit: Math.min(50, limit) },
-  ]);
-
-  return tags.map((t) => ({ tag: t._id, count: t.count }));
+  const forums = await forumRepository.listDiscussion({ projection: '_id' });
+  if (!forums.length) return [];
+  return postRepository.countTagUsage(
+    forums.map((forum) => forum._id),
+    Math.min(MAX_PAGE_SIZE, limit),
+  );
 }
 
-module.exports = {
-  searchCommunityPosts,
-  listPopularTags,
-};
+async function listPostsByTag({ tag, page = 1, limit = 20, sort = 'newest' }) {
+  const forums = await forumRepository.listDiscussion();
+  const filter = { forumId: { $in: forums.map((forum) => forum._id) }, tags: tag };
+  const limitNum = Math.min(MAX_PAGE_SIZE, limit);
+
+  const [posts, total] = await Promise.all([
+    postRepository.listPage(filter, { sort, skip: (Math.max(1, page) - 1) * limitNum, limit: limitNum }),
+    postRepository.count(filter),
+  ]);
+
+  const enriched = await enrichPostsWithAuthors(posts);
+  return { data: presenter.withForumMeta(enriched, forums), total, page, limit: limitNum, tag };
+}
+
+module.exports = { searchCommunityPosts, listPopularTags, listPostsByTag };

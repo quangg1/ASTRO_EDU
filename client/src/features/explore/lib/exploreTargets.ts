@@ -1,4 +1,4 @@
-import type { ShowcasePanelConfigDTO } from '@/features/content3d/showcase/api/showcaseEntitiesApi'
+import type { ShowcasePanelConfigDTO } from '@/features/content3d/showcase/public'
 
 /** Explore hub: solar 3D entities vs sky dome targets share `entityId` where possible. */
 

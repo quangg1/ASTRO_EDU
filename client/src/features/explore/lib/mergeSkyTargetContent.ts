@@ -1,4 +1,4 @@
-import type { ShowcasePanelConfigDTO } from '@/features/content3d/showcase/api/showcaseEntitiesApi'
+import type { ShowcasePanelConfigDTO } from '@/features/content3d/showcase/public'
 import type { SkyExploreTarget } from './exploreTargets'
 
 export type SkyTargetContentDTO = {

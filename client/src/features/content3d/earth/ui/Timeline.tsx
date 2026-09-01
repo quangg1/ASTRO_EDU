@@ -1,6 +1,6 @@
 'use client'
 
-import { useEarthHistoryStore } from '@/features/content3d/earth/public'
+import { useEarthHistoryStore } from '@/features/content3d/earth/stores/earthHistoryStore'
 import { clsx } from 'clsx'
 
 export function Timeline() {

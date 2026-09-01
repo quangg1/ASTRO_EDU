@@ -1,6 +1,6 @@
-import { buildStudioGlobeEntity } from '@/lib/mergeShowcaseCatalog'
+import { buildStudioGlobeEntity } from '@/features/content3d/showcase/lib/mergeShowcaseCatalog'
 import { resolveShowcaseDiffuseTextureUrl } from '@/lib/showcaseMediaUrl'
-import { getNasaCatalogItemById } from '@/lib/showcaseEntities'
+import { getNasaCatalogItemById } from '@/features/content3d/showcase/lib/showcaseEntities'
 import type { ShowcaseEntityContentDTO } from '@/features/content3d/showcase/api/showcaseEntitiesApi'
 
 /** Texture equirectangular cho map picker — cùng diffuse URL như globe 3D (ShowcaseDiffuseGlobe). */

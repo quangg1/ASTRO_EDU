@@ -1,6 +1,6 @@
 import type { ResolvedNasaCatalogItem } from '@/features/content3d/showcase/lib/mergeShowcaseCatalog'
 import { planetsData } from '@/features/content3d/showcase/lib/solarSystemData'
-import type { ShowcaseOrbitEntity } from '@/lib/showcaseEntities'
+import type { ShowcaseOrbitEntity } from '@/features/content3d/showcase/lib/showcaseEntities'
 import type { ShowcasePanelBlockDTO, ShowcasePanelConfigDTO } from '@/features/content3d/showcase/api/showcaseEntitiesApi'
 
 type TabId = 'overview' | 'physical' | 'sky'

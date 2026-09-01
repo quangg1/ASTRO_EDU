@@ -1,4 +1,6 @@
-const LearningPathEvent = require('../../learning-path/models/LearningPathEvent');
+const {
+  listEventsForUserByNames,
+} = require('../../learning-path/services/learningPathEventQueryService');
 
 const PASSPORT_EVENT_NAMES = [
   'scene_entity_discovered',
@@ -12,13 +14,10 @@ const PASSPORT_EVENT_NAMES = [
  * @returns {Promise<{ discoveries: string[], dhBeats: object[], dhSites: object[], storyTours: object[] }>}
  */
 async function buildExplorePassportPayload(userId) {
-  const rows = await LearningPathEvent.find({
-    userId: String(userId || '').trim(),
-    eventName: { $in: PASSPORT_EVENT_NAMES },
-  })
-    .select('eventName metadata timestamp')
-    .sort({ timestamp: 1 })
-    .lean();
+  const rows = await listEventsForUserByNames(String(userId || '').trim(), PASSPORT_EVENT_NAMES, {
+    projection: 'eventName metadata timestamp',
+    sort: { timestamp: 1 },
+  });
 
   const discoverySet = new Set();
   const dhBeatMap = new Map();

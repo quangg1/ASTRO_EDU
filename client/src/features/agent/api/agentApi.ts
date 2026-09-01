@@ -4,7 +4,7 @@ import {
   handleAuthUnauthorized,
   isUnauthorizedResponse,
   mapAuthApiError,
-} from '@/features/auth/lib/authSessionSync'
+} from '@/features/auth/public'
 import { apiRequestInit, usesCookieAuth } from '@/lib/apiRequestInit'
 import type { RecallQuizDeliveryQuestion } from '@/features/learning-path/public'
 import type {

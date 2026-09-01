@@ -3,17 +3,19 @@
 import { useCallback } from 'react'
 import type { AppRouterInstance } from 'next/dist/shared/lib/app-router-context.shared-runtime'
 import { useAuthStore } from '@/features/auth/public'
-import { dispatchExplorePassportChanged } from '@/features/explore/lib/explorePassportActions'
-import { markPassportSkyTarget } from '@/features/explore/lib/explorePassportStorage'
 import {
+  dispatchExplorePassportChanged,
+  markPassportSkyTarget,
   buildExploreHref,
   EXPLORE_SOLAR_ONLY_PARAMS,
   isSkyOnlyTarget,
   mergeExplorePreservedParams,
   type ExploreView,
+  formatObserverTimeParam,
+  skyTimeForPreset,
+  type SkyTimePreset,
+  normalizeSkyTargetId,
 } from '@/features/explore/public'
-import { formatObserverTimeParam, skyTimeForPreset, type SkyTimePreset } from '@/features/explore/lib/skyObserver'
-import { normalizeSkyTargetId } from '@/features/explore/lib/exploreViewUrl'
 import type { AstronomyCalendarEvent } from '@/features/astronomy-calendar/types'
 
 type Args = {

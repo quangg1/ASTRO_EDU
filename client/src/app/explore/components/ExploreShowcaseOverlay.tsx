@@ -7,22 +7,22 @@ import {
   resolveExplorePanelConfig,
   resolveShowcaseHostPlanetName,
   getShowcaseStoryById,
+  entityNeedsOrbitUnlock,
+  resolveStoryUnlockEntityId,
 } from '@/features/content3d/showcase/public'
-import { entityNeedsOrbitUnlock } from '@/features/content3d/showcase/lib/filterShowcaseOrbits'
 import { useToast } from '@/design-system'
 import type { ExplorePageModel } from '../hooks/useExplorePage'
 import { useExplorePanelLearning } from '../hooks/useExplorePanelLearning'
 import { ExploreShowcaseMenu } from './ExploreShowcaseMenu'
 import { ExploreViewToggle } from './ExploreViewToggle'
-import { isSkyOnlyTarget, mergeExplorePreservedParams } from '@/features/explore/public'
+import { isSkyOnlyTarget, mergeExplorePreservedParams, completeStoryTour } from '@/features/explore/public'
 import { ExploreBridgeQuiz } from './ExploreBridgeQuiz'
 import { ExploreLearningSteps } from './ExploreLearningSteps'
 import { ExploreConceptChips } from './ExploreConceptChips'
 import { ExploreStoryTourOverlay } from './ExploreStoryTourOverlay'
 import { ExploreStoryTourPicker } from './ExploreStoryTourPicker'
 import { ExplorePassportOverlay } from './ExplorePassportOverlay'
-import { completeStoryTour } from '@/features/explore/lib/explorePassportActions'
-import { resolveStoryUnlockEntityId } from '@/features/content3d/showcase/lib/filterShowcaseOrbits'
+import { ExploreJourneyCta } from './ExploreJourneyCta'
 
 type Props = Pick<
   ExplorePageModel,
@@ -406,52 +406,60 @@ export function ExploreShowcaseOverlay(props: Props) {
       ) : null}
 
       {!bridgeDebugOn ? (
-        <ShowcaseEntityPanel
-          item={activeResolved}
-          orbit={activeOrbitEntity}
-          museumLabelVi={museumLabelVi}
-          conceptChips={effectiveConceptCards}
-          learningLinks={effectiveLessonLinks}
-          panelConfig={effectivePanelConfig ?? undefined}
-          gamification={enrichedGamification}
-          hasDeepHistory={Boolean(activeResolved && activeEntityHasDeepHistory)}
-          onOpenDeepHistory={
-            activeResolved && activeEntityHasDeepHistory
-              ? () => openPlanetHistory(activeResolved.id)
-              : undefined
-          }
-          hostPlanetName={hostPlanetName}
-          satelliteChildren={satelliteChildren}
-          activeEntityId={showcaseActiveItemId}
-          onSelectSatellite={(entityId) => onMenuSelect(entityId, 'panel-satellite', false)}
-          crossViewSlot={
-            activeResolved && !isSkyOnlyTarget(showcaseActiveItemId) ? (
-              <button
-                type="button"
-                onClick={() => openSkyForEntity(showcaseActiveItemId)}
-                className="mt-2 w-full rounded border border-violet-400/30 bg-violet-950/35 px-3 py-2 text-left text-[11px] text-violet-100 hover:bg-violet-900/40"
-              >
-                Xem trên bầu trời đêm (La bàn chòm sao) →
-              </button>
-            ) : null
-          }
-          learningStepsSlot={
-            <ExploreLearningSteps
-              steps={panelLearning.steps}
-              onStepAction={panelLearning.onStepAction}
-              loggedIn={Boolean(user)}
-            />
-          }
-          conceptChipsSlot={
-            <ExploreConceptChips
-              chips={panelLearning.chipViews}
-              loading={panelLearning.conceptsLoading}
-              quizLoadingId={panelLearning.conceptQuizLoadingId}
-              loggedIn={Boolean(user)}
-              onChipClick={panelLearning.onConceptChipClick}
-            />
-          }
-        />
+        <>
+          <ExploreJourneyCta
+            entityLabel={activeResolved?.displayName}
+            lessonHref={effectiveLessonLinks[0]?.href}
+            lessonTitle={effectiveLessonLinks[0]?.title}
+            exploreHref={`/explore?view=solar&entity=${encodeURIComponent(showcaseActiveItemId)}`}
+          />
+          <ShowcaseEntityPanel
+            item={activeResolved}
+            orbit={activeOrbitEntity}
+            museumLabelVi={museumLabelVi}
+            conceptChips={effectiveConceptCards}
+            learningLinks={effectiveLessonLinks}
+            panelConfig={effectivePanelConfig ?? undefined}
+            gamification={enrichedGamification}
+            hasDeepHistory={Boolean(activeResolved && activeEntityHasDeepHistory)}
+            onOpenDeepHistory={
+              activeResolved && activeEntityHasDeepHistory
+                ? () => openPlanetHistory(activeResolved.id)
+                : undefined
+            }
+            hostPlanetName={hostPlanetName}
+            satelliteChildren={satelliteChildren}
+            activeEntityId={showcaseActiveItemId}
+            onSelectSatellite={(entityId) => onMenuSelect(entityId, 'panel-satellite', false)}
+            crossViewSlot={
+              activeResolved && !isSkyOnlyTarget(showcaseActiveItemId) ? (
+                <button
+                  type="button"
+                  onClick={() => openSkyForEntity(showcaseActiveItemId)}
+                  className="mt-2 w-full rounded border border-violet-400/30 bg-violet-950/35 px-3 py-2 text-left text-[11px] text-violet-100 hover:bg-violet-900/40"
+                >
+                  Xem trên bầu trời đêm (La bàn chòm sao) →
+                </button>
+              ) : null
+            }
+            learningStepsSlot={
+              <ExploreLearningSteps
+                steps={panelLearning.steps}
+                onStepAction={panelLearning.onStepAction}
+                loggedIn={Boolean(user)}
+              />
+            }
+            conceptChipsSlot={
+              <ExploreConceptChips
+                chips={panelLearning.chipViews}
+                loading={panelLearning.conceptsLoading}
+                quizLoadingId={panelLearning.conceptQuizLoadingId}
+                loggedIn={Boolean(user)}
+                onChipClick={panelLearning.onConceptChipClick}
+              />
+            }
+          />
+        </>
       ) : null}
 
       <div

@@ -1,6 +1,6 @@
 const path = require('path');
 const fs = require('fs');
-const ShowcaseCatalogBundle = require('../../content3d/models/ShowcaseCatalogBundle');
+const { getCatalogBundle } = require('../../content3d/services/showcaseContentService');
 
 const SOLAR_PLANETS = [
   'Mercury',
@@ -91,7 +91,7 @@ async function loadShowcaseCatalog() {
   if (catalogCache && Date.now() - catalogCacheAt < CACHE_MS) return catalogCache;
   let catalog = [];
   try {
-    const doc = await ShowcaseCatalogBundle.findOne({ slug: 'main' }).select('catalog').lean();
+    const doc = await getCatalogBundle();
     if (Array.isArray(doc?.catalog) && doc.catalog.length) catalog = doc.catalog;
   } catch {
     /* Mongo optional in dev */

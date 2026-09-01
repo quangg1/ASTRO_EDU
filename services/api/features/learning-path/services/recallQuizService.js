@@ -1,5 +1,8 @@
-const LearningPath = require('../models/LearningPath');
-const UserProgress = require('../models/UserProgress');
+const { AppError } = require('../../../shared/errors');
+const {
+  learningPathRepository,
+  userProgressRepository,
+} = require('../repositories/learningPathRepository');
 const { collectLpLessons } = require('../lib/collectLpLessons');
 const { normalizeQuizList } = require('../../../shared/quizQuestion');
 const { sanitizeQuizQuestionForDelivery } = require('../../courses/services/courseContentRedact');
@@ -10,10 +13,14 @@ let recallGatedLessonIdsCache = null;
 let recallGatedCacheAt = 0;
 const GATE_CACHE_MS = 60_000;
 
+/** Dưới 3 câu thì điểm số không đủ tin cậy để coi là đã thành thạo. */
+const MIN_RECALL_QUESTIONS = 3;
+
+const lessonNotFound = () =>
+  new AppError(404, 'LESSON_NOT_FOUND', 'Không tìm thấy bài trong lộ trình');
+
 async function loadLearningPathDoc() {
-  return LearningPath.findOne({ slug: 'main', published: { $ne: false } })
-    .select('modules concepts published')
-    .lean();
+  return learningPathRepository.findMainPublished();
 }
 
 /**
@@ -45,7 +52,7 @@ async function getRecallGatedLessonIdSet() {
   const set = new Set();
   if (doc) {
     for (const { lesson } of collectLpLessons(doc)) {
-      if (getRecallQuestionsFull(lesson).length >= 3) {
+      if (getRecallQuestionsFull(lesson).length >= MIN_RECALL_QUESTIONS) {
         set.add(String(lesson.id).trim());
       }
     }
@@ -60,18 +67,11 @@ async function getRecallGatedLessonIdSet() {
  */
 async function getRecallQuizDelivery(lessonId) {
   const hit = await findLpLessonById(lessonId);
-  if (!hit) {
-    const err = new Error('Không tìm thấy bài trong lộ trình');
-    err.status = 404;
-    err.code = 'LESSON_NOT_FOUND';
-    throw err;
-  }
+  if (!hit) throw lessonNotFound();
+
   const questions = getRecallQuestionsFull(hit.lesson);
-  if (questions.length < 3) {
-    const err = new Error('Bài này chưa có kiểm tra nhanh (mastery)');
-    err.status = 404;
-    err.code = 'RECALL_QUIZ_UNAVAILABLE';
-    throw err;
+  if (questions.length < MIN_RECALL_QUESTIONS) {
+    throw new AppError(404, 'RECALL_QUIZ_UNAVAILABLE', 'Bài này chưa có kiểm tra nhanh (mastery)');
   }
   return {
     lessonId: String(hit.lesson.id),
@@ -89,38 +89,24 @@ async function getRecallQuizDelivery(lessonId) {
  * @param {Record<string, number>} answers
  */
 async function submitRecallQuiz(userId, lessonId, answers) {
-  if (!userId) {
-    const err = new Error('Đăng nhập để nộp bài kiểm tra');
-    err.status = 401;
-    err.code = 'AUTH_REQUIRED';
-    throw err;
-  }
+  if (!userId) throw new AppError(401, 'AUTH_REQUIRED', 'Đăng nhập để nộp bài kiểm tra');
+
   const hit = await findLpLessonById(lessonId);
-  if (!hit) {
-    const err = new Error('Không tìm thấy bài trong lộ trình');
-    err.status = 404;
-    err.code = 'LESSON_NOT_FOUND';
-    throw err;
-  }
+  if (!hit) throw lessonNotFound();
+
   const questions = getRecallQuestionsFull(hit.lesson);
 
   const normalizedAnswers = {};
-  for (const q of questions) {
-    const raw = answers?.[q.id];
+  for (const question of questions) {
+    const raw = answers?.[question.id];
     if (raw === undefined || raw === null) {
-      const err = new Error('Chưa trả lời đủ câu hỏi');
-      err.status = 400;
-      err.code = 'INCOMPLETE_ANSWERS';
-      throw err;
+      throw new AppError(400, 'INCOMPLETE_ANSWERS', 'Chưa trả lời đủ câu hỏi');
     }
-    const idx = Number(raw);
-    if (!Number.isFinite(idx) || idx < 0 || idx >= (q.options || []).length) {
-      const err = new Error('Đáp án không hợp lệ');
-      err.status = 400;
-      err.code = 'INVALID_ANSWER';
-      throw err;
+    const index = Number(raw);
+    if (!Number.isFinite(index) || index < 0 || index >= (question.options || []).length) {
+      throw new AppError(400, 'INVALID_ANSWER', 'Đáp án không hợp lệ');
     }
-    normalizedAnswers[q.id] = Math.floor(idx);
+    normalizedAnswers[question.id] = Math.floor(index);
   }
 
   const graded = gradeAnswers(questions, normalizedAnswers);
@@ -153,7 +139,9 @@ async function filterRecallGatedMasteredIds(userId, requestedMasteredIds) {
   const gated = await getRecallGatedLessonIdSet();
   if (!gated.size) return requestedMasteredIds;
 
-  const doc = await UserProgress.findOne({ userId }).select('learningPathMasteredLessonIds').lean();
+  const doc = await userProgressRepository.findForUser(userId, {
+    projection: 'learningPathMasteredLessonIds',
+  });
   const existing = new Set((doc?.learningPathMasteredLessonIds || []).map(String));
 
   return (requestedMasteredIds || []).filter((id) => {
