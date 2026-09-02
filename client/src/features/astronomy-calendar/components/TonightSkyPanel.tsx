@@ -102,7 +102,15 @@ export function TonightSkyPanel({
   const lon = query.lon ?? data?.observer?.lon
   const { data: weather } = useSkyWeather(lat ?? NaN, lon ?? NaN, Number.isFinite(lat) && Number.isFinite(lon))
 
-  const items = [...(data?.live ?? []), ...(data?.upcoming ?? [])].slice(0, maxItems)
+  // Combine live, upcoming, and featured urgency events for chip display
+  const liveUpcoming = [...(data?.live ?? []), ...(data?.upcoming ?? [])]
+  const urgencyEvents = [
+    ...(featured?.urgency?.event ? [featured.urgency.event] : []),
+    ...(featured?.secondaryUrgency?.event ? [featured.secondaryUrgency.event] : []),
+  ]
+  const allEvents = [...liveUpcoming, ...urgencyEvents]
+  const items = allEvents.slice(0, maxItems)
+  const hasAnyContent = items.length > 0
 
   return (
     <section
@@ -135,22 +143,13 @@ export function TonightSkyPanel({
         </div>
       </div>
 
-      {featured?.urgency || featured?.secondaryUrgency ? (
-        <CalendarUrgencyBanner
-          urgency={featured.urgency ?? null}
-          secondaryUrgency={featured.secondaryUrgency ?? null}
-          nextEclipseTitle={featured.nextEclipse?.titleVi ?? null}
-          className="mb-4"
-        />
-      ) : null}
-
       {loading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {[1, 2, 3].map((i) => (
             <div key={i} className="h-32 animate-pulse rounded-xl bg-white/[0.04]" style={chamfer(10)} />
           ))}
         </div>
-      ) : error || items.length === 0 ? (
+      ) : error || !hasAnyContent ? (
         <p className="text-sm text-ds-text-muted">
           Chưa có sự kiện nổi bật cho đêm nay — thử{' '}
           <Link href="/calendar" className="text-ds-accent hover:underline">
