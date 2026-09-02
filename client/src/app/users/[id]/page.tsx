@@ -203,7 +203,7 @@ export default function PublicUserProfilePage() {
           </div>
           <div className="rounded-xl border border-ds-border bg-white/[0.03] p-4 text-center col-span-2 sm:col-span-2">
             <p className="text-lg font-semibold text-ds-text inline-flex items-center justify-center gap-1.5">
-              <Gem className="h-4 w-4 text-cyan-400" aria-hidden />
+              <Gem className="h-4 w-4 text-ds-gem" aria-hidden />
               {profile.totalGemsEarned.toLocaleString('vi-VN')}
             </p>
             <p className="text-[11px] text-ds-subtle mt-1">

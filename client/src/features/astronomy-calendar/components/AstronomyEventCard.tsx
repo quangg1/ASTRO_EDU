@@ -214,7 +214,7 @@ export function AstronomyEventCard({
           ) : null}
           {showEngagement && checkInHint ? (
             <p className="mt-3 inline-flex items-center gap-1.5 text-[11px] text-slate-400">
-              <Gem className="h-3.5 w-3.5 shrink-0 text-amber-400/80" />
+              <Gem className="h-3.5 w-3.5 shrink-0 text-ds-gem/80" />
               {checkInHint}
             </p>
           ) : null}

@@ -41,10 +41,15 @@
   --color-accent-strong: rgba(126, 231, 255, 0.35);
   --color-accent-fg: #042028;
 
-  /** Secondary — emphasis trong heading, gem, warmth */
+  /** Secondary — emphasis trong heading, streak, warmth */
   --color-brand-amber: #f5a524;
   --color-brand-amber-soft: rgba(245, 165, 36, 0.14);
   --color-brand-amber-fg: #1a0e00;
+
+  /** Gem currency — SSOT cho gem UI (icon, số, wallet) */
+  --color-gem: #7ee7ff;
+  --color-gem-soft: rgba(126, 231, 255, 0.12);
+  --color-gem-fg: #042028;
 
   /** Highlight — marketing hero, featured ring (dùng tiết kiệm) */
   --color-brand-highlight: #c41e3a;

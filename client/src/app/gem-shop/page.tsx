@@ -241,7 +241,7 @@ export default function GemShopPage() {
           // 05 · gem · exchange
         </span>
         <div className="flex items-center gap-5" style={{ ...mono, fontSize: 10, letterSpacing: '0.12em', color: 'var(--color-text-subtle)' }}>
-          <span>Wallet · <span style={{ color: 'var(--color-brand-amber)' }}>{balance} GEM</span></span>
+          <span>Wallet · <span style={{ color: 'var(--color-gem)' }}>{balance} GEM</span></span>
           <span style={{ color: categories.length > 0 ? '#6dffb0' : '#ff5cd4' }}>
             {categories.length > 0 ? '● LIVE' : '● LAUNCHING SOON'}
           </span>
@@ -359,7 +359,7 @@ export default function GemShopPage() {
           </div>
           <p style={{ fontSize: 14, color: 'var(--color-text-muted)', lineHeight: 1.6 }}>
             Bạn đang có{' '}
-            <span style={{ color: 'var(--color-brand-amber)', fontWeight: 600, fontSize: 16 }}>{balance} GEM</span>
+            <span style={{ color: 'var(--color-gem)', fontWeight: 600, fontSize: 16 }}>{balance} GEM</span>
             {' '}trong ví. Tiếp tục hoàn thành bài học và nhiệm vụ để tích lũy thêm.
           </p>
         </div>

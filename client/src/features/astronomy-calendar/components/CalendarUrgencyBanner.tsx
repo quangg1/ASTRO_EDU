@@ -58,7 +58,7 @@ function PrimaryBanner({
               {content.subtitleVi || content.subtitleEn || item.event.summaryVi}
             </p>
             {gem && (item.event.eventKind || 'observable') === 'observable' ? (
-              <p className="mt-2 inline-flex items-center gap-1 text-xs text-ds-amber">
+              <p className="mt-2 inline-flex items-center gap-1 text-xs text-ds-gem">
                 <Gem className="h-3.5 w-3.5" />+{gem} gem khi check-in
               </p>
             ) : null}

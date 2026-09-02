@@ -71,6 +71,10 @@ const config: Config = {
         'ds-amber': 'var(--color-brand-amber)',
         'ds-highlight': 'var(--color-brand-highlight)',
 
+        'ds-gem': 'var(--color-gem)',
+        'ds-gem-soft': 'var(--color-gem-soft)',
+        'ds-gem-fg': 'var(--color-gem-fg)',
+
         // ── Domain palettes (referenced by 3D content; not theme tokens) ──
         'earth': {
           'hadean': '#8B4513',

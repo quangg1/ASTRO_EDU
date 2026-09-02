@@ -290,7 +290,7 @@ export function AstronomyEventDetailSheet({ event, open, onClose }: Props) {
           </div>
           {checkInHint ? (
             <p className="mt-2 inline-flex items-center gap-1.5 text-xs text-ds-subtle">
-              <Gem className="h-3.5 w-3.5 shrink-0 text-ds-amber/80" />
+              <Gem className="h-3.5 w-3.5 shrink-0 text-ds-gem/80" />
               {checkInHint}
             </p>
           ) : null}

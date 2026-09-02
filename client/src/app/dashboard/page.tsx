@@ -321,7 +321,7 @@ export default function DashboardOverviewPage() {
           <div className="grid grid-cols-2 gap-4 mb-4">
             <div>
               <p className="dash-mono text-[10px] uppercase mb-1 flex items-center gap-1.5" style={{ color: '#8a9bb8', letterSpacing: '0.12em' }}>
-                <Users2 size={10} strokeWidth={1.6} />
+                <Users2 size={10} strokeWidth={1.6} style={{ color: 'var(--color-brand-amber)' }} />
                 điểm cộng đồng
               </p>
               <p
@@ -336,13 +336,13 @@ export default function DashboardOverviewPage() {
             </div>
             <div>
               <p className="dash-mono text-[10px] uppercase mb-1 flex items-center gap-1.5" style={{ color: '#8a9bb8', letterSpacing: '0.12em' }}>
-                <Gem size={10} strokeWidth={1.6} style={{ color: 'var(--color-accent)' }} />
+                <Gem size={10} strokeWidth={1.6} style={{ color: 'var(--color-gem)' }} />
                 gem
               </p>
               <p
                 className="dash-font text-5xl font-normal leading-none"
                 style={{
-                  background: 'linear-gradient(180deg,#ffd27a 0%,var(--color-brand-amber) 100%)',
+                  background: 'linear-gradient(180deg,color-mix(in srgb, var(--color-gem) 85%, white) 0%,var(--color-gem) 100%)',
                   WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
                 }}
               >

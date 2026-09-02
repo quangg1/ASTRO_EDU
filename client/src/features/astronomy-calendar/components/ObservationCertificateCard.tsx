@@ -187,9 +187,9 @@ export const ObservationCertificateCard = forwardRef<HTMLDivElement, Props>(func
             <div
               className="inline-flex items-center gap-1.5 rounded-xl border px-3 py-2 text-sm font-semibold"
               style={{
-                borderColor: 'color-mix(in srgb, #fbbf24 35%, transparent)',
-                background: 'color-mix(in srgb, #fbbf24 10%, transparent)',
-                color: '#fde68a',
+                borderColor: 'color-mix(in srgb, var(--color-gem) 35%, transparent)',
+                background: 'color-mix(in srgb, var(--color-gem) 10%, transparent)',
+                color: 'var(--color-gem)',
               }}
             >
               <Gem className="h-4 w-4" />+{gemAmount} gem
