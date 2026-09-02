@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-13T08:35:57.748Z",
+  "generatedAt": "2026-09-02T06:31:00.128Z",
   "routes": [
     {
       "route": "/admin/astronomy-calendar",
@@ -2643,20 +2643,20 @@
     {
       "route": "/dashboard",
       "page": "src/app/dashboard/page.tsx",
-      "lineCount": 541,
+      "lineCount": 570,
       "hasTrace": false,
       "features": [
         "astronomy-calendar",
         "auth",
+        "dashboard",
         "learning-path",
-        "onboarding",
         "rewards"
       ],
       "entryPoints": [
         "@/features/astronomy-calendar/public",
         "@/features/auth/public",
+        "@/features/dashboard/public",
         "@/features/learning-path/public",
-        "@/features/onboarding/public",
         "@/features/rewards/public"
       ],
       "apiFiles": [
@@ -2667,7 +2667,6 @@
         "src/features/auth/api/teacherApplicationsApi.ts",
         "src/features/auth/api/teacherProfileApi.ts",
         "src/features/learning-path/api/learningPathApi.ts",
-        "src/features/onboarding/api/onboardingApi.ts",
         "src/features/rewards/api/avatarDecorationApi.ts",
         "src/features/rewards/api/gemShopPublicApi.ts",
         "src/features/rewards/api/learnerTiersApi.ts",
@@ -2707,10 +2706,6 @@
         "/learner-tiers",
         "/learning-path",
         "/lessons/",
-        "/onboarding/complete",
-        "/onboarding/me",
-        "/onboarding/options",
-        "/onboarding/skip",
         "/recall-quiz",
         "/recall-quiz/submit",
         "/remind",
@@ -2731,7 +2726,6 @@
         "/api/concepts",
         "/api/gems",
         "/api/learning-path",
-        "/api/onboarding",
         "/api/showcase"
       ],
       "backendFeatures": [
@@ -2739,7 +2733,6 @@
         "astronomy-calendar",
         "concepts",
         "learning-path",
-        "onboarding",
         "rewards"
       ]
     },

@@ -37,7 +37,7 @@ Page → features → API paths → backend mounts. Regenerate: `node scripts/ge
 | `/courses/[slug]` | 44 | courses | /api/courses, /api/tutorials | — |
 | `/courses` | 621 | courses | /api/courses, /api/tutorials | MISSING |
 | `/dashboard/moderate` | 414 | auth | /api/admin | MISSING |
-| `/dashboard` | 541 | astronomy-calendar, auth, learning-path, onboarding, rewards | /api/admin, /api/astronomy-calendar, /api/concepts, /api/gems, /api/learning-path, /api/onboarding, /api/showcase | MISSING |
+| `/dashboard` | 570 | astronomy-calendar, auth, dashboard, learning-path, rewards | /api/admin, /api/astronomy-calendar, /api/concepts, /api/gems, /api/learning-path, /api/showcase | MISSING |
 | `/dashboard/saved` | 10 | saved | /api/users | — |
 | `/explore` | 20 | — | — | yes |
 | `/forgot-password` | 89 | auth | /api/admin | — |
@@ -339,11 +339,11 @@ Page → features → API paths → backend mounts. Regenerate: `node scripts/ge
 
 ### `/dashboard`
 
-- **page:** `src/app/dashboard/page.tsx` (541 lines)
-- **features:** `astronomy-calendar`, `auth`, `learning-path`, `onboarding`, `rewards`
-- **entry:** `@/features/astronomy-calendar/public`, `@/features/auth/public`, `@/features/learning-path/public`, `@/features/onboarding/public`, `@/features/rewards/public`
+- **page:** `src/app/dashboard/page.tsx` (570 lines)
+- **features:** `astronomy-calendar`, `auth`, `dashboard`, `learning-path`, `rewards`
+- **entry:** `@/features/astronomy-calendar/public`, `@/features/auth/public`, `@/features/dashboard/public`, `@/features/learning-path/public`, `@/features/rewards/public`
 - **api paths (sampled):** `/api/admin/teacher-applications`, `/api/admin/teacher-applications/`, `/astronomy-calendar`, `/auth/change-password`, `/auth/firebase`, `/auth/forgot-password`, `/auth/login`, `/auth/logout`, `/auth/me`, `/auth/register`, `/auth/register/resend-verification`, `/auth/register/verify-email`
-- **backend:** `/api/admin` (admin), `/api/astronomy-calendar` (astronomy-calendar), `/api/concepts` (concepts), `/api/gems` (rewards), `/api/learning-path` (learning-path), `/api/onboarding` (onboarding), `/api/showcase` (rewards)
+- **backend:** `/api/admin` (admin), `/api/astronomy-calendar` (astronomy-calendar), `/api/concepts` (concepts), `/api/gems` (rewards), `/api/learning-path` (learning-path), `/api/showcase` (rewards)
 - **TRACE:** MISSING (required for pages ≥400 LOC)
 
 ### `/dashboard/saved`
