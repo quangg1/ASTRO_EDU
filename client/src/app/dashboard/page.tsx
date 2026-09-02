@@ -19,13 +19,9 @@ import { getLessonById } from '@/data/learningPathCurriculum'
 import { loadGemWallet, syncGemWallet } from '@/features/rewards/public'
 import { fetchLearnerTiersWithProgress, type LearnerTierProgress } from '@/features/rewards/public'
 import { useLiveClock } from '@/hooks/useLiveClock'
-import {
-  DashboardForYouPanel,
-  DashboardOnboardingWelcome,
-  LearningStartGuide,
-} from '@/features/onboarding/public'
 import { TonightSkyPanel } from '@/features/astronomy-calendar/public'
 import { useLearnerNextAction } from '@/features/learning-path/public'
+import { WelcomeBanner, ContinueLearningCard } from '@/features/dashboard/public'
 
 const chamfer = (cut = 18) => ({
   clipPath: `polygon(${cut}px 0,100% 0,100% calc(100% - ${cut}px),calc(100% - ${cut}px) 100%,0 100%,0 ${cut}px)`,
@@ -156,16 +152,9 @@ export default function DashboardOverviewPage() {
 
   return (
     <div className="space-y-6">
-      {/* Page Head */}
+      {/* Header Row: Title + Session Clock */}
       <header className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <p
-            className="dash-mono text-[10px] uppercase flex items-center gap-2"
-            style={{ color: '#8a9bb8', letterSpacing: '0.18em', marginBottom: 50 }}
-          >
-            <span style={{ width: 20, height: 1, background: 'rgba(126,231,255,0.25)', display: 'inline-block', verticalAlign: 'middle' }} />
-            // 01 · bảng điều khiển / tổng quan
-          </p>
           <h1
             className="dash-font font-medium leading-none"
             style={{ fontSize: 'clamp(40px,4vw,56px)', letterSpacing: '-0.03em', color: 'var(--color-text-primary)' }}
@@ -182,20 +171,60 @@ export default function DashboardOverviewPage() {
             {zoneLabel} {localTime}
           </p>
           <p className="dash-mono text-[11px] mt-0.5" style={{ color: 'var(--color-text-subtle)' }}>
-            PHIÊN <span style={{ color: 'var(--color-accent)' }}>#A-7321</span>
+            Phiên đang mở
           </p>
         </div>
       </header>
 
-      <Suspense fallback={null}>
-        <DashboardOnboardingWelcome explainOnly />
-      </Suspense>
-      <LearningStartGuide compact primaryOnly hideKnowledgeMap />
-      {showSecondaryRecs ? <DashboardForYouPanel secondaryOnly /> : null}
+      {/* Welcome Banner */}
+      {user ? (
+        <WelcomeBanner
+          userName={user.displayName || user.email?.split('@')[0] || 'Học viên'}
+          userAvatar={user.avatar}
+          onboardingTip="Hoàn thành một bài mỗi ngày và giữ chuỗi học tập của bạn!"
+          streakDays={0}
+        />
+      ) : null}
 
-      <TonightSkyPanel maxItems={3} />
+      {/* Two-Column Row: Continue Learning + Tonight Sky */}
+      <section className="grid grid-cols-1 lg:grid-cols-[1.5fr_1fr] gap-4">
+        {/* Continue Learning Card */}
+        {currentLearningPathModule ? (
+          <ContinueLearningCard
+            title={currentLearningPathModule.module.titleVi}
+            description={currentLearningPathModule.module.goalVi || 'Tiếp tục khám phá các chủ đề về vũ trụ và hành tinh trong lộ trình học.'}
+            tags={['Chương 1', 'Khoa học vũ trụ']}
+            progress={currentModulePct}
+            href={`/tutorial/${currentLearningPathModule.module.id}`}
+            moduleId={currentLearningPathModule.module.id}
+          />
+        ) : (
+          <div
+            className="relative cosmo-dark-panel rounded-2xl p-6 flex flex-col items-center justify-center text-center"
+            style={{ minHeight: 280 }}
+          >
+            <p className="text-sm mb-4" style={{ color: 'var(--color-text-muted)' }}>
+              Bắt đầu lộ trình học để theo dõi tiến độ tại đây.
+            </p>
+            <Link
+              href="/tutorial"
+              className="inline-flex items-center gap-2 px-5 py-3 font-medium transition-all"
+              style={{
+                background: 'linear-gradient(135deg, var(--color-brand-amber) 0%, #ffa726 100%)',
+                color: '#0a0f17',
+                ...chamfer(10),
+              }}
+            >
+              Khám phá lộ trình
+            </Link>
+          </div>
+        )}
 
-      {/* Stats Row — 3 cards */}
+        {/* Tonight Sky Panel */}
+        <TonightSkyPanel maxItems={3} />
+      </section>
+
+      {/* Three-Column Stats Row: Level + Streak + Gem/Community */}
       <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
 
         {/* Card 1 — Cấp độ */}
@@ -297,7 +326,7 @@ export default function DashboardOverviewPage() {
                   backgroundClip: 'text',
                 }}
               >
-                1
+                0
               </p>
               <p className="dash-mono text-[11px] uppercase mt-1" style={{ color: 'var(--color-brand-amber)', letterSpacing: '0.15em' }}>
                 // ngày
@@ -309,7 +338,7 @@ export default function DashboardOverviewPage() {
             style={{ borderTop: '1px dashed rgba(245,165,36,0.2)' }}
           >
             <span className="dash-mono text-[10px]" style={{ color: 'var(--color-text-subtle)' }}>Chuỗi dài nhất</span>
-            <span className="dash-mono text-[11px] font-medium" style={{ color: 'var(--color-brand-amber)' }}>1 ngày</span>
+            <span className="dash-mono text-[11px] font-medium" style={{ color: 'var(--color-brand-amber)' }}>0 ngày</span>
           </div>
         </HudPanel>
 
