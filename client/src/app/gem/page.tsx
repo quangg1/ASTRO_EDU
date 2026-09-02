@@ -235,7 +235,7 @@ export default function GemPage() {
           // 04 · gem · constellation
         </span>
         <div className="flex items-center gap-5" style={{ ...mono, fontSize: 10, letterSpacing: '0.12em', color: 'var(--color-text-subtle)' }}>
-          <span>Wallet · <span style={{ color: 'var(--color-brand-amber)' }}>{wallet.balance} GEM</span></span>
+          <span>Wallet · <span style={{ color: 'var(--color-gem)' }}>{wallet.balance} GEM</span></span>
           <span>Sync · <span style={{ color: '#6dffb0' }}>●</span></span>
             <span className="hidden sm:inline">
               {zoneLabel} · <span style={{ color: 'var(--color-text-muted)' }}>{localTime}</span>

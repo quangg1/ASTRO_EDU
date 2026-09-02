@@ -394,7 +394,7 @@ export function ShowcaseEntityPanel({
               <Sparkles className="h-3 w-3 text-ds-accent" strokeWidth={1.75} />
               {t('explore.showcaseYourGems')}
             </span>
-            <span className="tabular-nums font-semibold text-ds-accent">{gamification.gemBalance}</span>
+            <span className="tabular-nums font-semibold text-ds-gem">{gamification.gemBalance}</span>
           </div>
 
           {gamification.showOrbitUnlock && gamification.orbitUnlocked === false ? (
