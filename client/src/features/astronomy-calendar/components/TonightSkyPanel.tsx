@@ -5,15 +5,89 @@ import { Cloud, Moon, Telescope } from 'lucide-react'
 import { useTonightAstronomyCalendar, useAstronomyFeatured } from '../hooks/useAstronomyCalendar'
 import { useSkyWeather } from '../hooks/useSkyWeather'
 import type { AstronomyCalendarQuery } from '../api/astronomyCalendarApi'
-import { AstronomyEventCard } from './AstronomyEventCard'
 import { CalendarUrgencyBanner } from './CalendarUrgencyBanner'
-import { Brackets } from './calendarUiPrimitives'
+import { Brackets, EventTypeIcon, resolveEventTheme, resolveEventIconKey } from './calendarUiPrimitives'
+import { formatEventWhen } from '../lib/eventUi'
+import { resolveEventContent } from '../lib/eventContent'
+import type { AstronomyCalendarEvent } from '../types'
 
 type Props = {
   query?: AstronomyCalendarQuery
   title?: string
   maxItems?: number
   className?: string
+}
+
+const chamfer = (cut = 10) => ({
+  clipPath: `polygon(${cut}px 0,100% 0,100% calc(100% - ${cut}px),calc(100% - ${cut}px) 100%,0 100%,0 ${cut}px)`,
+})
+
+const ACCENT_COLORS = [
+  'var(--color-accent)',       // cyan
+  'var(--color-brand-amber)',  // amber
+  'var(--color-brand-magenta)', // magenta
+]
+
+function TonightEventChip({ event, index }: { event: AstronomyCalendarEvent; index: number }) {
+  const theme = resolveEventTheme(event)
+  const iconKey = resolveEventIconKey(event)
+  const when = formatEventWhen(event.peakAt || event.startAt)
+  const content = resolveEventContent(event)
+  const accentColor = ACCENT_COLORS[index % ACCENT_COLORS.length]
+
+  return (
+    <Link
+      href={event.exploreHref}
+      className="block transition-all hover:scale-[1.02]"
+      style={{
+        background: 'var(--color-bg-surface)',
+        border: `1px solid color-mix(in srgb, ${accentColor} 25%, var(--color-border))`,
+        padding: 16,
+        ...chamfer(10),
+      }}
+    >
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center justify-between">
+          <div
+            className="flex items-center justify-center shrink-0"
+            style={{
+              width: 36,
+              height: 36,
+              border: `1.5px solid color-mix(in srgb, ${accentColor} 40%, transparent)`,
+              background: `color-mix(in srgb, ${accentColor} 10%, transparent)`,
+              boxShadow: `0 0 12px color-mix(in srgb, ${accentColor} 20%, transparent)`,
+              ...chamfer(8),
+            }}
+          >
+            <EventTypeIcon type={event.type} iconKey={iconKey} accent={accentColor} className="h-4 w-4" />
+          </div>
+          {when ? (
+            <p
+              className="dash-mono text-[10px] font-medium uppercase"
+              style={{ color: accentColor, letterSpacing: '0.1em' }}
+            >
+              {when.split(' ')[0]}
+            </p>
+          ) : null}
+        </div>
+        <div>
+          <h3
+            className="text-sm font-semibold leading-tight mb-1"
+            style={{ color: 'var(--color-text-primary)' }}
+          >
+            {event.titleVi}
+          </h3>
+          <p
+            className="text-[11px] leading-relaxed line-clamp-2"
+            style={{ color: 'var(--color-text-muted)' }}
+          >
+            {content.typeLabelVi}
+            {event.summaryVi ? ` · ${event.summaryVi.slice(0, 60)}${event.summaryVi.length > 60 ? '...' : ''}` : ''}
+          </p>
+        </div>
+      </div>
+    </Link>
+  )
 }
 
 export function TonightSkyPanel({
@@ -71,9 +145,9 @@ export function TonightSkyPanel({
       ) : null}
 
       {loading ? (
-        <div className="space-y-3">
-          {[1, 2].map((i) => (
-            <div key={i} className="h-20 animate-pulse rounded-xl bg-white/[0.04]" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-32 animate-pulse rounded-xl bg-white/[0.04]" style={chamfer(10)} />
           ))}
         </div>
       ) : error || items.length === 0 ? (
@@ -89,9 +163,9 @@ export function TonightSkyPanel({
           .
         </p>
       ) : (
-        <div className="space-y-3">
-          {items.map((ev) => (
-            <AstronomyEventCard key={ev.id} event={ev} compact showEngagement={false} />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {items.map((ev, idx) => (
+            <TonightEventChip key={ev.id} event={ev} index={idx} />
           ))}
         </div>
       )}
