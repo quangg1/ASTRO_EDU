@@ -182,7 +182,7 @@ export default function DashboardOverviewPage() {
           userName={user.displayName || user.email?.split('@')[0] || 'Học viên'}
           userAvatar={user.avatar}
           onboardingTip="Hoàn thành một bài mỗi ngày và giữ chuỗi học tập của bạn!"
-          streakDays={1}
+          streakDays={0}
         />
       ) : null}
 
@@ -326,7 +326,7 @@ export default function DashboardOverviewPage() {
                   backgroundClip: 'text',
                 }}
               >
-                1
+                0
               </p>
               <p className="dash-mono text-[11px] uppercase mt-1" style={{ color: 'var(--color-brand-amber)', letterSpacing: '0.15em' }}>
                 // ngày
@@ -338,7 +338,7 @@ export default function DashboardOverviewPage() {
             style={{ borderTop: '1px dashed rgba(245,165,36,0.2)' }}
           >
             <span className="dash-mono text-[10px]" style={{ color: 'var(--color-text-subtle)' }}>Chuỗi dài nhất</span>
-            <span className="dash-mono text-[11px] font-medium" style={{ color: 'var(--color-brand-amber)' }}>1 ngày</span>
+            <span className="dash-mono text-[11px] font-medium" style={{ color: 'var(--color-brand-amber)' }}>0 ngày</span>
           </div>
         </HudPanel>
 
