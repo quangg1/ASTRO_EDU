@@ -1,5 +1,5 @@
 import { getStaticAssetUrl, resolveMediaUrl } from '@/lib/apiConfig'
-import type { ShowcaseOrbitEntity } from '@/lib/showcaseEntities'
+import type { ShowcaseOrbitEntity } from '@/features/content3d/showcase/lib/showcaseEntities'
 
 /** Diffuse/normal/spec/model URLs accepted from CMS — CDN, uploads, hoặc static trong `public`. */
 export function isResolvableShowcaseAssetUrl(raw: string | undefined | null): boolean {

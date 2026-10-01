@@ -7,7 +7,7 @@ import * as THREE from 'three'
 import { useGLTF, OrbitControls, Environment } from '@react-three/drei'
 import type { IconicOrganism } from '@/features/content3d/earth/lib/iconicOrganisms'
 import { getStaticAssetUrl } from '@/lib/apiConfig'
-import { configureGltfRenderer, prepareGltfSceneForDisplay } from '@/lib/gltfDisplay'
+import { configureGltfRenderer, prepareGltfSceneForDisplay } from '../lib/gltfDisplay'
 
 const Canvas = dynamic(() => import('@react-three/fiber').then((m) => m.Canvas), { ssr: false })
 

@@ -9,8 +9,8 @@ import {
 } from '@/app/studio/showcase-entities/showcaseEntityHierarchy'
 import { useShowcaseStore } from '@/features/content3d/showcase/public'
 import type { ShowcaseEntityContentDTO } from '@/features/content3d/showcase/public'
-import type { ResolvedNasaCatalogItem } from '@/lib/mergeShowcaseCatalog'
-import { NASA_SHOWCASE_ITEMS } from '@/lib/showcaseEntities'
+import type { ResolvedNasaCatalogItem } from '@/features/content3d/showcase/public'
+import { NASA_SHOWCASE_ITEMS } from '@/features/content3d/showcase/public'
 
 type Props = {
   open: boolean

@@ -9,8 +9,8 @@ import {
 } from '@/app/studio/showcase-entities/showcaseEntityHierarchy'
 import type { ShowcaseEditorCatalogItem } from '@/features/content3d/showcase/public'
 import type { ShowcaseEntityContentDTO } from '@/features/content3d/showcase/public'
-import { NASA_SHOWCASE_ITEMS } from '@/lib/showcaseEntities'
-import { planetsData } from '@/lib/solarSystemData'
+import { NASA_SHOWCASE_ITEMS } from '@/features/content3d/showcase/public'
+import { planetsData } from '@/features/content3d/showcase/public'
 
 const CORE_PLANETS = new Set([
   'planet-mercury',

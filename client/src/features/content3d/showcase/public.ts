@@ -91,3 +91,7 @@ export {
   StudioShowcaseEntitiesPageWithSuspense,
 } from './ui/studio/StudioShowcaseEntitiesPage'
 export { ShowcaseCatalogProvider, useShowcaseCatalogGen } from './ui/ShowcaseCatalogProvider'
+export * from './lib/showcaseEntities'
+export * from './lib/showcaseCatalogRefresh'
+export * from './lib/mergeShowcaseCatalog'
+export * from './lib/solarSystemData'

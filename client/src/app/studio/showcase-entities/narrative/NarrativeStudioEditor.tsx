@@ -29,7 +29,7 @@ import {
   fetchEditorPlanetNarrative,
   savePlanetNarrative,
 } from '@/features/content3d/narrative/public'
-import { notifyShowcaseCatalogChanged } from '@/lib/showcaseCatalogRefresh'
+import { notifyShowcaseCatalogChanged } from '@/features/content3d/showcase/public'
 
 type SubTab = 'beat' | 'design' | 'sites' | 'fossils'
 

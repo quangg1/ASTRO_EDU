@@ -2,8 +2,8 @@
 
 import { useMemo, useRef } from 'react'
 import * as THREE from 'three'
-import type { PlanetData } from '@/lib/solarSystemData'
-import { computeOrbitalPosition } from '@/lib/solarOrbitMath'
+import type { PlanetData } from '@/features/content3d/showcase/lib/solarSystemData'
+import { computeOrbitalPosition } from '@/features/content3d/showcase/lib/solarOrbitMath'
 import { useLineProximityFade, type OrbitProximityFade } from '@/components/3d/orbitProximityFade'
 
 export function OrbitPath({

@@ -4,8 +4,8 @@ import { useRef, useMemo, useEffect } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { useGLTF } from '@react-three/drei'
 import * as THREE from 'three'
-import type { ShowcaseOrbitEntity } from '@/lib/showcaseEntities'
-import { resolveShowcaseEntitySpinPeriod } from '@/lib/showcaseEntities'
+import type { ShowcaseOrbitEntity } from '@/features/content3d/showcase/lib/showcaseEntities'
+import { resolveShowcaseEntitySpinPeriod } from '@/features/content3d/showcase/lib/showcaseEntities'
 
 export function ShowcaseModelEntityMesh({
   entity,

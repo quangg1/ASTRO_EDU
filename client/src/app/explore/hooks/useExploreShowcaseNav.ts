@@ -1,12 +1,12 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef } from 'react'
-import { planetsData } from '@/lib/solarSystemData'
-import { getNasaCatalogItemById } from '@/lib/showcaseEntities'
+import { planetsData } from '@/features/content3d/showcase/public'
+import { getNasaCatalogItemById } from '@/features/content3d/showcase/public'
 import { resolvePlanetAccent, useShowcaseStore } from '@/features/content3d/showcase/public'
 import { trackLearningPathBehavior } from '@/features/learning-path/public'
 import type { ShowcaseCameraSpherical } from '@/components/3d/showcase/ShowcaseCameraManager'
-import type { ResolvedNasaCatalogItem } from '@/lib/mergeShowcaseCatalog'
+import type { ResolvedNasaCatalogItem } from '@/features/content3d/showcase/public'
 import type { ReadonlyURLSearchParams } from 'next/navigation'
 
 type NavArgs = {

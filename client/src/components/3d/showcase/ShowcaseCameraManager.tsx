@@ -4,8 +4,8 @@ import { useRef, useEffect, useMemo } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib'
-import { NASA_SHOWCASE_ITEMS, SHOWCASE_ORBIT_ENTITIES } from '@/lib/showcaseEntities'
-import { planetsData } from '@/lib/solarSystemData'
+import { NASA_SHOWCASE_ITEMS, SHOWCASE_ORBIT_ENTITIES } from '@/features/content3d/showcase/lib/showcaseEntities'
+import { planetsData } from '@/features/content3d/showcase/lib/solarSystemData'
 import { useShowcaseStore } from '@/features/content3d/showcase/public'
 import { resolveShowcaseEntityCloseupDistance } from '@/features/content3d/showcase/lib/showcaseCameraFraming'
 
@@ -39,7 +39,7 @@ function sanitizeControlsCamera(c: OrbitControlsImpl) {
 
 function entityUsesOrbitalPosition(
   aid: string | null,
-  orbitEnt: import('@/lib/showcaseEntities').ShowcaseOrbitEntity | null | undefined,
+  orbitEnt: import('@/features/content3d/showcase/lib/showcaseEntities').ShowcaseOrbitEntity | null | undefined,
 ): boolean {
   if (!aid) return false
   if (aid.startsWith('moon-') || aid.startsWith('sc-') || aid.startsWith('comet-')) return true
@@ -84,7 +84,7 @@ type Props = {
   selectedIndex: number | null
   focusPlanetName?: string | null
   focusParentSystem?: boolean
-  orbitById?: Map<string, import('@/lib/showcaseEntities').ShowcaseOrbitEntity>
+  orbitById?: Map<string, import('@/features/content3d/showcase/lib/showcaseEntities').ShowcaseOrbitEntity>
   /** Initial URL-driven camera (optional) */
   initialSpherical?: { distance: number; az: number; el: number } | null
   /** Fires once per focus target when framing reaches FOCUSED (for URL sync). */

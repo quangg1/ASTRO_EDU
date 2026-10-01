@@ -16,7 +16,7 @@ import { EarthStage } from '@/types'
 /** Không pick mesh globe/lưới — để layer THREE.Points (hóa thạch) nhận raycast được. */
 export const globeSurfaceRaycast: THREE.Mesh['raycast'] = () => {}
 import { getStaticAssetUrl } from '@/lib/apiConfig'
-import { hasPaleoTexture, getPaleoTexturePath } from '@/lib/paleoTextureMap'
+import { hasPaleoTexture, getPaleoTexturePath } from '@/features/content3d/earth/lib/paleoTextureMap'
 
 const TEXTURE_BASE = '/textures'
 

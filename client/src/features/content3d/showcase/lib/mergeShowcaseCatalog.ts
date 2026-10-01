@@ -1,5 +1,5 @@
 import { getStaticAssetUrl, resolveMediaUrl } from '@/lib/apiConfig'
-import { isResolvableShowcaseAssetUrl } from '@/lib/showcaseMediaUrl'
+import { isResolvableShowcaseAssetUrl } from './showcaseMediaUrl'
 import { planetsData } from './solarSystemData'
 import {
   getNasaCatalogItemById,

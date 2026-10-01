@@ -6,8 +6,8 @@ import { Suspense } from 'react'
 import { preloadHipBrightCatalog } from '@/features/explore/public'
 import { isConstellationTargetId } from '@/features/explore/public'
 import { Loading } from '@/components/ui/Loading'
-import { planetsData } from '@/lib/solarSystemData'
-import { NASA_SHOWCASE_ITEMS } from '@/lib/showcaseEntities'
+import { planetsData } from '@/features/content3d/showcase/public'
+import { NASA_SHOWCASE_ITEMS } from '@/features/content3d/showcase/public'
 import type { ExplorePageModel } from '../hooks/useExplorePage'
 
 const EarthScene = dynamic(() => import('@/components/3d/EarthScene'), {

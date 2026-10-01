@@ -8,7 +8,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useTutorContextStore } from '@/features/courses/public'
 import { useAuthStore } from '@/features/auth/public'
-import { getAiChatUrl } from '@/lib/aiChatUrl'
+import { getAiChatUrl } from '../lib/aiChatUrl'
 import {
   AgentChips,
   AgentSuggestionsRail,

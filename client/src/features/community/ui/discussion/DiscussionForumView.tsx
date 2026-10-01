@@ -24,7 +24,7 @@ import { CommunitySearchBar } from '@/features/community/ui/shared/CommunitySear
 import { PostSortBar } from '@/features/community/ui/shared/PostSortBar'
 import { TagChips } from '@/features/community/ui/shared/TagChips'
 import { DiscussionPostList } from '@/features/community/ui/discussion/DiscussionPostList'
-import { readRouteCache, writeRouteCache } from '@/lib/clientRouteCache'
+import { readRouteCache, writeRouteCache } from '../../lib/clientRouteCache'
 
 const RichTextEditor = dynamic(() => import('@/components/studio/RichTextEditor'), {
   ssr: false,

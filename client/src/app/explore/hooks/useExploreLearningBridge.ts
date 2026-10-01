@@ -28,8 +28,8 @@ import {
 import type { LearningConcept } from '@/data/learningPathCurriculum'
 import type { LearningModule } from '@/data/learningPathCurriculum'
 import type { ShowcaseEntityContentDTO } from '@/features/content3d/showcase/public'
-import type { ResolvedNasaCatalogItem } from '@/lib/mergeShowcaseCatalog'
-import type { ShowcaseOrbitEntity } from '@/lib/showcaseEntities'
+import type { ResolvedNasaCatalogItem } from '@/features/content3d/showcase/public'
+import type { ShowcaseOrbitEntity } from '@/features/content3d/showcase/public'
 import type { QuizQuestion } from '@/shared/types/quizQuestion'
 import { postExploreLearningStateEvent } from '@/features/learning-state/public'
 import {

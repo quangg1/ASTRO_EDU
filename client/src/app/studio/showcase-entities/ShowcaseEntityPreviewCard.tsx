@@ -4,7 +4,7 @@ import { Suspense, useEffect, useMemo, useState } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { OrbitControls, Stars } from '@react-three/drei'
 import * as THREE from 'three'
-import type { ShowcaseOrbitEntity } from '@/lib/showcaseEntities'
+import type { ShowcaseOrbitEntity } from '@/features/content3d/showcase/public'
 import { ShowcaseEntityMesh } from '@/components/3d/showcase/ShowcaseEntityMesh'
 import { ErrorBoundary } from '@/components/system/ErrorBoundary'
 

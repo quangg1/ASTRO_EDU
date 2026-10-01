@@ -2,8 +2,8 @@ import type { Dispatch, SetStateAction } from 'react'
 import type { ShowcaseGamificationStrip } from '@/components/3d/showcase/ShowcaseEntityPanel'
 import type { ShowcaseCameraSpherical } from '@/components/3d/showcase/ShowcaseCameraManager'
 import type { ShowcaseEntityContentDTO, ShowcaseJplOrbitDTO } from '@/features/content3d/showcase/public'
-import type { ResolvedNasaCatalogItem } from '@/lib/mergeShowcaseCatalog'
-import type { ShowcaseOrbitEntity } from '@/lib/showcaseEntities'
+import type { ResolvedNasaCatalogItem } from '@/features/content3d/showcase/public'
+import type { ShowcaseOrbitEntity } from '@/features/content3d/showcase/public'
 import type { LearningConcept } from '@/data/learningPathCurriculum'
 import type { LessonVisited3DMap } from '@/features/learning-path/public'
 import type { QuizQuestion } from '@/shared/types/quizQuestion'
@@ -19,7 +19,7 @@ export type ExploreShowcaseCatalogSlice = {
   jplOrbits: ShowcaseJplOrbitDTO[]
   resolvedCatalog: ResolvedNasaCatalogItem[]
   mergedOrbitEntities: ShowcaseOrbitEntity[]
-  planetGlobeEntity: ReturnType<typeof import('@/lib/mergeShowcaseCatalog').buildPlanetGlobeEntity> | null
+  planetGlobeEntity: ReturnType<typeof import('@/features/content3d/showcase/public').buildPlanetGlobeEntity> | null
   planetHistoryLabel: string
   activeResolved: ResolvedNasaCatalogItem | null
   activeOrbitEntity: ShowcaseOrbitEntity | null

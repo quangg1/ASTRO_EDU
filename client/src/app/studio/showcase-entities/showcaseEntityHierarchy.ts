@@ -1,5 +1,5 @@
 import type { ShowcaseEntityContentDTO } from '@/features/content3d/showcase/public'
-import type { NasaCatalogItem } from '@/lib/showcaseEntities'
+import type { NasaCatalogItem } from '@/features/content3d/showcase/public'
 
 export type ShowcaseEntityGroup =
   | 'planets_moons'
