@@ -48,3 +48,8 @@ _local/
 PALEOMAP PaleoAtlas Rasters v3/
 lich_su_trai_dat_course/
 *.glb
+
+# Scratch từ agent / tool local, video thô
+.cursor-tmp/
+.tmp-*/
+/*.mp4

@@ -584,7 +584,7 @@ MongoDB was chosen as the primary database for the platform due to its flexibili
 
      1. ### **Use Case Diagram** {#use-case-diagram}
 
-The Cosmo Learn use case model is organized into **nine diagram pages** (draw.io): **01 Overview**, **02 Authentication & Account**, **03 Courses & Enrollment**, **04 Explore & 3D**, **05 Community**, **06 Rewards & Notifications**, **07 Studio (Teacher)**, **08 Administration**, and **09 AI Agent (Cosmo)**. The authoritative diagram source in the repository is `UC Diagram.drawio` (regenerate via `npm run diagrams:uc`). The generator script maintains **`CATALOG_UC50`**: exactly **50 ovals**, one per catalog row UC-01 … UC-50; the build fails if the diagram drifts from the catalog.
+The Cosmo Learn use case model is organized into **nine diagram pages** (draw.io): **01 Overview**, **02 Authentication & Account**, **03 Courses & Enrollment**, **04 Explore & 3D**, **05 Community**, **06 Rewards & Notifications**, **07 Studio (Teacher)**, **08 Administration**, and **09 AI Agent (Cosmo)**. The authoritative diagram source in the repository is `docs/diagrams/UC-Diagram.drawio` (regenerate via `npm run diagrams:uc`). The generator script maintains **`CATALOG_UC50`**: exactly **50 ovals**, one per catalog row UC-01 … UC-50; the build fails if the diagram drifts from the catalog.
 
 **Actors**
 
@@ -621,7 +621,7 @@ The Cosmo Learn use case model is organized into **nine diagram pages** (draw.io
 
 ![][image8]
 
-*Figure 1: Use Case Diagram (overview). Full multi-page model: repository `UC Diagram.drawio` or [Google Drive export](https://drive.google.com/file/d/14vTTygqAD97MRCHE_BNVDCB-SZjKiEHS/view?usp=drive_link).*
+*Figure 1: Use Case Diagram (overview). Full multi-page model: repository `docs/diagrams/UC-Diagram.drawio` or [Google Drive export](https://drive.google.com/file/d/14vTTygqAD97MRCHE_BNVDCB-SZjKiEHS/view?usp=drive_link).*
 
 2. ### **Use Case Catalog** {#use-case-catalog}
 

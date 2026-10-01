@@ -1,6 +1,6 @@
 # Extended use case specifications
 
-Companion to **FinalReport.docx.md** §3.4.2 (catalog **UC-01 … UC-50**). Wording is requirements-level (no implementation identifiers).
+Companion to **[FinalReport](report/FinalReport.md)** §3.4.2 (catalog **UC-01 … UC-50**). Wording is requirements-level (no implementation identifiers).
 
 Inline §3.4.3 covers UC-01–UC-14, UC-17–UC-22, UC-25, UC-37–UC-43, UC-45, UC-47, and UC-08 where listed.
 
@@ -166,16 +166,16 @@ Inline §3.4.3 covers UC-01–UC-14, UC-17–UC-22, UC-25, UC-37–UC-43, UC-45,
 
 ## UC-46 Manage Order
 
-Full specification: **FinalReport.docx.md** §3.4.3 item **28)** (Manage Order).
+Full specification: **[FinalReport](report/FinalReport.md)** §3.4.3 item **28)** (Manage Order).
 
 ## UC-48 Manage Gem Economy
 
-Full specification: **FinalReport.docx.md** §3.4.3 item **30)** (Manage Gem Economy).
+Full specification: **[FinalReport](report/FinalReport.md)** §3.4.3 item **30)** (Manage Gem Economy).
 
 ## UC-49 Promo & Broadcast
 
-Full specification: **FinalReport.docx.md** §3.4.3 item **31)** (Promo & Broadcast).
+Full specification: **[FinalReport](report/FinalReport.md)** §3.4.3 item **31)** (Promo & Broadcast).
 
 ## UC-50 Platform Analytics, Audit & System
 
-Full specification: **FinalReport.docx.md** §3.4.3 item **32)** (Platform Analytics, Audit & System). Includes admin home analytics (`/admin`) and optional GA4 client telemetry.
+Full specification: **[FinalReport](report/FinalReport.md)** §3.4.3 item **32)** (Platform Analytics, Audit & System). Includes admin home analytics (`/admin`) and optional GA4 client telemetry.

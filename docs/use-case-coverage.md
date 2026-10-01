@@ -4,7 +4,7 @@ Ma trận đối chiếu **sơ đồ use case UML** với code. Sơ đồ đư�
 
 | Tài nguyên | Đường dẫn |
 |----------|-----------|
-| Sơ đồ (mở bằng draw.io) | [`UC Diagram.drawio`](../UC%20Diagram.drawio), [`docs/diagrams/UC-Diagram.drawio`](diagrams/UC-Diagram.drawio) |
+| Sơ đồ (mở bằng draw.io) | [`docs/diagrams/UC-Diagram.drawio`](diagrams/UC-Diagram.drawio) (sinh bởi `npm run diagrams:uc`), [`docs/diagrams/UC-Diagram-full.drawio`](diagrams/UC-Diagram-full.drawio) (bản chi tiết trước đây ở thư mục gốc) |
 | Tái sinh sơ đồ | `npm run diagrams:uc` |
 
 **Cách đọc sơ đồ:** 9 tab — **01 Overview**, **02–08** domain, **09 Agent (Cosmo)**. Mỗi tab ~1100px; zoom 100–150%.
