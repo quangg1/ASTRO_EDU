@@ -6,7 +6,7 @@ import { useAuthStore } from '@/features/auth/public'
 import { canAccessAdmin, canAccessAdminPath } from '@/lib/roles'
 import { fetchAdminSystemStatus, triggerAdminNewsCrawl, type AdminSystemStatus } from '@/features/admin/public'
 import { formatOrderDateVi } from '@/features/payment/public'
-import { AdminGate } from '@/components/admin/AdminShell'
+import { AdminGate } from '@/features/admin/public'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Button, Card } from '@/design-system'
 

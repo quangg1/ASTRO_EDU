@@ -11,11 +11,12 @@ function getEntityContent(entityId) {
   return showcaseEntityContentRepository.findByEntityId(entityId);
 }
 
+/** panelConfig do Studio entity lưu trong catalog bundle (không nằm ở ShowcaseEntityContent). */
 async function getEntityPanelConfig(entityId) {
-  const content = await showcaseEntityContentRepository.findByEntityId(entityId, {
-    projection: 'panelConfig',
-  });
-  return content?.panelConfig ?? null;
+  const bundle = await catalogService.getBundle();
+  const id = String(entityId || '').trim();
+  const row = (bundle?.catalog || []).find((entry) => String(entry?.id || '').trim() === id);
+  return row?.panelConfig ?? null;
 }
 
 function getCatalogBundle() {

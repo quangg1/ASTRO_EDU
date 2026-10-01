@@ -10,7 +10,7 @@ import { Analytics } from '@/components/system/Analytics'
 import { ChunkLoadRecovery } from '@/components/system/ChunkLoadRecovery'
 import { RuntimePublicConfigScript } from '@/components/system/RuntimePublicConfigScript'
 import { LayoutChromeProvider } from '@/components/layout/LayoutChromeContext'
-import { ShowcaseCatalogProvider } from '@/components/showcase/ShowcaseCatalogProvider'
+import { ShowcaseCatalogProvider } from '@/features/content3d/showcase/public'
 import { ToastProvider } from '@/design-system'
 import { LocaleProvider } from '@/i18n/public'
 

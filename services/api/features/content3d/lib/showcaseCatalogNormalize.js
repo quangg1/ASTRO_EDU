@@ -3,6 +3,7 @@ const {
   trimTo,
   finiteOr,
 } = require('./showcaseFieldNormalize');
+const { normalizePanelConfig } = require('./showcasePanelNormalize');
 
 /**
  * Chuẩn hóa bundle catalog do studio đẩy lên: mục catalog, quỹ đạo và các
@@ -51,6 +52,8 @@ function normalizeCatalogEntry(raw) {
   entry.nameVi = String(raw.nameVi || '').trim();
   entry.museumBlurbVi = String(raw.museumBlurbVi || '').trim();
   entry.published = raw.published !== false;
+  const panelConfig = normalizePanelConfig(raw.panelConfig);
+  if (panelConfig) entry.panelConfig = panelConfig;
   return entry;
 }
 

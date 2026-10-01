@@ -69,3 +69,4 @@ export {
 } from './lib/explorePassportDisplay'
 export { mergeSkyTargetContent, type SkyTargetContentDTO } from './lib/mergeSkyTargetContent'
 export { buildSkyConstellationContextualQuiz } from './lib/buildSkyContextualQuiz'
+export { SkyHudSheet } from './ui/SkyHudSheet'

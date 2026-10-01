@@ -20,7 +20,7 @@ import {
   orderStatusLabelVi,
   orderStatusTone,
 } from '@/features/payment/public'
-import { AdminGate } from '@/components/admin/AdminShell'
+import { AdminGate } from '@/features/admin/public'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Button, Select } from '@/design-system'
 

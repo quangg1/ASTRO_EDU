@@ -1,8 +1,8 @@
 'use client'
 
 import { getStaticAssetUrl, resolveMediaUrl } from '@/lib/apiConfig'
-import { isResolvableShowcaseAssetUrl } from '@/lib/showcaseMediaUrl'
-import type { ShowcaseOrbitEntity } from '@/lib/showcaseEntities'
+import { isResolvableShowcaseAssetUrl } from '@/features/content3d/showcase/lib/showcaseMediaUrl'
+import type { ShowcaseOrbitEntity } from '@/features/content3d/showcase/lib/showcaseEntities'
 import { ShowcaseDiffuseGlobe } from '@/components/3d/showcase/ShowcaseDiffuseGlobe'
 import { ShowcaseModelEntityMesh } from '@/components/3d/showcase/ShowcaseModelEntityMesh'
 

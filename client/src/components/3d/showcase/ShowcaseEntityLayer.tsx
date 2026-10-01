@@ -4,9 +4,9 @@ import { Suspense, useEffect, useMemo, useRef } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import { Billboard, Html } from '@react-three/drei'
 import * as THREE from 'three'
-import type { PlanetData } from '@/lib/solarSystemData'
-import { planetsData } from '@/lib/solarSystemData'
-import { computeOrbitalPosition } from '@/lib/solarOrbitMath'
+import type { PlanetData } from '@/features/content3d/showcase/lib/solarSystemData'
+import { planetsData } from '@/features/content3d/showcase/lib/solarSystemData'
+import { computeOrbitalPosition } from '@/features/content3d/showcase/lib/solarOrbitMath'
 import {
   getNasaCatalogItemById,
   NASA_SHOWCASE_ITEMS,
@@ -14,13 +14,13 @@ import {
   resolveShowcaseOrbitPeriodSeconds,
   SHOWCASE_ORBIT_ENTITIES,
   type ShowcaseOrbitEntity,
-} from '@/lib/showcaseEntities'
+} from '@/features/content3d/showcase/lib/showcaseEntities'
 import { OrbitPath } from '@/components/3d/OrbitPath'
 import { ShowcaseEntityMesh } from '@/components/3d/showcase/ShowcaseEntityMesh'
 import { useShowcaseStore } from '@/features/content3d/showcase/public'
 import type { OrbitProximityFade } from '@/components/3d/orbitProximityFade'
-import { hasUsableOrbitalElements } from '@/lib/mergeShowcaseCatalog'
-import { isResolvableShowcaseAssetUrl } from '@/lib/showcaseMediaUrl'
+import { hasUsableOrbitalElements } from '@/features/content3d/showcase/lib/mergeShowcaseCatalog'
+import { isResolvableShowcaseAssetUrl } from '@/features/content3d/showcase/lib/showcaseMediaUrl'
 import {
   buildSatelliteOrbitLayout,
   heliocentricOrbitDisplayRadius,

@@ -15,7 +15,7 @@ import {
 } from '@/features/admin/public'
 import { formatOrderAmount } from '@/lib/money'
 import { formatOrderDateVi, orderKindLabelVi, orderStatusLabelVi } from '@/features/payment/public'
-import { AdminGate } from '@/components/admin/AdminShell'
+import { AdminGate } from '@/features/admin/public'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Button, Card } from '@/design-system'
 import {

@@ -8,3 +8,4 @@ export {
   markAllNotificationsRead,
 } from './api/notificationsApi'
 export type { AppNotification } from './api/notificationsApi'
+export { NotificationBell } from './ui/NotificationBell'

@@ -5,7 +5,7 @@ import { useFrame, type ThreeEvent } from '@react-three/fiber'
 import { useCursor } from '@react-three/drei'
 import * as THREE from 'three'
 import { useSceneCommandStore } from '@/features/content3d/earth/public'
-import { getPhylumColor } from '@/lib/fossilPhyla'
+import { getPhylumColor } from '@/features/content3d/earth/lib/fossilPhyla'
 import type { Fossil } from '@/types'
 
 const EARTH_RADIUS = 5

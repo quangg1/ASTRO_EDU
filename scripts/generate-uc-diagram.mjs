@@ -1,5 +1,5 @@
 /**
- * Regenerate UC Diagram.drawio — compact multi-page layout.
+ * Regenerate docs/diagrams/UC-Diagram.drawio — compact multi-page layout.
  * Run: npm run diagrams:uc
  */
 import fs from 'fs';
@@ -61,10 +61,7 @@ const CATALOG_UC50 = [
   ['UC-49', 'uc_promo'],
   ['UC-50', 'uc_audit'],
 ];
-const OUT = [
-  path.join(ROOT, 'UC Diagram.drawio'),
-  path.join(ROOT, 'docs/diagrams/UC-Diagram.drawio'),
-];
+const OUT = [path.join(ROOT, 'docs/diagrams/UC-Diagram.drawio')];
 
 const PAGE_W = 1100;
 const PAGE_H = 820;

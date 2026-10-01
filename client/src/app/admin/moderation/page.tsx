@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useAuthStore } from '@/features/auth/public'
 import { canAccessAdmin, canAccessAdminPath } from '@/lib/roles'
 import { ModerationQueuePanel } from '@/features/community/public'
-import { AdminGate } from '@/components/admin/AdminShell'
+import { AdminGate } from '@/features/admin/public'
 import { PageHeader } from '@/components/ui/PageHeader'
 
 export default function AdminModerationPage() {

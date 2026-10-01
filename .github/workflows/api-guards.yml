@@ -36,6 +36,12 @@ jobs:
         working-directory: services/api
         run: npm install --no-audit --no-fund
 
+      # @galaxies/contracts is a file: dependency; its dist/ resolves zod from
+      # packages/contracts/node_modules, so that package needs its own install.
+      - name: Install contracts dependencies
+        working-directory: packages/contracts
+        run: npm install --no-audit --no-fund
+
       - name: Unit tests
         working-directory: services/api
         run: npm test

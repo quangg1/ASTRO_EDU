@@ -5,7 +5,7 @@ import Link from 'next/link'
 import dynamic from 'next/dynamic'
 import { SpaceNumberedNav } from '@/components/space-premium'
 import { SiteLogo } from '@/components/ui/SiteLogo'
-import { CatalogSearchField } from '@/components/search/CatalogSearchField'
+import { CatalogSearchField } from '@/components/landing/CatalogSearchField'
 
 const SolarSystemVisual = dynamic(() => import('./SolarSystemVisual').then((m) => m.SolarSystemVisual), {
   ssr: false,

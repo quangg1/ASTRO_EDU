@@ -1,6 +1,6 @@
 # Sequence diagrams (supplement)
 
-Mermaid UML-style sequence diagrams for use cases that were missing figures in `FinalReport.docx.md`.  
+Mermaid UML-style sequence diagrams for use cases that were missing figures in `docs/report/FinalReport.md`.  
 Render in GitHub, VS Code (Mermaid), or export to PNG for Word.
 
 **Notation:** `Actor` → `UI (boundary)` → `API (control)` → `Entity (MongoDB / external)`.

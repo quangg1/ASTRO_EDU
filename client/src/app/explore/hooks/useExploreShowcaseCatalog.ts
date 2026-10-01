@@ -1,22 +1,22 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { getNasaCatalogItemById, NASA_SHOWCASE_ITEMS, SHOWCASE_ORBIT_ENTITIES } from '@/lib/showcaseEntities'
+import { getNasaCatalogItemById, NASA_SHOWCASE_ITEMS, SHOWCASE_ORBIT_ENTITIES } from '@/features/content3d/showcase/public'
 import {
   buildPlanetGlobeEntity,
   hasUsableOrbitalElements,
   mergeNasaCatalog,
   mergeOrbitEntities,
   mergeOrbitalElementsPreferUsable,
-} from '@/lib/mergeShowcaseCatalog'
+} from '@/features/content3d/showcase/public'
 import {
   fetchPublicShowcaseEntityContents,
   fetchJplShowcaseOrbits,
   type ShowcaseEntityContentDTO,
   type ShowcaseJplOrbitDTO,
 } from '@/features/content3d/showcase/public'
-import { SHOWCASE_CATALOG_CHANGED_EVENT } from '@/lib/showcaseCatalogRefresh'
-import { useShowcaseCatalogGen } from '@/components/showcase/ShowcaseCatalogProvider'
+import { SHOWCASE_CATALOG_CHANGED_EVENT } from '@/features/content3d/showcase/public'
+import { useShowcaseCatalogGen } from '@/features/content3d/showcase/public'
 
 export function useExploreShowcaseCatalog(planetHistoryEntityId: string | null) {
   const showcaseCatalogGen = useShowcaseCatalogGen()

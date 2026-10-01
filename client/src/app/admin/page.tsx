@@ -41,7 +41,7 @@ import { Badge, Card, Tabs, Tab, TabList, Select } from '@/design-system'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Spinner } from '@/components/ui/Spinner'
-import { AdminTeacherApplicationsPanel } from '@/components/admin/AdminTeacherApplicationsPanel'
+import { AdminTeacherApplicationsPanel } from '@/features/admin/public'
 
 export default function AdminPage() {
   const router = useRouter()

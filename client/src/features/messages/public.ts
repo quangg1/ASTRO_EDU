@@ -10,3 +10,4 @@ export {
 export type { DmConversationSummary, DmMessage } from './api/messagesApi'
 export { useDmRealtime } from './hooks/useDmRealtime'
 export type { DmRealtimeEvent } from './hooks/useDmRealtime'
+export { MessageUserButton } from './ui/MessageUserButton'

@@ -10,7 +10,7 @@ Page → features → API paths → backend mounts. Regenerate: `node scripts/ge
 | `/admin/broadcast` | 191 | admin, auth | /api/admin, /api/notifications | — |
 | `/admin/courses` | 117 | admin, auth | /api/admin, /api/notifications | — |
 | `/admin/gem-economy` | 491 | admin, auth, rewards | /api/admin, /api/gems, /api/notifications, /api/showcase | MISSING |
-| `/admin/moderation` | 30 | auth, community | /api/admin, /api/comments, /api/community, /api/forums, /api/news, /api/posts | — |
+| `/admin/moderation` | 30 | admin, auth, community | /api/admin, /api/comments, /api/community, /api/forums, /api/news, /api/notifications, /api/posts | — |
 | `/admin/orders` | 224 | admin, auth, payment | /api/admin, /api/notifications, /api/payments | — |
 | `/admin` | 802 | admin, auth, courses, payment | /api/admin, /api/courses, /api/notifications, /api/payments, /api/tutorials | MISSING |
 | `/admin/promo-codes` | 514 | admin, auth, courses | /api/admin, /api/courses, /api/notifications, /api/tutorials | MISSING |
@@ -42,7 +42,7 @@ Page → features → API paths → backend mounts. Regenerate: `node scripts/ge
 | `/explore` | 20 | — | — | yes |
 | `/forgot-password` | 89 | auth | /api/admin | — |
 | `/gem-shop` | 397 | auth, rewards | /api/admin, /api/gems, /api/showcase | — |
-| `/gem` | 599 | auth, content3d/showcase, learning-path, rewards | /api/admin, /api/concepts, /api/explore/contextual-quiz, /api/gems, /api/learning-path, /api/showcase, /api/showcase-catalog, /api/showcase-entities, /api/showcase-orbits | MISSING |
+| `/gem` | 599 | auth, content3d/showcase, learning-path, rewards | /api/admin, /api/concepts, /api/explore/contextual-quiz, /api/explore/learning-links, /api/gems, /api/learning-path, /api/showcase, /api/showcase-catalog, /api/showcase-entities, /api/showcase-orbits | MISSING |
 | `/gem/tiers` | 296 | rewards, users | /api/gems, /api/showcase, /api/users | — |
 | `/login` | 446 | auth | /api/admin | MISSING |
 | `/messages/[conversationId]` | 168 | auth, messages, users | /api/admin, /api/messages, /api/users | — |
@@ -53,7 +53,7 @@ Page → features → API paths → backend mounts. Regenerate: `node scripts/ge
 | `/onboarding` | 6 | onboarding | /api/onboarding | — |
 | `/` | 33 | — | — | — |
 | `/payment/return` | 77 | — | — | — |
-| `/profile` | 751 | auth, rewards, users | /api/admin, /api/gems, /api/showcase, /api/users | MISSING |
+| `/profile` | 750 | auth, rewards, users | /api/admin, /api/gems, /api/showcase, /api/users | MISSING |
 | `/register` | 315 | auth | /api/admin | — |
 | `/reset-password` | 124 | auth | /api/admin | — |
 | `/search` | 729 | community, courses | /api/comments, /api/community, /api/courses, /api/forums, /api/news, /api/posts, /api/tutorials | MISSING |
@@ -63,15 +63,15 @@ Page → features → API paths → backend mounts. Regenerate: `node scripts/ge
 | `/studio/concepts` | 6 | concepts | /api/concepts | yes |
 | `/studio/learning-path` | 6 | learning-path | /api/concepts, /api/learning-path | yes |
 | `/studio` | 744 | auth, courses | /api/admin, /api/courses, /api/tutorials | MISSING |
-| `/studio/showcase-entities` | 6 | content3d/showcase | /api/explore/contextual-quiz, /api/showcase-catalog, /api/showcase-entities, /api/showcase-orbits | yes |
-| `/studio/sky-targets` | 541 | auth, content3d/showcase, explore, learning-path | /api/admin, /api/concepts, /api/explore/contextual-quiz, /api/explore/passport, /api/explore/sky-targets, /api/learning-path, /api/showcase-catalog, /api/showcase-entities, /api/showcase-orbits | MISSING |
+| `/studio/showcase-entities` | 6 | content3d/showcase | /api/explore/contextual-quiz, /api/explore/learning-links, /api/showcase-catalog, /api/showcase-entities, /api/showcase-orbits | yes |
+| `/studio/sky-targets` | 541 | auth, content3d/showcase, explore, learning-path | /api/admin, /api/concepts, /api/explore/contextual-quiz, /api/explore/learning-links, /api/explore/passport, /api/explore/sky-targets, /api/learning-path, /api/showcase-catalog, /api/showcase-entities, /api/showcase-orbits | MISSING |
 | `/topics/[slug]` | 26 | learning-path | /api/concepts, /api/learning-path | — |
 | `/tutorial/[moduleId]/[nodeId]/[lessonId]` | 35 | learning-path | /api/concepts, /api/learning-path | — |
 | `/tutorial/[moduleId]/[nodeId]` | 25 | learning-path | /api/concepts, /api/learning-path | — |
 | `/tutorial/[moduleId]` | 23 | learning-path | /api/concepts, /api/learning-path | — |
 | `/tutorial/knowledge-map` | 31 | — | — | — |
 | `/tutorial` | 16 | learning-path | /api/concepts, /api/learning-path | — |
-| `/users/[id]` | 326 | auth, rewards, users | /api/admin, /api/gems, /api/showcase, /api/users | — |
+| `/users/[id]` | 326 | auth, messages, rewards, users | /api/admin, /api/gems, /api/messages, /api/showcase, /api/users | — |
 
 ## Detail
 
@@ -119,10 +119,10 @@ Page → features → API paths → backend mounts. Regenerate: `node scripts/ge
 ### `/admin/moderation`
 
 - **page:** `src/app/admin/moderation/page.tsx` (30 lines)
-- **features:** `auth`, `community`
-- **entry:** `@/features/auth/public`, `@/features/community/public`
-- **api paths (sampled):** `/api/admin/teacher-applications`, `/api/admin/teacher-applications/`, `/auth/change-password`, `/auth/firebase`, `/auth/forgot-password`, `/auth/login`, `/auth/logout`, `/auth/me`, `/auth/register`, `/auth/register/resend-verification`, `/auth/register/verify-email`, `/auth/reset-password`
-- **backend:** `/api/admin` (admin), `/api/comments` (community), `/api/community` (community), `/api/forums` (community), `/api/news` (community), `/api/posts` (community)
+- **features:** `admin`, `auth`, `community`
+- **entry:** `@/features/admin/public`, `@/features/auth/public`, `@/features/community/public`
+- **api paths (sampled):** `/admin`, `/admin/analytics/agent`, `/admin/analytics/cohort`, `/admin/analytics/explore`, `/admin/analytics/funnel`, `/admin/analytics/learning-path`, `/admin/analytics/overview`, `/admin/analytics/retention`, `/admin/analytics/unified-learner`, `/admin/astronomy-calendar`, `/admin/audit-log`, `/admin/courses`
+- **backend:** `/api/admin` (admin), `/api/comments` (community), `/api/community` (community), `/api/forums` (community), `/api/news` (community), `/api/notifications` (notifications), `/api/posts` (community)
 
 ### `/admin/orders`
 
@@ -383,7 +383,7 @@ Page → features → API paths → backend mounts. Regenerate: `node scripts/ge
 - **features:** `auth`, `content3d/showcase`, `learning-path`, `rewards`
 - **entry:** `@/features/auth/public`, `@/features/content3d/showcase/public`, `@/features/learning-path/public`, `@/features/rewards/public`
 - **api paths (sampled):** `/api/admin/teacher-applications`, `/api/admin/teacher-applications/`, `/auth/change-password`, `/auth/firebase`, `/auth/forgot-password`, `/auth/login`, `/auth/logout`, `/auth/me`, `/auth/register`, `/auth/register/resend-verification`, `/auth/register/verify-email`, `/auth/reset-password`
-- **backend:** `/api/admin` (admin), `/api/concepts` (concepts), `/api/explore/contextual-quiz` (content3d), `/api/gems` (rewards), `/api/learning-path` (learning-path), `/api/showcase` (rewards), `/api/showcase-catalog` (content3d), `/api/showcase-entities` (content3d), `/api/showcase-orbits` (content3d)
+- **backend:** `/api/admin` (admin), `/api/concepts` (concepts), `/api/explore/contextual-quiz` (content3d), `/api/explore/learning-links` (content3d), `/api/gems` (rewards), `/api/learning-path` (learning-path), `/api/showcase` (rewards), `/api/showcase-catalog` (content3d), `/api/showcase-entities` (content3d), `/api/showcase-orbits` (content3d)
 - **TRACE:** MISSING (required for pages ≥400 LOC)
 
 ### `/gem/tiers`
@@ -466,7 +466,7 @@ Page → features → API paths → backend mounts. Regenerate: `node scripts/ge
 
 ### `/profile`
 
-- **page:** `src/app/profile/page.tsx` (751 lines)
+- **page:** `src/app/profile/page.tsx` (750 lines)
 - **features:** `auth`, `rewards`, `users`
 - **entry:** `@/features/auth/public`, `@/features/rewards/public`, `@/features/users/public`
 - **api paths (sampled):** `/api/admin/teacher-applications`, `/api/admin/teacher-applications/`, `/auth/change-password`, `/auth/firebase`, `/auth/forgot-password`, `/auth/login`, `/auth/logout`, `/auth/me`, `/auth/register`, `/auth/register/resend-verification`, `/auth/register/verify-email`, `/auth/reset-password`
@@ -555,8 +555,8 @@ Page → features → API paths → backend mounts. Regenerate: `node scripts/ge
 - **page:** `src/app/studio/showcase-entities/page.tsx` (6 lines)
 - **features:** `content3d/showcase`
 - **entry:** `@/features/content3d/showcase/public`
-- **api paths (sampled):** `/editor`, `/editor/`, `/explore/contextual-quiz/`, `/jpl`, `/showcase-catalog`, `/showcase-entities`, `/showcase-orbits`, `/sync-entity`
-- **backend:** `/api/explore/contextual-quiz` (content3d), `/api/showcase-catalog` (content3d), `/api/showcase-entities` (content3d), `/api/showcase-orbits` (content3d)
+- **api paths (sampled):** `/editor`, `/editor/`, `/explore/contextual-quiz/`, `/explore/learning-links/`, `/jpl`, `/showcase-catalog`, `/showcase-entities`, `/showcase-orbits`, `/sync-entity`
+- **backend:** `/api/explore/contextual-quiz` (content3d), `/api/explore/learning-links` (content3d), `/api/showcase-catalog` (content3d), `/api/showcase-entities` (content3d), `/api/showcase-orbits` (content3d)
 - **TRACE:** `src/app/studio/showcase-entities/TRACE.md`
 
 ### `/studio/sky-targets`
@@ -565,7 +565,7 @@ Page → features → API paths → backend mounts. Regenerate: `node scripts/ge
 - **features:** `auth`, `content3d/showcase`, `explore`, `learning-path`
 - **entry:** `@/features/auth/public`, `@/features/content3d/showcase/public`, `@/features/explore/public`, `@/features/learning-path/public`
 - **api paths (sampled):** `/api/admin/teacher-applications`, `/api/admin/teacher-applications/`, `/auth/change-password`, `/auth/firebase`, `/auth/forgot-password`, `/auth/login`, `/auth/logout`, `/auth/me`, `/auth/register`, `/auth/register/resend-verification`, `/auth/register/verify-email`, `/auth/reset-password`
-- **backend:** `/api/admin` (admin), `/api/concepts` (concepts), `/api/explore/contextual-quiz` (content3d), `/api/explore/passport` (content3d), `/api/explore/sky-targets` (content3d), `/api/learning-path` (learning-path), `/api/showcase-catalog` (content3d), `/api/showcase-entities` (content3d), `/api/showcase-orbits` (content3d)
+- **backend:** `/api/admin` (admin), `/api/concepts` (concepts), `/api/explore/contextual-quiz` (content3d), `/api/explore/learning-links` (content3d), `/api/explore/passport` (content3d), `/api/explore/sky-targets` (content3d), `/api/learning-path` (learning-path), `/api/showcase-catalog` (content3d), `/api/showcase-entities` (content3d), `/api/showcase-orbits` (content3d)
 - **TRACE:** MISSING (required for pages ≥400 LOC)
 
 ### `/topics/[slug]`
@@ -617,8 +617,8 @@ Page → features → API paths → backend mounts. Regenerate: `node scripts/ge
 ### `/users/[id]`
 
 - **page:** `src/app/users/[id]/page.tsx` (326 lines)
-- **features:** `auth`, `rewards`, `users`
-- **entry:** `@/features/auth/public`, `@/features/rewards/public`, `@/features/users/public`
+- **features:** `auth`, `messages`, `rewards`, `users`
+- **entry:** `@/features/auth/public`, `@/features/messages/public`, `@/features/rewards/public`, `@/features/users/public`
 - **api paths (sampled):** `/api/admin/teacher-applications`, `/api/admin/teacher-applications/`, `/auth/change-password`, `/auth/firebase`, `/auth/forgot-password`, `/auth/login`, `/auth/logout`, `/auth/me`, `/auth/register`, `/auth/register/resend-verification`, `/auth/register/verify-email`, `/auth/reset-password`
-- **backend:** `/api/admin` (admin), `/api/gems` (rewards), `/api/showcase` (rewards), `/api/users` (users)
+- **backend:** `/api/admin` (admin), `/api/gems` (rewards), `/api/messages` (messages), `/api/showcase` (rewards), `/api/users` (users)
 

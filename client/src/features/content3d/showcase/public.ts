@@ -90,3 +90,14 @@ export {
   StudioShowcaseEntitiesPage,
   StudioShowcaseEntitiesPageWithSuspense,
 } from './ui/studio/StudioShowcaseEntitiesPage'
+export { ShowcaseCatalogProvider, useShowcaseCatalogGen } from './ui/ShowcaseCatalogProvider'
+export * from './lib/showcaseEntities'
+export * from './lib/showcaseCatalogRefresh'
+export * from './lib/mergeShowcaseCatalog'
+export * from './lib/solarSystemData'
+export { fetchEntityLearningLinks, lessonHrefForLink } from './api/entityLearningLinksApi'
+export type {
+  EntityLearningLinks,
+  EntityLessonLink,
+  EntityLearningLinkSource,
+} from './api/entityLearningLinksApi'

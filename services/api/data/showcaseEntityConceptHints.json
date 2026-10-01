@@ -1,0 +1,14 @@
+{
+  "note": "Gợi ý từ khóa entity → concept khi entity CHƯA được gắn concept/bài học trong Studio. Ưu tiên gắn tường minh (panelConfig.conceptTagIds / lessonIds, hoặc sceneContext trên bài học); file này chỉ là lưới an toàn.",
+  "hints": {
+    "planet-saturn": ["saturn", "rings", "cassini", "titan", "gas giant"],
+    "moon-titan": ["titan", "atmosphere", "methane"],
+    "planet-jupiter": ["jupiter", "gas giant", "magnetosphere", "europa"],
+    "planet-mars": ["mars", "atmosphere", "geology"],
+    "planet-venus": ["venus", "greenhouse", "co2", "atmosphere"],
+    "planet-earth": ["earth", "atmosphere", "biosphere"],
+    "dwarf-pluto": ["pluto", "kuiper", "dwarf planet"],
+    "moon-europa": ["europa", "ice", "subsurface ocean"],
+    "sc-cassini": ["cassini", "saturn", "rings", "titan"]
+  }
+}

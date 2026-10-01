@@ -6,12 +6,12 @@ import { OrbitControls, Stars, Preload } from '@react-three/drei'
 import { Suspense } from 'react'
 import * as THREE from 'three'
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib'
-import { planetsData } from '@/lib/solarSystemData'
+import { planetsData } from '@/features/content3d/showcase/lib/solarSystemData'
 import {
   NASA_SHOWCASE_ITEMS,
   resolveShowcaseOrbitParentPlanetName,
   type ShowcaseOrbitEntity,
-} from '@/lib/showcaseEntities'
+} from '@/features/content3d/showcase/lib/showcaseEntities'
 import { OrbitPath } from '@/components/3d/OrbitPath'
 import { Planet, Sun } from '@/components/3d/planetBodies'
 import { ExploreEntityFx } from '@/components/3d/ExploreEntityFx'
@@ -29,8 +29,8 @@ import {
   useShowcaseStore,
   type ShowcaseEntityContentDTO,
 } from '@/features/content3d/showcase/public'
-import { useShowcaseCatalogGen } from '@/components/showcase/ShowcaseCatalogProvider'
-import { buildPlanetShowcaseEntity } from '@/lib/mergeShowcaseCatalog'
+import { useShowcaseCatalogGen } from '@/features/content3d/showcase/public'
+import { buildPlanetShowcaseEntity } from '@/features/content3d/showcase/lib/mergeShowcaseCatalog'
 
 function sanitizeControlsCamera(c: OrbitControlsImpl) {
   const p = c.object.position

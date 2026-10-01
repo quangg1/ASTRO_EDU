@@ -6,7 +6,7 @@
  * - Message = business action / data exchange — NO file names, hooks, routes, or field names
  * - alt/opt = use-case branches, not implementation branches
  *
- * Architecture refs: docs/ARCHITECTURE_MERGED.md, client/DOMAIN_MAP.md
+ * Architecture refs: docs/architecture/api-layering.md, client/DOMAIN_MAP.md
  */
 
 /** @typedef {{ kind:'msg', from:string|number, to:string|number, label:string, dashed?:boolean }} Msg */

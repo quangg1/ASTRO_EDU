@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import { isResolvableShowcaseAssetUrl } from '@/lib/showcaseMediaUrl'
+import { isResolvableShowcaseAssetUrl } from './showcaseMediaUrl'
 import type { ShowcaseOrbitEntity } from './showcaseCatalogRuntime'
 import type { ShowcaseStoryCamera, ShowcaseStoryWaypoint } from './showcaseStoryTypes'
 

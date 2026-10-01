@@ -73,3 +73,4 @@ export {
   syncSolarJourneyProgress,
   pushSolarJourneyProgress,
 } from './lib/solarJourneyProgress'
+export { AvatarDecorationPicker } from './ui/AvatarDecorationPicker'

@@ -2,7 +2,7 @@
 
 import { Html } from '@react-three/drei'
 import { latLngToVector3 } from '@/lib/geo'
-import { getHotspotsForTime } from '@/lib/stageHotspots'
+import { getHotspotsForTime } from '@/features/content3d/earth/lib/stageHotspots'
 import { useSceneCommandStore } from '@/features/content3d/earth/public'
 
 const EARTH_RADIUS = 5

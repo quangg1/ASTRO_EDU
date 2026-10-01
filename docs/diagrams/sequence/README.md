@@ -51,7 +51,7 @@ User → Web UI (Next.js) → API Server (Node.js) → MongoDB
                         ↘ AI Service (Python) — when LLM/RAG is needed
 ```
 
-See also: `docs/ARCHITECTURE_MERGED.md`, `client/DOMAIN_MAP.md`.
+See also: `docs/architecture/api-layering.md`, `client/DOMAIN_MAP.md`.
 
 ## Regenerate
 

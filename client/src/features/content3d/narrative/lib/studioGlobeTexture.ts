@@ -1,5 +1,5 @@
 import { buildStudioGlobeEntity } from '@/features/content3d/showcase/lib/mergeShowcaseCatalog'
-import { resolveShowcaseDiffuseTextureUrl } from '@/lib/showcaseMediaUrl'
+import { resolveShowcaseDiffuseTextureUrl } from '@/features/content3d/showcase/lib/showcaseMediaUrl'
 import { getNasaCatalogItemById } from '@/features/content3d/showcase/lib/showcaseEntities'
 import type { ShowcaseEntityContentDTO } from '@/features/content3d/showcase/api/showcaseEntitiesApi'
 

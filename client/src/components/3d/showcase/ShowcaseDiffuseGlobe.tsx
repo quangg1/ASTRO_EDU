@@ -4,11 +4,11 @@ import type { MeshProps } from '@react-three/fiber'
 import { useEffect, useRef, useState } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
-import { applyGlobeTextureQuality } from '@/lib/planetTextureQuality'
+import { applyGlobeTextureQuality } from '@/features/content3d/earth/lib/planetTextureQuality'
 import { resolveMediaUrl } from '@/lib/apiConfig'
-import type { ShowcaseOrbitEntity } from '@/lib/showcaseEntities'
-import { resolveShowcaseEntitySpinPeriod } from '@/lib/showcaseEntities'
-import { isUsableShowcaseCloudMapUrl, resolveShowcaseDiffuseTextureUrl } from '@/lib/showcaseMediaUrl'
+import type { ShowcaseOrbitEntity } from '@/features/content3d/showcase/lib/showcaseEntities'
+import { resolveShowcaseEntitySpinPeriod } from '@/features/content3d/showcase/lib/showcaseEntities'
+import { isUsableShowcaseCloudMapUrl, resolveShowcaseDiffuseTextureUrl } from '@/features/content3d/showcase/lib/showcaseMediaUrl'
 
 type TextureBundle = {
   map: THREE.Texture | null

@@ -6,12 +6,12 @@ import * as THREE from 'three'
 import { useThree } from '@react-three/fiber'
 import { usePlanetNarrativeStore } from '@/features/content3d/narrative/stores/planetNarrativeStore'
 import { resolveMediaUrl } from '@/lib/apiConfig'
-import type { ShowcaseOrbitEntity } from '@/lib/showcaseEntities'
+import type { ShowcaseOrbitEntity } from '@/features/content3d/showcase/lib/showcaseEntities'
 import {
   isResolvableShowcaseAssetUrl,
   isUsableShowcaseCloudMapUrl,
   resolveShowcaseDiffuseTextureUrl,
-} from '@/lib/showcaseMediaUrl'
+} from '@/features/content3d/showcase/lib/showcaseMediaUrl'
 import { loadShowcaseDiffuseTexture } from '@/components/3d/showcase/ShowcaseDiffuseGlobe'
 
 type TextureBundle = {

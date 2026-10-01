@@ -4,7 +4,7 @@ import { Suspense, useEffect, useState } from 'react'
 import { AppHeader } from '@/components/ui/AppHeader'
 import { AppShell } from '@/components/layout/AppShell'
 import { useLayoutChrome } from '@/components/layout/LayoutChromeContext'
-import { PromoCampaignBar } from '@/components/promotions/PromoCampaignBar'
+import { PromoCampaignBar } from '@/features/promotions/public'
 import { OnboardingRedirect } from '@/features/onboarding/ui/OnboardingRedirect'
 
 export function AppChrome({ children }: { children: React.ReactNode }) {

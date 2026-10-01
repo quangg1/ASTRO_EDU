@@ -8,7 +8,7 @@ import type {
 import type { NarrativeBeat, NarrativeSite } from '@/features/content3d/narrative/types'
 import { getSkyTargetLabel, type SkyExploreTarget } from '@/features/explore/public'
 import type { SkyObserver } from '@/features/explore/public'
-import { getIconicOrganismsForStage } from '@/lib/iconicOrganisms'
+import { getIconicOrganismsForStage } from '@/features/content3d/earth/public'
 
 const EARTH_ENTITY_ID = 'planet-earth'
 

@@ -14,7 +14,7 @@ import {
   type AdminUser,
   type UserRole,
 } from '@/features/admin/public'
-import { AdminGate } from '@/components/admin/AdminShell'
+import { AdminGate } from '@/features/admin/public'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Select, Button } from '@/design-system'
 import { viText } from '@/messages/vi'
