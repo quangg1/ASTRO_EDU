@@ -18,7 +18,7 @@ import {
   type LessonVisited3DMap,
 } from '@/features/learning-path/public'
 import { useAuthStore } from '@/features/auth/public'
-import { suggestExploreTargetsForLesson } from '@/features/content3d/showcase/public'
+import { suggestExploreTargetsForLesson, useLessonEntityIndex } from '@/features/content3d/showcase/public'
 import { useSavedItems } from '@/features/saved/public'
 import { useT } from '@/i18n/public'
 
@@ -63,6 +63,7 @@ function CornerBrackets({ color, size = 10, thickness = 1, glow }: {
 export default function NodeDepthPanel({ module, node }: Props) {
   const { t } = useT()
   const userId = useAuthStore((s) => s.user?.id ?? null)
+  const lessonEntityIndex = useLessonEntityIndex()
   const depthStyle = useMemo(
     () =>
       ({
@@ -294,7 +295,7 @@ export default function NodeDepthPanel({ module, node }: Props) {
               const done = isLessonComplete(completion, lesson.id)
               const mast = isLessonMastered(mastery, lesson.id)
               const href = `/tutorial/${encodeURIComponent(module.id)}/${encodeURIComponent(node.id)}/${encodeURIComponent(lesson.id)}`
-              const exploreTargets = suggestExploreTargetsForLesson(lesson)
+              const exploreTargets = suggestExploreTargetsForLesson(lesson, lessonEntityIndex)
               const visitedScene = !!visited3D[lesson.id]
               const lessonNum = String(i + 1).padStart(2, '0')
               const isHov = hoveredLesson === lesson.id

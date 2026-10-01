@@ -6,6 +6,10 @@ module.exports = asyncController({
     return ok(res, { data: await learningLinks.getEntityLearningLinks(req.params.entityId) });
   },
 
+  async lessonIndex(_req, res) {
+    return ok(res, { data: await learningLinks.getLessonEntityIndex() });
+  },
+
   async coverage(_req, res) {
     return ok(res, { data: await learningLinks.getLearningLinkCoverage() });
   },

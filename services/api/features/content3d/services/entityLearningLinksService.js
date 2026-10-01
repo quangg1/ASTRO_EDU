@@ -8,6 +8,7 @@ const skyTargetService = require('./skyTargetService');
 const {
   resolveEntityLearningLinks,
   buildLearningLinkCoverage,
+  buildLessonEntityIndex,
 } = require('../lib/entityLearningLinks');
 
 const HINTS_PATH = path.join(__dirname, '../../../data/showcaseEntityConceptHints.json');
@@ -86,8 +87,7 @@ async function getEntityLearningLinks(entityIdRaw) {
   };
 }
 
-/** Báo cáo cho Studio: entity chưa gắn nội dung học + bài học trỏ tới entity không tồn tại. */
-async function getLearningLinkCoverage() {
+async function loadAllEntitiesWithModules() {
   const [bundle, sky, modules] = await Promise.all([
     catalogService.getBundle(),
     skyTargetService.getPublicCatalog(),
@@ -105,7 +105,17 @@ async function getLearningLinkCoverage() {
       panelConfig: t?.panelConfig || null,
     })),
   ].filter((e) => e.entityId);
-  return buildLearningLinkCoverage({ entities, modules });
+  return { entities, modules };
 }
 
-module.exports = { getEntityLearningLinks, getLearningLinkCoverage };
+/** Báo cáo cho Studio: entity chưa gắn nội dung học + bài học trỏ tới entity không tồn tại. */
+async function getLearningLinkCoverage() {
+  return buildLearningLinkCoverage(await loadAllEntitiesWithModules());
+}
+
+/** Bài học → entity 3D (chỉ liên kết tường minh) cho trang lộ trình / bài học. */
+async function getLessonEntityIndex() {
+  return buildLessonEntityIndex(await loadAllEntitiesWithModules());
+}
+
+module.exports = { getEntityLearningLinks, getLearningLinkCoverage, getLessonEntityIndex };

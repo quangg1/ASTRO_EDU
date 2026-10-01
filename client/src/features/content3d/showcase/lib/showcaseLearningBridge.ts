@@ -14,6 +14,8 @@ import {
   buildExploreHref,
 } from '@/features/explore/public'
 import { NASA_SHOWCASE_ITEMS } from './showcaseCatalogRuntime'
+import type { LessonEntityIndex } from '../api/entityLearningLinksApi'
+import { getLessonEntityIndexSync } from './lessonEntityIndex'
 
 export type ShowcaseBridgeMap = {
   entityId: string
@@ -356,8 +358,23 @@ export function guessEntityRarity(entityId: string): 'common' | 'rare' | 'epic' 
   return 'common'
 }
 
+/** Entity do Studio / concept gắn với bài (server index), dùng khi bài chưa có sceneContext. */
+function showcaseTargetFromIndex(
+  lesson: LessonItem,
+  index: LessonEntityIndex | null,
+): { entityId: string; href: string } | null {
+  for (const row of index?.[lesson.id] ?? []) {
+    const link = exploreHrefForShowcaseEntity(row.entityId)
+    if (link) return link
+  }
+  return null
+}
+
 /** Showcase orbit + Deep History (nếu sceneContext có historyFocus). */
-export function suggestExploreTargetsForLesson(lesson: LessonItem): LessonExploreTargets {
+export function suggestExploreTargetsForLesson(
+  lesson: LessonItem,
+  index: LessonEntityIndex | null = getLessonEntityIndexSync(),
+): LessonExploreTargets {
   const sc = lesson.sceneContext
   if (sc) {
     const ordered: string[] = []
@@ -379,12 +396,13 @@ export function suggestExploreTargetsForLesson(lesson: LessonItem): LessonExplor
     const history = primary && hf ? exploreHrefForHistory(primary, hf) : null
     if (showcase || history) return { showcase, history }
   }
-  const guessed = suggestShowcaseTargetForLesson(lesson)
+  const guessed = suggestShowcaseTargetForLesson(lesson, index)
   return { showcase: guessed, history: null }
 }
 
 export function suggestShowcaseTargetForLesson(
   lesson: LessonItem,
+  index: LessonEntityIndex | null = getLessonEntityIndexSync(),
 ): { entityId: string; href: string } | null {
   const sc = lesson.sceneContext
   if (sc) {
@@ -401,6 +419,10 @@ export function suggestShowcaseTargetForLesson(
     }
   }
 
+  const linked = showcaseTargetFromIndex(lesson, index)
+  if (linked) return linked
+
+  // Dự phòng cuối: đoán theo từ khóa trong tiêu đề / concept của bài.
   const text = [
     lesson.id,
     lesson.titleVi || '',

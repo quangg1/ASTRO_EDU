@@ -555,7 +555,7 @@ Page → features → API paths → backend mounts. Regenerate: `node scripts/ge
 - **page:** `src/app/studio/showcase-entities/page.tsx` (6 lines)
 - **features:** `content3d/showcase`
 - **entry:** `@/features/content3d/showcase/public`
-- **api paths (sampled):** `/editor`, `/editor/`, `/explore/contextual-quiz/`, `/explore/learning-links/`, `/jpl`, `/showcase-catalog`, `/showcase-entities`, `/showcase-orbits`, `/sync-entity`
+- **api paths (sampled):** `/editor`, `/editor/`, `/explore/contextual-quiz/`, `/explore/learning-links/`, `/explore/learning-links/by-lesson`, `/jpl`, `/showcase-catalog`, `/showcase-entities`, `/showcase-orbits`, `/sync-entity`
 - **backend:** `/api/explore/contextual-quiz` (content3d), `/api/explore/learning-links` (content3d), `/api/showcase-catalog` (content3d), `/api/showcase-entities` (content3d), `/api/showcase-orbits` (content3d)
 - **TRACE:** `src/app/studio/showcase-entities/TRACE.md`
 

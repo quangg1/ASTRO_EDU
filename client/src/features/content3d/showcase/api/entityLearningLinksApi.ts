@@ -48,3 +48,23 @@ export async function fetchEntityLearningLinks(entityId: string): Promise<Entity
 export function lessonHrefForLink(link: Pick<EntityLessonLink, 'moduleId' | 'nodeId' | 'lessonId'>): string {
   return `/tutorial/${link.moduleId}/${link.nodeId}/${encodeURIComponent(link.lessonId)}`
 }
+
+/** Bài học → entity 3D (chỉ liên kết do người biên soạn khai báo), mạnh nhất đứng đầu. */
+export type LessonEntityIndex = Record<
+  string,
+  Array<{ entityId: string; source: Exclude<EntityLearningLinkSource, 'hint'>; primary: boolean }>
+>
+
+export async function fetchLessonEntityIndex(): Promise<LessonEntityIndex | null> {
+  try {
+    const res = await apiFetch(`${getApiPathBase()}/explore/learning-links/by-lesson`, {}, false)
+    const data = (await res.json().catch(() => null)) as {
+      success?: boolean
+      data?: LessonEntityIndex
+    } | null
+    if (!res.ok || !data?.success || !data.data) return null
+    return data.data
+  } catch {
+    return null
+  }
+}

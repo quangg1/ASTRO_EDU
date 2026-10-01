@@ -8,6 +8,7 @@ import {
 } from '@/features/onboarding/public'
 import { loadEduJourneyContext, type EduJourneyContext } from '@/lib/eduJourney'
 import { useLearningPath } from './useLearningPath'
+import { useLessonEntityIndex } from '@/features/content3d/showcase/public'
 import {
   loadLastLearningPathLessonId,
   loadLessonCompletion,
@@ -70,6 +71,7 @@ export function useLearnerNextAction(): {
     }
   }, [user, tick])
 
+  const lessonEntityIndex = useLessonEntityIndex()
   const nextAction = useMemo(
     () =>
       resolveLearnerNextAction({
@@ -79,8 +81,9 @@ export function useLearnerNextAction(): {
         intent,
         primaryHref,
         eduJourney,
+        lessonEntityIndex,
       }),
-    [modules, completionMap, lastLessonId, intent, primaryHref, eduJourney],
+    [modules, completionMap, lastLessonId, intent, primaryHref, eduJourney, lessonEntityIndex],
   )
 
   return { nextAction, loading, intent, eduJourney, refresh }
