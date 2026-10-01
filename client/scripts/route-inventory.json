@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-01T11:09:01.230Z",
+  "generatedAt": "2026-10-01T11:16:29.572Z",
   "routes": [
     {
       "route": "/admin/astronomy-calendar",
@@ -2981,6 +2981,7 @@
         "src/features/auth/api/teacherApplicationMediaApi.ts",
         "src/features/auth/api/teacherApplicationsApi.ts",
         "src/features/auth/api/teacherProfileApi.ts",
+        "src/features/content3d/showcase/api/entityLearningLinksApi.ts",
         "src/features/content3d/showcase/api/exploreContextualQuizApi.ts",
         "src/features/content3d/showcase/api/showcaseCatalogApi.ts",
         "src/features/content3d/showcase/api/showcaseEntitiesApi.ts",
@@ -3018,6 +3019,7 @@
         "/editor/",
         "/editor/generate-quiz",
         "/explore/contextual-quiz/",
+        "/explore/learning-links/",
         "/gems",
         "/gems/shop/bootstrap",
         "/gems/shop/catalog",
@@ -3044,6 +3046,7 @@
         "/api/admin",
         "/api/concepts",
         "/api/explore/contextual-quiz",
+        "/api/explore/learning-links",
         "/api/gems",
         "/api/learning-path",
         "/api/showcase",
@@ -4206,6 +4209,7 @@
         "@/features/content3d/showcase/public"
       ],
       "apiFiles": [
+        "src/features/content3d/showcase/api/entityLearningLinksApi.ts",
         "src/features/content3d/showcase/api/exploreContextualQuizApi.ts",
         "src/features/content3d/showcase/api/showcaseCatalogApi.ts",
         "src/features/content3d/showcase/api/showcaseEntitiesApi.ts",
@@ -4215,6 +4219,7 @@
         "/editor",
         "/editor/",
         "/explore/contextual-quiz/",
+        "/explore/learning-links/",
         "/jpl",
         "/showcase-catalog",
         "/showcase-entities",
@@ -4223,6 +4228,7 @@
       ],
       "backendMounts": [
         "/api/explore/contextual-quiz",
+        "/api/explore/learning-links",
         "/api/showcase-catalog",
         "/api/showcase-entities",
         "/api/showcase-orbits"
@@ -4254,6 +4260,7 @@
         "src/features/auth/api/teacherApplicationMediaApi.ts",
         "src/features/auth/api/teacherApplicationsApi.ts",
         "src/features/auth/api/teacherProfileApi.ts",
+        "src/features/content3d/showcase/api/entityLearningLinksApi.ts",
         "src/features/content3d/showcase/api/exploreContextualQuizApi.ts",
         "src/features/content3d/showcase/api/showcaseCatalogApi.ts",
         "src/features/content3d/showcase/api/showcaseEntitiesApi.ts",
@@ -4285,6 +4292,7 @@
         "/editor/",
         "/editor/generate-quiz",
         "/explore/contextual-quiz/",
+        "/explore/learning-links/",
         "/explore/passport",
         "/explore/sky-targets",
         "/jpl",
@@ -4304,6 +4312,7 @@
         "/api/admin",
         "/api/concepts",
         "/api/explore/contextual-quiz",
+        "/api/explore/learning-links",
         "/api/explore/passport",
         "/api/explore/sky-targets",
         "/api/learning-path",

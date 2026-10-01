@@ -95,3 +95,9 @@ export * from './lib/showcaseEntities'
 export * from './lib/showcaseCatalogRefresh'
 export * from './lib/mergeShowcaseCatalog'
 export * from './lib/solarSystemData'
+export { fetchEntityLearningLinks, lessonHrefForLink } from './api/entityLearningLinksApi'
+export type {
+  EntityLearningLinks,
+  EntityLessonLink,
+  EntityLearningLinkSource,
+} from './api/entityLearningLinksApi'

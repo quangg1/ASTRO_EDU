@@ -20,6 +20,10 @@ export type ShowcaseBridgeMap = {
   conceptHints: string[]
 }
 
+/**
+ * Dự phòng offline. Nguồn chuẩn là `GET /api/explore/learning-links/:entityId`
+ * (gợi ý từ khóa nằm ở `services/api/data/showcaseEntityConceptHints.json`).
+ */
 export const SHOWCASE_ENTITY_CONCEPT_MAP: ShowcaseBridgeMap[] = [
   { entityId: 'planet-saturn', conceptHints: ['saturn', 'rings', 'cassini', 'titan', 'gas giant'] },
   { entityId: 'moon-titan', conceptHints: ['titan', 'atmosphere', 'methane'] },

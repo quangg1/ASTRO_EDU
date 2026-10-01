@@ -3,9 +3,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   buildExploreContextualQuiz,
+  fetchEntityLearningLinks,
   fetchExploreContextualQuiz,
   getShowcaseMuseumLabelVi,
   guessEntityRarity,
+  lessonHrefForLink,
   loadBridgeVisitedEntityMap,
   loadDiscoveryMap,
   resolveAllLessonsForEntity,
@@ -13,7 +15,12 @@ import {
   saveBridgeVisitedEntityMap,
   saveDiscoveryMap,
 } from '@/features/content3d/showcase/public'
-import { dispatchExplorePassportChanged, markPassportSkyTarget } from '@/features/explore/public'
+import type { EntityLearningLinks } from '@/features/content3d/showcase/public'
+import {
+  dispatchExplorePassportChanged,
+  fetchExplorePassport,
+  markPassportSkyTarget,
+} from '@/features/explore/public'
 import type { ExploreView, SkyExploreTarget } from '@/features/explore/public'
 import { getSkyTargetLabel, isSkyOnlyTarget } from '@/features/explore/public'
 import {
@@ -86,6 +93,7 @@ export function useExploreLearningBridge({
   const [entityQuizCompleted, setEntityQuizCompleted] = useState(false)
   const [bridgeDebugEntries, setBridgeDebugEntries] = useState<string[]>([])
   const [visited3DMap, setVisited3DMap] = useState<LessonVisited3DMap>({})
+  const [serverLinks, setServerLinks] = useState<EntityLearningLinks | null>(null)
   const bridgeFocusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const bridgeQuizTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const bridgeQuizQuestionsRef = useRef<QuizQuestion[]>([])
@@ -112,6 +120,42 @@ export function useExploreLearningBridge({
       setVisited3DMap(loadLessonVisited3D(userId))
     })
   }, [userId])
+
+  // Khám phá đã ghi trên server là nguồn chuẩn: đổi máy / xoá cache không bị
+  // tính "khám phá mới" lần nữa.
+  useEffect(() => {
+    if (!userId) return
+    let cancelled = false
+    void fetchExplorePassport().then((passport) => {
+      if (cancelled || !passport?.discoveries?.length) return
+      const local = loadDiscoveryMap(userId)
+      const merged = { ...local }
+      for (const id of passport.discoveries) merged[id] = true
+      saveDiscoveryMap(merged, userId)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [userId])
+
+  // Liên kết entity ↔ concept ↔ bài học do server quyết định (Studio + sceneContext).
+  const linkEntityId =
+    exploreView === 'sky' ? activeSkyTarget?.id ?? activeTargetId : bridgeEntityId
+  useEffect(() => {
+    setServerLinks(null)
+    if (!linkEntityId) return
+    let cancelled = false
+    void fetchEntityLearningLinks(linkEntityId).then((links) => {
+      if (!cancelled) setServerLinks(links)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [linkEntityId])
+
+  /** Chỉ dùng kết quả server khi có liên kết do người biên soạn khai báo; còn lại giữ cách nối cũ. */
+  const authoredLinks =
+    serverLinks && serverLinks.entityId === linkEntityId && serverLinks.explicit ? serverLinks : null
 
   const skyConceptExtraHints = useMemo(() => {
     if (exploreView !== 'sky') return null
@@ -164,6 +208,13 @@ export function useExploreLearningBridge({
   const skyPanelConfig = exploreView === 'sky' ? activeSkyTarget?.panelConfig ?? null : null
 
   const effectiveConceptCards = useMemo(() => {
+    if (authoredLinks?.concepts.length) {
+      const byId = new Map(concepts.map((c) => [c.id, c]))
+      const picked = authoredLinks.concepts
+        .map((c) => byId.get(c.id))
+        .filter((c): c is LearningConcept => Boolean(c))
+      if (picked.length) return picked.slice(0, 12)
+    }
     const ids =
       exploreView === 'sky'
         ? skyPanelConfig?.conceptTagIds || []
@@ -173,6 +224,7 @@ export function useExploreLearningBridge({
     const picked = concepts.filter((c) => set.has(c.id))
     return picked.length ? picked.slice(0, 12) : bridgeConceptCards
   }, [
+    authoredLinks,
     exploreView,
     skyPanelConfig?.conceptTagIds,
     activeContentRow?.panelConfig?.conceptTagIds,
@@ -181,6 +233,13 @@ export function useExploreLearningBridge({
   ])
 
   const effectiveLessonLinks = useMemo(() => {
+    if (authoredLinks?.lessons.length) {
+      return authoredLinks.lessons.map((l) => ({
+        lessonId: l.lessonId,
+        title: l.titleVi,
+        href: lessonHrefForLink(l),
+      }))
+    }
     const ids =
       exploreView === 'sky'
         ? skyPanelConfig?.lessonIds || []
@@ -191,6 +250,7 @@ export function useExploreLearningBridge({
       .filter((x): x is { lessonId: string; title: string; href: string } => Boolean(x))
     return out.length ? out : bridgeLessonLinks
   }, [
+    authoredLinks,
     exploreView,
     skyPanelConfig?.lessonIds,
     activeContentRow?.panelConfig?.lessonIds,
