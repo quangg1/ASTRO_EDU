@@ -1,10 +1,12 @@
 'use client'
 
 import type { ThreeEvent } from '@react-three/fiber'
-import { Canvas, useFrame } from '@react-three/fiber'
-import { OrbitControls, Preload, Stars } from '@react-three/drei'
-import React, { Suspense, useCallback, useEffect, useMemo, useRef, type ComponentPropsWithoutRef } from 'react'
+import { useFrame } from '@react-three/fiber'
+import { OrbitControls, Stars } from '@react-three/drei'
+import React, { useCallback, useEffect, useMemo, useRef, type ComponentPropsWithoutRef } from 'react'
 import * as THREE from 'three'
+import { StandaloneSceneCanvas } from './scene-host/SceneCanvas'
+import { PLANET_HISTORY_SCENE_PRESET } from './scenePresets'
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib'
 import type { NarrativeSite } from '@/features/content3d/narrative/types'
 import { narrativeSitesForBeat } from '@/features/content3d/narrative/lib/siteVisibility'
@@ -184,27 +186,15 @@ function Scene({ globeEntity }: { globeEntity: ShowcaseOrbitEntity }) {
   )
 }
 
-const onCanvasPointerMissed = () => {
-  usePlanetNarrativeStore.getState().setSelectedSiteId(null)
+/** Nội dung cảnh Deep History hành tinh (không có Canvas). */
+export function PlanetHistorySceneContent({ globeEntity }: { globeEntity: ShowcaseOrbitEntity }) {
+  return <Scene globeEntity={globeEntity} />
 }
 
 export default function PlanetHistoryScene({ globeEntity }: { globeEntity: ShowcaseOrbitEntity }) {
   return (
-    <Canvas
-      className="h-full w-full"
-      camera={{ position: [0, 4, 22], fov: 58, near: 0.02 }}
-      gl={{ antialias: true, alpha: false }}
-      style={{ background: '#100818' }}
-      onCreated={({ gl }) => {
-        gl.toneMappingExposure = 1.28
-      }}
-      onPointerMissed={onCanvasPointerMissed}
-    >
-      <color attach="background" args={['#100818']} />
-      <Suspense fallback={null}>
-        <Scene globeEntity={globeEntity} />
-        <Preload all />
-      </Suspense>
-    </Canvas>
+    <StandaloneSceneCanvas preset={PLANET_HISTORY_SCENE_PRESET} className="h-full w-full">
+      <PlanetHistorySceneContent globeEntity={globeEntity} />
+    </StandaloneSceneCanvas>
   )
 }

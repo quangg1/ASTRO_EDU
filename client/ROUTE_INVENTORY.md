@@ -58,11 +58,12 @@ Page → features → API paths → backend mounts. Regenerate: `node scripts/ge
 | `/reset-password` | 124 | auth | /api/admin | — |
 | `/search` | 729 | community, courses | /api/comments, /api/community, /api/courses, /api/forums, /api/news, /api/posts, /api/tutorials | MISSING |
 | `/studio/[slug]/cohorts` | 62 | auth, courses | /api/admin, /api/courses, /api/tutorials | — |
-| `/studio/[slug]` | 919 | auth, courses | /api/admin, /api/courses, /api/tutorials | MISSING |
+| `/studio/[slug]` | 927 | auth, content3d/showcase, courses | /api/admin, /api/courses, /api/explore/contextual-quiz, /api/explore/learning-links, /api/showcase-catalog, /api/showcase-entities, /api/showcase-orbits, /api/tutorials | MISSING |
 | `/studio/astronomy-calendar` | 40 | astronomy-calendar, auth | /api/admin, /api/astronomy-calendar | — |
 | `/studio/concepts` | 6 | concepts | /api/concepts | yes |
+| `/studio/learning-links` | 6 | content3d/showcase | /api/explore/contextual-quiz, /api/explore/learning-links, /api/showcase-catalog, /api/showcase-entities, /api/showcase-orbits | — |
 | `/studio/learning-path` | 6 | learning-path | /api/concepts, /api/learning-path | yes |
-| `/studio` | 744 | auth, courses | /api/admin, /api/courses, /api/tutorials | MISSING |
+| `/studio` | 771 | auth, courses | /api/admin, /api/courses, /api/tutorials | MISSING |
 | `/studio/showcase-entities` | 6 | content3d/showcase | /api/explore/contextual-quiz, /api/explore/learning-links, /api/showcase-catalog, /api/showcase-entities, /api/showcase-orbits | yes |
 | `/studio/sky-targets` | 541 | auth, content3d/showcase, explore, learning-path | /api/admin, /api/concepts, /api/explore/contextual-quiz, /api/explore/learning-links, /api/explore/passport, /api/explore/sky-targets, /api/learning-path, /api/showcase-catalog, /api/showcase-entities, /api/showcase-orbits | MISSING |
 | `/topics/[slug]` | 26 | learning-path | /api/concepts, /api/learning-path | — |
@@ -508,11 +509,11 @@ Page → features → API paths → backend mounts. Regenerate: `node scripts/ge
 
 ### `/studio/[slug]`
 
-- **page:** `src/app/studio/[slug]/page.tsx` (919 lines)
-- **features:** `auth`, `courses`
-- **entry:** `@/features/auth/public`, `@/features/courses/public`
+- **page:** `src/app/studio/[slug]/page.tsx` (927 lines)
+- **features:** `auth`, `content3d/showcase`, `courses`
+- **entry:** `@/features/auth/public`, `@/features/content3d/showcase/public`, `@/features/courses/public`
 - **api paths (sampled):** `/analytics`, `/announcements`, `/announcements/`, `/api/admin/teacher-applications`, `/api/admin/teacher-applications/`, `/assignment/`, `/attempts`, `/attempts/`, `/attempts/active`, `/auth/change-password`, `/auth/firebase`, `/auth/forgot-password`
-- **backend:** `/api/admin` (admin), `/api/courses` (courses), `/api/tutorials` (courses)
+- **backend:** `/api/admin` (admin), `/api/courses` (courses), `/api/explore/contextual-quiz` (content3d), `/api/explore/learning-links` (content3d), `/api/showcase-catalog` (content3d), `/api/showcase-entities` (content3d), `/api/showcase-orbits` (content3d), `/api/tutorials` (courses)
 - **TRACE:** MISSING (required for pages ≥400 LOC)
 
 ### `/studio/astronomy-calendar`
@@ -532,6 +533,14 @@ Page → features → API paths → backend mounts. Regenerate: `node scripts/ge
 - **backend:** `/api/concepts` (concepts)
 - **TRACE:** `src/app/studio/concepts/TRACE.md`
 
+### `/studio/learning-links`
+
+- **page:** `src/app/studio/learning-links/page.tsx` (6 lines)
+- **features:** `content3d/showcase`
+- **entry:** `@/features/content3d/showcase/public`
+- **api paths (sampled):** `/editor`, `/editor/`, `/explore/contextual-quiz/`, `/explore/learning-links/`, `/explore/learning-links/by-lesson`, `/explore/learning-links/coverage`, `/jpl`, `/learn/`, `/showcase-catalog`, `/showcase-entities`, `/showcase-orbits`, `/sync-entity`
+- **backend:** `/api/explore/contextual-quiz` (content3d), `/api/explore/learning-links` (content3d), `/api/showcase-catalog` (content3d), `/api/showcase-entities` (content3d), `/api/showcase-orbits` (content3d)
+
 ### `/studio/learning-path`
 
 - **page:** `src/app/studio/learning-path/page.tsx` (6 lines)
@@ -543,7 +552,7 @@ Page → features → API paths → backend mounts. Regenerate: `node scripts/ge
 
 ### `/studio`
 
-- **page:** `src/app/studio/page.tsx` (744 lines)
+- **page:** `src/app/studio/page.tsx` (771 lines)
 - **features:** `auth`, `courses`
 - **entry:** `@/features/auth/public`, `@/features/courses/public`
 - **api paths (sampled):** `/analytics`, `/announcements`, `/announcements/`, `/api/admin/teacher-applications`, `/api/admin/teacher-applications/`, `/assignment/`, `/attempts`, `/attempts/`, `/attempts/active`, `/auth/change-password`, `/auth/firebase`, `/auth/forgot-password`
@@ -555,7 +564,7 @@ Page → features → API paths → backend mounts. Regenerate: `node scripts/ge
 - **page:** `src/app/studio/showcase-entities/page.tsx` (6 lines)
 - **features:** `content3d/showcase`
 - **entry:** `@/features/content3d/showcase/public`
-- **api paths (sampled):** `/editor`, `/editor/`, `/explore/contextual-quiz/`, `/explore/learning-links/`, `/explore/learning-links/by-lesson`, `/jpl`, `/showcase-catalog`, `/showcase-entities`, `/showcase-orbits`, `/sync-entity`
+- **api paths (sampled):** `/editor`, `/editor/`, `/explore/contextual-quiz/`, `/explore/learning-links/`, `/explore/learning-links/by-lesson`, `/explore/learning-links/coverage`, `/jpl`, `/learn/`, `/showcase-catalog`, `/showcase-entities`, `/showcase-orbits`, `/sync-entity`
 - **backend:** `/api/explore/contextual-quiz` (content3d), `/api/explore/learning-links` (content3d), `/api/showcase-catalog` (content3d), `/api/showcase-entities` (content3d), `/api/showcase-orbits` (content3d)
 - **TRACE:** `src/app/studio/showcase-entities/TRACE.md`
 

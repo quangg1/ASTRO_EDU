@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { lazy, useEffect, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { Suspense } from 'react'
 import { preloadHipBrightCatalog } from '@/features/explore/public'
@@ -9,22 +9,28 @@ import { Loading } from '@/components/ui/Loading'
 import { planetsData } from '@/features/content3d/showcase/public'
 import { NASA_SHOWCASE_ITEMS } from '@/features/content3d/showcase/public'
 import type { ExplorePageModel } from '../hooks/useExplorePage'
+import { EXPLORE_SCENES, resolveExploreSceneId } from '../lib/exploreSceneRegistry'
+import type { ScenePreset } from '@/components/3d/scene-host/scenePreset'
 
-const EarthScene = dynamic(() => import('@/components/3d/EarthScene'), {
-  ssr: false,
-  loading: () => <Loading />,
-})
-const PlanetHistoryScene = dynamic(() => import('@/components/3d/PlanetHistoryScene'), {
-  ssr: false,
-  loading: () => <Loading />,
-})
-const ShowcaseScene = dynamic(() => import('@/components/3d/showcase/ShowcaseScene'), {
-  ssr: false,
-  loading: () => <Loading />,
-})
+/** Canvas dùng chung cho Trái Đất / Deep History / Showcase — tạo một lần, sống suốt trang. */
+const SharedSceneCanvas = dynamic(
+  () => import('@/components/3d/scene-host/SceneCanvas').then((m) => m.SharedSceneCanvas),
+  { ssr: false, loading: () => <Loading /> },
+)
 const SkyPlanetariumScene = dynamic(
   () => import('@/components/3d/sky/SkyPlanetariumScene').then((m) => m.SkyPlanetariumScene),
   { ssr: false, loading: () => <Loading /> },
+)
+
+// Nội dung cảnh (không Canvas) — chỉ tải khi cảnh được mở lần đầu.
+const EarthSceneContent = lazy(() =>
+  import('@/components/3d/EarthScene').then((m) => ({ default: m.EarthSceneContent })),
+)
+const PlanetHistorySceneContent = lazy(() =>
+  import('@/components/3d/PlanetHistoryScene').then((m) => ({ default: m.PlanetHistorySceneContent })),
+)
+const ShowcaseSceneRoot = lazy(() =>
+  import('@/components/3d/showcase/ShowcaseScene').then((m) => ({ default: m.ShowcaseSceneRoot })),
 )
 
 type Props = Pick<
@@ -84,10 +90,73 @@ export function ExploreSceneCanvas({
     if (exploreView === 'sky') preloadHipBrightCatalog()
   }, [exploreView])
 
+  const sceneId = resolveExploreSceneId({
+    exploreView,
+    sceneMode,
+    planetHistoryEntityId,
+    hasEarthHistoryStage: Boolean(earthHistoryStage),
+    hasPlanetGlobe: Boolean(planetGlobeEntity),
+  })
+  const scene = EXPLORE_SCENES[sceneId]
+
+  // Canvas dùng chung chỉ được tạo khi lần đầu cần, rồi giữ lại (ẩn) khi sang bầu trời
+  // để quay lại không phải dựng WebGL context mới.
+  const lastSharedPresetRef = useRef<ScenePreset | null>(null)
+  if (scene.canvas === 'shared') lastSharedPresetRef.current = scene.preset
+  const [sharedMounted, setSharedMounted] = useState(scene.canvas === 'shared')
+  useEffect(() => {
+    if (scene.canvas === 'shared') setSharedMounted(true)
+  }, [scene.canvas])
+  const sharedPreset = lastSharedPresetRef.current
+
   return (
     <div className="canvas-container explore-scene-canvas" data-explore-tour="explore-scene-canvas">
-      <Suspense fallback={<Loading />}>
-        {exploreView === 'sky' ? (
+      {sharedMounted && sharedPreset && (
+        <SharedSceneCanvas preset={sharedPreset} active={scene.canvas === 'shared'}>
+          {sceneId === 'earth' ? (
+            <EarthSceneContent />
+          ) : sceneId === 'earth-history' && earthHistoryStage ? (
+            <EarthSceneContent
+              overrideStage={earthHistoryStage}
+              overrideFossils={earthHistoryFossils}
+              interactiveGlobe
+            />
+          ) : sceneId === 'planet-history' && planetGlobeEntity ? (
+            <PlanetHistorySceneContent globeEntity={planetGlobeEntity} />
+          ) : sceneId === 'showcase' ? (
+            <ShowcaseSceneRoot
+              orbitEntities={mergedOrbitEntities}
+              showcaseContent={showcaseContent}
+              showcaseActiveItemId={showcaseActiveItemId}
+              onShowcaseItemSelect={(id) => {
+                handleShowcaseEntityClicked(id, 'scene')
+                syncSelectedPlanetFromItem(id)
+              }}
+              flightTargetIndex={selectedSolarPlanetIndex}
+              onPlanetSelect={(idx) => {
+                setSelectedSolarPlanetIndex(idx)
+                if (idx === null) return
+                const planetName = planetsData[idx]?.name
+                if (!planetName) return
+                const planetId = `planet-${planetName.toLowerCase()}`
+                const planetItem = NASA_SHOWCASE_ITEMS.find(
+                  (item) =>
+                    item.group === 'planets_moons' &&
+                    (item.id === planetId || item.linkedPlanetName === planetName || item.name === planetName),
+                )
+                if (planetItem) handleShowcaseEntityClicked(planetItem.id, 'planet-select')
+              }}
+              observerTargetLock
+              observerDisableAutoTarget={false}
+              observerExploreEntityId={null}
+              initialSpherical={initialShowcaseSpherical}
+              onCameraSettled={handleShowcaseCameraSettled}
+            />
+          ) : null}
+        </SharedSceneCanvas>
+      )}
+      {sceneId === 'sky' && (
+        <Suspense fallback={<Loading />}>
           <SkyPlanetariumScene
             targets={skyTargets}
             pinnedTargetId={skyActiveTargetId}
@@ -100,49 +169,8 @@ export function ExploreSceneCanvas({
             ephemerisBodies={ephemerisBodies}
             skyWeather={skyWeather}
           />
-        ) : sceneMode === 'earth' ? (
-          <EarthScene />
-        ) : sceneMode === 'planet-history' &&
-          planetHistoryEntityId === 'planet-earth' &&
-          earthHistoryStage ? (
-          <EarthScene
-            overrideStage={earthHistoryStage}
-            overrideFossils={earthHistoryFossils}
-            interactiveGlobe
-          />
-        ) : sceneMode === 'planet-history' && planetGlobeEntity ? (
-          <PlanetHistoryScene globeEntity={planetGlobeEntity} />
-        ) : (
-          <ShowcaseScene
-            orbitEntities={mergedOrbitEntities}
-            showcaseContent={showcaseContent}
-            showcaseActiveItemId={showcaseActiveItemId}
-            onShowcaseItemSelect={(id) => {
-              handleShowcaseEntityClicked(id, 'scene')
-              syncSelectedPlanetFromItem(id)
-            }}
-            flightTargetIndex={selectedSolarPlanetIndex}
-            onPlanetSelect={(idx) => {
-              setSelectedSolarPlanetIndex(idx)
-              if (idx === null) return
-              const planetName = planetsData[idx]?.name
-              if (!planetName) return
-              const planetId = `planet-${planetName.toLowerCase()}`
-              const planetItem = NASA_SHOWCASE_ITEMS.find(
-                (item) =>
-                  item.group === 'planets_moons' &&
-                  (item.id === planetId || item.linkedPlanetName === planetName || item.name === planetName),
-              )
-              if (planetItem) handleShowcaseEntityClicked(planetItem.id, 'planet-select')
-            }}
-            observerTargetLock
-            observerDisableAutoTarget={false}
-            observerExploreEntityId={null}
-            initialSpherical={initialShowcaseSpherical}
-            onCameraSettled={handleShowcaseCameraSettled}
-          />
-        )}
-      </Suspense>
+        </Suspense>
+      )}
     </div>
   )
 }

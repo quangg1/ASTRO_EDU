@@ -13,6 +13,11 @@ router.get('/concepts', validate({ query: schema.conceptIdsQuery }), learningSta
 router.get('/weak-lessons', validate({ query: schema.weakLessonsQuery }), learningState.weakLessons);
 router.get('/spaced-review', validate({ query: schema.spacedReviewQuery }), learningState.spacedReview);
 router.get('/lesson/:lessonId', validate({ params: schema.lessonIdParams }), learningState.lessonState);
+router.get(
+  '/explore/:entityId',
+  validate({ params: schema.entityIdParams }),
+  learningState.exploreEntityProgress,
+);
 router.get('/concept/:conceptId', validate({ params: schema.conceptIdParams }), learningState.conceptState);
 
 router.post('/events', validate({ body: schema.learningEventsBody }), learningState.recordEvents);

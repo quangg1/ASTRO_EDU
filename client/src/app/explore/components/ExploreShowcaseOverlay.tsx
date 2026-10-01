@@ -32,6 +32,7 @@ type Props = Pick<
   | 'bridgeDebugEntries'
   | 'showcaseActiveItemId'
   | 'effectiveLessonLinks'
+  | 'courseLessonLinks'
   | 'bridgeVisitedLessonsForEntity'
   | 'activeResolved'
   | 'activeEntityHasDeepHistory'
@@ -87,6 +88,7 @@ export function ExploreShowcaseOverlay(props: Props) {
     bridgeDebugEntries,
     showcaseActiveItemId,
     effectiveLessonLinks,
+    courseLessonLinks,
     bridgeVisitedLessonsForEntity,
     activeResolved,
     activeEntityHasDeepHistory,
@@ -419,6 +421,7 @@ export function ExploreShowcaseOverlay(props: Props) {
             museumLabelVi={museumLabelVi}
             conceptChips={effectiveConceptCards}
             learningLinks={effectiveLessonLinks}
+            courseLessonLinks={courseLessonLinks}
             panelConfig={effectivePanelConfig ?? undefined}
             gamification={enrichedGamification}
             hasDeepHistory={Boolean(activeResolved && activeEntityHasDeepHistory)}

@@ -1,10 +1,12 @@
 'use client'
 
-import { Canvas, useFrame, useThree } from '@react-three/fiber'
+import { useFrame, useThree } from '@react-three/fiber'
 import type { ThreeEvent } from '@react-three/fiber'
-import { OrbitControls, Stars, Preload } from '@react-three/drei'
-import React, { Suspense, useCallback, useEffect, useMemo, useRef } from 'react'
+import { OrbitControls, Stars } from '@react-three/drei'
+import React, { useCallback, useEffect, useMemo, useRef } from 'react'
 import * as THREE from 'three'
+import { StandaloneSceneCanvas } from './scene-host/SceneCanvas'
+import { EARTH_SCENE_PRESET } from './scenePresets'
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib'
 import { Earth, globeSurfaceRaycast } from './Earth'
 import { FossilPoints } from './FossilPoints'
@@ -431,39 +433,25 @@ export interface EarthSceneProps {
   interactiveGlobe?: boolean
 }
 
-export default function EarthScene({
+/** Nội dung cảnh Trái Đất (không có Canvas) — Explore gắn vào Canvas dùng chung. */
+export function EarthSceneContent({
   overrideStage,
   overrideFossils,
   interactiveGlobe = false,
 }: EarthSceneProps = {}) {
-  const onPointerMissed = useCallback(() => {
-    useSceneCommandStore.getState().clearAllGlobeFossilUi()
-  }, [])
-
   return (
-    <Canvas
-      camera={{ position: [0, 5, 25], fov: 60, near: 0.006 }}
-      gl={{ antialias: true, alpha: false }}
-      style={{ background: '#000000' }}
-      onPointerMissed={onPointerMissed}
-      raycaster={{
-        params: {
-          Mesh: {},
-          Line: { threshold: 1 },
-          LOD: {},
-          Points: { threshold: 0.42 },
-          Sprite: {},
-        },
-      }}
-    >
-      <Suspense fallback={null}>
-        <Scene
-          overrideStage={overrideStage}
-          overrideFossils={overrideFossils}
-          interactiveGlobe={interactiveGlobe}
-        />
-        <Preload all />
-      </Suspense>
-    </Canvas>
+    <Scene
+      overrideStage={overrideStage}
+      overrideFossils={overrideFossils}
+      interactiveGlobe={interactiveGlobe}
+    />
+  )
+}
+
+export default function EarthScene(props: EarthSceneProps = {}) {
+  return (
+    <StandaloneSceneCanvas preset={EARTH_SCENE_PRESET}>
+      <EarthSceneContent {...props} />
+    </StandaloneSceneCanvas>
   )
 }

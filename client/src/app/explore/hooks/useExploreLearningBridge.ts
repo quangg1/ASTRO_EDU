@@ -7,6 +7,7 @@ import {
   fetchExploreContextualQuiz,
   getShowcaseMuseumLabelVi,
   guessEntityRarity,
+  courseLessonHref,
   lessonHrefForLink,
   loadBridgeVisitedEntityMap,
   loadDiscoveryMap,
@@ -38,7 +39,10 @@ import type { ShowcaseEntityContentDTO } from '@/features/content3d/showcase/pub
 import type { ResolvedNasaCatalogItem } from '@/features/content3d/showcase/public'
 import type { ShowcaseOrbitEntity } from '@/features/content3d/showcase/public'
 import type { QuizQuestion } from '@/shared/types/quizQuestion'
-import { postExploreLearningStateEvent } from '@/features/learning-state/public'
+import {
+  fetchExploreEntityProgress,
+  postExploreLearningStateEvent,
+} from '@/features/learning-state/public'
 import {
   loadExploreContextualQuizDoneToday,
   saveExploreContextualQuizDoneToday,
@@ -232,6 +236,17 @@ export function useExploreLearningBridge({
     concepts,
   ])
 
+  /** Bài Khóa học khai báo entity — chỉ để mở bài, không tính vào tiến độ Lộ trình. */
+  const courseLessonLinks = useMemo(
+    () =>
+      (authoredLinks?.courseLessons ?? []).map((l) => ({
+        lessonId: `course:${l.courseSlug}:${l.lessonSlug}`,
+        title: l.courseTitle ? `${l.title} · ${l.courseTitle}` : l.title,
+        href: courseLessonHref(l),
+      })),
+    [authoredLinks],
+  )
+
   const effectiveLessonLinks = useMemo(() => {
     if (authoredLinks?.lessons.length) {
       return authoredLinks.lessons.map((l) => ({
@@ -302,6 +317,23 @@ export function useExploreLearningBridge({
   useEffect(() => {
     setPanelReadComplete(loadExplorePanelReadComplete(activeTargetId, userId ?? null))
     setEntityQuizCompleted(loadExploreContextualQuizDoneToday(activeTargetId, userId ?? null))
+    if (!userId || !activeTargetId) return
+    // Server là nguồn chuẩn khi đã đăng nhập; localStorage chỉ là bộ đệm cho khách / offline.
+    let cancelled = false
+    void fetchExploreEntityProgress(activeTargetId).then((progress) => {
+      if (cancelled || !progress || progress.entityId !== activeTargetId) return
+      if (progress.panelRead) {
+        saveExplorePanelReadComplete(activeTargetId, userId)
+        setPanelReadComplete(true)
+      }
+      if (progress.quizDoneToday) {
+        saveExploreContextualQuizDoneToday(activeTargetId, userId)
+        setEntityQuizCompleted(true)
+      }
+    })
+    return () => {
+      cancelled = true
+    }
   }, [activeTargetId, userId])
 
   useEffect(() => {
@@ -461,6 +493,13 @@ export function useExploreLearningBridge({
     saveExplorePanelReadComplete(activeTargetId, userId ?? null)
     setPanelReadComplete(true)
     panelReadCompleteRef.current = true
+    if (userId) {
+      void postExploreLearningStateEvent(
+        'explore_panel_read',
+        { entityId: activeTargetId, exploreView },
+        `explore_panel_read_${activeTargetId}`,
+      )
+    }
 
     if (
       !loadExploreContextualQuizDoneToday(activeTargetId, userId ?? null) &&
@@ -468,7 +507,7 @@ export function useExploreLearningBridge({
     ) {
       setBridgeQuizPromptOpen(true)
     }
-  }, [activeTargetId, panelReadComplete, userId])
+  }, [activeTargetId, panelReadComplete, userId, exploreView])
 
   const openBridgeQuiz = useCallback(() => {
     if (!panelReadComplete) return false
@@ -550,6 +589,7 @@ export function useExploreLearningBridge({
     handleQuizComplete,
     panelReadComplete,
     markPanelReadComplete,
+    courseLessonLinks,
     openBridgeQuiz,
     entityQuizCompleted,
   }

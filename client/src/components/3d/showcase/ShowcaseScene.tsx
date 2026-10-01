@@ -1,10 +1,11 @@
 'use client'
 
 import { useRef, useMemo, useState, useEffect, useCallback } from 'react'
-import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { OrbitControls, Stars, Preload } from '@react-three/drei'
-import { Suspense } from 'react'
+import { useFrame, useThree } from '@react-three/fiber'
+import { OrbitControls, Stars } from '@react-three/drei'
 import * as THREE from 'three'
+import { StandaloneSceneCanvas } from '../scene-host/SceneCanvas'
+import { SHOWCASE_SCENE_PRESET } from '../scenePresets'
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib'
 import { planetsData } from '@/features/content3d/showcase/lib/solarSystemData'
 import {
@@ -422,19 +423,7 @@ function ShowcaseSceneContent({
   )
 }
 
-export default function ShowcaseScene({
-  showcaseActiveItemId,
-  onShowcaseItemSelect,
-  flightTargetIndex,
-  onPlanetSelect,
-  observerDisableAutoTarget,
-  observerExploreEntityId,
-  observerTargetLock,
-  initialSpherical,
-  onCameraSettled,
-  orbitEntities,
-  showcaseContent,
-}: {
+export type ShowcaseSceneProps = {
   showcaseActiveItemId: string | null
   onShowcaseItemSelect?: (id: string) => void
   flightTargetIndex?: number | null
@@ -446,7 +435,10 @@ export default function ShowcaseScene({
   onCameraSettled?: (spherical: ShowcaseCameraSpherical) => void
   orbitEntities?: ShowcaseOrbitEntity[]
   showcaseContent?: ShowcaseEntityContentDTO[]
-}) {
+}
+
+/** Nội dung cảnh Showcase (không có Canvas) — Explore gắn vào Canvas dùng chung. */
+export function ShowcaseSceneRoot(props: ShowcaseSceneProps) {
   useEffect(() => {
     return () => {
       useShowcaseStore.getState().setPreloadGroup(null)
@@ -455,44 +447,13 @@ export default function ShowcaseScene({
     }
   }, [])
 
-  const onPointerMissed = useCallback(() => {
-    useShowcaseStore.getState().setFocusedEntity(null)
-  }, [])
+  return <ShowcaseSceneContent {...props} />
+}
 
+export default function ShowcaseScene(props: ShowcaseSceneProps) {
   return (
-    <Canvas
-      camera={{ position: [0, 19, 58], fov: 45 }}
-      dpr={[1, 2]}
-      gl={{
-        antialias: true,
-        alpha: false,
-        powerPreference: 'high-performance',
-        stencil: false,
-      }}
-      style={{ background: '#000', touchAction: 'none' }}
-      onPointerMissed={onPointerMissed}
-      onCreated={({ gl }) => {
-        gl.outputColorSpace = THREE.SRGBColorSpace
-        gl.toneMapping = THREE.ACESFilmicToneMapping
-        gl.toneMappingExposure = 1.24
-      }}
-    >
-      <Suspense fallback={null}>
-        <ShowcaseSceneContent
-          showcaseActiveItemId={showcaseActiveItemId}
-          onShowcaseItemSelect={onShowcaseItemSelect}
-          flightTargetIndex={flightTargetIndex}
-          onPlanetSelect={onPlanetSelect}
-          observerDisableAutoTarget={observerDisableAutoTarget}
-          observerExploreEntityId={observerExploreEntityId}
-          observerTargetLock={observerTargetLock}
-          initialSpherical={initialSpherical}
-          onCameraSettled={onCameraSettled}
-          orbitEntities={orbitEntities}
-          showcaseContent={showcaseContent}
-        />
-        <Preload all />
-      </Suspense>
-    </Canvas>
+    <StandaloneSceneCanvas preset={SHOWCASE_SCENE_PRESET}>
+      <ShowcaseSceneRoot {...props} />
+    </StandaloneSceneCanvas>
   )
 }

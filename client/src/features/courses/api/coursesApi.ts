@@ -3,6 +3,7 @@ import { getToken } from '@/features/auth/public'
 import { apiClientHeaders, apiFetchInit } from '@/lib/apiClientHeaders'
 import { getApiPathBase, getUploadBase } from '@/lib/apiConfig'
 import type { QuizQuestion } from '@/shared/types/quizQuestion'
+import type { LessonSceneContext } from '@/shared/types/sceneContext'
 import type { VideoTranscript } from '@/features/courses/lib/videoTranscript'
 
 export type { QuizQuestion }
@@ -93,6 +94,7 @@ export interface CourseLessonOutline {
   moduleId?: string | null
   week?: number | null
   visualizationId?: string | null
+  sceneContext?: LessonSceneContext | null
   quizQuestionCount: number
   sectionCount: number
 }
@@ -104,6 +106,8 @@ export interface Lesson {
   type: 'text' | 'visualization' | 'quiz' | 'assignment' | 'live_session'
   visualizationId: string | null
   stageTime?: number | null
+  /** Entity 3D bài này mở trong Explore (cùng dạng với bài Lộ trình). */
+  sceneContext?: LessonSceneContext | null
   videoUrl?: string | null
   coverImage?: string | null
   galleryImages?: string[]

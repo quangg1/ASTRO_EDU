@@ -17,6 +17,12 @@ module.exports = asyncController({
     });
   },
 
+  async exploreEntityProgress(req, res) {
+    return ok(res, {
+      progress: await engine.getExploreEntityProgress(req.userId, req.valid.params.entityId),
+    });
+  },
+
   async conceptStates(req, res) {
     const concepts = await conceptStates.getConceptChips(req.userId, req.valid.query.ids);
     return ok(res, { concepts });

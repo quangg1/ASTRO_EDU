@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const { lessonSectionSchema } = require('../../../shared/schemas/lessonSectionSchema');
 const { quizQuestionMongooseSchema } = require('../../../shared/quizQuestion');
+const { sceneContextSchema } = require('../../../shared/schemas/sceneContextSchema');
 
 const quizQuestionSchema = new mongoose.Schema(quizQuestionMongooseSchema, { _id: false });
 
@@ -49,6 +50,8 @@ const lessonSchema = new mongoose.Schema({
   },
   visualizationId: { type: String, default: null },
   stageTime: { type: Number, default: null },
+  /** Entity 3D bài học này mở trong Explore (cùng dạng với bài Lộ trình). */
+  sceneContext: { type: sceneContextSchema, default: undefined },
   videoUrl: { type: String, default: null },
   coverImage: { type: String, default: null },
   galleryImages: [{ type: String }],

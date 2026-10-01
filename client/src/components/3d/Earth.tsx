@@ -95,21 +95,33 @@ export function Earth({ stage, effectTags }: EarthProps) {
   )
 }
 
+/**
+ * Texture Trái Đất 8k nạp một lần mỗi tab: đổi cảnh trong Explore (Canvas dùng
+ * chung) dùng lại đúng object đã lên GPU thay vì tải và upload lại.
+ */
+const textureCache = new Map<string, Promise<THREE.Texture | null>>()
+
+function loadTextureOnce(path: string): Promise<THREE.Texture | null> {
+  let pending = textureCache.get(path)
+  if (!pending) {
+    pending = new Promise((resolve) => {
+      new THREE.TextureLoader().load(path, resolve, undefined, () => {
+        textureCache.delete(path)
+        resolve(null)
+      })
+    })
+    textureCache.set(path, pending)
+  }
+  return pending
+}
+
 function useOptionalTexture(path: string): THREE.Texture | null {
   const [texture, setTexture] = useState<THREE.Texture | null>(null)
   useEffect(() => {
     let cancelled = false
-    const loader = new THREE.TextureLoader()
-    loader.load(
-      path,
-      (loaded) => {
-        if (!cancelled) setTexture(loaded)
-      },
-      undefined,
-      () => {
-        if (!cancelled) setTexture(null)
-      },
-    )
+    void loadTextureOnce(path).then((loaded) => {
+      if (!cancelled) setTexture(loaded)
+    })
     return () => {
       cancelled = true
     }

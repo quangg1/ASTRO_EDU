@@ -90,17 +90,27 @@ export {
   StudioShowcaseEntitiesPage,
   StudioShowcaseEntitiesPageWithSuspense,
 } from './ui/studio/StudioShowcaseEntitiesPage'
+export { StudioLearningCoveragePage } from './ui/studio/StudioLearningCoveragePage'
+export { SceneContextField } from './ui/studio/SceneContextField'
 export { ShowcaseCatalogProvider, useShowcaseCatalogGen } from './ui/ShowcaseCatalogProvider'
 export * from './lib/showcaseEntities'
 export * from './lib/showcaseCatalogRefresh'
 export * from './lib/mergeShowcaseCatalog'
 export * from './lib/solarSystemData'
-export { fetchEntityLearningLinks, fetchLessonEntityIndex, lessonHrefForLink } from './api/entityLearningLinksApi'
+export {
+  fetchEntityLearningLinks,
+  fetchLessonEntityIndex,
+  fetchLearningLinkCoverage,
+  lessonHrefForLink,
+  courseLessonHref,
+} from './api/entityLearningLinksApi'
 export { loadLessonEntityIndex } from './lib/lessonEntityIndex'
 export { useLessonEntityIndex } from './hooks/useLessonEntityIndex'
 export type {
   EntityLearningLinks,
   EntityLessonLink,
+  EntityCourseLessonLink,
   EntityLearningLinkSource,
+  LearningLinkCoverage,
   LessonEntityIndex,
 } from './api/entityLearningLinksApi'

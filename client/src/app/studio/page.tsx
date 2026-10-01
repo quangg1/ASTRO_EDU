@@ -272,6 +272,33 @@ export default function StudioHomePage() {
               3D Showcase Studio
             </Link>
 
+            <Link
+              href="/studio/learning-links"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 8,
+                background: 'rgba(52,211,153,0.08)',
+                color: '#6ee7b7',
+                padding: '11px 20px',
+                ...mono,
+                fontSize: 11,
+                fontWeight: 600,
+                letterSpacing: '0.16em',
+                textTransform: 'uppercase',
+                textDecoration: 'none',
+                border: '1px solid rgba(52,211,153,0.28)',
+                boxShadow: '0 0 16px rgba(52,211,153,0.08)',
+                ...chamfer(10),
+              }}
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+              </svg>
+              Độ phủ Edu ↔ 3D
+            </Link>
+
             {canEditAstronomyCalendar ? (
               <Link
                 href="/studio/astronomy-calendar"

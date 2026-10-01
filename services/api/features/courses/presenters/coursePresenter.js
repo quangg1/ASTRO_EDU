@@ -84,6 +84,7 @@ function lessonOutline(lesson) {
     moduleId: lesson.moduleId || null,
     week: lesson.week ?? null,
     visualizationId: lesson.visualizationId || null,
+    sceneContext: lesson.sceneContext || null,
     quizQuestionCount: Array.isArray(lesson.quizQuestions) ? lesson.quizQuestions.length : 0,
     sectionCount: Array.isArray(lesson.sections) ? lesson.sections.length : 0,
   };

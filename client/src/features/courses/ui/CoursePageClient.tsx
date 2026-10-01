@@ -16,6 +16,7 @@ import {
 } from '@/features/courses/api/coursesApi'
 import { hasCourseLearnerAccess } from '@/features/courses/lib/courseLearnerAccess'
 import { SaveLessonButton } from '@/features/saved/public'
+import { exploreTargetsForSceneContext } from '@/features/content3d/showcase/public'
 import {
   earthHistoryData,
   FeaturedOrganisms,
@@ -216,6 +217,12 @@ export function CoursePageClient({
     if (ctx?.mode === 'cohort' && ctx.cohortId) return ctx.cohortId
     return null
   }, [course?.deliveryContext])
+
+  // Bài tự khai báo cảnh 3D (sceneContext) — cùng luật deep-link với bài Lộ trình.
+  const lessonExplore = useMemo(
+    () => exploreTargetsForSceneContext(selectedLesson?.sceneContext),
+    [selectedLesson?.sceneContext],
+  )
 
   const earthLessonStage = useMemo(() => {
     if (selectedLesson?.visualizationId !== 'earth-history') return null
@@ -575,6 +582,24 @@ export function CoursePageClient({
                   <h2 className="font-semibold text-lg leading-tight" style={{ color: 'var(--color-text-primary)' }}>{selectedLesson.title}</h2>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
+                  {lessonExplore.showcase && (
+                    <Link
+                      href={lessonExplore.showcase.href}
+                      className="min-h-9 inline-flex items-center rounded-lg border px-3 text-xs font-medium"
+                      style={{ borderColor: 'rgba(126,231,255,0.3)', color: 'var(--color-accent)' }}
+                    >
+                      Xem trong 3D
+                    </Link>
+                  )}
+                  {lessonExplore.history && (
+                    <Link
+                      href={lessonExplore.history.href}
+                      className="min-h-9 inline-flex items-center rounded-lg border px-3 text-xs font-medium"
+                      style={{ borderColor: 'rgba(167,139,250,0.3)', color: '#c4b5fd' }}
+                    >
+                      Deep History
+                    </Link>
+                  )}
                   <SaveLessonButton
                     source="course"
                     courseSlug={course.slug}

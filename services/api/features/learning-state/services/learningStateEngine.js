@@ -12,9 +12,11 @@ const {
   markLessonCompletedAndMastered,
 } = require('../../learning-path/services/learningPathQueryService');
 const { getLearningPathLessonIndex } = require('../../agent/services/toolAuthorizers/lpCurriculum');
-const showcaseContent = require('../../content3d/services/showcaseContentService');
+const entityLearningLinks = require('../../content3d/services/entityLearningLinksService');
+const { AppError } = require('../../../shared/errors');
 const {
   markExploreContextualQuizDayCompleted,
+  getExploreContextualQuizCompletedToday,
 } = require('../../content3d/services/exploreContextualQuizService');
 const {
   applyRecallQuizToLesson,
@@ -29,31 +31,29 @@ const {
 
 const DEPTH_ORDER = ['beginner', 'explorer', 'researcher'];
 
-/** @returns {{ conceptIds: string[], lessonIds: string[] }} */
+/**
+ * Concept + bài Lộ trình mà entity dạy, theo cầu nối Edu ↔ 3D. Chỉ lấy liên kết
+ * do người biên soạn khai báo: tiến độ học không được ghi theo từ khóa đoán.
+ *
+ * @returns {Promise<{ conceptIds: string[], lessonIds: string[] }>}
+ */
 async function resolveEntityCurriculumLinks(entityId) {
   const eid = String(entityId || '').trim();
   if (!eid) return { conceptIds: [], lessonIds: [] };
-
-  const content = await showcaseContent.getEntityContent(eid);
-  let conceptIds = Array.isArray(content?.panelConfig?.conceptTagIds)
-    ? content.panelConfig.conceptTagIds.map((x) => String(x || '').trim()).filter(Boolean)
-    : [];
-  let lessonIds = Array.isArray(content?.panelConfig?.lessonIds)
-    ? content.panelConfig.lessonIds.map((x) => String(x || '').trim()).filter(Boolean)
-    : [];
-
-  if (!conceptIds.length && !lessonIds.length) {
-    const bundle = await showcaseContent.getCatalogBundle();
-    const row = (bundle?.catalog || []).find((c) => String(c?.id || '').trim() === eid);
-    conceptIds = Array.isArray(row?.panelConfig?.conceptTagIds)
-      ? row.panelConfig.conceptTagIds.map((x) => String(x || '').trim()).filter(Boolean)
-      : [];
-    lessonIds = Array.isArray(row?.panelConfig?.lessonIds)
-      ? row.panelConfig.lessonIds.map((x) => String(x || '').trim()).filter(Boolean)
-      : [];
+  let links;
+  try {
+    links = await entityLearningLinks.getEntityLearningLinks(eid);
+  } catch (err) {
+    // entityId lạ từ client không được làm hỏng việc ghi sự kiện học.
+    if (err instanceof AppError && err.status === 400) return { conceptIds: [], lessonIds: [] };
+    throw err;
   }
-
-  return { conceptIds: [...new Set(conceptIds)], lessonIds: [...new Set(lessonIds)] };
+  const conceptIds =
+    links.conceptSource === 'cms' ? links.concepts.map((c) => c.id) : [];
+  const lessonIds = links.lessons
+    .filter((l) => l.source === 'cms' || l.source === 'scene')
+    .map((l) => l.lessonId);
+  return { conceptIds, lessonIds };
 }
 
 /**
@@ -547,6 +547,25 @@ async function getMisconceptions(userId, limit = 12) {
   return out.slice(-limit);
 }
 
+/**
+ * Tiến độ Explore của một entity, lưu trên server để không mất khi đổi máy hay
+ * xoá cache trình duyệt (trước đây chỉ nằm trong localStorage).
+ */
+async function getExploreEntityProgress(userId, entityId) {
+  const eid = String(entityId || '').trim();
+  const [panelRead, discovered, quizDoneToday] = await Promise.all([
+    LearningStateEvent.exists({ userId, entityId: eid, type: 'explore_panel_read' }),
+    LearningStateEvent.exists({ userId, entityId: eid, type: 'explore_entity_discovered' }),
+    getExploreContextualQuizCompletedToday(userId, eid),
+  ]);
+  return {
+    entityId: eid,
+    panelRead: Boolean(panelRead),
+    discovered: Boolean(discovered),
+    quizDoneToday: Boolean(quizDoneToday),
+  };
+}
+
 async function getLessonState(userId, lessonId) {
   if (!userId || !lessonId) return null;
   await ensureMigrated(userId);
@@ -784,6 +803,7 @@ module.exports = {
   evaluateDepthSuggestion,
   getMisconceptions,
   getLessonState,
+  getExploreEntityProgress,
   getConceptState,
   getLearnerSnapshot,
   getAgentLearningContext,
