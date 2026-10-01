@@ -20,6 +20,22 @@ async function getBundle() {
   return { stories, catalog, orbits, updatedAt };
 }
 
+/**
+ * panelConfig (tab nội dung + concept/bài học gắn với entity) do Studio entity
+ * biên soạn. Bản import catalog thường không mang theo nó, nên giữ lại bản đang
+ * lưu thay vì xóa mất liên kết Edu ↔ 3D.
+ */
+function keepStudioPanelConfig(nextCatalog, prevCatalog) {
+  const prevById = new Map(
+    (prevCatalog || []).map((entry) => [String(entry?.id || '').trim(), entry?.panelConfig]),
+  );
+  return nextCatalog.map((entry) => {
+    if (entry.panelConfig) return entry;
+    const kept = prevById.get(entry.id);
+    return kept ? { ...entry, panelConfig: kept } : entry;
+  });
+}
+
 async function replaceBundle({ catalog: rawCatalog, orbits: rawOrbits, stories: rawStories }) {
   if (
     rawCatalog.length > MAX_CATALOG ||
@@ -29,7 +45,11 @@ async function replaceBundle({ catalog: rawCatalog, orbits: rawOrbits, stories: 
     throw AppError.badRequest('Payload quá lớn');
   }
 
-  const catalog = rawCatalog.map(normalizeCatalogEntry).filter(Boolean);
+  const existing = await showcaseCatalogRepository.loadBundleParts();
+  const catalog = keepStudioPanelConfig(
+    rawCatalog.map(normalizeCatalogEntry).filter(Boolean),
+    existing.catalog,
+  );
   const orbits = rawOrbits.map(normalizeOrbit).filter(Boolean);
   const stories = rawStories.map(normalizeStory).filter(Boolean);
 
