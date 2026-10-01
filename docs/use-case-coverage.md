@@ -9,7 +9,7 @@ Ma trận đối chiếu **sơ đồ use case UML** với code. Sơ đồ đư�
 
 **Cách đọc sơ đồ:** 9 tab — **01 Overview**, **02–08** domain, **09 Agent (Cosmo)**. Mỗi tab ~1100px; zoom 100–150%.
 
-**Đồng bộ catalog:** `FinalReport.docx.md` §3.4.2 liệt kê **50 UC (UC-01 … UC-50)**. Sơ đồ sinh từ `scripts/generate-uc-diagram.mjs` — mảng `CATALOG_UC50` map 1:1 với oval trên draw.io. Chạy `npm run diagrams:uc` sẽ **fail** nếu thiếu/thừa oval so với catalog.
+**Đồng bộ catalog:** `docs/report/FinalReport.md` §3.4.2 liệt kê **50 UC (UC-01 … UC-50)**. Sơ đồ sinh từ `scripts/generate-uc-diagram.mjs` — mảng `CATALOG_UC50` map 1:1 với oval trên draw.io. Chạy `npm run diagrams:uc` sẽ **fail** nếu thiếu/thừa oval so với catalog.
 
 | Nguồn | Vai trò |
 |-------|---------|
