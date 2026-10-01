@@ -1,6 +1,6 @@
 'use client'
 
-import { DecorationCatalogExperience } from '@/components/rewards/DecorationCatalogExperience'
+import { DecorationCatalogExperience } from './DecorationCatalogExperience'
 
 type Props = {
   avatarUrl: string

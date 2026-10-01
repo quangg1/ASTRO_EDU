@@ -90,3 +90,4 @@ export {
   StudioShowcaseEntitiesPage,
   StudioShowcaseEntitiesPageWithSuspense,
 } from './ui/studio/StudioShowcaseEntitiesPage'
+export { ShowcaseCatalogProvider, useShowcaseCatalogGen } from './ui/ShowcaseCatalogProvider'

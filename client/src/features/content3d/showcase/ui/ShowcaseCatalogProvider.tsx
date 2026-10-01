@@ -1,8 +1,8 @@
 'use client'
 
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
-import { fetchPublicShowcaseCatalogBundle } from '@/features/content3d/showcase/public'
-import { hydrateShowcaseCatalogBundle, NASA_SHOWCASE_ITEMS } from '@/lib/showcaseEntities'
+import { fetchPublicShowcaseCatalogBundle } from '../api/showcaseCatalogApi'
+import { hydrateShowcaseCatalogBundle, NASA_SHOWCASE_ITEMS } from '../lib/showcaseEntities'
 import { SHOWCASE_CATALOG_CHANGED_EVENT } from '@/lib/showcaseCatalogRefresh'
 
 function catalogSnapshot(): string {

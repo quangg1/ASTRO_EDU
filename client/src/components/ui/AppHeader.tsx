@@ -10,7 +10,7 @@ import { canAccessStudio, canAdminContentOverride, canModerate, canManagePlatfor
 import { AvatarWithDecoration } from '@/features/users/ui/AvatarWithDecoration'
 import { useEquippedDecoration } from '@/features/rewards/hooks/useEquippedDecoration'
 import { navItemsForSurface, navLabel, navItemIsActive } from '@/lib/navigationConfig'
-import { NotificationBell } from '@/components/notifications/NotificationBell'
+import { NotificationBell } from '@/features/notifications/public'
 import {
   BookOpen,
   CalendarDays,

@@ -29,7 +29,7 @@ import {
   useShowcaseStore,
   type ShowcaseEntityContentDTO,
 } from '@/features/content3d/showcase/public'
-import { useShowcaseCatalogGen } from '@/components/showcase/ShowcaseCatalogProvider'
+import { useShowcaseCatalogGen } from '@/features/content3d/showcase/public'
 import { buildPlanetShowcaseEntity } from '@/lib/mergeShowcaseCatalog'
 
 function sanitizeControlsCamera(c: OrbitControlsImpl) {

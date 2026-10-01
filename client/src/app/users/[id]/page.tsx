@@ -12,7 +12,7 @@ import {
   MessageSquare,
   Sparkles,
 } from 'lucide-react'
-import { MessageUserButton } from '@/components/messages/MessageUserButton'
+import { MessageUserButton } from '@/features/messages/public'
 import { useAuthStore } from '@/features/auth/public'
 import {
   AvatarWithDecoration,

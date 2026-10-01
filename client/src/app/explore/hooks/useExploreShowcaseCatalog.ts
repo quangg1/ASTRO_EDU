@@ -16,7 +16,7 @@ import {
   type ShowcaseJplOrbitDTO,
 } from '@/features/content3d/showcase/public'
 import { SHOWCASE_CATALOG_CHANGED_EVENT } from '@/lib/showcaseCatalogRefresh'
-import { useShowcaseCatalogGen } from '@/components/showcase/ShowcaseCatalogProvider'
+import { useShowcaseCatalogGen } from '@/features/content3d/showcase/public'
 
 export function useExploreShowcaseCatalog(planetHistoryEntityId: string | null) {
   const showcaseCatalogGen = useShowcaseCatalogGen()

@@ -2,9 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { AvatarWithDecoration } from '@/features/users/ui/AvatarWithDecoration'
-import { DecorationCategoryBanner } from '@/features/users/ui/DecorationCategoryBanner'
-import { DecorationOverlayThumb } from '@/features/users/ui/DecorationOverlayThumb'
+import {
+  AvatarWithDecoration,
+  DecorationCategoryBanner,
+  DecorationOverlayThumb,
+} from '@/features/users/public'
 import { hasClientSession } from '@/features/auth/public'
 import {
   equipAvatarDecoration,
@@ -12,15 +14,15 @@ import {
   purchaseAvatarDecoration,
   type AvatarDecorationCatalogItem,
   type AvatarDecorationCategorySection,
-} from '@/features/rewards/public'
+} from '../api/avatarDecorationApi'
 import {
   DECORATION_UPDATED_EVENT,
   isDecorCategoryBannerSlug,
-} from '@/features/rewards/constants/avatarDecoration'
+} from '../constants/avatarDecoration'
 import {
   flatItemsFromSections,
   formatDecorationPrice,
-} from '@/features/rewards/lib/decorationCatalog'
+} from '../lib/decorationCatalog'
 import { Button, Card } from '@/design-system'
 import { useT } from '@/i18n/public'
 

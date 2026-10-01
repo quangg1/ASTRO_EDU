@@ -10,11 +10,13 @@ import {
   markAllNotificationsRead,
   markNotificationRead,
   type AppNotification,
-} from '@/features/notifications/public'
-import { useNotificationRealtime } from '@/features/notifications/hooks/useNotificationRealtime'
-import { PromoNotificationsSection } from '@/components/promotions/PromoNotificationsSection'
-import { fetchActivePromotions } from '@/features/promotions/public'
-import { undismissedPromos } from '@/features/promotions/lib/promoDismiss'
+} from '../api/notificationsApi'
+import { useNotificationRealtime } from '../hooks/useNotificationRealtime'
+import {
+  PromoNotificationsSection,
+  fetchActivePromotions,
+  undismissedPromos,
+} from '@/features/promotions/public'
 import { useT } from '@/i18n/public'
 
 export function NotificationBell() {

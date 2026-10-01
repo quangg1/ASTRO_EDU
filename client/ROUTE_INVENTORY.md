@@ -10,7 +10,7 @@ Page → features → API paths → backend mounts. Regenerate: `node scripts/ge
 | `/admin/broadcast` | 191 | admin, auth | /api/admin, /api/notifications | — |
 | `/admin/courses` | 117 | admin, auth | /api/admin, /api/notifications | — |
 | `/admin/gem-economy` | 491 | admin, auth, rewards | /api/admin, /api/gems, /api/notifications, /api/showcase | MISSING |
-| `/admin/moderation` | 30 | auth, community | /api/admin, /api/comments, /api/community, /api/forums, /api/news, /api/posts | — |
+| `/admin/moderation` | 30 | admin, auth, community | /api/admin, /api/comments, /api/community, /api/forums, /api/news, /api/notifications, /api/posts | — |
 | `/admin/orders` | 224 | admin, auth, payment | /api/admin, /api/notifications, /api/payments | — |
 | `/admin` | 802 | admin, auth, courses, payment | /api/admin, /api/courses, /api/notifications, /api/payments, /api/tutorials | MISSING |
 | `/admin/promo-codes` | 514 | admin, auth, courses | /api/admin, /api/courses, /api/notifications, /api/tutorials | MISSING |
@@ -53,7 +53,7 @@ Page → features → API paths → backend mounts. Regenerate: `node scripts/ge
 | `/onboarding` | 6 | onboarding | /api/onboarding | — |
 | `/` | 33 | — | — | — |
 | `/payment/return` | 77 | — | — | — |
-| `/profile` | 751 | auth, rewards, users | /api/admin, /api/gems, /api/showcase, /api/users | MISSING |
+| `/profile` | 750 | auth, rewards, users | /api/admin, /api/gems, /api/showcase, /api/users | MISSING |
 | `/register` | 315 | auth | /api/admin | — |
 | `/reset-password` | 124 | auth | /api/admin | — |
 | `/search` | 729 | community, courses | /api/comments, /api/community, /api/courses, /api/forums, /api/news, /api/posts, /api/tutorials | MISSING |
@@ -71,7 +71,7 @@ Page → features → API paths → backend mounts. Regenerate: `node scripts/ge
 | `/tutorial/[moduleId]` | 23 | learning-path | /api/concepts, /api/learning-path | — |
 | `/tutorial/knowledge-map` | 31 | — | — | — |
 | `/tutorial` | 16 | learning-path | /api/concepts, /api/learning-path | — |
-| `/users/[id]` | 326 | auth, rewards, users | /api/admin, /api/gems, /api/showcase, /api/users | — |
+| `/users/[id]` | 326 | auth, messages, rewards, users | /api/admin, /api/gems, /api/messages, /api/showcase, /api/users | — |
 
 ## Detail
 
@@ -119,10 +119,10 @@ Page → features → API paths → backend mounts. Regenerate: `node scripts/ge
 ### `/admin/moderation`
 
 - **page:** `src/app/admin/moderation/page.tsx` (30 lines)
-- **features:** `auth`, `community`
-- **entry:** `@/features/auth/public`, `@/features/community/public`
-- **api paths (sampled):** `/api/admin/teacher-applications`, `/api/admin/teacher-applications/`, `/auth/change-password`, `/auth/firebase`, `/auth/forgot-password`, `/auth/login`, `/auth/logout`, `/auth/me`, `/auth/register`, `/auth/register/resend-verification`, `/auth/register/verify-email`, `/auth/reset-password`
-- **backend:** `/api/admin` (admin), `/api/comments` (community), `/api/community` (community), `/api/forums` (community), `/api/news` (community), `/api/posts` (community)
+- **features:** `admin`, `auth`, `community`
+- **entry:** `@/features/admin/public`, `@/features/auth/public`, `@/features/community/public`
+- **api paths (sampled):** `/admin`, `/admin/analytics/agent`, `/admin/analytics/cohort`, `/admin/analytics/explore`, `/admin/analytics/funnel`, `/admin/analytics/learning-path`, `/admin/analytics/overview`, `/admin/analytics/retention`, `/admin/analytics/unified-learner`, `/admin/astronomy-calendar`, `/admin/audit-log`, `/admin/courses`
+- **backend:** `/api/admin` (admin), `/api/comments` (community), `/api/community` (community), `/api/forums` (community), `/api/news` (community), `/api/notifications` (notifications), `/api/posts` (community)
 
 ### `/admin/orders`
 
@@ -466,7 +466,7 @@ Page → features → API paths → backend mounts. Regenerate: `node scripts/ge
 
 ### `/profile`
 
-- **page:** `src/app/profile/page.tsx` (751 lines)
+- **page:** `src/app/profile/page.tsx` (750 lines)
 - **features:** `auth`, `rewards`, `users`
 - **entry:** `@/features/auth/public`, `@/features/rewards/public`, `@/features/users/public`
 - **api paths (sampled):** `/api/admin/teacher-applications`, `/api/admin/teacher-applications/`, `/auth/change-password`, `/auth/firebase`, `/auth/forgot-password`, `/auth/login`, `/auth/logout`, `/auth/me`, `/auth/register`, `/auth/register/resend-verification`, `/auth/register/verify-email`, `/auth/reset-password`
@@ -617,8 +617,8 @@ Page → features → API paths → backend mounts. Regenerate: `node scripts/ge
 ### `/users/[id]`
 
 - **page:** `src/app/users/[id]/page.tsx` (326 lines)
-- **features:** `auth`, `rewards`, `users`
-- **entry:** `@/features/auth/public`, `@/features/rewards/public`, `@/features/users/public`
+- **features:** `auth`, `messages`, `rewards`, `users`
+- **entry:** `@/features/auth/public`, `@/features/messages/public`, `@/features/rewards/public`, `@/features/users/public`
 - **api paths (sampled):** `/api/admin/teacher-applications`, `/api/admin/teacher-applications/`, `/auth/change-password`, `/auth/firebase`, `/auth/forgot-password`, `/auth/login`, `/auth/logout`, `/auth/me`, `/auth/register`, `/auth/register/resend-verification`, `/auth/register/verify-email`, `/auth/reset-password`
-- **backend:** `/api/admin` (admin), `/api/gems` (rewards), `/api/showcase` (rewards), `/api/users` (users)
+- **backend:** `/api/admin` (admin), `/api/gems` (rewards), `/api/messages` (messages), `/api/showcase` (rewards), `/api/users` (users)
 

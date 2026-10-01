@@ -9,7 +9,7 @@ import { NarrativePanelSchemaEditor } from '@/app/studio/showcase-entities/narra
 import { NarrativeGlobeMapPicker } from '@/app/studio/showcase-entities/narrative/NarrativeGlobeMapPicker'
 import { StageMultiSelect } from '@/app/studio/showcase-entities/narrative/StageMultiSelect'
 import type { ShowcaseEntityContentDTO } from '@/features/content3d/showcase/public'
-import { useShowcaseCatalogGen } from '@/components/showcase/ShowcaseCatalogProvider'
+import { useShowcaseCatalogGen } from '@/features/content3d/showcase/public'
 import {
   entityExploreHref,
   entityHasExploreHistoryViewer,

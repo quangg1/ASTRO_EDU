@@ -1,6 +1,6 @@
 'use client'
 
-import { DecorationCatalogExperience } from '@/components/rewards/DecorationCatalogExperience'
+import { DecorationCatalogExperience } from './DecorationCatalogExperience'
 import type { AvatarDecorationCategorySection } from '@/features/rewards/api/avatarDecorationApi'
 
 type Props = {

@@ -8,10 +8,9 @@ import { canModerate } from '@/lib/roles'
 import {
   TeacherProfileEditor,
   LearnerProfileEditor,
-  AvatarDecorationPicker,
   AvatarWithDecoration,
 } from '@/features/users/public'
-import { useEquippedDecoration } from '@/features/rewards/public'
+import { AvatarDecorationPicker, useEquippedDecoration } from '@/features/rewards/public'
 import { useLiveClock } from '@/hooks/useLiveClock'
 
 // ── Design primitives ──────────────────────────────────────────────────────────

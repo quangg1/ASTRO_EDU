@@ -17,7 +17,7 @@ import {
 import { useUpcomingAstronomyCalendar } from '@/features/astronomy-calendar/public'
 import { computeSunSkyState, showScreenWeatherLayers } from '@/features/explore/public'
 import { getSkyTargetLabel, resolveSolarEntityIdForTarget } from '@/features/explore/public'
-import { SkyHudSheet } from '@/components/explore/SkyHudSheet'
+import { SkyHudSheet } from '@/features/explore/public'
 import type { ExplorePageModel } from '../hooks/useExplorePage'
 import { ExploreViewToggle } from './ExploreViewToggle'
 import { ExploreBridgeQuiz } from './ExploreBridgeQuiz'

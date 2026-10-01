@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/cn'
 import { useAuthStore } from '@/features/auth/public'
 import { canAccessAdmin, hasAdminScope } from '@/lib/roles'
-import type { AdminScope } from '@/features/admin/lib/adminLabelsVi'
+import type { AdminScope } from '../lib/adminLabelsVi'
 
 const NAV: ReadonlyArray<{
   href: string

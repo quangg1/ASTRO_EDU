@@ -15,7 +15,7 @@ import {
   Globe,
   User,
 } from 'lucide-react'
-import type { TeacherApplicationWithUser } from '@/features/admin/public'
+import type { TeacherApplicationWithUser } from '../public'
 import { resolveMediaUrl } from '@/lib/apiConfig'
 import { Badge, Button, Card, Dialog, Select } from '@/design-system'
 import { EmptyState } from '@/components/ui/EmptyState'

@@ -1,5 +1,5 @@
 import { LayoutChromeBoundary } from '@/components/layout/LayoutChromeBoundary'
-import { AdminShell } from '@/components/admin/AdminShell'
+import { AdminShell } from '@/features/admin/public'
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-13T08:35:57.748Z",
+  "generatedAt": "2026-10-01T11:09:01.230Z",
   "routes": [
     {
       "route": "/admin/astronomy-calendar",
@@ -523,14 +523,23 @@
       "lineCount": 30,
       "hasTrace": false,
       "features": [
+        "admin",
         "auth",
         "community"
       ],
       "entryPoints": [
+        "@/features/admin/public",
         "@/features/auth/public",
         "@/features/community/public"
       ],
       "apiFiles": [
+        "src/features/admin/api/adminAnalyticsApi.ts",
+        "src/features/admin/api/adminAstronomyApi.ts",
+        "src/features/admin/api/adminBroadcastApi.ts",
+        "src/features/admin/api/adminGemEconomyApi.ts",
+        "src/features/admin/api/adminOpsApi.ts",
+        "src/features/admin/api/adminPromoCodesApi.ts",
+        "src/features/admin/api/adminUsersApi.ts",
         "src/features/auth/api/authApi.ts",
         "src/features/auth/api/avatarUploadApi.ts",
         "src/features/auth/api/teacherApplicationMediaApi.ts",
@@ -540,8 +549,44 @@
         "src/features/community/api/moderationApi.ts"
       ],
       "apiPaths": [
+        "/admin",
+        "/admin/analytics/agent",
+        "/admin/analytics/cohort",
+        "/admin/analytics/explore",
+        "/admin/analytics/funnel",
+        "/admin/analytics/learning-path",
+        "/admin/analytics/overview",
+        "/admin/analytics/retention",
+        "/admin/analytics/unified-learner",
+        "/admin/astronomy-calendar",
+        "/admin/audit-log",
+        "/admin/courses",
+        "/admin/courses/",
+        "/admin/enrollments/catalog/grant",
+        "/admin/enrollments/catalog/revoke",
+        "/admin/enrollments/cohort/grant",
+        "/admin/enrollments/cohort/revoke",
+        "/admin/gem-economy/audit-log",
+        "/admin/gem-economy/config",
+        "/admin/gem-economy/decoration-categories",
+        "/admin/gem-economy/decoration-categories/",
+        "/admin/gem-economy/earn-constants",
+        "/admin/gem-economy/manual-adjust",
+        "/admin/gem-economy/metrics",
+        "/admin/gem-economy/shop-items",
+        "/admin/gem-economy/shop-items/",
+        "/admin/moderation/queue",
+        "/admin/orders",
+        "/admin/orders/",
+        "/admin/promo-codes",
+        "/admin/system/news-crawl",
+        "/admin/system/status",
+        "/admin/users",
+        "/admin/users/",
         "/api/admin/teacher-applications",
         "/api/admin/teacher-applications/",
+        "/api/admin/users",
+        "/api/apiimport-suggestions",
         "/auth/change-password",
         "/auth/firebase",
         "/auth/forgot-password",
@@ -555,6 +600,7 @@
         "/auth/teacher-application",
         "/auth/teacher-application/me",
         "/auth/teacher-profile/me",
+        "/cancel",
         "/comments",
         "/comments/",
         "/community/mod/comments/",
@@ -567,15 +613,27 @@
         "/community/tags",
         "/community/tags/",
         "/cv-reviewed",
+        "/detail",
         "/forums",
         "/forums/",
         "/helpful",
         "/hidden",
         "/news",
         "/news/categories",
+        "/note",
+        "/notifications/broadcast",
         "/posts",
         "/posts/",
+        "/publish",
+        "/published",
+        "/refund",
         "/resolve",
+        "/role",
+        "/scopes",
+        "/send-password-reset",
+        "/status",
+        "/type-kits",
+        "/type-kits/",
         "/upload/avatar",
         "/upload/teacher-application-certificate",
         "/upload/teacher-application-cv",
@@ -587,11 +645,13 @@
         "/api/community",
         "/api/forums",
         "/api/news",
+        "/api/notifications",
         "/api/posts"
       ],
       "backendFeatures": [
         "admin",
-        "community"
+        "community",
+        "notifications"
       ]
     },
     {
@@ -3441,7 +3501,7 @@
     {
       "route": "/profile",
       "page": "src/app/profile/page.tsx",
-      "lineCount": 751,
+      "lineCount": 750,
       "hasTrace": false,
       "features": [
         "auth",
@@ -4443,11 +4503,13 @@
       "hasTrace": false,
       "features": [
         "auth",
+        "messages",
         "rewards",
         "users"
       ],
       "entryPoints": [
         "@/features/auth/public",
+        "@/features/messages/public",
         "@/features/rewards/public",
         "@/features/users/public"
       ],
@@ -4457,6 +4519,7 @@
         "src/features/auth/api/teacherApplicationMediaApi.ts",
         "src/features/auth/api/teacherApplicationsApi.ts",
         "src/features/auth/api/teacherProfileApi.ts",
+        "src/features/messages/api/messagesApi.ts",
         "src/features/rewards/api/avatarDecorationApi.ts",
         "src/features/rewards/api/gemShopPublicApi.ts",
         "src/features/rewards/api/learnerTiersApi.ts",
@@ -4481,6 +4544,8 @@
         "/auth/teacher-application/me",
         "/auth/teacher-profile/me",
         "/catalog",
+        "/conversations",
+        "/conversations/",
         "/cv-reviewed",
         "/decorations/catalog",
         "/decorations/equip",
@@ -4491,7 +4556,10 @@
         "/gems/shop/catalog",
         "/learner-tiers",
         "/me/learner-profile",
+        "/messages",
+        "/open",
         "/public",
+        "/send",
         "/showcase",
         "/unlock",
         "/upload/avatar",
@@ -4505,11 +4573,13 @@
       "backendMounts": [
         "/api/admin",
         "/api/gems",
+        "/api/messages",
         "/api/showcase",
         "/api/users"
       ],
       "backendFeatures": [
         "admin",
+        "messages",
         "rewards",
         "users"
       ]

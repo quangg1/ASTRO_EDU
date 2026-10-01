@@ -6,7 +6,7 @@ import type { AstronomyCalendarQuery } from '../api/astronomyCalendarApi'
 import type { AstronomyCalendarEvent, AstronomyCalendarResponse } from '../types'
 import { useUpcomingAstronomyCalendar } from '../hooks/useAstronomyCalendar'
 import { AstronomyEventRow } from './AstronomyEventRow'
-import { SkyHudSheet } from '@/components/explore/SkyHudSheet'
+import { SkyHudSheet } from '@/features/explore/public'
 
 const SKY_EVENT_LIMIT = 5
 

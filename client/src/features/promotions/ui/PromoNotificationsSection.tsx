@@ -6,8 +6,8 @@ import { Sparkles } from 'lucide-react'
 import {
   fetchActivePromotions,
   type ActivePromoCampaign,
-} from '@/features/promotions/public'
-import { dismissPromo, undismissedPromos } from '@/features/promotions/lib/promoDismiss'
+} from '../api/promoApi'
+import { dismissPromo, undismissedPromos } from '../lib/promoDismiss'
 import { useT } from '@/i18n/public'
 
 export function PromoNotificationsSection({ onNavigate }: { onNavigate?: () => void }) {

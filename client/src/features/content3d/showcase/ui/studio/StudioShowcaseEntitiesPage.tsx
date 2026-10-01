@@ -21,7 +21,7 @@ import {
 } from '@/app/studio/showcase-entities/showcaseEntityHierarchy'
 import { useAuthStore } from '@/features/auth/public'
 import { canEnterStudio } from '@/lib/roles'
-import { useShowcaseCatalogGen } from '@/components/showcase/ShowcaseCatalogProvider'
+import { useShowcaseCatalogGen } from '../ShowcaseCatalogProvider'
 import { ShowcaseMediaUrlField } from '@/app/studio/showcase-entities/ShowcaseMediaUrlField'
 import type { UploadMediaContext } from '@/features/courses/public'
 import { ShowcaseEntityPreviewCard } from '@/app/studio/showcase-entities/ShowcaseEntityPreviewCard'

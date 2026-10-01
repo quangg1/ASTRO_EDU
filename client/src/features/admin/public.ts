@@ -150,3 +150,7 @@ export {
   ADMIN_SCOPE_OPTIONS,
 } from './lib/adminLabelsVi'
 export type { AdminScope } from './lib/adminLabelsVi'
+
+// UI ------------------------------------------------------------------------
+export { AdminShell, AdminGate } from './ui/AdminShell'
+export { AdminTeacherApplicationsPanel } from './ui/AdminTeacherApplicationsPanel'
