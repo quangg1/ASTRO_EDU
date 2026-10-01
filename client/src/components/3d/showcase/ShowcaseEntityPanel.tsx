@@ -99,6 +99,7 @@ export function ShowcaseEntityPanel({
   museumLabelVi,
   conceptChips,
   learningLinks,
+  courseLessonLinks = [],
   panelConfig,
   gamification,
   hasDeepHistory,
@@ -116,6 +117,8 @@ export function ShowcaseEntityPanel({
   museumLabelVi: string
   conceptChips: ConceptChip[]
   learningLinks: LessonLink[]
+  /** Bài Khóa học khai báo entity này (sceneContext) — tách khỏi tiến độ Lộ trình. */
+  courseLessonLinks?: LessonLink[]
   panelConfig?: ShowcasePanelConfigDTO
   gamification?: ShowcaseGamificationStrip | null
   hasDeepHistory?: boolean
@@ -372,6 +375,16 @@ export function ShowcaseEntityPanel({
                 href={row.href}
                 className="block rounded-xl border border-white/[0.08] bg-ds-surface/50 px-3 py-2.5 text-sm text-ds-accent transition hover:border-ds-accent-strong hover:bg-ds-accent-soft"
               >
+                {row.title}
+              </a>
+            ))}
+            {courseLessonLinks.map((row) => (
+              <a
+                key={row.lessonId}
+                href={row.href}
+                className="block rounded-xl border border-amber-300/20 bg-ds-surface/50 px-3 py-2.5 text-sm text-amber-200 transition hover:border-amber-300/50"
+              >
+                <span className="mr-1.5 text-[10px] uppercase tracking-wide text-amber-300/70">Khóa học</span>
                 {row.title}
               </a>
             ))}

@@ -38,7 +38,11 @@ export async function postLearningStateEvents(
 
 /** Ghi state học tập từ Explore/3D (song song telemetry LP). */
 export async function postExploreLearningStateEvent(
-  type: 'explore_entity_focus' | 'explore_entity_discovered' | 'explore_quiz_submitted',
+  type:
+    | 'explore_entity_focus'
+    | 'explore_entity_discovered'
+    | 'explore_quiz_submitted'
+    | 'explore_panel_read',
   payload: {
     entityId: string
     dwellSec?: number
@@ -99,4 +103,28 @@ export async function fetchLearningStateSnapshot(): Promise<Record<string, unkno
   if (!res?.ok) return null
   const data = await res.json().catch(() => ({}))
   return data.snapshot ?? null
+}
+
+/** Tiến độ Explore của một entity lưu trên server (không mất khi đổi máy / xoá cache). */
+export type ExploreEntityProgress = {
+  entityId: string
+  panelRead: boolean
+  discovered: boolean
+  quizDoneToday: boolean
+}
+
+/** `null` khi chưa đăng nhập hoặc API lỗi — caller giữ trạng thái cục bộ. */
+export async function fetchExploreEntityProgress(entityId: string): Promise<ExploreEntityProgress | null> {
+  const id = String(entityId || '').trim()
+  if (!id || !hasClientSession()) return null
+  const res = await fetch(
+    `${base()}/explore/${encodeURIComponent(id)}`,
+    apiFetchInit({ headers: authHeaders() }),
+  ).catch(() => null)
+  const data = (await res?.json().catch(() => null)) as {
+    success?: boolean
+    progress?: ExploreEntityProgress
+  } | null
+  if (!res?.ok || !data?.success || !data.progress) return null
+  return data.progress
 }

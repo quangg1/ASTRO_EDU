@@ -3,6 +3,7 @@ const fs = require('fs');
 const { AppError } = require('../../../shared/errors');
 const conceptService = require('../../concepts/services/conceptService');
 const learningPathContent = require('../../learning-path/services/learningPathContentService');
+const courseSceneLessons = require('../../courses/services/courseSceneLessonService');
 const catalogService = require('./showcaseCatalogService');
 const skyTargetService = require('./skyTargetService');
 const {
@@ -63,7 +64,11 @@ async function getEntityLearningLinks(entityIdRaw) {
   const entityId = String(entityIdRaw || '').trim();
   if (!ENTITY_ID_PATTERN.test(entityId)) throw AppError.badRequest('entityId không hợp lệ');
 
-  const [sources, modules] = await Promise.all([loadEntitySources(entityId), loadPublishedModules()]);
+  const [sources, modules, courseLessons] = await Promise.all([
+    loadEntitySources(entityId),
+    loadPublishedModules(),
+    courseSceneLessons.listPublishedSceneLessons(),
+  ]);
   const hasCmsConcepts = Array.isArray(sources.panelConfig?.conceptTagIds)
     && sources.panelConfig.conceptTagIds.length > 0;
   const hintConceptIds = hasCmsConcepts
@@ -75,6 +80,7 @@ async function getEntityLearningLinks(entityIdRaw) {
     panelConfig: sources.panelConfig,
     modules,
     hintConceptIds,
+    courseLessons,
   });
 
   return {
@@ -84,14 +90,16 @@ async function getEntityLearningLinks(entityIdRaw) {
     conceptSource: links.conceptSource,
     concepts: await describeConcepts(links.conceptIds),
     lessons: links.lessons,
+    courseLessons: links.courseLessons,
   };
 }
 
 async function loadAllEntitiesWithModules() {
-  const [bundle, sky, modules] = await Promise.all([
+  const [bundle, sky, modules, courseLessons] = await Promise.all([
     catalogService.getBundle(),
     skyTargetService.getPublicCatalog(),
     loadPublishedModules(),
+    courseSceneLessons.listPublishedSceneLessons(),
   ]);
   const entities = [
     ...(bundle?.catalog || []).map((c) => ({
@@ -105,7 +113,7 @@ async function loadAllEntitiesWithModules() {
       panelConfig: t?.panelConfig || null,
     })),
   ].filter((e) => e.entityId);
-  return { entities, modules };
+  return { entities, modules, courseLessons };
 }
 
 /** Báo cáo cho Studio: entity chưa gắn nội dung học + bài học trỏ tới entity không tồn tại. */

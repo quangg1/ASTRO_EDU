@@ -1,3 +1,5 @@
+const { normalizeSceneContext } = require('../../../shared/schemas/sceneContextSchema');
+
 const MATERIAL_KINDS = ['pdf', 'slides', 'link', 'video'];
 const LESSON_TYPES = ['text', 'visualization', 'quiz', 'assignment', 'live_session'];
 
@@ -40,6 +42,7 @@ function normalizeLessons(lessons) {
     liveScheduledAt: toDate(lesson?.liveScheduledAt),
     visualizationId: lesson?.visualizationId || null,
     stageTime: toNumberOrNull(lesson?.stageTime),
+    sceneContext: normalizeSceneContext(lesson?.sceneContext),
     videoUrl: lesson?.videoUrl || null,
     coverImage: lesson?.coverImage || null,
     galleryImages: toArray(lesson?.galleryImages),

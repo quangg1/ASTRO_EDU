@@ -6,6 +6,23 @@ const {
   buildLessonEntityIndex,
 } = require('../features/content3d/lib/entityLearningLinks');
 
+const COURSE_LESSONS = [
+  {
+    courseSlug: 'astro-101',
+    courseTitle: 'Thiên văn 101',
+    lessonSlug: 'rings-lab',
+    title: 'Thực hành vành đai',
+    sceneContext: { primaryEntityId: 'planet-saturn' },
+  },
+  {
+    courseSlug: 'astro-101',
+    courseTitle: 'Thiên văn 101',
+    lessonSlug: 'moons',
+    title: 'Các vệ tinh',
+    sceneContext: { primaryEntityId: 'moon-titan', entityIds: ['planet-saturn', 'moon-ghost'] },
+  },
+];
+
 const lesson = (id, extra = {}) => ({ id, titleVi: `Bài ${id}`, conceptIds: [], ...extra });
 
 const MODULES = [
@@ -100,13 +117,45 @@ test('coverage lists unlinked entities and lessons pointing at missing entities'
       { entityId: 'planet-neptune' },
     ],
     modules: MODULES,
+    courseLessons: COURSE_LESSONS,
   });
   assert.deepEqual(report.unlinkedEntityIds, ['planet-neptune']);
   assert.deepEqual(report.danglingSceneRefs, [
-    { lessonId: 'ghost', titleVi: 'Bài ghost', entityId: 'planet-vulcan' },
+    { kind: 'lp', lessonId: 'ghost', titleVi: 'Bài ghost', moduleId: 'm1', nodeId: 'n1', entityId: 'planet-vulcan' },
+    { kind: 'course', lessonId: 'moons', titleVi: 'Các vệ tinh', courseSlug: 'astro-101', entityId: 'moon-ghost' },
   ]);
   const saturn = report.entities.find((e) => e.entityId === 'planet-saturn');
   assert.equal(saturn.lessonCount, 2);
+  assert.equal(saturn.courseLessonCount, 2);
+  assert.deepEqual(saturn.sources, { cms: 0, scene: 2, concept: 0 });
+  assert.deepEqual(report.summary, {
+    entityCount: 3,
+    linkedEntityCount: 2,
+    lpLessonCount: 5,
+    lpLessonsWithScene: 3,
+    courseLessonsWithScene: 2,
+  });
+});
+
+test('course lessons declaring an entity link to it and make it explicit', () => {
+  const links = resolveEntityLearningLinks({
+    entityId: 'planet-saturn',
+    modules: [],
+    courseLessons: COURSE_LESSONS,
+  });
+  assert.deepEqual(
+    links.courseLessons.map((l) => [l.courseSlug, l.lessonSlug, l.primary]),
+    [
+      ['astro-101', 'rings-lab', true],
+      ['astro-101', 'moons', false],
+    ],
+  );
+  assert.equal(links.explicit, true);
+  assert.deepEqual(
+    resolveEntityLearningLinks({ entityId: 'planet-mars', modules: [], courseLessons: COURSE_LESSONS })
+      .courseLessons,
+    [],
+  );
 });
 
 test('lesson index maps lessons back to entities, primary scene entity first, no hints', () => {

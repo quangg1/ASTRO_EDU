@@ -19,6 +19,7 @@ const learningStateEventSchema = new mongoose.Schema(
         'recall_quiz_submitted',
         'explore_quiz_submitted',
         'explore_entity_discovered',
+        'explore_panel_read',
       ],
     },
     surface: { type: String, enum: ['lp', 'explore', 'course', 'agent'], default: 'lp' },

@@ -16,6 +16,7 @@ import {
 import { NASA_SHOWCASE_ITEMS } from './showcaseCatalogRuntime'
 import type { LessonEntityIndex } from '../api/entityLearningLinksApi'
 import { getLessonEntityIndexSync } from './lessonEntityIndex'
+import type { LessonSceneContext } from '@/shared/types/sceneContext'
 
 export type ShowcaseBridgeMap = {
   entityId: string
@@ -370,32 +371,41 @@ function showcaseTargetFromIndex(
   return null
 }
 
+/**
+ * Đích Explore từ bối cảnh cảnh 3D mà bài tự khai báo (bài Lộ trình hoặc Khóa học):
+ * entity đầu tiên mở được trong showcase + Deep History nếu có historyFocus.
+ */
+export function exploreTargetsForSceneContext(
+  sc: LessonSceneContext | null | undefined,
+): LessonExploreTargets {
+  if (!sc) return { showcase: null, history: null }
+  const ordered: string[] = []
+  const primary = String(sc.primaryEntityId || '').trim()
+  if (primary) ordered.push(primary)
+  for (const id of sc.entityIds || []) {
+    const x = String(id || '').trim()
+    if (x && !ordered.includes(x)) ordered.push(x)
+  }
+  let showcase: LessonExploreTarget | null = null
+  for (const entityId of ordered) {
+    const link = exploreHrefForShowcaseEntity(entityId)
+    if (link) {
+      showcase = link
+      break
+    }
+  }
+  const hf = sc.historyFocus
+  const history = primary && hf ? exploreHrefForHistory(primary, hf) : null
+  return { showcase, history }
+}
+
 /** Showcase orbit + Deep History (nếu sceneContext có historyFocus). */
 export function suggestExploreTargetsForLesson(
   lesson: LessonItem,
   index: LessonEntityIndex | null = getLessonEntityIndexSync(),
 ): LessonExploreTargets {
-  const sc = lesson.sceneContext
-  if (sc) {
-    const ordered: string[] = []
-    const primary = String(sc.primaryEntityId || '').trim()
-    if (primary) ordered.push(primary)
-    for (const id of sc.entityIds || []) {
-      const x = String(id || '').trim()
-      if (x && !ordered.includes(x)) ordered.push(x)
-    }
-    let showcase: LessonExploreTarget | null = null
-    for (const entityId of ordered) {
-      const link = exploreHrefForShowcaseEntity(entityId)
-      if (link) {
-        showcase = link
-        break
-      }
-    }
-    const hf = sc.historyFocus
-    const history = primary && hf ? exploreHrefForHistory(primary, hf) : null
-    if (showcase || history) return { showcase, history }
-  }
+  const declared = exploreTargetsForSceneContext(lesson.sceneContext)
+  if (declared.showcase || declared.history) return declared
   const guessed = suggestShowcaseTargetForLesson(lesson, index)
   return { showcase: guessed, history: null }
 }

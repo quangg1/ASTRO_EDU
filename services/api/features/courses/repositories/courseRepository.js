@@ -50,6 +50,14 @@ class CourseRepository extends BaseRepository {
     return this.exists({ slug });
   }
 
+  /** Khóa đã xuất bản có ít nhất một bài gắn cảnh 3D (cầu nối Edu ↔ 3D). */
+  listPublishedWithSceneLessons() {
+    return this.findMany(
+      { published: true, 'lessons.sceneContext': { $exists: true } },
+      { projection: 'title slug lessons.title lessons.slug lessons.order lessons.sceneContext' },
+    );
+  }
+
   /** `isPaid` là cờ mới; khóa cũ chỉ có giá > 0 nên phải chấp nhận cả hai. */
   countPaidPublished() {
     return this.count({ published: true, $or: [{ isPaid: true }, { price: { $gt: 0 } }] });

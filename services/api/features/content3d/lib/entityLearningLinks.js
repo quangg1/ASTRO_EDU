@@ -4,7 +4,8 @@
  * Hàm thuần — không đọc DB — để service, agent và test dùng chung một luật.
  * Thứ tự nguồn (mạnh → yếu):
  *   1. `cms`   — Studio gắn tường minh trên entity (panelConfig.conceptTagIds / lessonIds)
- *   2. `scene` — bài học tự khai báo entity (lesson.sceneContext.primaryEntityId / entityIds)
+ *   2. `scene` — bài học tự khai báo entity (lesson.sceneContext.primaryEntityId / entityIds),
+ *      cả bài Lộ trình lẫn bài Khóa học (Khóa học chỉ có nguồn này)
  *   3. `concept` — bài học có concept trùng với concept của entity
  *   4. `hint`  — khớp từ khóa (chỉ dùng khi entity chưa có concept tường minh)
  */
@@ -67,14 +68,36 @@ function toLessonLink(row, source, primary = false) {
 
 const SOURCE_RANK = { cms: 0, scene: 1, concept: 2, hint: 3 };
 
+/** Bài Khóa học khai báo entity này trong sceneContext, entity chính đứng đầu. */
+function courseLessonsForEntity(courseLessons, entityId) {
+  const out = [];
+  for (const row of Array.isArray(courseLessons) ? courseLessons : []) {
+    const sc = row?.sceneContext || {};
+    const primary = String(sc.primaryEntityId || '').trim() === entityId;
+    if (!primary && !cleanIds(sc.entityIds).includes(entityId)) continue;
+    out.push({
+      courseSlug: String(row.courseSlug || ''),
+      courseTitle: String(row.courseTitle || ''),
+      lessonSlug: String(row.lessonSlug || ''),
+      title: String(row.title || row.lessonSlug || ''),
+      primary,
+    });
+  }
+  return out.sort((a, b) => {
+    if (a.primary !== b.primary) return a.primary ? -1 : 1;
+    return a.title.localeCompare(b.title, 'vi');
+  });
+}
+
 /**
  * @param {object} input
  * @param {string} input.entityId
  * @param {{conceptTagIds?: string[], lessonIds?: string[]}|null} [input.panelConfig]
  * @param {object[]} [input.modules] — modules của lộ trình đã publish
  * @param {string[]} [input.hintConceptIds] — concept khớp từ khóa (đã tra sẵn)
+ * @param {object[]} [input.courseLessons] — bài Khóa học có sceneContext (listPublishedSceneLessons)
  */
-function resolveEntityLearningLinks({ entityId, panelConfig, modules, hintConceptIds }) {
+function resolveEntityLearningLinks({ entityId, panelConfig, modules, hintConceptIds, courseLessons }) {
   const id = String(entityId || '').trim();
   const lessons = flattenLessons(modules);
   const byLessonId = new Map(lessons.map((row) => [row.lessonId, row]));
@@ -115,24 +138,27 @@ function resolveEntityLearningLinks({ entityId, panelConfig, modules, hintConcep
     if (a.source !== b.source) return SOURCE_RANK[a.source] - SOURCE_RANK[b.source];
     return a.titleVi.localeCompare(b.titleVi, 'vi');
   });
+  const courseLinks = courseLessonsForEntity(courseLessons, id);
 
   return {
     entityId: id,
     conceptIds,
     conceptSource: conceptIds.length ? conceptSource : null,
     lessons: sorted,
+    courseLessons: courseLinks,
     /** true khi có ít nhất một liên kết do người biên soạn khai báo (không phải đoán). */
-    explicit: cmsConceptIds.length > 0 || sorted.some((l) => l.source !== 'hint'),
+    explicit:
+      cmsConceptIds.length > 0 || sorted.some((l) => l.source !== 'hint') || courseLinks.length > 0,
   };
 }
 
 /**
- * Báo cáo độ phủ cho Studio: entity nào chưa nối với nội dung học,
- * và bài học nào trỏ tới entity không tồn tại trong cảnh 3D.
+ * Báo cáo độ phủ cho Studio: entity nào chưa nối với nội dung học, nối qua nguồn
+ * nào, và bài học (Lộ trình / Khóa học) nào trỏ tới entity không có trong cảnh 3D.
  *
- * @param {{ entities: Array<{entityId: string, nameVi?: string, panelConfig?: object}>, modules: object[] }} input
+ * @param {{ entities: Array<{entityId: string, nameVi?: string, panelConfig?: object}>, modules: object[], courseLessons?: object[] }} input
  */
-function buildLearningLinkCoverage({ entities, modules }) {
+function buildLearningLinkCoverage({ entities, modules, courseLessons }) {
   const knownIds = new Set();
   const rows = (Array.isArray(entities) ? entities : []).map((entity) => {
     const entityId = String(entity?.entityId || '').trim();
@@ -141,26 +167,63 @@ function buildLearningLinkCoverage({ entities, modules }) {
       entityId,
       panelConfig: entity?.panelConfig,
       modules,
+      courseLessons,
     });
+    const sources = { cms: 0, scene: 0, concept: 0 };
+    for (const lesson of links.lessons) {
+      if (lesson.source in sources) sources[lesson.source] += 1;
+    }
     return {
       entityId,
       nameVi: String(entity?.nameVi || ''),
       conceptCount: links.conceptIds.length,
       lessonCount: links.lessons.length,
+      courseLessonCount: links.courseLessons.length,
+      sources,
       explicit: links.explicit,
     };
   });
 
+  const lpLessons = flattenLessons(modules);
   const danglingSceneRefs = [];
-  for (const row of flattenLessons(modules)) {
+  for (const row of lpLessons) {
     for (const entityId of row.sceneEntityIds) {
       if (!knownIds.has(entityId)) {
-        danglingSceneRefs.push({ lessonId: row.lessonId, titleVi: row.titleVi, entityId });
+        danglingSceneRefs.push({
+          kind: 'lp',
+          lessonId: row.lessonId,
+          titleVi: row.titleVi,
+          moduleId: row.moduleId,
+          nodeId: row.nodeId,
+          entityId,
+        });
+      }
+    }
+  }
+  const courseRows = Array.isArray(courseLessons) ? courseLessons : [];
+  for (const row of courseRows) {
+    const sc = row?.sceneContext || {};
+    for (const entityId of cleanIds([sc.primaryEntityId, ...(sc.entityIds || [])])) {
+      if (!knownIds.has(entityId)) {
+        danglingSceneRefs.push({
+          kind: 'course',
+          lessonId: String(row.lessonSlug || ''),
+          titleVi: String(row.title || row.lessonSlug || ''),
+          courseSlug: String(row.courseSlug || ''),
+          entityId,
+        });
       }
     }
   }
 
   return {
+    summary: {
+      entityCount: rows.length,
+      linkedEntityCount: rows.filter((r) => r.explicit).length,
+      lpLessonCount: lpLessons.length,
+      lpLessonsWithScene: lpLessons.filter((r) => r.sceneEntityIds.size > 0).length,
+      courseLessonsWithScene: courseRows.length,
+    },
     entities: rows,
     unlinkedEntityIds: rows.filter((r) => !r.explicit).map((r) => r.entityId),
     danglingSceneRefs,

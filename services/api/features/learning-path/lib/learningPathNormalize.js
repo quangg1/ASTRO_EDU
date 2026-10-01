@@ -1,5 +1,6 @@
 const { coerceLessonSections } = require('../../../shared/schemas/lessonSectionSchema');
 const { normalizeQuizList } = require('../../../shared/quizQuestion');
+const { normalizeSceneContext } = require('../../../shared/schemas/sceneContextSchema');
 
 /** Recall quiz của một bài tối đa 5 câu; 0 câu nghĩa là bài chưa gắn quiz. */
 const RECALL_QUIZ_LIMITS = { maxCount: 5, minCount: 0 };
@@ -32,36 +33,6 @@ function normalizeConceptAnchors(lesson) {
     .filter((anchor) => anchor.conceptId && anchor.phrase);
 }
 
-/** Bối cảnh cảnh 3D chỉ có nghĩa khi trỏ tới ít nhất một thực thể hoặc mốc lịch sử. */
-function normalizeSceneContext(lesson) {
-  const source = lesson?.sceneContext;
-  if (!source || typeof source !== 'object') return undefined;
-
-  const primaryEntityId = String(source.primaryEntityId || '').trim();
-  const entityIds = uniqueIds(source.entityIds).filter((id) => id !== primaryEntityId);
-
-  let historyFocus;
-  const rawFocus = source.historyFocus;
-  if (rawFocus && typeof rawFocus === 'object' && primaryEntityId) {
-    const beatId = Number(rawFocus.beatId);
-    if (Number.isFinite(beatId)) {
-      historyFocus = { beatId };
-      const pinId = String(rawFocus.pinId || '').trim();
-      if (pinId) historyFocus.pinId = pinId;
-      const labelVi = String(rawFocus.labelVi || '').trim();
-      if (labelVi) historyFocus.labelVi = labelVi;
-    }
-  }
-
-  if (!primaryEntityId && entityIds.length === 0 && !historyFocus) return undefined;
-
-  return {
-    ...(primaryEntityId ? { primaryEntityId } : {}),
-    ...(entityIds.length ? { entityIds } : {}),
-    ...(historyFocus ? { historyFocus } : {}),
-  };
-}
-
 /**
  * Chuẩn hóa cây module -> node -> depth -> lesson từ editor.
  * `invalidSectionCount` được đếm dồn để editor báo cho tác giả biết có bao nhiêu
@@ -83,7 +54,7 @@ function normalizeModules(modules) {
         String(lesson?.id || '').trim(),
         RECALL_QUIZ_LIMITS,
       ),
-      sceneContext: normalizeSceneContext(lesson),
+      sceneContext: normalizeSceneContext(lesson?.sceneContext),
     };
   };
 

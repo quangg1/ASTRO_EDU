@@ -18,7 +18,5 @@ const planetNarrativeSchema = new mongoose.Schema(
   { timestamps: true, collection: 'planet_narratives' },
 );
 
-planetNarrativeSchema.index({ entityId: 1 });
-
 module.exports =
   mongoose.models.PlanetNarrative || mongoose.model('PlanetNarrative', planetNarrativeSchema);

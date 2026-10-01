@@ -21,6 +21,7 @@ const conceptIdsQuery = z.object({
 
 const lessonIdParams = z.object({ lessonId: trimmedString(200, 'lessonId') });
 const conceptIdParams = z.object({ conceptId: trimmedString(200, 'conceptId') });
+const entityIdParams = z.object({ entityId: trimmedString(120, 'entityId') });
 
 const weakLessonsQuery = z.object({
   lessonId: z
@@ -47,6 +48,7 @@ module.exports = {
   conceptIdsQuery,
   lessonIdParams,
   conceptIdParams,
+  entityIdParams,
   weakLessonsQuery,
   spacedReviewQuery,
   learningEventsBody,

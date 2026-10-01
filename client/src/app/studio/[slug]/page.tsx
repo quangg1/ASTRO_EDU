@@ -19,6 +19,7 @@ import {
   type QuizQuestion,
 } from '@/features/courses/public'
 import { useAuthStore } from '@/features/auth/public'
+import { SceneContextField } from '@/features/content3d/showcase/public'
 import { canEnterStudio } from '@/lib/roles'
 import { useBlockEditorActions } from '@/components/studio/hooks/useBlockEditorActions'
 import { CourseStorefrontEditor } from '@/components/studio/CourseStorefrontEditor'
@@ -888,6 +889,13 @@ export default function StudioEditorPage() {
                         <input value={lesson.meetingUrl ?? ''} onChange={(e) => ul((l) => ({ ...l, meetingUrl: e.target.value || null }))} className="mt-1 studio-field" placeholder="https://zoom.us/..." />
                       </label>
                     )}
+                    <div className="md:col-span-2">
+                      <SceneContextField
+                        value={lesson.sceneContext}
+                        onChange={(next) => ul((l) => ({ ...l, sceneContext: next }))}
+                        hint="Học viên mở bài sẽ có nút “Xem trong 3D”; entity này cũng hiện bài của khóa trong Explore."
+                      />
+                    </div>
                     <div className="text-xs text-ds-muted">3D Earth Simulation<div className="mt-1"><StageTimePicker value={lesson.stageTime ?? null} onChange={(v) => ul((l) => ({ ...l, stageTime: v }))} /></div></div>
                     <div className="text-xs text-ds-muted">Video URL<div className="flex gap-2 mt-1"><input value={lesson.videoUrl ?? ''} onChange={(e) => ul((l) => ({ ...l, videoUrl: e.target.value || null }))} placeholder="YouTube or upload" className="studio-field" /><UploadBtn accept="video/*" onUrl={(u) => ul((l) => ({ ...l, videoUrl: u }))} onError={uploadErr} label="Upload" uploadContext={{ purpose: 'course-lesson', entityId: uploadEntityId, slug: course.slug, lessonSlug: lesson.slug, variant: 'video' }} /></div></div>
                     <div className="text-xs text-ds-muted">Cover Image<div className="flex gap-2 mt-1"><input value={lesson.coverImage ?? ''} onChange={(e) => ul((l) => ({ ...l, coverImage: e.target.value || null }))} placeholder="URL or upload" className="studio-field" /><UploadBtn accept="image/*" onUrl={(u) => ul((l) => ({ ...l, coverImage: u }))} onError={uploadErr} label="Upload" uploadContext={{ purpose: 'course-lesson', entityId: uploadEntityId, slug: course.slug, lessonSlug: lesson.slug, variant: 'cover' }} /></div>{lesson.coverImage && <img src={lesson.coverImage} alt="" className="mt-2 h-20 rounded-lg object-cover border border-ds-border" />}</div>

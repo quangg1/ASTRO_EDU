@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-01T11:29:16.251Z",
+  "generatedAt": "2026-10-01T14:33:46.394Z",
   "routes": [
     {
       "route": "/admin/astronomy-calendar",
@@ -3021,10 +3021,12 @@
         "/explore/contextual-quiz/",
         "/explore/learning-links/",
         "/explore/learning-links/by-lesson",
+        "/explore/learning-links/coverage",
         "/gems",
         "/gems/shop/bootstrap",
         "/gems/shop/catalog",
         "/jpl",
+        "/learn/",
         "/learner-tiers",
         "/learning-path",
         "/lessons/",
@@ -3882,14 +3884,16 @@
     {
       "route": "/studio/[slug]",
       "page": "src/app/studio/[slug]/page.tsx",
-      "lineCount": 919,
+      "lineCount": 927,
       "hasTrace": false,
       "features": [
         "auth",
+        "content3d/showcase",
         "courses"
       ],
       "entryPoints": [
         "@/features/auth/public",
+        "@/features/content3d/showcase/public",
         "@/features/courses/public"
       ],
       "apiFiles": [
@@ -3898,6 +3902,11 @@
         "src/features/auth/api/teacherApplicationMediaApi.ts",
         "src/features/auth/api/teacherApplicationsApi.ts",
         "src/features/auth/api/teacherProfileApi.ts",
+        "src/features/content3d/showcase/api/entityLearningLinksApi.ts",
+        "src/features/content3d/showcase/api/exploreContextualQuizApi.ts",
+        "src/features/content3d/showcase/api/showcaseCatalogApi.ts",
+        "src/features/content3d/showcase/api/showcaseEntitiesApi.ts",
+        "src/features/content3d/showcase/api/showcaseOrbitsApi.ts",
         "src/features/courses/api/cohortApi.ts",
         "src/features/courses/api/coursesApi.ts"
       ],
@@ -3946,8 +3955,14 @@
         "/editor/all",
         "/enroll",
         "/exam/",
+        "/explore/contextual-quiz/",
+        "/explore/learning-links/",
+        "/explore/learning-links/by-lesson",
+        "/explore/learning-links/coverage",
         "/grade",
         "/home",
+        "/jpl",
+        "/learn/",
         "/progress",
         "/progress/complete",
         "/quiz-attempts",
@@ -3956,11 +3971,15 @@
         "/schedules/apply-weekly",
         "/schedules/copy-from",
         "/session",
+        "/showcase-catalog",
+        "/showcase-entities",
+        "/showcase-orbits",
         "/staging-files",
         "/submissions",
         "/submissions/",
         "/submit",
         "/syllabus",
+        "/sync-entity",
         "/tracks",
         "/tracks/",
         "/tutorials",
@@ -3974,10 +3993,16 @@
       "backendMounts": [
         "/api/admin",
         "/api/courses",
+        "/api/explore/contextual-quiz",
+        "/api/explore/learning-links",
+        "/api/showcase-catalog",
+        "/api/showcase-entities",
+        "/api/showcase-orbits",
         "/api/tutorials"
       ],
       "backendFeatures": [
         "admin",
+        "content3d",
         "courses"
       ]
     },
@@ -4065,6 +4090,49 @@
       ]
     },
     {
+      "route": "/studio/learning-links",
+      "page": "src/app/studio/learning-links/page.tsx",
+      "lineCount": 6,
+      "hasTrace": false,
+      "features": [
+        "content3d/showcase"
+      ],
+      "entryPoints": [
+        "@/features/content3d/showcase/public"
+      ],
+      "apiFiles": [
+        "src/features/content3d/showcase/api/entityLearningLinksApi.ts",
+        "src/features/content3d/showcase/api/exploreContextualQuizApi.ts",
+        "src/features/content3d/showcase/api/showcaseCatalogApi.ts",
+        "src/features/content3d/showcase/api/showcaseEntitiesApi.ts",
+        "src/features/content3d/showcase/api/showcaseOrbitsApi.ts"
+      ],
+      "apiPaths": [
+        "/editor",
+        "/editor/",
+        "/explore/contextual-quiz/",
+        "/explore/learning-links/",
+        "/explore/learning-links/by-lesson",
+        "/explore/learning-links/coverage",
+        "/jpl",
+        "/learn/",
+        "/showcase-catalog",
+        "/showcase-entities",
+        "/showcase-orbits",
+        "/sync-entity"
+      ],
+      "backendMounts": [
+        "/api/explore/contextual-quiz",
+        "/api/explore/learning-links",
+        "/api/showcase-catalog",
+        "/api/showcase-entities",
+        "/api/showcase-orbits"
+      ],
+      "backendFeatures": [
+        "content3d"
+      ]
+    },
+    {
       "route": "/studio/learning-path",
       "page": "src/app/studio/learning-path/page.tsx",
       "lineCount": 6,
@@ -4099,7 +4167,7 @@
     {
       "route": "/studio",
       "page": "src/app/studio/page.tsx",
-      "lineCount": 744,
+      "lineCount": 771,
       "hasTrace": false,
       "features": [
         "auth",
@@ -4222,7 +4290,9 @@
         "/explore/contextual-quiz/",
         "/explore/learning-links/",
         "/explore/learning-links/by-lesson",
+        "/explore/learning-links/coverage",
         "/jpl",
+        "/learn/",
         "/showcase-catalog",
         "/showcase-entities",
         "/showcase-orbits",
@@ -4296,9 +4366,11 @@
         "/explore/contextual-quiz/",
         "/explore/learning-links/",
         "/explore/learning-links/by-lesson",
+        "/explore/learning-links/coverage",
         "/explore/passport",
         "/explore/sky-targets",
         "/jpl",
+        "/learn/",
         "/learning-path",
         "/lessons/",
         "/recall-quiz",

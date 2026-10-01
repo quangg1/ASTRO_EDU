@@ -37,6 +37,7 @@ import {
   type Lesson,
 } from '@/features/courses/public'
 import { useAuthStore } from '@/features/auth/public'
+import { SceneContextField } from '@/features/content3d/showcase/public'
 import {
   BookOpen,
   ChevronDown,
@@ -432,6 +433,11 @@ function LearningPathLessonEditor({
           className={`mt-1 ${inputCls}`}
         />
       </label>
+
+      <SceneContextField
+        value={activeLesson.sceneContext}
+        onChange={(next) => patchLesson({ sceneContext: next ?? undefined })}
+      />
 
       <div style={{ position: 'relative', background: 'rgba(3,7,14,0.95)', border: '1px solid rgba(126,231,255,0.22)', clipPath: 'polygon(12px 0%,100% 0%,100% calc(100% - 12px),calc(100% - 12px) 100%,0% 100%,0% 12px)', padding: 16 }}>
         <SCorner color="var(--color-accent)" size={10} thick={1} />
