@@ -2,6 +2,7 @@ import { getLessonById, type LearningModule } from '@/features/learning-path/dat
 import type { EduJourneyContext } from '@/lib/eduJourney'
 import type { OnboardingIntentId } from '@/features/onboarding/public'
 import { suggestExploreTargetsForLesson } from '@/features/content3d/showcase/public'
+import type { LessonEntityIndex } from '@/features/content3d/showcase/public'
 import {
   buildLearningJourneyGuardrail,
   type JourneyGuardrailRecommendation,
@@ -42,6 +43,8 @@ export type ResolveLearnerNextActionInput = {
   /** Onboarding primaryHref — chỉ dùng khi intent lệch khỏi LP spine. */
   primaryHref?: string | null
   eduJourney?: EduJourneyContext | null
+  /** Bài học → entity 3D từ server; thiếu thì gợi ý Explore rơi về đoán từ khóa. */
+  lessonEntityIndex?: LessonEntityIndex | null
 }
 
 function kindFromGuardrail(status: JourneyGuardrailRecommendation['status']): LearnerNextActionKind {
@@ -70,11 +73,12 @@ function lessonSecondaryFromGuardrail(g: JourneyGuardrailRecommendation): Learne
 function exploreSecondaryForLesson(
   modules: LearningModule[],
   lessonId?: string | null,
+  lessonEntityIndex?: LessonEntityIndex | null,
 ): LearnerNextActionLink | undefined {
   if (!lessonId) return undefined
   const hit = getLessonById(lessonId, modules)
   if (!hit) return undefined
-  const targets = suggestExploreTargetsForLesson(hit.lesson)
+  const targets = suggestExploreTargetsForLesson(hit.lesson, lessonEntityIndex ?? undefined)
   const target = targets.showcase || targets.history
   if (!target) return undefined
   return {
@@ -115,7 +119,7 @@ export function resolveLearnerNextAction(input: ResolveLearnerNextActionInput): 
     lessonId: guardrail.lessonId,
     lessonTitle: guardrail.lessonTitle,
     hasProgress,
-    secondary: exploreSecondaryForLesson(modules, guardrail.lessonId) ||
+    secondary: exploreSecondaryForLesson(modules, guardrail.lessonId, input.lessonEntityIndex) ||
       (eduJourney?.exploreHref
         ? { title: 'Quay lại Explore', href: eduJourney.exploreHref, ctaLabel: 'Mở Explore' }
         : { title: 'Khám phá 3D', href: '/explore', ctaLabel: 'Mở Explore' }),

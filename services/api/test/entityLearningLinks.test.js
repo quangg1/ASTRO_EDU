@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 const {
   resolveEntityLearningLinks,
   buildLearningLinkCoverage,
+  buildLessonEntityIndex,
 } = require('../features/content3d/lib/entityLearningLinks');
 
 const lesson = (id, extra = {}) => ({ id, titleVi: `Bài ${id}`, conceptIds: [], ...extra });
@@ -106,4 +107,21 @@ test('coverage lists unlinked entities and lessons pointing at missing entities'
   ]);
   const saturn = report.entities.find((e) => e.entityId === 'planet-saturn');
   assert.equal(saturn.lessonCount, 2);
+});
+
+test('lesson index maps lessons back to entities, primary scene entity first, no hints', () => {
+  const index = buildLessonEntityIndex({
+    entities: [
+      { entityId: 'planet-saturn', panelConfig: { conceptTagIds: ['planetary-rings'] } },
+      { entityId: 'moon-titan' },
+      { entityId: 'planet-jupiter' },
+    ],
+    modules: MODULES,
+  });
+  assert.deepEqual(index['titan-air'], [
+    { entityId: 'moon-titan', source: 'scene', primary: true },
+    { entityId: 'planet-saturn', source: 'scene', primary: false },
+  ]);
+  assert.deepEqual(index.rings, [{ entityId: 'planet-saturn', source: 'concept', primary: false }]);
+  assert.equal(index['gas-giants'], undefined);
 });

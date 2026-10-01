@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-01T11:16:29.572Z",
+  "generatedAt": "2026-10-01T11:29:16.251Z",
   "routes": [
     {
       "route": "/admin/astronomy-calendar",
@@ -3020,6 +3020,7 @@
         "/editor/generate-quiz",
         "/explore/contextual-quiz/",
         "/explore/learning-links/",
+        "/explore/learning-links/by-lesson",
         "/gems",
         "/gems/shop/bootstrap",
         "/gems/shop/catalog",
@@ -4220,6 +4221,7 @@
         "/editor/",
         "/explore/contextual-quiz/",
         "/explore/learning-links/",
+        "/explore/learning-links/by-lesson",
         "/jpl",
         "/showcase-catalog",
         "/showcase-entities",
@@ -4293,6 +4295,7 @@
         "/editor/generate-quiz",
         "/explore/contextual-quiz/",
         "/explore/learning-links/",
+        "/explore/learning-links/by-lesson",
         "/explore/passport",
         "/explore/sky-targets",
         "/jpl",

@@ -167,4 +167,36 @@ function buildLearningLinkCoverage({ entities, modules }) {
   };
 }
 
-module.exports = { resolveEntityLearningLinks, buildLearningLinkCoverage, flattenLessons };
+/**
+ * Chiều ngược lại: bài học → entity 3D, chỉ từ liên kết do người biên soạn khai báo
+ * (không dùng gợi ý từ khóa). Mỗi bài có danh sách entity, mạnh nhất đứng đầu.
+ *
+ * @param {{ entities: Array<{entityId: string, panelConfig?: object}>, modules: object[] }} input
+ * @returns {Record<string, Array<{ entityId: string, source: string, primary: boolean }>>}
+ */
+function buildLessonEntityIndex({ entities, modules }) {
+  const index = {};
+  for (const entity of Array.isArray(entities) ? entities : []) {
+    const entityId = String(entity?.entityId || '').trim();
+    if (!entityId) continue;
+    const links = resolveEntityLearningLinks({ entityId, panelConfig: entity?.panelConfig, modules });
+    for (const lesson of links.lessons) {
+      if (lesson.source === 'hint') continue;
+      (index[lesson.lessonId] ||= []).push({ entityId, source: lesson.source, primary: lesson.primary });
+    }
+  }
+  for (const rows of Object.values(index)) {
+    rows.sort((a, b) => {
+      if (a.primary !== b.primary) return a.primary ? -1 : 1;
+      return SOURCE_RANK[a.source] - SOURCE_RANK[b.source];
+    });
+  }
+  return index;
+}
+
+module.exports = {
+  resolveEntityLearningLinks,
+  buildLearningLinkCoverage,
+  buildLessonEntityIndex,
+  flattenLessons,
+};
