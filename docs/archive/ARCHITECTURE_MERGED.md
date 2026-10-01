@@ -1,3 +1,5 @@
+> **Lưu trữ (2026-10):** tài liệu tháng 3/2026, đã được thay bởi [architecture/api-layering.md](../architecture/api-layering.md) và ADR 0001. Giữ lại để tham khảo lịch sử.
+
 # Kiến trúc gộp backend (Modular Monolith)
 
 ## Tổng quan

@@ -9,7 +9,7 @@ related:
   - docs/architecture/learning-agent.md
   - docs/AI_TUTOR_PLAN.md
   - docs/plans/agent-entitlement-guardrails.md
-  - docs/EDU_ARCHITECTURE.md
+  - docs/archive/EDU_ARCHITECTURE.md
   - client/DOMAIN_MAP.md
   - services/ai/README.md
 ---

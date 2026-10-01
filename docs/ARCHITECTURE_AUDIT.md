@@ -6,7 +6,8 @@
 > - `client/DOMAIN_MAP.md` — bản spec target của FE↔BE alignment (Phase 0–4 plan).
 > - `client/src/design-system/README.md` — 3-layer design system spec.
 > - `client/src/components/3d/showcase/SHOWCASE_TECH_NOTES.md` — note kỹ thuật 3D showcase.
-> - `docs/ARCHITECTURE_MERGED.md`, `docs/EDU_ARCHITECTURE.md`, `docs/AI_TUTOR_PLAN.md` — context lịch sử.
+> - `docs/architecture/` — kiến trúc hiện hành (API layering, frontend layering, ADR).
+> - `docs/archive/ARCHITECTURE_MERGED.md`, `docs/archive/EDU_ARCHITECTURE.md`, `docs/AI_TUTOR_PLAN.md` — context lịch sử.
 - `docs/plans/learning-agent-system.md`, `docs/plans/agent-entitlement-guardrails.md` — Learning Agent + entitlement audit.
 >
 > Audit này KHÔNG thay thế các spec trên — nó kiểm tra xem **code thật có khớp spec không**, và liệt kê drift.
@@ -22,6 +23,7 @@
 | Backend `services/api/services/*` | **Done** | Colocated `features/admin|auth/services/` |
 | §2.3 / §2.4 / §3.3 narrative cũ | **Doc refreshed** | Bảng dưới phản ánh `usePlanetNarrativeStore` + xoá `useNarrativeStore` / NarrativeStudioMode |
 | Agent entitlement + guardrails | **Planned** | `docs/plans/agent-entitlement-guardrails.md`; parent §3.5–3.7 `learning-agent-system.md`; P0.8–0.10 |
+| Dọn repo + `components/<domain>` + `lib/` shims (2026-10) | **Done** | Rác ở root đã xoá; 8 thư mục `components/<domain>` → `features/<domain>/ui`; 9 shim `@deprecated` trong `lib/` đã bỏ (§1.9.A) |
 | **Còn mở** (Part 4) | P1/P2 | `cosmic-*` marketing, DS primitives thiếu, `components/` import sâu `api/`, `learning-path/public` re-export `server`, studio showcase-entities dày |
 
 ### Hygiene wave (2026-05) — resolved in repo
@@ -945,12 +947,12 @@ Cột “P/E” = Priority (P0/P1/P2/P3) · Effort (S/M/L). Cột “Loại” =
 
 | ID | Mục | P/E | Loại | Ghi chú |
 |---|---|---|---|---|
-| 1.1 | Root `package.json` reference 4 service không tồn tại (`dev:auth/courses/media/community/payment`) | P0/S | Hygiene | `install:all` & `dev:*` scripts gãy. |
-| 1.2 | Secret/asset rời ở root: `aws_credentials.txt`, `cosmolearn-…firebase-adminsdk….json`, file `.glb`, PDF mojibake | P0/S | Security | Cần verify `.gitignore` + di dời. |
+| 1.1 | ~~Root `package.json` reference 4 service không tồn tại~~ | ~~P0/S~~ | **Done** | Root scripts chỉ còn `dev:api/client/ai`, `install:all`, `rag:*` (kiểm 2026-10) |
+| 1.2 | ~~Secret/asset rời ở root~~ | ~~P0/S~~ | **Done 2026-10** | Không còn secret được track; `.gitignore` chặn credentials/adminsdk/`.glb`; PDF + report chuyển vào `docs/report/`, mp4 rời đã xoá |
 | 1.7.A | `components/ui/` là junk drawer (5 nhóm: app shell, system util, generic atom, domain 3D UI, error boundary) | P1/M | Restructure | 27 file. Phân loại theo §1.7. |
 | 1.8.A | ~~4 domain thiếu `public.ts`~~ (`app/` deep import) | ~~P1/S~~ | **Partial 2026-05** | Barrels + `check:app-public`; `components/` + studio còn deep import |
 | 1.8.B / 3.3.A | `narrative` lệch pattern: store ở `store.ts` (ngang), không `stores/` | P2/S | Consistency | Move file + update imports. |
-| 1.9.A | Domain data 3D vẫn ở `lib/`: `iconicOrganisms`, `fossilPhyla`, `paleoTextureMap`, `planetTextureQuality`, `stageHotspots`, `solarSystemData`, `solarOrbitMath` | P2/M | Spec drift | DOMAIN_MAP cho phép “pragmatic exception”; đánh giá từng file có nên move. |
+| 1.9.A | ~~Domain data 3D vẫn ở `lib/`~~ | ~~P2/M~~ | **Done 2026-10** | Shim `lib/*` đã xoá; importer dùng `features/content3d/{earth,showcase}` |
 | 1.9.B | ~~`solarJourneyProgress.ts` ở `lib/`~~ → **`features/rewards/lib/`** + barrel **`rewards/public`** (PR10) | ~~P2/S~~ | Done | — |
 | 1.9.C | ~~`postContent`, `postEngagement` ở `lib/`~~ → **`features/community/lib/`** + barrel **`community/public`** (PR10) | ~~P2/S~~ | Done | — |
 | 1.10.A / 3.2.D | DS primitives: 4 ban đầu + Tooltip/Toast (explore); còn Dialog/Tabs/Select/Popover/Slider/Progress/Command | P1/L | DS expand | Mỗi primitive 1 sub-PR. |

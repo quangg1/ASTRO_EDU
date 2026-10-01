@@ -1,3 +1,5 @@
+> **Lưu trữ (2026-10):** tài liệu tháng 3/2026, đã được thay bởi [plans/3d-learning-system.md](../plans/3d-learning-system.md) và mô hình Learning Path. Giữ lại để tham khảo lịch sử.
+
 # Galaxies Edu – Kiến trúc Nội dung Giáo dục
 
 Tài liệu mô tả cấu trúc nội dung học tập: **Tutorial** (miễn phí, tham khảo) và **Course** (có lộ trình, có thanh toán).

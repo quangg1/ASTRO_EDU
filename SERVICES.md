@@ -8,7 +8,7 @@ Blueprint: [`render.yaml`](render.yaml) — API Node + Next **Web Service** (`np
 
 ## Khuyến nghị: API gộp (Modular Monolith)
 
-**Một backend gộp** `services/api` (port **3002**) thay cho auth, courses, media, community, payment. Kiến trúc theo **feature** để dễ branch/PR từng tính năng trên GitHub. Chi tiết: [docs/ARCHITECTURE_MERGED.md](docs/ARCHITECTURE_MERGED.md).
+**Một backend gộp** `services/api` (port **3002**) thay cho auth, courses, media, community, payment. Kiến trúc theo **feature** để dễ branch/PR từng tính năng trên GitHub. Chi tiết: [docs/architecture/api-layering.md](docs/architecture/api-layering.md).
 
 - Chạy API gộp: `npm run dev:api`
 - Client: copy `client/.env.local.example` → `.env.local`, điền `NEXT_PUBLIC_API_BASE_URL` và `API_PROXY_TARGET` (cùng gốc unified API).
@@ -58,7 +58,7 @@ Cần MongoDB chạy (local hoặc Atlas). Mỗi service dùng DB riêng (hoặc
 cd services/api && node scripts/migrate-all-dbs.js
 ```
 
-Xem chi tiết trong [docs/ARCHITECTURE_MERGED.md](docs/ARCHITECTURE_MERGED.md#database).
+Xem chi tiết trong [docs/archive/ARCHITECTURE_MERGED.md](docs/archive/ARCHITECTURE_MERGED.md#database).
 
 ### 3. Biến môi trường
 
