@@ -26,6 +26,7 @@ import { Loading } from '@/components/ui/Loading'
 import { LessonContentBody } from '@/features/courses/ui/LessonContentBody'
 import { trackEvent } from '@/lib/analytics'
 import { trackCourseBehavior } from '@/features/courses/lib/courseBehavior'
+import { ScrollFriendlySceneFrame } from '@/components/3d/ScrollFriendlySceneFrame'
 
 const EarthScene = dynamic(() => import('@/components/3d/EarthScene'), { ssr: false, loading: () => <Loading /> })
 
@@ -700,9 +701,9 @@ export function CoursePageClient({
                                   </div>
                                 </>
                               )}
-                              <div className="flex-1 min-h-[360px]">
+                              <ScrollFriendlySceneFrame className="flex-1 min-h-[360px]">
                                 <EarthScene overrideStage={stage} overrideFossils={earthLessonFossils} />
-                              </div>
+                              </ScrollFriendlySceneFrame>
                             </>
                           )
                         })()}
