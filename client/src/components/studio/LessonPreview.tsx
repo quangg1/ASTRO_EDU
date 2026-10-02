@@ -10,6 +10,7 @@ import { applyConceptAnchorsToHtml } from '@/features/concepts/public'
 import { resolveMediaUrl } from '@/lib/apiConfig'
 import { VideoWithTranscriptPanel } from '@/features/courses/ui/VideoWithTranscriptPanel'
 import { earthHistoryData, findStageByTime, useCourseStageFossils } from '@/features/content3d/earth/public'
+import { ScrollFriendlySceneFrame } from '@/components/3d/ScrollFriendlySceneFrame'
 
 const EarthScene = dynamic(() => import('@/components/3d/EarthScene'), { ssr: false, loading: () => <div className="h-full flex items-center justify-center text-ds-subtle text-sm">Loading 3D scene...</div> })
 
@@ -24,9 +25,9 @@ function CourseEarthSceneBlock({ stageTime }: { stageTime: number }) {
           {stage ? `${stage.timeDisplay} · ${stage.description}` : `Stage ${stageTime} Ma`}
         </p>
       </div>
-      <div className="h-[380px]">
+      <ScrollFriendlySceneFrame className="h-[380px]">
         <EarthScene overrideStage={stage} overrideFossils={fossils} />
-      </div>
+      </ScrollFriendlySceneFrame>
     </div>
   )
 }
@@ -157,9 +158,9 @@ export function SectionPreview({ sec, conceptAnchors, concepts }: SectionPreview
         <div className="space-y-2">
           {sec.title && <h3 className="text-xl font-semibold tracking-tight text-white mb-2">{sec.title}</h3>}
           {sec.modelUrl ? (
-            <div className="h-[350px] rounded-xl border border-ds-accent-strong overflow-hidden bg-black/50">
+            <ScrollFriendlySceneFrame className="h-[350px] rounded-xl border border-ds-accent-strong overflow-hidden bg-black/50">
               <ModelViewer url={resolveMediaUrl(sec.modelUrl)} />
-            </div>
+            </ScrollFriendlySceneFrame>
           ) : (
             <div className="h-[200px] rounded-xl border border-dashed border-ds-border-strong flex items-center justify-center text-ds-subtle text-sm">No 3D model set</div>
           )}
