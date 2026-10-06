@@ -196,7 +196,7 @@ const packages = [
     ],
     includes: [],
     noteExtra:
-      'Contextual Quiz = exploreContextualQuizService (không qua LLM). Cosmo / concept quiz → tab 09 Agent.',
+      'Contextual Quiz = exploreContextualQuizService (không qua LLM). Guest cũng làm được quiz; chỉ người đã đăng nhập mới được lưu kết quả / concept mastery. Cosmo / concept quiz → tab 09 Agent.',
   },
   {
     tab: '09 Agent',
@@ -213,7 +213,7 @@ const packages = [
     ],
     includes: [],
     noteExtra:
-      'Guest demo = alternate flow (limited pipeline). Tools/search/nudge = system behavior trong pipeline (SRS). Widget layout; xem docs/architecture/learning-agent.md',
+      'Guest demo = alternate flow: widget gọi proxy chat của web server thẳng tới AI service (không tool, không lưu lịch sử). Đã đăng nhập = pipeline đầy đủ của API. Tools/search/nudge = system behavior trong pipeline. Xem docs/architecture/learning-agent.md',
   },
   {
     tab: '05 Community',
@@ -245,7 +245,9 @@ const packages = [
   {
     tab: '07 Studio',
     id: 'pkg_studio',
-    label: 'Studio (Teacher)',
+    label: 'Studio (Teacher / Admin)',
+    noteExtra:
+      'Mọi route Studio nhận role teacher HOẶC admin. Teacher chỉ sửa khóa / bài của mình; admin sửa được tất cả. Teacher kế thừa toàn bộ UC của Student.',
     ucs: [
       ['uc_studio', 'Studio Dashboard', null, null, 120, UC_H],
       ['uc_course_edit', 'Create / Edit Course', null, null, 150, UC_H],
@@ -286,6 +288,7 @@ const links = {
     'uc_study_lp',
     'uc_3d',
     'uc_sky',
+    'uc_ctx_quiz',
     'uc_comm_browse',
     'uc_course',
     'uc_agent_chat',
@@ -301,6 +304,15 @@ const links = {
     'uc_promo',
     'uc_audit',
     'uc_moderate',
+    // Studio routes accept role teacher OR admin (requireRole('teacher', 'admin')).
+    'uc_studio',
+    'uc_course_edit',
+    'uc_lesson_edit',
+    'uc_cohort_edit',
+    'uc_quiz_edit',
+    'uc_concepts',
+    'uc_lp_edit',
+    'uc_showcase',
     'uc_profile',
     'uc_chpass',
     'uc_deact_self',

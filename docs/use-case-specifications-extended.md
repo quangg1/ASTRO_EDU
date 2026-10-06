@@ -42,9 +42,10 @@ Inline §3.4.3 covers UC-01–UC-14, UC-17–UC-22, UC-25, UC-37–UC-43, UC-45,
 
 | Field | Description |
 | :---- | :---- |
-| **Actor** | Student |
-| **Trigger** | Start a quiz from the Explore learning panel. |
-| **Description** | Quiz tied to the current Explore context (not the full Cosmo chat flow). |
+| **Actor** | Guest, Student |
+| **Trigger** | After the learner has read the Explore panel for an object, a quiz prompt appears. |
+| **Description** | Short quiz tied to the current Explore object, served from a prepared question pool (no AI call). If the server is unreachable, a template quiz is built on the device. One completion per object per day. |
+| **Post-Conditions** | Signed-in learners: concept / lesson state is updated. Guests: the result is kept only on the device. |
 
 ## UC-24 Track Concept Mastery
 
@@ -134,14 +135,14 @@ Inline §3.4.3 covers UC-01–UC-14, UC-17–UC-22, UC-25, UC-37–UC-43, UC-45,
 | Field | Description |
 | :---- | :---- |
 | **Actor** | Student |
-| **Description** | Track milestone progress on the Solar Journey reward track. |
+| **Description** | See how many Solar Journey milestones are completed (dashboard). Signed-in progress syncs with the server; guests keep it on the device. Current builds only display and sync milestones; no screen records new ones. |
 
 ## UC-36 View Notifications
 
 | Field | Description |
 | :---- | :---- |
 | **Actor** | Student |
-| **Description** | Read system and reward notifications. |
+| **Description** | Read system and reward notifications, newest first; new ones arrive live while the app is open. Mark one or all as read and follow the link. |
 
 ## UC-41 Make Quiz
 

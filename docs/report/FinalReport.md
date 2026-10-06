@@ -601,7 +601,7 @@ The Cosmo Learn use case model is organized into **nine diagram pages** (draw.io
 | Relation | Examples |
 | :---- | :---- |
 | **Generalization** | Teacher → Student |
-| **<<extend>>** | View Lesson → View Course; Take Quiz / Submit Assignment → View Lesson; Study LP In-Depth → View Learning Path; Contextual Quiz → Explore Sky / 3D; Concept Quiz / Rate Reply / Guest demo → Chat with Cosmo; Recall Quiz → View Lesson; First-visit Explore guide → View 3D Simulation (not a separate UC) |
+| **<<extend>>** | View Lesson → View Course; Take Quiz / Submit Assignment → View Lesson; Study LP In-Depth → View Learning Path; Contextual Quiz → Explore Sky / 3D; Concept Quiz / Rate Reply → Chat with Cosmo (guest demo is an alternate flow of UC-25, not a separate oval); Recall Quiz → View Lesson; First-visit Explore guide → View 3D Simulation (not a separate UC) |
 | **<<include>>** | Pay Order → Enroll in Course (catalog); Pay Order + `cohortId` → cohort placement |
 | **Alternate flows** | Google/Facebook OAuth on Register and Log In (not separate use cases) |
 
@@ -651,7 +651,7 @@ The table below lists **all use cases** aligned with the implemented system (50 
 | UC-20 | Study Tutorial In-Depth | Guest, Student | Courses |
 | UC-21 | View 3D Simulation | Guest, Student | Explore |
 | UC-22 | Explore Sky Planetarium | Guest, Student | Explore |
-| UC-23 | Take Contextual Quiz | Student | Explore |
+| UC-23 | Take Contextual Quiz | Guest, Student | Explore |
 | UC-24 | Track Concept Mastery | Student | Explore |
 | UC-25 | Chat with Cosmo Assistant | Guest, Student, Teacher | Agent |
 | UC-26 | Take Concept Quiz (Agent) | Student | Agent |
@@ -665,14 +665,14 @@ The table below lists **all use cases** aligned with the implemented system (50 
 | UC-34 | Earn & Spend Gems | Student | Rewards |
 | UC-35 | Solar Journey Milestones | Student | Rewards |
 | UC-36 | View Notifications | Student | Rewards |
-| UC-37 | View Studio Dashboard | Teacher | Studio |
-| UC-38 | Create / Edit Course | Teacher | Studio |
-| UC-39 | Create / Edit Lesson | Teacher | Studio |
-| UC-40 | Manage Cohort | Teacher | Studio |
-| UC-41 | Make Quiz | Teacher | Studio |
-| UC-42 | Manage Learning Path | Teacher | Studio |
-| UC-43 | Manage Concepts | Teacher | Studio |
-| UC-44 | Showcase Entity Studio | Teacher | Studio |
+| UC-37 | View Studio Dashboard | Teacher, Admin | Studio |
+| UC-38 | Create / Edit Course | Teacher, Admin | Studio |
+| UC-39 | Create / Edit Lesson | Teacher, Admin | Studio |
+| UC-40 | Manage Cohort | Teacher, Admin | Studio |
+| UC-41 | Make Quiz | Teacher, Admin | Studio |
+| UC-42 | Manage Learning Path | Teacher, Admin | Studio |
+| UC-43 | Manage Concepts | Teacher, Admin | Studio |
+| UC-44 | Showcase Entity Studio | Teacher, Admin | Studio |
 | UC-45 | Manage User | Admin | Admin |
 | UC-46 | Manage Order | Admin | Admin |
 | UC-47 | Approve / Reject Teacher Application | Admin | Admin |

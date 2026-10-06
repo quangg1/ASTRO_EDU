@@ -17,18 +17,27 @@ sequenceDiagram
     participant DB as MongoDB
 
     User->>UI: Select La bàn chòm sao / open sky deep link
-    UI->>API: GET explore sky targets + content
-    API->>DB: Load sky catalog / panel copy
-    DB-->>API: Targets + narratives
-    API-->>UI: Sky scene payload
+    UI->>API: GET explore sky targets
+    API->>API: Load built-in star seed (data file)
+    API->>DB: Load published editor content
+    DB-->>API: Narratives / panel overrides
+    alt API unreachable or empty
+        UI->>UI: Use bundled offline seed
+    else OK
+        API-->>UI: Seed merged with editor content
+    end
     UI-->>User: Render planetarium dome + panel
-    opt Signed-in student
-        User->>UI: Open learning steps / bridge quiz
-        UI->>API: POST contextual quiz / progress
-        API->>DB: Save attempt / events
-        DB-->>API: OK
-        API-->>UI: Score + feedback
-        UI-->>User: Quiz overlay result
+    opt Panel read (guest or student)
+        UI->>API: GET contextual quiz for target
+        API->>DB: Question pool (template-seeded, no LLM)
+        API-->>UI: Questions (or completedToday)
+        Note over UI: Offline → client builds template quiz
+        User->>UI: Answer quiz
+        UI-->>User: Quiz result
+        opt Signed-in student
+            UI->>API: POST learning-state event (explore quiz)
+            API->>DB: Update concept / lesson state
+        end
     end
     opt Cross-link to solar
         User->>UI: Open in Solar System
@@ -69,10 +78,10 @@ sequenceDiagram
 
     Student->>UI: Compose post or comment
     UI->>API: POST post / comment (auth)
-    API->>API: Validate length, cooldown, role
+    API->>API: Validate body, forum access (cohort gate), sanitise HTML
     API->>DB: Insert Post / Comment
     DB-->>API: Saved document
-    opt Community gem policy
+    opt Passes anti-spam checks + daily cap (no recent post, no duplicate title)
         API->>Rewards: Maybe award GEM_EARN (post)
         Rewards->>DB: UserReward + GemTransaction
     end
@@ -136,16 +145,28 @@ sequenceDiagram
     participant DB as MongoDB
 
     Student->>UI: Open /gem-shop
-    UI->>API: GET shop catalog (visible SKUs)
-    API->>DB: ShopItem + categories
-    DB-->>API: Catalog
+    UI->>API: GET decoration catalog + my decorations + wallet
+    API->>DB: ShopItem + DecorationCategory + UserReward
+    DB-->>API: Catalog, owned SKUs, balance
     API-->>UI: Items + prices (gem)
     UI-->>Student: Display shop grid
-    Student->>UI: Purchase / equip decoration
-    UI->>API: POST spend / inventory (as implemented)
-    API->>DB: Deduct gemBalance, grant cosmetic
-    DB-->>API: Updated wallet
-    API-->>UI: Success
+    alt Purchase
+        Student->>UI: Buy decoration
+        UI->>API: POST decorations/purchase
+        alt Already owned
+            API-->>UI: alreadyOwned (no charge)
+        else Not enough gems
+            API-->>UI: 402 INSUFFICIENT_GEMS
+        else Free or affordable
+            API->>DB: Deduct gemBalance, add owned SKU, GemTransaction
+            API-->>UI: New balance
+        end
+    else Equip
+        Student->>UI: Equip owned decoration
+        UI->>API: PATCH decorations/equip
+        API->>DB: Save equipped SKU (must be owned)
+        API-->>UI: OK
+    end
     UI-->>Student: Updated avatar preview
 ```
 
@@ -186,14 +207,15 @@ sequenceDiagram
 
     Student->>UI: Open notifications panel
     UI->>API: GET notifications (auth)
-    API->>DB: Query by userId, unread first
+    API->>DB: Query by userId, newest first (optional unread-only)
     DB-->>API: Notification list
     API-->>UI: Items (incl. admin_broadcast)
     UI-->>Student: Render list + links
     Student->>UI: Mark read / click href
-    UI->>API: PATCH read state
-    API->>DB: Update notification
+    UI->>API: PATCH :id/read (or POST read-all)
+    API->>DB: Set readAt
     UI-->>Student: Navigate target page
+    Note over UI,API: New notifications also arrive live over WebSocket /ws/notifications
 ```
 
 ---
@@ -211,9 +233,15 @@ sequenceDiagram
     UI->>API: GET cohorts for course (editor)
     API->>DB: Cohort collection
     DB-->>API: Cohort rows
-    Teacher->>UI: Create / edit cohort (dates, capacity)
-    UI->>API: PUT cohort
-    API->>DB: Upsert Cohort
+    alt Create
+        Teacher->>UI: New cohort (title, dates, price, status)
+        UI->>API: POST cohorts for course
+        API->>DB: Insert Cohort (unique slug + invite code)
+    else Edit
+        Teacher->>UI: Edit dates / price / status / week map
+        UI->>API: PATCH cohort
+        API->>DB: Update only the fields sent
+    end
     DB-->>API: Saved
     API-->>UI: OK
     UI-->>Teacher: Updated cohort list
@@ -240,10 +268,11 @@ sequenceDiagram
     UI->>API: PUT learning path
     API->>Concepts: validateModulesByConceptIds()
     Concepts-->>API: Valid / strip unknown ids
-    API->>DB: Save path + schedule RAG reindex
+    API->>DB: Save path
     DB-->>API: OK
-    API-->>UI: Warnings (if any)
+    API-->>UI: Warnings (invalid concept ids / sections), if any
     UI-->>Teacher: Save confirmation
+    Note over API: After responding: background RAG reindex of all LP lessons (AI service)
 ```
 
 ---
@@ -451,7 +480,7 @@ sequenceDiagram
 
     Admin->>UI: Open /admin/audit?source=
     UI->>API: GET audit log (source, page)
-    alt source = admin
+    alt source = admin or all (default — both read the admin log)
         API->>DB: AdminActionLog
     else source = gem
         API->>DB: GemEconomyAuditLog
@@ -481,7 +510,11 @@ sequenceDiagram
         Admin->>UI: Trigger crawl
         UI->>API: POST trigger news crawl
         API->>Job: runScheduledNewsCrawl()
-        Job->>DB: Update job state + ingest posts
+        alt Disabled or last run < 24h ago
+            Job-->>API: null (skipped)
+        else Due
+            Job->>DB: Ingest posts + update job state
+        end
         API->>DB: recordAdminAction
         API-->>UI: Result message
     end
