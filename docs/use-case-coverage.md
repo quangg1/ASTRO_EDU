@@ -19,13 +19,15 @@ Ma trận đối chiếu **sơ đồ use case UML** với code. Sơ đồ đư�
 | `docs/use-case-coverage.md` | Route/code + ma trận actor |
 | `FinalReport` §3.4.3 | Spec chi tiết (một phần + extended) |
 
-**Actors:** Guest, Moderator, Admin, Student, **Teacher** (generalization → Student, kế thừa mọi UC của Student).
+**Actors:** Guest, Moderator, Admin, Student, **Teacher** (generalization → Student, kế thừa mọi UC của Student). Admin cũng nối với 8 UC Studio vì mọi route Studio nhận `requireRole('teacher', 'admin')`.
+
+> Đối chiếu lại với code trên `integrate/web-ui` ngày 2026-10-06. Mỗi sơ đồ sequence trong `scripts/seq-diagram-definitions.mjs` có comment *Verified against* ghi nơi hành vi nằm trong code.
 
 **Quan hệ trên sơ đồ**
 
 | Quan hệ | Ví dụ |
 |---------|--------|
-| `<<extend>>` | View Lesson → View Course; Take Quiz / Assignment → Lesson; Study LP → View LP; Contextual Quiz → Sky / 3D; Concept Quiz / Rate Reply / Guest demo → Chat; Recall Quiz → Lesson; Onboarding → 3D |
+| `<<extend>>` | View Lesson → View Course; Take Quiz / Assignment → Lesson; Study LP → View LP; Contextual Quiz → Sky / 3D; Concept Quiz / Rate Reply → Chat; Recall Quiz → Lesson |
 | `<<include>>` | Pay Order → Enroll in Course |
 
 ---
@@ -84,7 +86,7 @@ Code: `services/api/features/courses/lib/distributionStrategy.js`, `client/.../d
 |----------|--------|----------------|
 | View 3D Simulation | Guest, Student | `/explore?view=solar`, earth stages; optional first-visit guided tour (**Hướng dẫn**) — alternate flow, not separate UC |
 | Explore Sky Planetarium | Guest, Student | `/explore?view=sky`, 88 chòm |
-| Take Contextual Quiz | Student | `exploreContextualQuizService` — **API, không LLM agent** |
+| Take Contextual Quiz | Guest, Student | `GET /api/explore/contextual-quiz/:entityId` (`optionalAuth`, không gọi LLM; offline → client tự dựng quiz mẫu). Chỉ người đã đăng nhập mới ghi kết quả qua `POST /api/learning-state/events` |
 | Track Concept Mastery | Student | `features/learning-state` |
 
 Cosmo / concept quiz → [§3b](#3b-ai-agent-cosmo--tab-09).
@@ -97,7 +99,7 @@ Kiến trúc: [`docs/architecture/learning-agent.md`](architecture/learning-agen
 
 | Use case | Actors | Code |
 |----------|--------|------|
-| Chat with Cosmo Assistant | Guest (demo), Student, Teacher | `CosmoAssistantWidget`, `POST /api/agent/message`; guest `/api/chat` |
+| Chat with Cosmo Assistant | Guest (demo), Student, Teacher | Đã đăng nhập: `CosmoAssistantWidget` → `POST /api/agent/message` (pipeline đầy đủ). Guest: widget gọi `client/src/app/api/chat/route.ts` — proxy của web server **thẳng tới AI service**, không qua unified API, không tool, không lưu lịch sử |
 | Take Concept Quiz (agent) | Student | `concept-quiz/*`, `CosmoConceptQuizHost` — **<<extend>>** chat |
 | Rate Agent Reply | Student | `POST /api/agent/feedback` — **<<extend>>** chat |
 
@@ -125,14 +127,14 @@ Chat **khóa** khi Recall/Exam. Widget toàn app (`layout.tsx`).
 |----------|--------|----------------|
 | Gem Shop & Avatar | Student | `/gem-shop`, `features/rewards` |
 | Earn & Spend Gems | Student | explore rewards, LP, quiz |
-| Solar Journey Milestones | Student | `solarJourneyProgress`, CDN media |
-| View Notifications | Student | `/notifications` |
+| Solar Journey Milestones | Student | `/dashboard` đọc + đồng bộ `GET/PUT /api/learning-path/solar-journey/progress`. Hiện **không có màn hình nào ghi mốc mới** (chỉ hiển thị / đồng bộ) |
+| View Notifications | Student | `/notifications`, `GET /api/notifications` (mới nhất trước), `PATCH /:id/read`, `POST /read-all`, push qua WebSocket `/ws/notifications` |
 
 ---
 
-## 6. Studio (Teacher)
+## 6. Studio (Teacher, Admin)
 
-Teacher **kế thừa** Student; thêm:
+Teacher **kế thừa** Student; thêm (admin cũng dùng được, sửa được khóa của mọi teacher):
 
 | Use case | Route / code |
 |----------|----------------|
@@ -143,7 +145,7 @@ Teacher **kế thừa** Student; thêm:
 | Make Quiz | studio lesson tab Quiz |
 | Manage Concepts | `/studio/concepts` |
 | Manage Learning Path | `/studio/learning-path` |
-| Showcase Entity Studio | `/studio/showcase-entities` |
+| Showcase Entity Studio | `/studio/showcase-entities`, `/studio/sky-targets`; độ phủ Edu↔3D qua `GET /api/explore/learning-links/coverage` |
 
 ---
 
@@ -152,7 +154,7 @@ Teacher **kế thừa** Student; thêm:
 | Use case | Route / code |
 |----------|----------------|
 | Manage User | `/admin/users`, `/admin/users/[id]` — role, `send-password-reset`, deactivate/restore (`updateUserStatus`) |
-| Manage Order | `/admin/orders` |
+| Manage Order | `/admin/orders`; cấp / thu hồi ghi danh thủ công `POST /api/admin/enrollments/{catalog,cohort}/{grant,revoke}` |
 | Approve / Reject Teacher | `/admin`, `reviewTeacherApplication` |
 | Manage Gem Economy | `/admin/gem-economy` |
 | Promo & Broadcast | `/admin/promo-codes`, `/admin/broadcast` |
@@ -168,15 +170,29 @@ Admin cũng **Log In**, **Browse** (cùng Moderator/Student).
 
 | Actor | Liên kết bổ sung so với sơ đồ cũ |
 |-------|-----------------------------------|
-| Guest | Explore Sky, Community browse, View Course (preview) |
+| Guest | Explore Sky, Contextual Quiz, Community browse, View Course (preview), Cosmo demo |
 | Moderator | Browse, Report, Community browse |
-| Admin | Browse, Log In, Gem/Promo/Audit, Admin moderation |
+| Admin | Browse, Log In, Gem/Promo/Audit, Admin moderation, 8 UC Studio |
 | Student | Browse, View LP, toàn bộ Explore/Rewards/Community |
 | Teacher | Generalization → Student; 6 UC Studio riêng |
 
 ---
 
-## 9. Ngoài phạm vi UC (chi tiết kỹ thuật)
+## 9. Chức năng có trong code nhưng chưa có UC trong catalog 50
+
+Catalog 50 UC được khóa theo `FinalReport` §3.4.2 nên chưa thêm oval. Nếu cần đưa vào báo cáo thì thêm UC-51+ vào `CATALOG_UC50` (đổi tên hằng và số kiểm tra 50 trong script).
+
+| Chức năng | Route / code |
+|-----------|--------------|
+| Lịch thiên văn + nhắc lịch | `/calendar`, `/admin/astronomy-calendar`, `/studio/astronomy-calendar`, `features/astronomy-calendar` (job nhắc lịch) |
+| Onboarding sở thích học | `/onboarding`, `features/onboarding` |
+| Lưu mục yêu thích | `/dashboard/saved`, `features/users/services/savedItemsService.js` |
+| Hộ chiếu Explore | `GET /api/explore/passport` |
+| Tìm kiếm toàn site, bản đồ tri thức, trang chủ đề | `/search`, `/tutorial/knowledge-map`, `/topics/[slug]` |
+| Hồ sơ công khai | `/users/[id]` |
+| Admin bật / tắt xuất bản khóa học | `PATCH /api/admin/courses/:id/published` |
+
+## 10. Ngoài phạm vi UC (chi tiết kỹ thuật)
 
 | Hạng mục | Ghi chú |
 |----------|---------|

@@ -6,7 +6,7 @@ Open in [diagrams.net](https://app.diagrams.net) or VS Code Draw.io Integration.
 
 | File | Use case |
 |------|----------|
-| [UC-21-View-3D-Simulation.drawio](UC-21-View-3D-Simulation.drawio) | UC-21 View 3D Simulation (Solar System / Museum) |
+| [UC-21-View-3D-Simulation.drawio](UC-21-View-3D-Simulation.drawio) | UC-21 View 3D Simulation (Solar System / Earth & Planet history) |
 | [UC-22-Explore-Sky-Planetarium.drawio](UC-22-Explore-Sky-Planetarium.drawio) | UC-22 Explore Sky Planetarium |
 | [UC-25-Chat-with-Cosmo.drawio](UC-25-Chat-with-Cosmo.drawio) | UC-25 Chat with Cosmo Assistant |
 | [UC-28-Browse-Community.drawio](UC-28-Browse-Community.drawio) | UC-28 Browse Community & News |
