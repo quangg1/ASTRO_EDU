@@ -35,7 +35,8 @@ const T = '/textures'
  * Fallback khi Explore chưa có diffuse từ Studio/catalog (`buildPlanetShowcaseEntity`).
  * Texture thật cho planet-* lấy từ showcase catalog + CMS, không từ đây.
  */
-export const MARS_NASA_GLOBE_TEXTURE_PATH = `${T}/nasa/mars_nasa.jpg`
+/** `nasa/mars_nasa.jpg` không còn trên bucket (403, 24/11/2026) — dùng bản 8K đang có. */
+export const MARS_NASA_GLOBE_TEXTURE_PATH = `${T}/8k_mars.jpg`
 
 /** Tỉ lệ phóng to hành tinh để dễ nhìn (bán kính × scale) */
 const PLANET_SIZE_SCALE = 2.8

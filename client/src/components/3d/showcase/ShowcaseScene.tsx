@@ -17,6 +17,7 @@ import { OrbitPath } from '@/components/3d/OrbitPath'
 import { Planet, Sun } from '@/components/3d/planetBodies'
 import { ExploreEntityFx } from '@/components/3d/ExploreEntityFx'
 import { ShowcaseLighting } from '@/components/3d/showcase/ShowcaseLighting'
+import { AssetErrorBoundary } from '@/components/3d/AssetErrorBoundary'
 import { ShowcaseEntityLayer } from '@/components/3d/showcase/ShowcaseEntityLayer'
 import {
   ShowcaseCameraManager,
@@ -306,13 +307,15 @@ function ShowcaseSceneContent({
         )
       })}
 
-      <Sun
-        visible
-        interactive
-        onSelect={() => {
-          setSelection(null)
-        }}
-      />
+      <AssetErrorBoundary label="texture Sun" fallback={null}>
+        <Sun
+          visible
+          interactive
+          onSelect={() => {
+            setSelection(null)
+          }}
+        />
+      </AssetErrorBoundary>
       {runtimePlanetsData.map((data, i) => (
         (() => {
           const isContextPlanet = contextPlanetName ? data.name === contextPlanetName : false

@@ -12,6 +12,7 @@ import { useShowcaseStore } from '@/features/content3d/showcase/public'
 import { ShowcaseDiffuseGlobe } from '@/components/3d/showcase/ShowcaseDiffuseGlobe'
 import type { ShowcaseOrbitEntity } from '@/lib/showcaseEntities'
 import { planetUsesShowcaseCmsTextures } from '@/lib/showcaseMediaUrl'
+import { AssetErrorBoundary } from '@/components/3d/AssetErrorBoundary'
 
 export const SUN_SPIN_PERIOD = 25
 
@@ -361,6 +362,43 @@ function PlanetRing({
   )
 }
 
+/** Quả cầu màu khi texture hành tinh không tải được (thiếu file trên CDN, mất mạng…). */
+function PlanetFallbackSphere({
+  data,
+  bodyScale,
+  bodyMeshRef,
+  interactive,
+  handlePlanetPick,
+  onHoverChange,
+}: {
+  data: PlanetData
+  bodyScale: number
+  bodyMeshRef: RefObject<THREE.Mesh | null>
+  interactive: boolean
+  handlePlanetPick: () => void
+  onHoverChange?: (hovered: boolean) => void
+}) {
+  const color = (data as PlanetData & { color?: string }).color ?? '#8a8a8a'
+  return (
+    <mesh
+      ref={bodyMeshRef as unknown as RefObject<THREE.Mesh>}
+      onClick={
+        interactive
+          ? (e) => {
+              e.stopPropagation()
+              handlePlanetPick()
+            }
+          : undefined
+      }
+      onPointerEnter={interactive ? () => onHoverChange?.(true) : undefined}
+      onPointerLeave={interactive ? () => onHoverChange?.(false) : undefined}
+    >
+      <sphereGeometry args={[data.radius * bodyScale, 48, 48]} />
+      <meshStandardMaterial color={color} roughness={0.9} />
+    </mesh>
+  )
+}
+
 function PlanetDefaultSphere({
   data,
   bodyScale,
@@ -431,12 +469,14 @@ function PlanetDefaultSphere({
         </mesh>
       )}
       {data.ringTexture ? (
-        <PlanetRing
-          inner={data.ringInner! * data.radius * bodyScale}
-          outer={data.ringOuter! * data.radius * bodyScale}
-          texturePath={getStaticAssetUrl(data.ringTexture)}
-          interactive={interactive}
-        />
+        <AssetErrorBoundary label={`ring ${data.name}`} fallback={null}>
+          <PlanetRing
+            inner={data.ringInner! * data.radius * bodyScale}
+            outer={data.ringOuter! * data.radius * bodyScale}
+            texturePath={getStaticAssetUrl(data.ringTexture)}
+            interactive={interactive}
+          />
+        </AssetErrorBoundary>
       ) : null}
     </>
   )
@@ -598,25 +638,41 @@ export function Planet({
                 </mesh>
               ) : null}
               {data.ringTexture ? (
-                <PlanetRing
-                  inner={data.ringInner! * data.radius * bodyScale}
-                  outer={data.ringOuter! * data.radius * bodyScale}
-                  texturePath={getStaticAssetUrl(data.ringTexture)}
-                  interactive={interactive}
-                />
+                <AssetErrorBoundary label={`ring ${data.name}`} fallback={null}>
+                  <PlanetRing
+                    inner={data.ringInner! * data.radius * bodyScale}
+                    outer={data.ringOuter! * data.radius * bodyScale}
+                    texturePath={getStaticAssetUrl(data.ringTexture)}
+                    interactive={interactive}
+                  />
+                </AssetErrorBoundary>
               ) : null}
             </>
           ) : (
-            <PlanetDefaultSphere
-              data={data}
-              bodyScale={bodyScale}
-              unlitTexture={unlitTexture}
-              profile={profile}
-              bodyMeshRef={bodyMeshRef}
-              interactive={interactive}
-              handlePlanetPick={handlePlanetPick}
-              onHoverChange={onHoverChange}
-            />
+            <AssetErrorBoundary
+              label={`texture ${data.name}`}
+              fallback={
+                <PlanetFallbackSphere
+                  data={data}
+                  bodyScale={bodyScale}
+                  bodyMeshRef={bodyMeshRef}
+                  interactive={interactive}
+                  handlePlanetPick={handlePlanetPick}
+                  onHoverChange={onHoverChange}
+                />
+              }
+            >
+              <PlanetDefaultSphere
+                data={data}
+                bodyScale={bodyScale}
+                unlitTexture={unlitTexture}
+                profile={profile}
+                bodyMeshRef={bodyMeshRef}
+                interactive={interactive}
+                handlePlanetPick={handlePlanetPick}
+                onHoverChange={onHoverChange}
+              />
+            </AssetErrorBoundary>
           )}
         </group>
       </group>
