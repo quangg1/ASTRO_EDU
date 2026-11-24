@@ -10,6 +10,7 @@ import { planetsData } from '@/lib/solarSystemData'
 import {
   NASA_SHOWCASE_ITEMS,
   resolveShowcaseOrbitParentPlanetName,
+  SHOWCASE_ORBIT_ENTITIES,
   type ShowcaseOrbitEntity,
 } from '@/lib/showcaseEntities'
 import { OrbitPath } from '@/components/3d/OrbitPath'
@@ -22,6 +23,7 @@ import {
   type ShowcaseCameraSpherical,
 } from '@/components/3d/showcase/ShowcaseCameraManager'
 import {
+  makeStressEntities,
   useShowcaseStore,
   type ShowcaseEntityContentDTO,
 } from '@/features/content3d/showcase/public'
@@ -76,6 +78,13 @@ function ShowcaseSceneContent({
   showcaseContent?: ShowcaseEntityContentDTO[]
 }) {
   const showcaseCatalogGen = useShowcaseCatalogGen()
+  // `?stress=N` thêm N thực thể giả để đo hiệu năng LOD (chỉ phía client).
+  const layerOrbitEntities = useMemo(() => {
+    const base = orbitEntities ?? SHOWCASE_ORBIT_ENTITIES
+    if (typeof window === 'undefined') return base
+    const n = Number(new URLSearchParams(window.location.search).get('stress') || 0)
+    return n > 0 ? [...base, ...makeStressEntities(n)] : base
+  }, [orbitEntities])
   const controlsRef = useRef<OrbitControlsImpl | null>(null)
   const controlsTargetRef = useRef<[number, number, number]>([0, 0, 0])
   const programmaticMoveRef = useRef(false)
@@ -357,7 +366,7 @@ function ShowcaseSceneContent({
           else showcaseEntityPositionsRef.current.set(id, p.clone())
         }}
         onSelectEntity={(id) => onShowcaseItemSelect?.(id)}
-        orbitEntities={orbitEntities}
+        orbitEntities={layerOrbitEntities}
       />
 
       <ShowcaseCameraManager

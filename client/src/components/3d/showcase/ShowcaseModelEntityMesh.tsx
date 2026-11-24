@@ -1,11 +1,22 @@
 'use client'
 
 import { useRef, useMemo, useEffect } from 'react'
-import { useFrame } from '@react-three/fiber'
+import { useFrame, useThree } from '@react-three/fiber'
 import { useGLTF } from '@react-three/drei'
 import * as THREE from 'three'
 import type { ShowcaseOrbitEntity } from '@/lib/showcaseEntities'
+import {
+  acquireModel,
+  extendGltfLoader,
+  initKtx2Support,
+  releaseModel,
+} from '@/features/content3d/showcase/public'
 
+/**
+ * GLB đầy đủ của một thực thể. Chỉ được mount khi LOD cho phép tier `model`
+ * (xem `assignLod`), nên số GLB trong bộ nhớ luôn bị chặn bởi `modelBudget`.
+ * Khi unmount, model được giải phóng khỏi GPU sau một khoảng trễ (nếu không ai dùng lại).
+ */
 export function ShowcaseModelEntityMesh({
   entity,
   modelUrl,
@@ -18,8 +29,17 @@ export function ShowcaseModelEntityMesh({
   active: boolean
   onSelect?: () => void
 }) {
+  const gl = useThree((s) => s.gl)
+  initKtx2Support(gl)
   const groupRef = useRef<THREE.Group>(null)
-  const gltf = useGLTF(modelUrl) as { scene: THREE.Object3D }
+  const gltf = useGLTF(modelUrl, true, true, extendGltfLoader) as { scene: THREE.Object3D }
+
+  useEffect(() => {
+    acquireModel(modelUrl, gltf.scene)
+    return () => releaseModel(modelUrl, (u) => useGLTF.clear(u))
+  }, [modelUrl, gltf.scene])
+
+  // clone(true) dùng chung geometry/material với bản gốc → nhiều thực thể cùng model không nhân bộ nhớ GPU.
   const model = useMemo(() => gltf.scene.clone(true), [gltf.scene])
   const normalizedScale = useMemo(() => {
     const bbox = new THREE.Box3().setFromObject(model)

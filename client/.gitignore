@@ -46,3 +46,8 @@ next-env.d.ts
 /public/models/
 /public/textures/
 /public/images/
+
+# generated
+/public/basis/
+/.tmp/
+/assets-optimized/

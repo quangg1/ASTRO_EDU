@@ -1,6 +1,6 @@
 'use client'
 
-import { Suspense, useEffect, useMemo, useRef } from 'react'
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import { Html } from '@react-three/drei'
 import * as THREE from 'three'
@@ -16,7 +16,17 @@ import {
 } from '@/lib/showcaseEntities'
 import { OrbitPath } from '@/components/3d/OrbitPath'
 import { ShowcaseEntityMesh } from '@/components/3d/showcase/ShowcaseEntityMesh'
-import { useShowcaseStore } from '@/features/content3d/showcase/public'
+import {
+  assignLod,
+  isStressEntityId,
+  sameAssignment,
+  screenRadiusPx,
+  useShowcaseStore,
+  type EntityLodTier,
+  type LodAssignment,
+  type LodCandidate,
+} from '@/features/content3d/showcase/public'
+import { ShowcaseEntityPoints } from '@/components/3d/showcase/ShowcaseEntityPoints'
 import type { OrbitProximityFade } from '@/components/3d/orbitProximityFade'
 import { hasUsableOrbitalElements } from '@/lib/mergeShowcaseCatalog'
 import { isResolvableShowcaseAssetUrl } from '@/lib/showcaseMediaUrl'
@@ -74,6 +84,11 @@ function hasRenderableShowcaseMedia(e: ShowcaseOrbitEntity): boolean {
   const mp = String(e.modelPath || '').trim()
   if (mp.length > 1) return true
   return false
+}
+
+function entityHasModel(e: ShowcaseOrbitEntity): boolean {
+  if (isResolvableShowcaseAssetUrl(String(e.remoteModelUrl || '').trim())) return true
+  return String(e.modelPath || '').trim().length > 1
 }
 
 function isSatelliteEntity(e: ShowcaseOrbitEntity): boolean {
@@ -252,6 +267,24 @@ export function ShowcaseEntityLayer({
   )
   const groupsRef = useRef(new Map<string, THREE.Group>())
   const anglesRef = useRef(new Map<string, number>())
+  /** Vị trí mọi thực thể đủ điều kiện — tính kể cả khi không mount mesh (để vẽ Points và chọn LOD). */
+  const positionsRef = useRef(new Map<string, THREE.Vector3>())
+  const validPosRef = useRef(new Set<string>())
+  const computeIdsRef = useRef(new Set<string>())
+  const getPos = (id: string) => {
+    let v = positionsRef.current.get(id)
+    if (!v) {
+      v = new THREE.Vector3()
+      positionsRef.current.set(id, v)
+    }
+    return v
+  }
+  const { camera, size: viewportSize } = useThree()
+  const lodFrameRef = useRef(0)
+  const lodRef = useRef<LodAssignment>({ tiers: new Map(), labels: new Set() })
+  const [lod, setLod] = useState<LodAssignment>(lodRef.current)
+  const frustumRef = useRef(new THREE.Frustum())
+  const projScreenRef = useRef(new THREE.Matrix4())
 
   useEffect(() => {
     const next = new Map<string, number>()
@@ -308,8 +341,9 @@ export function ShowcaseEntityLayer({
     labelCollisionRef.current.frame = collisionFrameRef.current
     labelCollisionRef.current.points = []
     for (const entity of sortedEntitiesRef.current) {
-      const g = groupsRef.current.get(entity.id)
-      if (!g) continue
+      if (!computeIdsRef.current.has(entity.id)) continue
+      validPosRef.current.delete(entity.id)
+      const g = getPos(entity.id)
       const prevA = anglesRef.current.get(entity.id) ?? 0
       const pd = entity.orbitalElements?.periodDays || entity.periodDays || entity.period
       const period = Math.max(0.5, Number(pd || 1))
@@ -331,35 +365,35 @@ export function ShowcaseEntityLayer({
         )
         const parentPlanetResolved = resolveShowcaseOrbitParentPlanetName(entity)
         if (parentId) {
-          const parentG = groupsRef.current.get(parentId)
+          const parentG = positionsRef.current.get(parentId)
           if (parentG) {
-            g.position.copy(parentAddScratch.current.addVectors(parentG.position, local))
+            g.copy(parentAddScratch.current.addVectors(parentG, local))
           } else if (parentPlanetResolved) {
             const pIdx = parentIndexByName.get(parentPlanetResolved)
             const p = pIdx != null ? planetPositionsRef.current[pIdx] : null
-            if (p && p.lengthSq() >= 1e-6) g.position.copy(parentAddScratch.current.addVectors(p, local))
+            if (p && p.lengthSq() >= 1e-6) g.copy(parentAddScratch.current.addVectors(p, local))
             else continue
           } else {
-            g.position.copy(local)
+            g.copy(local)
           }
         } else if (parentPlanetResolved) {
           const pIdx = parentIndexByName.get(parentPlanetResolved)
           const p = pIdx != null ? planetPositionsRef.current[pIdx] : null
           if (!p || p.lengthSq() < 1e-6) continue
-          g.position.copy(parentAddScratch.current.addVectors(p, local))
+          g.copy(parentAddScratch.current.addVectors(p, local))
         } else {
-          g.position.copy(local)
+          g.copy(local)
         }
       } else if (parentId && hasVector) {
-        const parentG = groupsRef.current.get(parentId)
+        const parentG = positionsRef.current.get(parentId)
         if (!parentG) continue
         const v = entity.vectorSim!
-        g.position.set(parentG.position.x + v.x, parentG.position.y + v.y, parentG.position.z + v.z)
+        g.set(parentG.x + v.x, parentG.y + v.y, parentG.z + v.z)
       } else if (hasVector) {
         const v = entity.vectorSim!
-        g.position.set(v.x, v.y, v.z)
+        g.set(v.x, v.y, v.z)
       } else if (parentId) {
-        const parentG = groupsRef.current.get(parentId)
+        const parentG = positionsRef.current.get(parentId)
         const local = solveKeplerLocalOrbitPosition(
           entity,
           orbitDistanceScaleAu,
@@ -369,14 +403,14 @@ export function ShowcaseEntityLayer({
           axisXScratch.current,
         )
         if (parentG) {
-          g.position.copy(parentAddScratch.current.addVectors(parentG.position, local))
+          g.copy(parentAddScratch.current.addVectors(parentG, local))
         } else {
           const pp = resolveShowcaseOrbitParentPlanetName(entity)
           if (!pp) continue
           const pIdx = parentIndexByName.get(pp)
           const p = pIdx != null ? planetPositionsRef.current[pIdx] : null
           if (!p || p.lengthSq() < 1e-6) continue
-          g.position.copy(parentAddScratch.current.addVectors(p, local))
+          g.copy(parentAddScratch.current.addVectors(p, local))
         }
       } else if (resolveShowcaseOrbitParentPlanetName(entity)) {
         const pp = resolveShowcaseOrbitParentPlanetName(entity)!
@@ -390,16 +424,16 @@ export function ShowcaseEntityLayer({
         const x = Math.cos(nextA) * orbitRadius
         const z = Math.sin(nextA) * orbitRadius
         const y = Math.sin(nextA * 0.5) * orbitRadius * 0.06
-        g.position.set(p.x + x, p.y + y, p.z + z)
+        g.set(p.x + x, p.y + y, p.z + z)
       } else if (entity.parentShowcaseEntityId) {
-        const parentG = groupsRef.current.get(entity.parentShowcaseEntityId)
+        const parentG = positionsRef.current.get(entity.parentShowcaseEntityId)
         if (!parentG) continue
-        const p = parentG.position
+        const p = parentG
         const orbitRadius = Math.max(entity.distance, entity.distance * 1.45)
         const x = Math.cos(nextA) * orbitRadius
         const z = Math.sin(nextA) * orbitRadius
         const y = Math.sin(nextA * 0.5) * orbitRadius * 0.06
-        g.position.set(p.x + x, p.y + y, p.z + z)
+        g.set(p.x + x, p.y + y, p.z + z)
       } else {
         const pos = solveKeplerLocalOrbitPosition(
           entity,
@@ -409,9 +443,11 @@ export function ShowcaseEntityLayer({
           axisYScratch.current,
           axisXScratch.current,
         )
-        g.position.copy(pos)
+        g.copy(pos)
       }
-      onPositionUpdate?.(entity.id, g.position)
+      validPosRef.current.add(entity.id)
+      groupsRef.current.get(entity.id)?.position.copy(g)
+      onPositionUpdate?.(entity.id, g)
     }
   })
 
@@ -419,6 +455,7 @@ export function ShowcaseEntityLayer({
     return orbitEntities.filter((entity) => {
       // Main planets are rendered by `Planet` in ShowcaseScene; skip duplicate `planet-*` in entity layer.
       if (String(entity.id || '').startsWith('planet-')) return false
+      if (isStressEntityId(entity.id)) return true
       const c = getNasaCatalogItemById(entity.id)
       const g = c?.group
       const groupOk =
@@ -446,16 +483,94 @@ export function ShowcaseEntityLayer({
     })
   }, [activeGroup, preloadGroup, activeItemId, selectedPlanetName, orbitEntities])
 
+  // Tập cần tính vị trí = thực thể đủ điều kiện + toàn bộ tổ tiên (cha phải có vị trí trước con).
+  useEffect(() => {
+    const ids = new Set<string>()
+    for (const e of visibleEntities) {
+      let cur: ShowcaseOrbitEntity | undefined = e
+      let guard = 0
+      while (cur && !ids.has(cur.id) && guard++ < 10) {
+        ids.add(cur.id)
+        const pid: string = normalizedParentId(cur) || String(cur.parentShowcaseEntityId || '').trim()
+        cur = pid ? orbitById.get(pid) : undefined
+      }
+    }
+    computeIdsRef.current = ids
+  }, [visibleEntities, orbitById])
+
+  const meshRadiusById = useMemo(() => {
+    const m = new Map<string, number>()
+    for (const e of visibleEntities) {
+      m.set(e.id, Math.max(0.14, radiusToSize(e.radiusKm, e.size, orbitDistanceScaleAu) * 2.55))
+    }
+    return m
+  }, [visibleEntities, orbitDistanceScaleAu])
+
+  // Chọn LOD ~8 lần/giây (không cần mỗi khung); chỉ setState khi kết quả đổi.
+  useFrame(() => {
+    if (!visible) return
+    lodFrameRef.current = (lodFrameRef.current + 1) % 8
+    if (lodFrameRef.current !== 0) return
+    const cam = camera as THREE.PerspectiveCamera
+    projScreenRef.current.multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse)
+    frustumRef.current.setFromProjectionMatrix(projScreenRef.current)
+    const fov = cam.fov ?? 45
+    const candidates: LodCandidate[] = []
+    for (const e of visibleEntities) {
+      const p = positionsRef.current.get(e.id)
+      if (!p || !validPosRef.current.has(e.id)) continue
+      const r = meshRadiusById.get(e.id) ?? 0.14
+      const d = cam.position.distanceTo(p)
+      candidates.push({
+        id: e.id,
+        px: screenRadiusPx(r, d, fov, viewportSize.height),
+        hasModel: entityHasModel(e),
+        active: e.id === activeItemId,
+        offscreen: !frustumRef.current.containsPoint(p),
+      })
+    }
+    const next = assignLod(candidates, lodRef.current.tiers)
+    if (!sameAssignment(next, lodRef.current)) {
+      lodRef.current = next
+      setLod(next)
+    }
+  })
+
+  const mountedEntities = useMemo(
+    () => visibleEntities.filter((e) => e.id === activeItemId || (lod.tiers.get(e.id) ?? 'point') !== 'point'),
+    [visibleEntities, lod, activeItemId],
+  )
+  // Vệ tinh ở góc nhìn toàn hệ đang mờ dần (satelliteRevealAlpha) → không vẽ chấm cho chúng để đỡ rối.
+  const hideSatellitePoints = !selectedPlanetName && satelliteRevealAlpha(cameraDistanceToSun) < 0.05
+  const pointEntities = useMemo(
+    () =>
+      visibleEntities.filter(
+        (e) =>
+          e.id !== activeItemId &&
+          (lod.tiers.get(e.id) ?? 'point') === 'point' &&
+          !(hideSatellitePoints && isSatelliteEntity(e)),
+      ),
+    [visibleEntities, lod, activeItemId, hideSatellitePoints],
+  )
+
   if (!visible) return null
   const revealAlpha =
     !selectedPlanetName ? satelliteRevealAlpha(cameraDistanceToSun) : 1
 
   return (
     <group>
-      {visibleEntities.map((entity) => (
+      <ShowcaseEntityPoints
+        entities={pointEntities}
+        positionsRef={positionsRef}
+        validPosRef={validPosRef}
+        onSelectEntity={onSelectEntity}
+      />
+      {mountedEntities.map((entity) => (
         <Suspense key={entity.id} fallback={null}>
           <ShowcaseEntityRow
             entity={entity}
+            tier={lod.tiers.get(entity.id) ?? 'globe'}
+            showLabel={entity.id === activeItemId || lod.labels.has(entity.id)}
             orbitDistanceScaleAu={orbitDistanceScaleAu}
             activeItemId={activeItemId}
             selectedPlanetName={selectedPlanetName ?? null}
@@ -688,6 +803,8 @@ function FadedLocalEllipticOrbit({
 
 function ShowcaseEntityRow({
   entity,
+  tier,
+  showLabel,
   orbitDistanceScaleAu,
   activeItemId,
   selectedPlanetName,
@@ -700,6 +817,8 @@ function ShowcaseEntityRow({
   revealAlpha,
 }: {
   entity: ShowcaseOrbitEntity
+  tier: EntityLodTier
+  showLabel: boolean
   orbitDistanceScaleAu: number
   activeItemId?: string | null
   selectedPlanetName: string | null
@@ -757,7 +876,7 @@ function ShowcaseEntityRow({
 
   return (
     <group>
-      {isHeliocentricBody ? (
+      {!showLabel ? null : isHeliocentricBody ? (
             <OrbitPath
               data={{
                 name: entity.name,
@@ -804,10 +923,12 @@ function ShowcaseEntityRow({
       >
         <ShowcaseEntityMesh
           entity={{ ...entity, size: bodySceneSize }}
+          allowModel={tier === 'model'}
           active={active}
           visualOpacity={rowRevealAlpha}
           onSelect={() => onSelectEntity?.(entity.id)}
         />
+        {showLabel ? (
         <ShowcaseEntityNametag
           anchorRef={anchorRef}
           label={entity.name.toUpperCase()}
@@ -821,6 +942,7 @@ function ShowcaseEntityRow({
           frameRef={frameRef}
           onSelect={() => onSelectEntity?.(entity.id)}
         />
+        ) : null}
       </group>
     </group>
   )

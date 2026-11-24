@@ -2,6 +2,9 @@
 export { useShowcaseStore } from './stores/showcaseStore'
 export type { ShowcaseCameraState, ShowcaseEntityRef } from './types'
 export * from './lib/showcaseLearningBridge'
+export * from './lib/entityLod'
+export * from './lib/gltfAssetCache'
+export * from './lib/stressEntities'
 export {
   PLANET_ACCENT,
   SHOWCASE_DEFAULT_ACCENT,

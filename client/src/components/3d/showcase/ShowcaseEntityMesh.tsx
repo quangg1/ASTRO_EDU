@@ -9,16 +9,19 @@ import { ShowcaseModelEntityMesh } from '@/components/3d/showcase/ShowcaseModelE
 export function ShowcaseEntityMesh({
   entity,
   active,
+  allowModel = true,
   visualOpacity = 1,
   onSelect,
 }: {
   entity: ShowcaseOrbitEntity
   active: boolean
+  /** LOD: chỉ tải GLB khi true; ngược lại vẽ quả cầu nhẹ thay thế (không tải file model). */
+  allowModel?: boolean
   visualOpacity?: number
   onSelect?: () => void
 }) {
   const remoteModelRaw = entity.remoteModelUrl?.trim()
-  if (remoteModelRaw && isResolvableShowcaseAssetUrl(remoteModelRaw)) {
+  if (allowModel && remoteModelRaw && isResolvableShowcaseAssetUrl(remoteModelRaw)) {
     return (
       <ShowcaseModelEntityMesh
         entity={entity}
@@ -29,7 +32,7 @@ export function ShowcaseEntityMesh({
     )
   }
 
-  if (entity.modelPath) {
+  if (allowModel && entity.modelPath) {
     return (
       <ShowcaseModelEntityMesh
         entity={entity}
